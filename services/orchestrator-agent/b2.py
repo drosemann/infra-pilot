@@ -13,13 +13,14 @@ import asyncio
 from discord import app_commands
 import requests
 from datetime import datetime, timedelta
+from threading import Lock
 
 # =============================================================================
 # Configuration Section
 # =============================================================================
 
 # Bot and Docker configuration
-TOKEN = ''  # Specify the Discord bot token here
+TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
 RAM_LIMIT = '1g'  # Memory limit allocation for user instances
 SERVER_LIMIT = 1  # Maximum number of VPS instances allowed per user
 database_file = 'database.txt'  # File used to store instance details
@@ -36,7 +37,9 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 client = docker.from_env()
 
 # Set of admin user IDs (as strings) who may execute restricted commands
-whitelist_ids = {"1128161197766746213"}  # Replace with actual admin user IDs
+whitelist_ids = set(filter(None, os.getenv("WHITELIST_IDS", "").split(",")))
+database_lock = Lock()
+SAFE_CONTAINER_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 
 # =============================================================================
 # Utility Functions for Database Management
@@ -46,8 +49,9 @@ def add_to_database(userid, container_name, ssh_command):
     """
     Append instance details (user ID, container identifier, SSH command) to the database file.
     """
-    with open(database_file, 'a') as f:
-        f.write(f"{userid}|{container_name}|{ssh_command}\n")
+    with database_lock:
+        with open(database_file, 'a', encoding='utf-8') as f:
+            f.write(f"{userid}|{container_name}|{ssh_command}\n")
 
 def remove_from_database(ssh_command):
     """
@@ -55,13 +59,14 @@ def remove_from_database(ssh_command):
     """
     if not os.path.exists(database_file):
         return
-    with open(database_file, 'r') as f:
-        lines = f.readlines()
-    # Write back all lines that do not contain the provided SSH command
-    with open(database_file, 'w') as f:
-        for line in lines:
-            if ssh_command not in line:
-                f.write(line)
+    with database_lock:
+        with open(database_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        # Write back all lines that do not contain the provided SSH command
+        with open(database_file, 'w', encoding='utf-8') as f:
+            for line in lines:
+                if ssh_command not in line:
+                    f.write(line)
 
 def get_user_servers(user):
     """
@@ -122,7 +127,7 @@ async def capture_ssh_session_line(process):
 user_credits = {}
 
 # API key for URL-shortening service (Cuty.io) integration
-API_KEY = 'ebe681f9e37ef61fcfd756396'
+API_KEY = os.getenv("CUTTLY_API_KEY", "")
 
 # =============================================================================
 # Slash Commands Definitions
@@ -681,15 +686,18 @@ async def execute_command(command):
     """
     Helper function to execute a shell command asynchronously.
     """
-    process = await asyncio.create_subprocess_shell(
-        command,
+    process = await asyncio.create_subprocess_exec(
+        *command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await process.communicate()
     return stdout.decode(), stderr.decode()
 
-PUBLIC_IP = '138.68.79.95'  # Public IP address for service hosting
+PUBLIC_IP = os.getenv("PUBLIC_IP", "")  # Public IP address for service hosting
+
+def _is_safe_container_name(name: str) -> bool:
+    return bool(SAFE_CONTAINER_RE.fullmatch(name))
 
 async def capture_output(process, keyword):
     """
@@ -718,12 +726,16 @@ async def port_add(interaction: discord.Interaction, container_name: str, contai
     public_port = generate_random_port()  # Generate a random public-facing port
 
     # Command to establish SSH reverse tunnel via serveo.net
-    command = f"ssh -o StrictHostKeyChecking=no -R {public_port}:localhost:{container_port} serveo.net -N -f"
-
     try:
+        if not _is_safe_container_name(container_name):
+            await interaction.followup.send("Invalid container name.", ephemeral=True)
+            return
         # Execute the reverse tunnel command inside the Docker container
         await asyncio.create_subprocess_exec(
-            "docker", "exec", container_name, "bash", "-c", command,
+            "docker", "exec", container_name, "ssh",
+            "-o", "StrictHostKeyChecking=no",
+            "-R", f"{public_port}:localhost:{container_port}",
+            "serveo.net", "-N", "-f",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
@@ -735,7 +747,7 @@ async def port_add(interaction: discord.Interaction, container_name: str, contai
     except Exception as e:
         await interaction.followup.send(
             embed=discord.Embed(
-                description=f"An error occurred: {e}",
+                description="An error occurred while configuring port forwarding.",
                 color=0xff0000)
         )
 

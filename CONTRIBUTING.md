@@ -181,6 +181,10 @@ Use clear, imperative commit messages that describe what the change does:
 - [ ] No debug statements or temporary code
 - [ ] No secrets or credentials committed (use `.env.example` templates)
 - [ ] Commit messages are clear and follow guidelines
+- [ ] Testname entspricht der Konvention (`test_<funktion>_<erwartetes_verhalten>` oder sprachspezifischer Standard)
+- [ ] Kein Placeholder in neuen Tests (z. B. `TODO`, `pass`, `it('works')`)
+- [ ] Doppelte Assertions vermieden (gleiche Aussage nicht mehrfach prüfen)
+- [ ] Parametrisierung verwendet, wenn mehr als 3 ähnliche Fälle getestet werden
 
 ---
 
@@ -214,6 +218,53 @@ mvn spotless:apply
 
 All new features must include tests. We follow these principles:
 
+### Done-Kriterien für neue Tests
+
+Ein neuer Test gilt erst als **Done**, wenn alle folgenden Kriterien erfüllt sind:
+
+1. **Lesbarkeit:** Testname und Arrange/Act/Assert-Struktur machen die Intention sofort verständlich.
+2. **Isolation:** Der Test ist unabhängig von anderen Tests und hat keine versteckten Seiteneffekte.
+3. **Deterministisch:** Der Test liefert bei gleichem Code immer dasselbe Ergebnis (keine Zufalls-/Zeitabhängigkeit ohne Kontrolle).
+4. **Klare Failure-Message:** Bei Fehlschlag ist direkt erkennbar, was erwartet wurde und was tatsächlich passiert ist.
+
+### Beispiele: schlecht vs. gut
+
+#### Testnamen
+
+**Schlecht**
+- `test1`
+- `should_work`
+- `it handles stuff`
+
+**Gut**
+- `test_create_server_rejects_invalid_region`
+- `test_allocate_ip_returns_next_free_address`
+- `shouldReturn403WhenTokenIsExpired`
+
+#### Teststruktur
+
+**Schlecht**
+```python
+def test_user_creation():
+    user = create_user("a@b.com")
+    assert user is not None
+    assert user.email == "a@b.com"
+    assert user.email == "a@b.com"  # doppelt
+```
+
+**Gut**
+```python
+def test_create_user_sets_email_field():
+    # Arrange
+    email = "a@b.com"
+
+    # Act
+    user = create_user(email)
+
+    # Assert
+    assert user.email == email, "Expected created user to keep the provided email"
+```
+
 ### Service-Specific Testing
 
 **Python (Orchestrator Agent):**
@@ -246,6 +297,8 @@ mvn test
   ./scripts/test.sh --coverage
   ```
 
+Weitere Vorlagen und Empfehlungen: [docs/testing-guidelines.md](docs/testing-guidelines.md)
+
 ---
 
 ## Documentation
@@ -257,36 +310,3 @@ When contributing code, update documentation as needed:
 3. **Code comments** - For complex logic, explain the "why" not just "what"
 4. **Architecture docs** - If you make structural changes, update [docs/architecture/](docs/architecture/)
 5. **API docs** - If you add endpoints, document them in [docs/api/](docs/api/)
-
-Keep documentation clear, concise, and up-to-date.
-
----
-
-## Security
-
-**Never commit:**
-- Secret keys or API keys
-- Database credentials
-- Passwords or authentication tokens
-- Private configuration
-
-**Instead:**
-- Use `.env.example` templates
-- Document required environment variables
-- Add secrets via CI/CD secret management
-
-**Found a vulnerability?**
-
-Please report security issues privately to maintainers rather than opening a public issue. Email security details to the project maintainers.
-
----
-
-## Questions or Need Help?
-
-- **Documentation:** Check [docs/](docs/) first
-- **GitHub Issues:** [Create an issue](https://github.com/DaaanielTV/infra-pilot/issues)
-- **GitHub Discussions:** [Ask in discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
-
----
-
-Thank you for contributing to Infra Pilot! 🚀

@@ -486,9 +486,9 @@ kubectl apply -f infrastructure/kubernetes/
 ```
 
 #### Option 3: Cloud Provider
-- **AWS:** See [infrastructure/terraform/aws/](infrastructure/terraform/aws/)
-- **GCP:** See [infrastructure/terraform/gcp/](infrastructure/terraform/gcp/)
-- **Azure:** See [infrastructure/terraform/azure/](infrastructure/terraform/azure/)
+Cloud-provider deployment guidance is consolidated in the central deployment documentation:
+- [Deployment Guide](docs/operations/deployment-guide.md)
+- [Environment Configuration](docs/setup/environment-config.md)
 
 Full deployment guide: [docs/operations/deployment-guide.md](docs/operations/deployment-guide.md)
 

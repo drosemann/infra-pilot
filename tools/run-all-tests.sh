@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Recommended local execution order before/around this script:
+#   1) lint (bash tools/lint-all.sh)
+#   2) unit tests
+#   3) integration tests
+#   4) smoke/e2e tests
+# This script primarily orchestrates service-level tests plus repo integration tests.
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 OFFLINE=false
 JSON_OUTPUT=false

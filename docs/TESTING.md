@@ -1,5 +1,31 @@
 (# Testing Guide)
 
+- Testpyramide (kompakt)
+  - Unit: schnell, isoliert, ohne externe Dienste; Fokus auf Business-Logik und Randfälle.
+  - Integration: Zusammenspiel mehrerer Komponenten (z. B. API + Datenzugriff), optional mit Mocks/Test-Doubles.
+  - E2E/Smoke: wenige, stabile Tests für kritische Happy Paths über reale Schnittstellen.
+
+- Laufzeitbudget und Zielabdeckung
+  - Unit
+    - Laufzeitbudget: lokal < 2 Minuten pro Service.
+    - Zielabdeckung: mindestens 80% Line-Coverage pro Service (kritische Kernmodule höher).
+  - Integration
+    - Laufzeitbudget: lokal < 10 Minuten gesamt.
+    - Zielabdeckung: alle zentralen Integrationspunkte (API, Persistenz, Messaging/Webhooks) mindestens einmal positiv getestet.
+  - E2E/Smoke
+    - Laufzeitbudget: lokal/CI < 15 Minuten gesamt.
+    - Zielabdeckung: 100% der geschäftskritischen Happy Paths (Login/Health/Provisionierung o. ä. je Service).
+
+- Ablagekonventionen pro Service (`services/*`)
+  - Empfohlene Struktur in jedem Service-Ordner:
+    - `tests/unit` für Unit-Tests.
+    - `tests/integration` für service-interne Integrationstests.
+    - `tests/smoke` (oder `tests/e2e`) für Smoke/E2E-Tests.
+  - Sprache/Runtime-spezifisch:
+    - Python-Services (pytest): Discovery unter `tests/`, idealerweise getrennt nach den Ordnern oben.
+    - Node-Services: Test-Runner so konfigurieren, dass die gleichen Pfade genutzt werden.
+  - Repository-weite Integrationstests bleiben unter `tests/integration` im Repo-Root möglich, wenn mehrere Services beteiligt sind.
+
 - What runs where
   - Node services: tests are discovered via the package.json's test script. If absent, tests are skipped by the runner.
   - Python services: tests are discovered by pytest under tests/ directories inside the service; if none, runner skips.
@@ -14,6 +40,7 @@
     - `test_given_ec2_service_when_initialized_then_applies_ec2_defaults`
 
 - Local testing workflow
+  - Empfohlene Reihenfolge: `lint -> unit -> integration -> smoke`.
   - Linting: `bash tools/lint-all.sh`.
   - Full test suite: `bash tools/run-all-tests.sh`.
   - Per-service testing:

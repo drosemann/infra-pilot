@@ -13,13 +13,14 @@ import asyncio
 from discord import app_commands
 import requests
 from datetime import datetime, timedelta  # Added for VPS renewal
+from threading import Lock
 
 # -----------------------------------------------------------------------------
 # Bot Configuration and Global Variables
 # -----------------------------------------------------------------------------
 
 # Bot token and configuration settings
-TOKEN = 'YOUR_BOT_TOKEN'
+TOKEN = os.getenv("DISCORD_BOT_TOKEN", "")
 RAM_LIMIT = '1g'  # Maximum memory allocation for user instances
 SERVER_LIMIT = 1  # Maximum allowed instances per user
 database_file = 'database.txt'  # File to store instance information
@@ -34,16 +35,18 @@ intents.message_content = False
 bot = commands.Bot(command_prefix='/', intents=intents)
 
 # A set of whitelisted user IDs (admin privileges)
-whitelist_ids = {"1128161197766746213"}  # Replace with actual user IDs
+whitelist_ids = set(filter(None, os.getenv("WHITELIST_IDS", "").split(",")))
 
 # In-memory dictionary to keep track of user credits (should be replaced with persistent storage in production)
 user_credits = {}
 
 # API key for the cuty.io URL-shortening service
-API_KEY = 'ebe681f9e37ef61fcfd756396'
+API_KEY = os.getenv("CUTTLY_API_KEY", "")
 
 # Public IP address used in port forwarding commands
-PUBLIC_IP = '138.68.79.95'
+PUBLIC_IP = os.getenv("PUBLIC_IP", "")
+database_lock = Lock()
+SAFE_CONTAINER_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$")
 
 # -----------------------------------------------------------------------------
 # Utility Functions
@@ -54,8 +57,9 @@ def add_to_database(userid, container_name, ssh_command):
     Records the VPS instance data to a local database file.
     Format: userID|containerID|ssh_command
     """
-    with open(database_file, 'a') as f:
-        f.write(f"{userid}|{container_name}|{ssh_command}\n")
+    with database_lock:
+        with open(database_file, 'a', encoding='utf-8') as f:
+            f.write(f"{userid}|{container_name}|{ssh_command}\n")
 
 def remove_from_database(ssh_command):
     """
@@ -63,12 +67,16 @@ def remove_from_database(ssh_command):
     """
     if not os.path.exists(database_file):
         return
-    with open(database_file, 'r') as f:
-        lines = f.readlines()
-    with open(database_file, 'w') as f:
-        for line in lines:
-            if ssh_command not in line:
-                f.write(line)
+    with database_lock:
+        with open(database_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        with open(database_file, 'w', encoding='utf-8') as f:
+            for line in lines:
+                if ssh_command not in line:
+                    f.write(line)
+
+def _is_safe_container_name(name: str) -> bool:
+    return bool(SAFE_CONTAINER_RE.fullmatch(name))
 
 def get_user_servers(user):
     """
@@ -187,9 +195,12 @@ async def port_forward_win(interaction: discord.Interaction, container_name: str
     """
     await interaction.response.defer()  # Defer the response to get extra processing time
     try:
-        command = f"docker exec -it {container_name} ssh -R 80:localhost:{container_port} ssh.localhost.run"
-        process = await asyncio.create_subprocess_shell(
-            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        if not _is_safe_container_name(container_name):
+            await interaction.followup.send("Invalid container name.", ephemeral=True)
+            return
+        process = await asyncio.create_subprocess_exec(
+            "docker", "exec", "-i", container_name, "ssh", "-R", f"80:localhost:{container_port}", "ssh.localhost.run",
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
 
@@ -212,7 +223,7 @@ async def port_forward_win(interaction: discord.Interaction, container_name: str
     except Exception as e:
         await interaction.followup.send(
             embed=discord.Embed(
-                description=f"### Failed to set up port forwarding: {str(e)}",
+                description="### Failed to set up port forwarding.",
                 color=0xff0000
             )
         )
@@ -337,7 +348,7 @@ async def remove_everything_task(interaction: discord.Interaction):
         subprocess.run("pkill pytho*", shell=True, check=True)
         await interaction.channel.send("### All instances and data have been reset.")
     except Exception as e:
-        await interaction.channel.send(f"### Failed to reset instances: {str(e)}")
+        await interaction.channel.send("### Failed to reset instances.")
 
 @bot.tree.command(name="killvps", description="Kill all user VPS instances. Admin only.")
 async def kill_vps(interaction: discord.Interaction):
@@ -409,7 +420,7 @@ async def remove_everything(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(
             embed=discord.Embed(
-                description=f"Failed to clear database or restart service: {str(e)}",
+                description="Failed to clear database or restart service.",
                 color=0xff0000
             )
         )
@@ -817,10 +828,15 @@ async def port_add(interaction: discord.Interaction, container_name: str, contai
         )
     )
     public_port = generate_random_port()
-    command = f"ssh -o StrictHostKeyChecking=no -R {public_port}:localhost:{container_port} serveo.net -N -f"
     try:
+        if not _is_safe_container_name(container_name):
+            await interaction.followup.send("Invalid container name.", ephemeral=True)
+            return
         await asyncio.create_subprocess_exec(
-            "docker", "exec", container_name, "bash", "-c", command,
+            "docker", "exec", container_name, "ssh",
+            "-o", "StrictHostKeyChecking=no",
+            "-R", f"{public_port}:localhost:{container_port}",
+            "serveo.net", "-N", "-f",
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL
         )
@@ -833,7 +849,7 @@ async def port_add(interaction: discord.Interaction, container_name: str, contai
     except Exception as e:
         await interaction.followup.send(
             embed=discord.Embed(
-                description=f"### An unexpected error occurred: {e}",
+                description="### An unexpected error occurred.",
                 color=0xff0000
             )
         )

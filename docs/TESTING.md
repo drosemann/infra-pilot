@@ -5,6 +5,14 @@
   - Python services: tests are discovered by pytest under tests/ directories inside the service; if none, runner skips.
   - Integration tests: a lightweight harness collects tests under tests/integration and runs them with pytest.
 
+
+- Test Naming Convention
+  - Dateinamen: `test_<modul>_<verhalten>.py`
+  - Testfunktionen: `test_<given>_<when>_<then>`
+  - Beispiele:
+    - `test_aws_service_defaults.py`
+    - `test_given_ec2_service_when_initialized_then_applies_ec2_defaults`
+
 - Local testing workflow
   - Linting: `bash tools/lint-all.sh`.
   - Full test suite: `bash tools/run-all-tests.sh`.

@@ -248,6 +248,22 @@ mvn test
 
 ---
 
+
+## Test Naming Convention
+
+Verwende für Tests ein konsistentes, fachlich lesbares Schema:
+
+- **Dateinamen:** `test_<modul>_<verhalten>.py`
+- **Testfunktionen:** `test_<given>_<when>_<then>`
+
+**Beispiele:**
+- `tests/test_aws_service_defaults.py`
+- `def test_given_ec2_service_when_initialized_then_applies_ec2_defaults():`
+- `def test_given_s3_service_when_initialized_then_applies_s3_defaults():`
+- `def test_given_route53_service_when_initialized_then_applies_route53_defaults():`
+
+---
+
 ## Documentation
 
 When contributing code, update documentation as needed:

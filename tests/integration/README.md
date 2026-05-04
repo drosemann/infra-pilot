@@ -6,13 +6,13 @@
 - Structure
   - tests/integration/
     - __init__.py
-    - test_placeholder.py
+    - test_smoke_runtime.py
     - README.md
 - How to run
   - Run: pytest -q
-  - Pytest will discover tests in tests/integration because we placed tests with the pattern test_*.py and added an integration marker.
+  - Pytest will discover tests in tests/integration because we use the pattern `test_*.py` and pytest markers (`smoke`, `integration`).
 - How to expand
-  - Add new test modules under this directory, e.g. test_<scenario>.py with @pytest.mark.integration.
+  - Add new test modules under this directory, e.g. `test_smoke_<area>.py` for lightweight checks or `test_<scenario>.py` for deeper integration flows.
   - Implement real service clients / fixtures as services come online.
 
 - Scaffolding notes

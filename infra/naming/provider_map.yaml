@@ -1,0 +1,9 @@
+# Neutral to actual provider mapping (mocked for testing)
+# This skeleton currently maps mock-related tokens.
+PROVIDER_MOCK: mock-provider
+REGION_MOCK_US_EAST: mock-region-us-east
+REGION_MOCK_US_WEST: mock-region-us-west
+REGION_MOCK_EU: mock-region-eu
+SKU_MOCK_SMALL: mock-sku-small
+SKU_MOCK_MEDIUM: mock-sku-medium
+SKU_MOCK_LARGE: mock-sku-large

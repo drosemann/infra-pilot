@@ -1,0 +1,7 @@
+# Environment-specific provider overrides (empty template)
+# This file can be extended per environment to map neutral tokens to
+# real provider identities, hosts, or endpoints.
+## Example (CI/local Linux):
+## PROVIDER_MOCK: mock-provider-ci
+## REGION_MOCK_US_EAST: region-us-east-ci
+## SKU_MOCK_SMALL: s-ci

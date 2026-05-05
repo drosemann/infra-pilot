@@ -1,0 +1,30 @@
+import React from 'react';
+import { useTheme } from '../theme/ThemeProvider';
+
+type CardProps = {
+  title?: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  variant?: 'elevated' | 'flat';
+  compact?: boolean;
+};
+
+export const Card: React.FC<CardProps> = ({ title, subtitle, children, variant = 'elevated', compact = false }) => {
+  const theme = useTheme() || {} as any;
+  const styles: React.CSSProperties = {
+    background: theme.colors?.surface ?? '#111',
+    border: `1px solid ${theme.colors?.border ?? '#222'}`,
+    borderRadius: (theme.radii?.medium ?? 8) as any,
+    padding: (theme.space?.md ?? 12) as any,
+    boxShadow: variant === 'elevated' ? (theme.shadows?.elevation2 ?? 'none') as any : 'none',
+  };
+  return (
+    <div className="ds-card" style={styles}>
+      {title && <div style={{ fontWeight: (theme.fontWeights?.semibold ?? 600) as any }}>{title}</div>}
+      {subtitle && <div style={{ color: theme.colors?.textSecondary }}>{subtitle}</div>}
+      <div style={compact ? { paddingTop: 0 } : { paddingTop: 8 }}>{children}</div>
+    </div>
+  );
+};
+
+export default Card;

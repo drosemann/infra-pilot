@@ -1,153 +1,149 @@
 import logging
-import requests
 import os
+from typing import Dict, Any, Optional
 
-INTEGRATION_SERVICE_URL=os.getenv("INTEGRATION_SERVICE_URL","http://localhost:9000")
+import requests
 
+# Configuration
+INTEGRATION_SERVICE_URL = os.getenv("INTEGRATION_SERVICE_URL", "http://localhost:9000")
+REQUEST_TIMEOUT = 5
+
+# Logging setup
 logging.basicConfig(level=logging.INFO)
-logger=logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-async def notify_integration(event_type:str,data:dict)->bool:
 
+def _send_request(
+    method: str,
+    endpoint: str,
+    data: Optional[Dict[str, Any]] = None,
+) -> tuple[bool, Optional[Dict[str, Any]]]:
+    """
+    Send HTTP request to integration service.
+    
+    Args:
+        method: HTTP method ("GET" or "POST")
+        endpoint: API endpoint path
+        data: JSON payload for POST requests
+        
+    Returns:
+        Tuple of (success: bool, response_data: Optional[Dict])
+    """
     try:
-
-        response=requests.post(INTEGRATION_SERVICE_URL+"/api/notifications/server-event",json={
-        "event_type":event_type,
-        "server_name":data.get("server_name"),
-        "details":data
-        },timeout=5)
-
-        if response.status_code==200:
-            return True
+        url = f"{INTEGRATION_SERVICE_URL}{endpoint}"
+        if method == "GET":
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+        elif method == "POST":
+            response = requests.post(url, json=data, timeout=REQUEST_TIMEOUT)
         else:
-            if response.status_code==201:
-                return True
-            else:
-                return False
+            return False, None
 
-    except Exception as e:
+        # Accept both 200 (OK) and 201 (Created)
+        if response.status_code in (200, 201):
+            return True, response.json()
+        
+        logger.warning(f"Request failed with status {response.status_code}: {response.text}")
+        return False, None
 
-        logger.warning("fehler lol")
-        logger.warning(e)
+    except requests.Timeout:
+        logger.warning(f"Request timeout for {endpoint}")
+        return False, None
+    except requests.RequestException as e:
+        logger.warning(f"Request error for {endpoint}: {e}")
+        return False, None
+    except ValueError as e:
+        logger.warning(f"Failed to parse response JSON: {e}")
+        return False, None
 
-        return False
 
-async def notify_server_created(server_id:str,server_name:str):
+async def notify_integration(event_type: str, data: Dict[str, Any]) -> bool:
+    """Notify integration service of an event."""
+    payload = {
+        "event_type": event_type,
+        "server_name": data.get("server_name"),
+        "details": data,
+    }
+    success, _ = _send_request("POST", "/api/notifications/server-event", payload)
+    return success
 
-    x={}
-    x["server_id"]=server_id
-    x["server_name"]=server_name
-    x["service"]="orchestrator"
 
-    return await notify_integration("server_created",x)
+async def notify_server_created(server_id: str, server_name: str) -> bool:
+    """Notify that a server was created."""
+    data = {
+        "server_id": server_id,
+        "server_name": server_name,
+        "service": "orchestrator",
+    }
+    return await notify_integration("server_created", data)
 
-async def notify_server_started(server_id:str,server_name:str):
 
-    y={}
-    y["server_id"]=server_id
-    y["server_name"]=server_name
-    y["service"]="orchestrator"
+async def notify_server_started(server_id: str, server_name: str) -> bool:
+    """Notify that a server was started."""
+    data = {
+        "server_id": server_id,
+        "server_name": server_name,
+        "service": "orchestrator",
+    }
+    return await notify_integration("server_started", data)
 
-    return await notify_integration("server_started",y)
 
-async def notify_server_stopped(server_id:str,server_name:str):
+async def notify_server_stopped(server_id: str, server_name: str) -> bool:
+    """Notify that a server was stopped."""
+    data = {
+        "server_id": server_id,
+        "server_name": server_name,
+        "service": "orchestrator",
+    }
+    return await notify_integration("server_stopped", data)
 
-    z={}
-    z["server_id"]=server_id
-    z["server_name"]=server_name
-    z["service"]="orchestrator"
 
-    return await notify_integration("server_stopped",z)
+async def notify_server_deleted(server_id: str, server_name: str) -> bool:
+    """Notify that a server was deleted."""
+    data = {
+        "server_id": server_id,
+        "server_name": server_name,
+        "service": "orchestrator",
+    }
+    return await notify_integration("server_deleted", data)
 
-async def notify_server_deleted(server_id:str,server_name:str):
 
-    lol={}
-    lol["server_id"]=server_id
-    lol["server_name"]=server_name
-    lol["service"]="orchestrator"
+async def sync_user_to_integration(
+    user_id: str, email: str, username: str
+) -> Dict[str, Any]:
+    """Synchronize user to integration service."""
+    payload = {
+        "email": email,
+        "username": username,
+        "discord_id": user_id,
+    }
+    success, response = _send_request("POST", "/api/users", payload)
+    return response or {}
 
-    return await notify_integration("server_deleted",lol)
 
-async def sync_user_to_integration(user_id:str,email:str,username:str)->dict:
+async def get_unified_metrics() -> Dict[str, Any]:
+    """Retrieve unified metrics from integration service."""
+    success, response = _send_request("GET", "/api/metrics/dashboard")
+    return response or {}
 
-    try:
 
-        abc={}
-        abc["email"]=email
-        abc["username"]=username
-        abc["discord_id"]=user_id
+async def broadcast_notification(message: str, title: str = "Notification") -> bool:
+    """Broadcast a notification to all users."""
+    payload = {
+        "content": message,
+        "title": title,
+    }
+    success, _ = _send_request("POST", "/api/notifications", payload)
+    return success
 
-        response=requests.post(INTEGRATION_SERVICE_URL+"/api/users",json=abc,timeout=5)
 
-        if response.status_code==200:
-            return response.json()
-        else:
-            if response.status_code==201:
-                return response.json()
-
-    except Exception as e:
-
-        logger.warning("user kaputt")
-        logger.warning(e)
-
-    return {}
-
-async def get_unified_metrics()->dict:
-
-    try:
-
-        response=requests.get(INTEGRATION_SERVICE_URL+"/api/metrics/dashboard",timeout=5)
-
-        if response.status_code==200:
-
-            stuff=response.json()
-
-            return stuff
-
-    except Exception as e:
-
-        logger.warning("metrics gehen nicht")
-        logger.warning(e)
-
-    return {}
-
-async def broadcast_notification(message:str,title:str="Notification")->bool:
-
-    try:
-
-        hahaha={}
-        hahaha["content"]=message
-        hahaha["title"]=title
-
-        response=requests.post(INTEGRATION_SERVICE_URL+"/api/notifications",json=hahaha,timeout=5)
-
-        if response.status_code==200:
-            return True
-        else:
-            if response.status_code==201:
-                return True
-
-        return False
-
-    except Exception as e:
-
-        logger.warning("alles kaputt")
-        logger.warning(e)
-
-        return False
-
-if __name__=="__main__":
-
+if __name__ == "__main__":
     import asyncio
 
     async def test():
+        result = await notify_server_created("test-123", "test-server")
+        print("Server created notification:", result)
 
-        result=await notify_server_created("test-123","test-server")
-
-        print("gemacht?",result)
-
-        metrics=await get_unified_metrics()
-
-        print("zahlen:",metrics)
+        metrics = await get_unified_metrics()
+        print("Metrics retrieved:", bool(metrics))
 
     asyncio.run(test())

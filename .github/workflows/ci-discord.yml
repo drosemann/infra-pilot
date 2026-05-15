@@ -5,98 +5,19 @@ on:
     branches: [ main, develop ]
     paths:
       - 'services/discord-service/**'
-      - '.github/workflows/ci-discord.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'services/discord-service/**'
 
-env:
-  SERVICE_PATH: services/discord-service
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/discord-service
-
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    name: Lint & Format Check
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: '${{ env.SERVICE_PATH }}/package-lock.json'
-      
-      - name: Install dependencies
-        run: cd ${{ env.SERVICE_PATH }} && npm ci
-      
-      - name: Run ESLint
-        run: cd ${{ env.SERVICE_PATH }} && npm run lint || true
-      
-      - name: Type check
-        run: cd ${{ env.SERVICE_PATH }} && npm run type-check || true
-
-  test:
-    runs-on: ubuntu-latest
-    name: Unit Tests
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: '${{ env.SERVICE_PATH }}/package-lock.json'
-      
-      - name: Install dependencies
-        run: cd ${{ env.SERVICE_PATH }} && npm ci
-      
-      - name: Run tests
-        run: cd ${{ env.SERVICE_PATH }} && npm run test || true
-
-  docker:
-    needs: [lint, test]
-    runs-on: ubuntu-latest
-    name: Build Docker Image
-    if: github.event_name == 'push'
-    
+  node-service:
+    name: Discord service CI
+    uses: ./.github/workflows/reusable-node-service.yml
     permissions:
       contents: read
       packages: write
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
-      - name: Log in to Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
-      
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: ${{ env.SERVICE_PATH }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+    secrets: inherit
+    with:
+      service-path: services/discord-service
+      image-name: ${{ github.repository }}/discord-service

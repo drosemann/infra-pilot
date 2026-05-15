@@ -51,12 +51,12 @@ jobs:
       - name: Run Playwright tests (Demo gating enabled)
         run: |
           cd services/management-panel
-          VITE_DEMO_FEATURE_ENABLED=true npm run test:playwright || true
+          VITE_DEMO_FEATURE_ENABLED=true npm run test:playwright
         env:
           VITE_DEMO_FEATURE_ENABLED: true
       - name: Run Playwright tests (Demo gating disabled)
         run: |
           cd services/management-panel
-          VITE_DEMO_FEATURE_ENABLED=false npm run test:playwright || true
+          VITE_DEMO_FEATURE_ENABLED=false npm run test:playwright
         env:
           VITE_DEMO_FEATURE_ENABLED: false

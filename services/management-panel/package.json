@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "vite --open",
-    "dev:backend": "node --loader ts-node/esm server/index.ts",
+    "dev:backend": "TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --loader ts-node/esm server/index.ts",
     "build": "vite build",
     "lint": "tsc --noEmit --pretty false",
     "preview": "vite preview",
     "test:playwright": "npx playwright test --config playwright.config.ts",
     "playwright:install": "npx playwright install",
-    "seed:customers": "node ./scripts/seed-customers.mjs"
+    "seed:customers": "node ./scripts/seed-customers.mjs",
+    "test": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/**/*.test.ts",
+    "test:coverage": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' NODE_V8_COVERAGE=coverage/v8 node --test --experimental-test-coverage --loader ts-node/esm tests/**/*.test.ts",
+    "test:api": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/integration/**/*.test.ts",
+    "test:unit": "NODE_ENV=test TS_NODE_TRANSPILE_ONLY=true TS_NODE_COMPILER_OPTIONS='{\"module\":\"ESNext\",\"moduleResolution\":\"bundler\",\"allowImportingTsExtensions\":true}' node --test --loader ts-node/esm tests/unit/**/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.5",

@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'express-cors';
+import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import http from 'http';
@@ -46,8 +46,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.VITE_SUPABASE_URL || 'http://localhost:54321';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || 'test-anon-key';
+let supabase = createClient(supabaseUrl, supabaseKey);
+
+export function setSupabaseClientForTests(client: ReturnType<typeof createClient>) {
+  supabase = client;
+}
+
+export { app };
 
 // Middleware
 app.use(cors());
@@ -591,12 +597,25 @@ app.post('/api/seed-demo', verifyAuth, async (req: Request, res: Response) => {
         if (data) insertedCustomers.push(data);
       }
     }
-    // Prepare apps for seed (optional)
+    // Prepare apps for seed (optional). Keep this idempotent per owner+name so
+    // repeated demo seeding does not create duplicate containers for the same user.
     const demoApps = [
       { user_id: userId, name: 'demo-app', image: 'nginx:latest', status: 'stopped', memory_limit: '256mb' },
       { user_id: userId, name: 'monitor', image: 'prom/prometheus', status: 'stopped', memory_limit: '256mb' },
     ];
-    const { data: insertedApps, error: appError } = await supabase.from('docker_apps').insert(demoApps).select().then((r) => ({ data: r.data, error: null }));
+    let insertedApps: any[] = [];
+    for (const appSeed of demoApps) {
+      const { data: exists } = await supabase
+        .from('docker_apps')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', appSeed.name)
+        .single();
+      if (!exists) {
+        const { data } = await supabase.from('docker_apps').insert(appSeed).select().single();
+        if (data) insertedApps.push(data);
+      }
+    }
 
     const customersSeeded = Array.isArray(insertedCustomers) ? insertedCustomers.length : 0;
     const appsSeeded = Array.isArray(insertedApps) ? insertedApps.length : 0;
@@ -646,8 +665,10 @@ app.delete('/api/customers/:customerId', verifyAuth, async (req: Request, res: R
   }
 });
 
-app.listen(port, () => {
-  console.log(`✨ Docker Panel API running on http://localhost:${port}`);
-  console.log(`📡 Frontend should be at http://localhost:5173`);
-  console.log(`🐳 Make sure Supabase and Docker are configured in .env.local`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, () => {
+    console.log(`✨ Docker Panel API running on http://localhost:${port}`);
+    console.log(`📡 Frontend should be at http://localhost:5173`);
+    console.log(`🐳 Make sure Supabase and Docker are configured in .env.local`);
+  });
+}

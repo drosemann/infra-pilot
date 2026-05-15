@@ -22,8 +22,8 @@ jobs:
       service-path: services/management-panel
       image-name: ${{ github.repository }}/management-panel
       run-build: true
-      test-command: npm run test -- --coverage
+      test-command: npm run test:coverage
       upload-coverage: true
-      coverage-files: ./services/management-panel/coverage/coverage-final.json
+      coverage-files: ./services/management-panel/coverage/v8
       coverage-flag: dashboard
       coverage-name: dashboard-coverage

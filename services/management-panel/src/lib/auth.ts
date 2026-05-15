@@ -1,7 +1,7 @@
 import { createClient, Session } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL || 'http://localhost:54321') as string;
+const supabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'test-anon-key') as string;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

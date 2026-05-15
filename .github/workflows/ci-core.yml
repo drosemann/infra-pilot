@@ -35,7 +35,7 @@ jobs:
         run: cd ${{ env.SERVICE_PATH }} && mvn -B clean package
       
       - name: Run tests with coverage
-        run: cd ${{ env.SERVICE_PATH }} && mvn -B test jacoco:report
+        run: cd ${{ env.SERVICE_PATH }} && mvn -B test jacoco:report jacoco:check
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

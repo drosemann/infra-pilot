@@ -116,11 +116,26 @@ for svc in "$ROOT_DIR"/services/*; do
     fi
   fi
 
-  # Mark if this service contains any test artifact (node script or python requirements)
+
+  if [ -f "$svc/pom.xml" ]; then
+    echo "--> Java/Maven: $name"
+    HAS_TESTS=true
+    if command -v mvn >/dev/null 2>&1; then
+      (cd "$svc" && mvn -B test jacoco:report jacoco:check) && PASSED=$((PASSED + 1)) || FAILED=$((FAILED + 1))
+    else
+      echo "---- Skipping Maven tests for $name (mvn not found)"
+      SKIPPED=$((SKIPPED + 1))
+    fi
+  fi
+
+  # Mark if this service contains any test artifact (node, python, or Maven)
   if [ -f "$svc/package.json" ]; then
     HAS_TESTS=true
   fi
   if [ -f "$svc/requirements.txt" ]; then
+    HAS_TESTS=true
+  fi
+  if [ -f "$svc/pom.xml" ]; then
     HAS_TESTS=true
   fi
 done

@@ -2,12 +2,6 @@
 
 **Infrastructure Orchestration & Management Platform**
 
-[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)](https://www.python.org/)
-[![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-brightgreen?logo=node.js)](https://nodejs.org/)
-[![Java 8+](https://img.shields.io/badge/Java-8%2B-orange?logo=java)](https://www.oracle.com/java/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-__COVERAGE__%25-brightgreen)](scripts/coverage_report.sh)
-
 ## 📌 Overview
 
 **Infra Pilot** ist eine umfassende Infrastructure-Orchestration-Plattform, die es Entwicklern und DevOps-Teams ermöglicht, komplexe Multi-Cloud-Infrastrukturen automatisiert zu verwalten. Das System provisioner Spielserver, verwaltet VPS-Lebenszyklen und orchestriert Ressourcen über Discord, Web-Dashboards und RESTful APIs.

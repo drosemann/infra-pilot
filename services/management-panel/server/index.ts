@@ -7,12 +7,20 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 import { promises as fs } from 'fs';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config({ path: '.env.local' });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 3001;
+
+const customersLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Simple observability instrumentation
 const APP_VERSION = process.env.APP_VERSION || 'dev';
@@ -493,7 +501,7 @@ app.get('/api/demo/flag', (_req: Request, res: Response) => {
 
 // Minimal Business Mode MVP: expose a placeholder endpoint for customers
 // Access controlled via existing verifyAuth middleware
-app.get('/api/customers', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/customers', verifyAuth, customersLimiter, async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
     const { data: cfg } = await supabase.from('setup_config').select('mode').single();
@@ -549,7 +557,7 @@ app.get('/api/customers', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/customers - Create a new customer (Business Mode only)
-app.post('/api/customers', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/customers', verifyAuth, customersLimiter, async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   const { name, email } = req.body;
   try {

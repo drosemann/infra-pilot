@@ -5,7 +5,7 @@ Reviewed repository code for:
 - command injection, path traversal, deserialization
 - hardcoded secrets, unsafe dependencies
 - race conditions and information leakage in error handling
-- GPL-3.0 compatibility concerns for external libraries
+- MIT license notice and dependency-license inventory concerns
 
 ## Real issues found
 
@@ -72,12 +72,12 @@ Authorization/state integrity issues (orphaned records, mistaken container owner
 **Impact**
 Supply-chain and CI/runtime security posture degradation.
 
-### 6) Compliance risk (GPL-3.0) — No machine-readable SBOM/license inventory for dependencies
+### 6) Compliance risk (MIT project) — No machine-readable SBOM/license inventory for dependencies
 **Where**
 - Dependency manifests across repo (`package.json`, `requirements.txt`, `pom.xml`)
 
 **Why this is real**
-- For GPL-3.0 distribution, you must ensure dependency license compatibility and preserve notices/source obligations where applicable.
+- For MIT-licensed distribution, preserve the repository license notice and maintain dependency license attribution/compatibility records where applicable.
 - Repo currently lacks an auditable dependency license report/SBOM and documented compliance workflow.
 
 **Impact**

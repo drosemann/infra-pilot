@@ -1,123 +1,75 @@
 # Documentation Index
 
-Welcome to the Infra Pilot Infrastructure Orchestration Platform documentation.
+Willkommen in der Infra-Pilot-Dokumentation. Dieser Index listet bewusst nur Dokumente, die aktuell im Repository vorhanden sind.
 
-## 📑 Quick Navigation
+## Schnellstart
 
-### 🏗️ Architecture & Design
-- [System Overview](architecture/overview.md) - High-level architecture
-- [Service Specifications](architecture/) - Individual service docs
-- [Data Flow & Integration](architecture/data-flow.md)
-- [Integration Patterns](architecture/integration-patterns.md)
+- [Quickstart](quickstart.md)
+- [Local Development Setup](setup/local-development.md)
+- [Management Panel README](../services/management-panel/README.md)
+- [Docker Panel Quick Start](../services/management-panel/README-DOCKER-PANEL.md)
+- [zero-native Management Panel Shell](desktop/zero-native-management-panel.md)
 
-### 🚀 Setup & Installation
-- [zero-native Management Panel Shell](desktop/zero-native-management-panel.md) - Native desktop WebView shell for the management panel
-- [Local Development Setup](setup/local-development.md) - Get started locally
-- [Docker Deployment](setup/docker-setup.md) - Using Docker Compose
-- [Kubernetes Deployment](setup/kubernetes-deploy.md) - K8s manifests
-- [Environment Configuration](setup/environment-config.md) - Config reference
-- [SSL/TLS Setup](setup/ssl-tls-setup.md) - Secure connections
+## Architektur
 
-### 🛠️ Operations & Deployment
-- [Deployment Guide](operations/deployment-guide.md) - Prod deployment
-- [Scaling Strategy](operations/scaling-strategy.md) - Horizontal/vertical scaling
-- [Monitoring & Observability](operations/monitoring-observability.md) - Metrics, logs, traces
-- [Troubleshooting](operations/troubleshooting.md) - Common issues & solutions
-- [Backup & Recovery](operations/backup-recovery.md) - Data protection
-- [Security Hardening](operations/security-hardening.md) - Production security
+- [System Overview](architecture/overview.md)
+- [Orchestrator Agent](architecture/orchestrator-agent.md)
 
-### 👨‍💻 Development
-- [Development Workflow](development/development-workflow.md) - Contributing guidelines
-- [Testing Strategy](development/testing-strategy.md) - Testing best practices
-- [Code Standards](development/code-standards.md) - Coding conventions
-- [Debugging Tips](development/debugging-tips.md) - Troubleshooting dev issues
-- [AI Assistant Playbook](development/ai-assistant-playbook.md) - Practical guardrails for AI contributors
+## Development & CI
 
-### 📡 API Documentation
-- [Service Core API](api/service-core-api.md)
-- [Orchestrator Agent API](api/orchestrator-api.md)
-- [Discord Webhooks](api/discord-webhooks.md)
-- [Dashboard API](api/dashboard-api.md)
+- [Development Workflow](development/development-workflow.md)
+- [Code Standards](development/code-standards.md)
+- [CI Architecture](development/ci-architecture.md)
+- [AI Assistant Playbook](development/ai-assistant-playbook.md)
+- [Contributing](../CONTRIBUTING.md)
+- [Docs Contributing](CONTRIBUTING.md)
 
-Branding
-- Cosmic Infra branding documented at docs/branding.md
+## Testing
 
+- [Testing Overview](TESTING.md)
+- [Testing Guidelines](testing-guidelines.md)
+- [Running Tests](testing/running_tests.md)
+- [Automated Test Suite](testing/automated-test-suite.md)
+- [Test Plan](testing/test_plan.md)
+- [Provider Neutral Mapping](testing/provider_neutral_mapping.md)
+- [CI Demo Gate](CI_DEMO_GATE.md)
 
-## 🎯 Getting Started
+## Operations
 
-**New to Infra Pilot?** Start here:
+- [Deployment Guide](operations/deployment-guide.md)
+- [Workflow Optimization Audit](operations/workflow-optimization-audit.md)
 
-1. [Local Development Setup](setup/local-development.md) - 15 minutes
-2. [System Overview](architecture/overview.md) - Understand the architecture
-3. [Development Workflow](development/development-workflow.md) - Ready to code?
+> Hinweis: `docker-compose.yml` ist aktuell ein Stack-Scaffold. Für einen vollständigen Compose-Start fehlen derzeit noch mehrere Service-Dockerfiles und Monitoring-Konfigurationsdateien.
 
-**Deploying to production?**
+## Branding & Design
 
-1. [Deployment Guide](operations/deployment-guide.md)
-2. [Scaling Strategy](operations/scaling-strategy.md)
-3. [Monitoring & Observability](operations/monitoring-observability.md)
-4. [Security Hardening](operations/security-hardening.md)
+- [Branding](branding.md)
+- [Branding Guidelines](branding-guidelines.md)
+- [Design System](design-system.md)
+- [Design Tokens](design-tokens.md)
+- [Repository Branding](../branding/branding.md)
 
----
+## Service-Dokumentation
 
-## 📚 Key Concepts
+- [Management Panel](../services/management-panel/README.md)
+- [Management Panel Architecture](../services/management-panel/docs/ARCHITECTURE.md)
+- [Management Panel Database Setup](../services/management-panel/docs/DATABASE_SETUP.md)
+- [Management Panel Personal Mode](../services/management-panel/docs/PERSONAL_MODE.md)
+- [Discord Service](../services/discord-service/README.md)
+- [Orchestrator Agent](../services/orchestrator-agent/README.md)
+- [Integration Service](../services/integration-service/README.md)
 
-### Services
-- **Management Dashboard** - Web UI for operations
-- **Orchestrator Agent** - Core provisioning engine
-- **Discord Service** - Bot interface
-- **Service Core** - Game server management
+## Security & Support
 
-### Architecture Pattern
-Multi-service architecture with clear boundaries, API-first design, and event-driven integrations.
+- [Security Policy](../SECURITY.md)
+- [Security Review 2026-05-04](security/security-review-2026-05-04.md)
+- [Code of Conduct](../CODE_OF_CONDUCT.md)
+- [Owners](../OWNERS.md)
 
-### Deployment Options
-- Docker Compose (dev/test)
-- Kubernetes (prod)
-- Terraform (infrastructure as code)
+## License
+
+Infra Pilot ist unter der [MIT License](../LICENSE) lizenziert.
 
 ---
 
-## 🔍 Glossary
-
-| Term | Definition |
-|------|-----------|
-| **Orchestrator** | Core service managing provisioning and resource allocation |
-| **Service Core** | Game server lifecycle management module |
-| **Provisioning** | Automated creation and configuration of infrastructure |
-| **RPC** | Remote Procedure Call - service-to-service communication |
-| **Webhook** | Event-driven HTTP callback |
-
-See [GLOSSARY.md](GLOSSARY.md) for complete terminology.
-
----
-
-## ❓ FAQ
-
-**Q: How do I set up a local development environment?**  
-A: Follow [Local Development Setup](setup/local-development.md)
-
-**Q: Where's the API documentation?**  
-A: See [API Documentation](api/)
-
-**Q: How do I deploy to production?**  
-A: Read [Deployment Guide](operations/deployment-guide.md)
-
-**Q: What are the system requirements?**  
-A: See [Environment Configuration](setup/environment-config.md)
-
-**Q: How do I report a security issue?**  
-A: See [SECURITY.md](../SECURITY.md)
-
----
-
-## 🆘 Getting Help
-
-- **Issues:** [GitHub Issues](https://github.com/DaaanielTV/infra-pilot/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
-- **Contributing:** [CONTRIBUTING.md](../CONTRIBUTING.md)
-
----
-
-**Last Updated:** April 2026  
-**Documentation Version:** 1.0
+**Last Updated:** May 2026

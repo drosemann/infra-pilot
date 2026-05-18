@@ -2,6 +2,17 @@
 
 Create and provision Pterodactyl servers from Discord workflows.
 
+## Current status
+
+This directory currently contains the bot source (`index.js`, `integration.js`) and `.env.example`, but no service-local `package.json`. Before running the bot in a fresh checkout, add a dependency manifest or provide the required packages from your runtime environment.
+
+Expected runtime dependencies:
+
+- Node.js 18+
+- `discord.js`
+- `axios`
+- `dotenv`
+
 ## Features
 
 - Multiple server templates (Minecraft, Node.js, TeamSpeak, Database, Python).
@@ -13,33 +24,23 @@ Create and provision Pterodactyl servers from Discord workflows.
 ## Prerequisites
 
 - Node.js 18+
-- npm
 - A Discord bot application
 - A reachable Pterodactyl panel
+- Installed/provided Node dependencies listed above
 
 ## Branding
+
 - Cosmic Infra branding is applied across the Infra Pilot UI. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
 - Logo variants are available, with a simple selector implemented in the management panel to switch between default and alt IP lockup designs.
 - UI elements reuse the branding tokens for consistency (buttons, inputs, cards).
 
-## Installation
+## Configuration
 
 ```bash
-npm install
 cp .env.example .env
 ```
 
 Update `.env` with your credentials and IDs.
-
-## Usage
-
-```bash
-node index.js
-```
-
-Then run `/server create` in your configured channel.
-
-## Configuration
 
 Environment variables include:
 
@@ -52,10 +53,20 @@ Environment variables include:
 - `MINECRAFT_EGG_ID`, `NODEJS_EGG_ID`, `TEAMSPEAK_EGG_ID`, `DATABASE_EGG_ID`, `PYTHON_EGG_ID`
 - `LOCATION_ID`
 
+## Syntax check
+
+```bash
+node --check index.js
+```
+
+## Usage after dependencies are installed
+
+```bash
+node index.js
+```
+
+Then run `/server create` in your configured channel.
+
 ## License
 
-This module is distributed under the repository GPLv3 license.
-
-## Branding
-- Cosmic Infra branding is used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
-- Alternate logo variants exist and can be surfaced in the branding assets. Use the runtime selector in the management panel to switch logo variants if needed.
+This module is distributed under the repository MIT License. See [LICENSE](../../LICENSE).

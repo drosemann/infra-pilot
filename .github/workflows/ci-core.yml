@@ -11,6 +11,9 @@ on:
     paths:
       - 'services/service-core/**'
 
+permissions:
+  contents: read
+
 env:
   SERVICE_PATH: services/service-core
   REGISTRY: ghcr.io

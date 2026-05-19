@@ -82,3 +82,19 @@ export const useConfig = () => {
   }
   return context;
 };
+
+
+export interface ServerPreset {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  startupCommand: string;
+  resources: {
+    ram: string;
+    cpu: number;
+    disk: string;
+  };
+  ports: Array<{ hostPort: number; containerPort: number; protocol: 'tcp' | 'udp' }>;
+  environmentVars: Record<string, string>;
+}

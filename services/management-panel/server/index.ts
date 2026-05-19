@@ -8,6 +8,7 @@ import { dirname } from 'path';
 import path from 'path';
 import { promises as fs } from 'fs';
 import rateLimit from 'express-rate-limit';
+import { SERVER_PRESETS } from './presets.js';
 
 dotenv.config({ path: '.env.local' });
 
@@ -192,6 +193,12 @@ app.post('/api/setup/init', async (req: Request, res: Response) => {
 // ============================================================================
 // DOCKER APP ROUTES (require auth)
 // ============================================================================
+
+
+// GET /api/presets - List server presets
+app.get('/api/presets', verifyAuth, async (_req: Request, res: Response) => {
+  res.json(SERVER_PRESETS);
+});
 
 // GET /api/apps - List all apps for current user
 app.get('/api/apps', verifyAuth, async (req: Request, res: Response) => {

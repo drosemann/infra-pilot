@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { DockerApp, SetupStatus, UserProfile, AppConfig, Customer } from './types';
+import { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset } from './types';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -39,6 +39,13 @@ class APIClient {
       displayName,
       mode,
     });
+    return res.data;
+  }
+
+
+
+  async listPresets(): Promise<ServerPreset[]> {
+    const res = await this.api.get('/api/presets');
     return res.data;
   }
 

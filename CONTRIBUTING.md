@@ -1,1 +1,1 @@
-Just open a PR request; we might want some minor changes, but we won't close anything! 
+Please submit a pull request for any proposed changes. Minor refinements are welcome, and we keep all requests open for review rather than closing them prematurely.

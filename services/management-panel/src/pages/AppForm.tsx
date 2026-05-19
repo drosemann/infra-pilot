@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
-import { DockerApp } from '../lib/types';
+import { ServerPreset } from '../lib/types';
 import { toast } from 'sonner';
 
 export const AppForm = () => {
@@ -25,12 +25,44 @@ export const AppForm = () => {
   const [newEnvKey, setNewEnvKey] = useState('');
   const [newEnvValue, setNewEnvValue] = useState('');
   const [newVolume, setNewVolume] = useState({ hostPath: '', containerPath: '' });
+  const [presets, setPresets] = useState<ServerPreset[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState('');
 
   useEffect(() => {
     if (isEdit && appId) {
       loadApp();
     }
+    loadPresets();
   }, [appId, isEdit]);
+
+
+  const loadPresets = async () => {
+    try {
+      const data = await apiClient.listPresets();
+      setPresets(data);
+    } catch (error) {
+      toast.error('Failed to load presets');
+    }
+  };
+
+  const applyPreset = (presetId: string) => {
+    const preset = presets.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      name: prev.name || preset.name,
+      image: preset.image,
+      description: preset.description,
+      memoryLimit: preset.resources.ram,
+      ports: preset.ports.map((port) => ({
+        hostPort: String(port.hostPort),
+        containerPort: String(port.containerPort),
+        protocol: port.protocol,
+      })),
+      environmentVars: preset.environmentVars,
+    }));
+  };
 
   const loadApp = async () => {
     try {
@@ -102,6 +134,35 @@ export const AppForm = () => {
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {!isEdit && (
+          <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Create your first server
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              Pick a preset to pre-fill resources, image, ports, and environment variables.
+            </p>
+            <div className="flex gap-2">
+              <select
+                value={selectedPreset}
+                onChange={(e) => {
+                  setSelectedPreset(e.target.value);
+                  applyPreset(e.target.value);
+                }}
+                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              >
+                <option value="">Select a preset</option>
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </fieldset>
+        )}
+
         {/* Basic Info */}
         <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">

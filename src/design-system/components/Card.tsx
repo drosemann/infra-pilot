@@ -12,11 +12,14 @@ type CardProps = {
 export const Card: React.FC<CardProps> = ({ title, subtitle, children, variant = 'elevated', compact = false }) => {
   const theme = useTheme() || {} as any;
   const styles: React.CSSProperties = {
-    background: theme.colors?.surface ?? '#111',
+    background: `linear-gradient(180deg, ${theme.colors?.surface ?? '#1a2333'} 0%, ${theme.colors?.surfaceAlt ?? '#101726'} 100%)`,
     border: `1px solid ${theme.colors?.border ?? '#222'}`,
     borderRadius: (theme.radii?.medium ?? 8) as any,
     padding: (theme.space?.md ?? 12) as any,
-    boxShadow: variant === 'elevated' ? (theme.shadows?.elevation2 ?? 'none') as any : 'none',
+    boxShadow:
+      variant === 'elevated'
+        ? `${theme.shadows?.skeuoRaised ?? theme.shadows?.elevation2 ?? 'none'}, ${theme.shadows?.skeuoInset ?? ''}`
+        : 'none',
   };
   return (
     <div className="ds-card" style={styles}>

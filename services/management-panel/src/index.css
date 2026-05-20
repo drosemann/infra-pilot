@@ -5,6 +5,10 @@
 :root {
   --color-light: #ffffff;
   --color-dark: #171717;
+  --skeuo-surface: linear-gradient(180deg, #fbfdff 0%, #e8eef7 100%);
+  --skeuo-surface-dark: linear-gradient(180deg, #2a3343 0%, #1a2130 100%);
+  --skeuo-shadow-raised: 0 10px 24px rgba(15, 23, 42, 0.2), 0 2px 5px rgba(15, 23, 42, 0.16);
+  --skeuo-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -2px 3px rgba(15, 23, 42, 0.12);
 }
 
 .accent-text {
@@ -12,7 +16,7 @@
 }
 
 .button {
-  @apply bg-gradient-to-r bg-blue-500;
+  @apply bg-gradient-to-b from-blue-400 to-blue-600;
 }
 
 body {
@@ -22,11 +26,36 @@ body {
 }
 
 .input-field {
-  @apply w-full px-3 py-2 rounded-md bg-transparent border-2 border-slate-200 focus:outline-none focus:border-blue-500 transition-colors;
+  @apply w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:border-blue-500 transition-colors;
+  background: var(--skeuo-surface);
+  box-shadow: var(--skeuo-shadow-inset);
 }
 
 .auth-button {
-  @apply w-full py-2 rounded-md text-white font-medium button hover:opacity-90 transition-opacity;
+  @apply w-full py-2 rounded-md text-white font-medium button transition-all;
+  box-shadow: var(--skeuo-shadow-raised), inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+.auth-button:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.08);
+}
+
+.auth-button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 3px 6px rgba(15, 23, 42, 0.2);
+}
+
+.skeuo-card {
+  background: var(--skeuo-surface);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: var(--skeuo-shadow-raised), var(--skeuo-shadow-inset);
+}
+
+.dark .skeuo-card {
+  background: var(--skeuo-surface-dark);
+  border-color: rgba(100, 116, 139, 0.4);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.55), inset 0 1px 0 rgba(148, 163, 184, 0.18);
 }
 
 .link-text {

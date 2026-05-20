@@ -18,9 +18,16 @@ export const Button: React.FC<ButtonProps> = ({ label, variant = 'primary', onCl
   } as React.CSSProperties;
   const styles: React.CSSProperties = {
     ...base,
-    background: variant === 'primary' ? theme.colors?.primary ?? '#4ea8ff' : 'transparent',
+    background:
+      variant === 'primary'
+        ? `linear-gradient(180deg, ${theme.colors?.primary ?? '#63b3ff'} 0%, ${theme.colors?.primaryDark ?? '#2d7dd2'} 100%)`
+        : 'transparent',
     color: variant === 'ghost' ? theme.colors?.text ?? '#fff' : '#fff',
     opacity: disabled ? 0.5 : 1,
+    boxShadow:
+      variant === 'primary'
+        ? `${theme.shadows?.skeuoRaised ?? '0 8px 20px rgba(0,0,0,0.25)'}, ${theme.shadows?.skeuoInset ?? 'inset 0 1px 0 rgba(255,255,255,0.25)'}`
+        : 'none',
   };
   return (
     <button onClick={onClick} disabled={disabled} style={styles} aria-label={label}>

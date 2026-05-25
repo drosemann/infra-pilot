@@ -69,6 +69,23 @@ python src/backup.py
 python src/resource_tracker.py
 ```
 
+## Project Structure
+
+The service has been modularized into focused Python modules under `src/`:
+
+```
+src/
+├── __init__.py          # Package marker
+├── alerts.py            # Unified alert system (AlertManager)
+├── announcements.py     # Announcement scheduler (AnnouncementScheduler)
+├── auth.py              # Authentication & security (AuthManager)
+├── commands.py          # Cross-platform commands (CommandExecutor)
+├── events.py            # Event broadcasting (EventBroadcaster)
+├── messaging.py         # Message bridge Discord↔Minecraft (MessageBridge)
+├── permissions.py       # Permission system (PermissionManager)
+├── users.py             # User profiles & linking (UserProfileManager)
+```
+
 ## Environment Variables
 
 - `DASHBOARD_URL` - Management dashboard URL

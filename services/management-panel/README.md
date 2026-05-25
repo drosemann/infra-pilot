@@ -130,6 +130,14 @@ See the repository guide at [`../../docs/desktop/zero-native-management-panel.md
 - Volume/mount management
 - Memory and CPU limits
 - Simple dashboard with app grid
+- Server performance monitoring with real-time metrics (TPS, CPU, memory, player count)
+- Health check dashboard with uptime tracking and incident timeline
+- Backup job automation and scheduling with retention policies
+- Access log viewer for authentication and console events
+- Reports generation with CSV/PDF export
+- Alert configuration (metric thresholds) and alert history
+- Maintenance window scheduling
+- Config version control with snapshot and rollback
 
 ### Business Mode (Roadmap) 🔜
 - Customer accounts and management
@@ -160,15 +168,16 @@ See the repository guide at [`../../docs/desktop/zero-native-management-panel.md
 ```
 services/management-panel/
 ├── src/
-│   ├── pages/           # Setup, Dashboard, AppForm, AppDetail
-│   ├── components/      # MainLayout, shared components
+│   ├── pages/           # Setup, Dashboard, AppForm, AppDetail, Monitoring, AccessLogs, Backups, Reports, Settings
+│   ├── components/      # MainLayout, shared components, monitoring/backup/alert components
 │   ├── lib/             # API client, auth, types, feature gates
 │   ├── App.tsx          # Main router and mode provider
 │   └── main.tsx         # React entry point
 ├── server/
-│   └── index.ts         # Express API (445 lines, 30+ routes)
+│   ├── index.ts         # Express API (1142 lines, 60+ routes)
+│   └── presets.ts       # Server preset definitions
 ├── db/
-│   └── schema.sql       # PostgreSQL schema with RLS
+│   └── schema.sql       # PostgreSQL schema with RLS (server_metrics, access_logs, config_versions, maintenance_windows, backup_jobs, backup_status, alert_configs, alert_history, health_checks)
 ├── docs/
 │   ├── PERSONAL_MODE.md # Mode architecture
 │   ├── DATABASE_SETUP.md # Setup guide
@@ -210,6 +219,57 @@ GET    /api/apps/:appId/logs        Get logs (paginated)
 GET    /api/user                    Current user profile
 GET    /api/config/mode             Get mode (personal/business)
 GET    /health                      API health check
+```
+
+### Monitoring & Metrics
+```
+GET    /api/apps/:appId/metrics            Server metrics (TPS, CPU, memory, players) with time range
+GET    /api/metrics/aggregated             Aggregated metrics across all apps
+```
+
+### Access Logs & Config Versions
+```
+GET    /api/logs/access                    Access logs (paginated)
+GET    /api/apps/:appId/config-versions    Config version history
+POST   /api/apps/:appId/config-versions    Create config snapshot
+POST   /api/apps/:appId/config-versions/:version/rollback  Rollback to version
+```
+
+### Maintenance Windows
+```
+GET    /api/maintenance-windows            List maintenance windows
+POST   /api/maintenance-windows            Create maintenance window
+PATCH  /api/maintenance-windows/:id        Update window
+```
+
+### Backups
+```
+GET    /api/backup-jobs                    List backup jobs
+POST   /api/backup-jobs                    Create backup job
+PATCH  /api/backup-jobs/:id                Update job
+DELETE /api/backup-jobs/:id                Delete job
+GET    /api/backup-jobs/:jobId/status      Backup execution history
+```
+
+### Alerting
+```
+GET    /api/alert-configs                  List alert configurations
+POST   /api/alert-configs                  Create alert config
+PATCH  /api/alert-configs/:id              Update alert config
+DELETE /api/alert-configs/:id              Delete alert config
+GET    /api/alert-history                  Alert trigger history
+POST   /api/alert-history/:id/acknowledge  Acknowledge alert
+```
+
+### Health Checks
+```
+GET    /api/health-checks                  Health check results (optional ?app_id= filter)
+```
+
+### Reports
+```
+GET    /api/reports                        Generate report (optional start_date, end_date)
+GET    /api/reports/export                 Export report (?format=csv|pdf)
 ```
 
 ---
@@ -281,20 +341,15 @@ npm run preview
 
 ---
 
-## 🐳 Docker Integration (TODO)
+## 🐳 Docker Integration
 
-Currently, the panel stores app configurations. To add actual Docker support:
+The panel stores app configurations and manages container state via Supabase. Docker API integration for live container operations (start/stop/restart) is wired through the backend with Dockerode available for socket-level control.
 
-```typescript
-// server/index.ts
-import Docker from 'dockerode';
-
-const docker = new Docker({
-  socketPath: '/var/run/docker.sock'
-});
-```
-
-See implementation guide in [next steps](#-next-steps).
+Real-time monitoring is handled via:
+- **Server metrics** - TPS, CPU, memory, player count, lag spike detection
+- **Health checks** - HTTP ping, port checks with uptime/degraded/down status
+- **Backup system** - Scheduled backup jobs with retention and status tracking
+- **Access logging** - Authentication and console access event recording
 
 ---
 
@@ -332,18 +387,24 @@ See implementation guide in [next steps](#-next-steps).
 - [ ] Audit logging
 - [ ] Team management
 
-### Phase 3 ⏳ Docker Integration
-- [ ] Live container creation
+### Phase 3 ✅ Monitoring & Operations
+- [x] Server metrics collection (TPS, CPU, memory, players)
+- [x] Health check dashboard with uptime tracking
+- [x] Backup job automation and scheduling
+- [x] Access log viewer
+- [x] Alert configuration and history
+- [x] Maintenance window scheduling
+- [x] Config version control with rollback
+- [x] Reports generation with CSV/PDF export
+- [ ] Live container creation (Dockerode integration)
 - [ ] Real-time status (WebSocket)
 - [ ] Image pull workflows
-- [ ] Health monitoring
-- [ ] Resource metrics
 
 ### Phase 4 ⏳ Advanced
 - [ ] White-label system
 - [ ] Multi-tenant RBAC
 - [ ] Multi-region support
-- [ ] Analytics dashboard
+- [ ] Advanced analytics dashboard
 
 ---
 

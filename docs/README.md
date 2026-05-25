@@ -14,6 +14,7 @@ Willkommen in der Infra-Pilot-Dokumentation. Dieser Index listet bewusst nur Dok
 
 - [System Overview](architecture/overview.md)
 - [Orchestrator Agent](architecture/orchestrator-agent.md)
+- [Implementation Plan](implementation-plan.md)
 
 ## Development & CI
 
@@ -58,6 +59,8 @@ Willkommen in der Infra-Pilot-Dokumentation. Dieser Index listet bewusst nur Dok
 - [Discord Service](../services/discord-service/README.md)
 - [Orchestrator Agent](../services/orchestrator-agent/README.md)
 - [Integration Service](../services/integration-service/README.md)
+- [Service Core](../services/service-core/README.md) (Minecraft-Plugin mit Feature-Modulen: economy, worlds, statistics, gameplay, items, server, community)
+- [Implementation Plan](implementation-plan.md) (Phasenplan für ~120 Features)
 
 ## Security & Support
 
@@ -72,4 +75,4 @@ Infra Pilot ist unter der [MIT License](../LICENSE) lizenziert.
 
 ---
 
-**Last Updated:** May 2026
+**Last Updated:** May 2026 (post-refactoring)

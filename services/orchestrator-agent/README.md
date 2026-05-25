@@ -70,7 +70,7 @@ All configurable values are in `config.py` (loaded via environment variables):
 - `vps_manager.py` - Docker SDK-based VPS management
 - `integration.py` - MySQL and REST integration helpers
 - `resource_monitor.py` - System/container stats collection
-- `cogs/*.py` - Discord command cogs (28 total)
+- `cogs/*.py` - Discord command cogs (29 total)
 
 ## Database Tables
 

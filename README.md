@@ -72,12 +72,11 @@ Weitere Details: [Orchestrator Agent README](services/orchestrator-agent/README.
 ```bash
 git clone https://github.com/DaaanielTV/infra-pilot.git
 cd infra-pilot/services/discord-service
+npm install
 cp .env.example .env
 # .env mit Discord- und Pterodactyl-Werten befüllen
 node --check index.js
 ```
-
-Hinweis: Der Discord Service enthält aktuell Quellcode und `.env.example`, aber kein eigenes `package.json`. Für einen produktiven Start müssen die Node-Abhängigkeiten (`discord.js`, `axios`, `dotenv`) zuerst über ein Service-Manifest ergänzt oder in einer übergeordneten Umgebung bereitgestellt werden.
 
 Weitere Details: [Discord Service README](services/discord-service/README.md).
 
@@ -102,11 +101,11 @@ Weitere Details: [Discord Service README](services/discord-service/README.md).
 ├── infra/naming/                     # Provider-neutrale Token-Auflösung
 ├── scripts/                          # Setup-, Test-, Coverage- und Build-Hilfen
 ├── services/
-│   ├── management-panel/             # React/Vite + Express Docker Panel
-│   ├── orchestrator-agent/           # Python Provisioning-/Discord-Agent
-│   ├── discord-service/              # Discord.js Bot Service
-│   ├── integration-service/          # Integrationsnotizen und Requirements
-│   └── service-core/                 # Java/Maven Service-Core-Skeleton
+│   ├── management-panel/             # React/Vite + Express Docker Panel (Pages: Monitoring, Backups, Reports, Settings, AccessLogs)
+│   ├── orchestrator-agent/           # Python Provisioning-/Discord-Agent (25+ Cogs: scaling, backup, health, security, DNS, SSL, …)
+│   ├── discord-service/              # Discord.js Bot Service (20+ Module: tickets, polling, logging, moderation, …)
+│   ├── integration-service/          # Cross-Plattform-Hub (Auth, Events, Messaging, Permissions, Users, …)
+│   └── service-core/                 # Java/Maven Minecraft-Plugin (Features: economy, worlds, stats, items, gameplay, server, community)
 ├── tests/                            # Repo-weite Unit-/Integration-/Smoke-Tests
 └── docs/                             # Projekt-, Architektur-, Testing- und Operations-Doku
 ```
@@ -120,6 +119,7 @@ Modernes Docker-Management-Panel für Self-Hoster und Hosting-Workflows.
 - **Stack:** React 19, TypeScript, Vite, Tailwind CSS, Express.js, Supabase/PostgreSQL.
 - **Modi:** Personal Mode als Standard, Business Mode für Kunden-, Plan- und Demo-Datenflüsse.
 - **Features:** App-/Container-CRUD, Logs, Ressourcenlimits, Setup-Flow, Seed Demo Feature Gate, optionale zero-native Desktop-Shell.
+- **Neue Dashboards/Seiten:** AccessLogs, Backups, Monitoring, Reports, Settings – jeweils mit eigenen Komponenten (HealthCheckDashboard, MetricsOverview, PerformanceChart, PlayerCountChart, ResourceChart, ResourceMonitor, SystemGauge, AccessLogViewer, AlertConfig, AlertHistory, BackupManager, BackupStatus, ConfigVersionControl, MaintenanceScheduler).
 - **Wichtige Skripte:**
   - `npm run dev` startet Frontend und Backend parallel.
   - `npm run dev:frontend` startet nur Vite.
@@ -133,20 +133,32 @@ Python-basierte Provisioning- und Orchestrierungslogik.
 
 - **Stack:** Python 3.9+, Discord.py/aiohttp-Umfeld laut Requirements.
 - **Features:** VPS-Management, Billing-/Pricing-Cogs, Ressourcenmonitoring, Integration Hooks.
+- **Cogs (25+):** alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, cost_optimizer, cost_prediction, dns_manager, health_checks, load_balancer, network_monitor, performance_optimizer, quota_manager, recovery, resource_manager, security_audit, server_migration, snapshot_system, ssl_manager, template_manager, traffic_analysis, troubleshoot, update_manager.
 - **Docker:** Enthält aktuell ein Dockerfile und ist damit der einzige Service, der im Repository direkt als Image gebaut werden kann.
 
 ### Discord Service (`services/discord-service/`)
 
 Discord.js-Service für Pterodactyl-nahe Server-Erstellungsflüsse.
 
-- **Stack:** Node.js 18+, CommonJS, Discord.js/Axios/Dotenv als erwartete Runtime-Abhängigkeiten.
+- **Stack:** Node.js 18+, CommonJS, Discord.js/Axios/Dotenv (package.json jetzt vorhanden).
 - **Features:** `/server create`-Flow, Pterodactyl-User-/Server-Erstellung, Rollen-/Limit-Konfiguration.
+- **Module (20+):** activityTracker, advancedTicketSystem, categoryManager, channelCleanup, customCommands, eventScheduler, messageArchive, messageFilter, messageLogger, messageScheduler, pollCreator, prefixSettings, roleHierarchy, serverStatus, statsGraphs, tempVoiceChannels, topicRotation, verificationLevels, verificationSystem, voiceManager, warningSystem, welcomeMessages.
 - **Konfiguration:** siehe `services/discord-service/.env.example`.
-- **Status:** Ein eigenes `package.json` fehlt derzeit; vor dem Betrieb muss ein Dependency-Manifest ergänzt werden.
+
+### Integration Service (`services/integration-service/`)
+
+Python-basierter Cross-Plattform-Hub für serviceübergreifende Kommunikation.
+
+- **Stack:** Python 3.9+, Flask/FastAPI-Umfeld.
+- **Module:** alerts, announcements, auth, commands, events, messaging, permissions, users.
+- **Aufgabe:** Zentraler Nerv des Gesamtsystems – verbindet Discord-Bot, Minecraft-Plugin, Orchestrator und Management Panel über eine einheitliche API.
 
 ### Service Core (`services/service-core/`)
 
-Java/Maven-Skeleton für Core-Service-Funktionalität. Das Verzeichnis enthält derzeit primär `pom.xml`; eine eigene Service-Dokumentation und Dockerisierung sind noch ausstehend.
+Java/Maven-Minecraft-Plugin mit vollständigem Feature-Set.
+
+- **Stack:** Java, Maven, Paper/Bukkit-API, PlayerServerPlugin als Entry Point.
+- **Feature-Module:** economy (CurrencyExchangeManager, MarketManager, ShopTaxManager), statistics (AchievementsManager, PlayerStatistics, StatisticsCommand), worlds (BorderManager, ResourceWorldManager, WorldCommands), gameplay (DeathPenaltyManager, PlayerTimeWeatherManager, PlaytimeRewardsManager, ResourceMultiplierManager), items (CustomCraftingManager, CustomItemManager), server (AntiCheatManager, CommandCooldownManager, MaintenanceManager, PermissionManager, ResourceLimitsManager, VIPPerksManager), community (ReferralManager, VoteRewardsManager), plus InactivityShutdownTask und PluginMessageListener.
 
 ## Provider-neutrales Token-System
 

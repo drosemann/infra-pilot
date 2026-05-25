@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>Infra Pilot - Player Server Plugin</name>
-    <description>A plugin for managing player servers.</description>
+    <description>A comprehensive plugin for managing player Minecraft servers.</description>
 
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -24,8 +24,9 @@
     <dependencies>
         <dependency>
             <groupId>net.md-5</groupId>
-            <artifactId>bungee-api</artifactId>
-            <version>BungeeCord-API-1.20-R0.2</version>
+            <artifactId>bungeecord-api</artifactId>
+            <version>1.20-R0.2</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.zaxxer</groupId>
@@ -82,22 +83,16 @@
                 <version>0.8.12</version>
                 <executions>
                     <execution>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
+                        <goals><goal>prepare-agent</goal></goals>
                     </execution>
                     <execution>
                         <id>report</id>
                         <phase>test</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
+                        <goals><goal>report</goal></goals>
                     </execution>
                     <execution>
                         <id>check</id>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
+                        <goals><goal>check</goal></goals>
                         <configuration>
                             <rules>
                                 <rule>
@@ -124,7 +119,6 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>com.playerservers.main</mainClass> <!-- Update with your main class -->
                         </manifest>
                     </archive>
                 </configuration>

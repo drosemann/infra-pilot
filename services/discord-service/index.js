@@ -50,6 +50,37 @@ const SERVER_TYPES = {
   }
 };
 
+// --- Load Existing Modules ---
+const TicketSystem = require('./modules/ticketSystem');
+const TicketCommands = require('./modules/ticketCommands');
+const StatsCommands = require('./modules/statsCommands');
+const RoleManager = require('./modules/roleManager');
+const EconomyCommands = require('./modules/economyCommands');
+const DashboardManager = require('./modules/dashboard');
+
+const AdvancedTicketSystem = require('./modules/advancedTicketSystem');
+const ServerStatus = require('./modules/serverStatus');
+const EventScheduler = require('./modules/eventScheduler');
+const PollCreator = require('./modules/pollCreator');
+const RoleHierarchy = require('./modules/roleHierarchy');
+const CustomCommands = require('./modules/customCommands');
+const PrefixSettings = require('./modules/prefixSettings');
+const WarningSystem = require('./modules/warningSystem');
+const VerificationSystem = require('./modules/verificationSystem');
+const MessageFilter = require('./modules/messageFilter');
+const MessageLogger = require('./modules/messageLogger');
+const ActivityTracker = require('./modules/activityTracker');
+const WelcomeMessages = require('./modules/welcomeMessages');
+const VoiceManager = require('./modules/voiceManager');
+const TempVoiceChannels = require('./modules/tempVoiceChannels');
+const MessageScheduler = require('./modules/messageScheduler');
+const ChannelCleanup = require('./modules/channelCleanup');
+const MessageArchive = require('./modules/messageArchive');
+const CategoryManager = require('./modules/categoryManager');
+const TopicRotation = require('./modules/topicRotation');
+const StatsGraphs = require('./modules/statsGraphs');
+const VerificationLevels = require('./modules/verificationLevels');
+
 // --- Utility Functions ---
 function loadServerLimits() {
   try {
@@ -127,12 +158,48 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildIntegrations,
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 // --- State Management ---
 const userRegistrationState = new Map();
+
+// --- Instantiate All Modules ---
+const ticketSystem = new TicketSystem(client);
+const ticketCommands = new TicketCommands(ticketSystem);
+const statsCommands = new StatsCommands(client);
+const roleManager = new RoleManager(client);
+const economyCommands = new EconomyCommands(client);
+const dashboard = new DashboardManager(client);
+
+const advancedTicketSystem = new AdvancedTicketSystem(client, ticketSystem);
+const serverStatus = new ServerStatus(client);
+const eventScheduler = new EventScheduler(client);
+const pollCreator = new PollCreator(client);
+const roleHierarchy = new RoleHierarchy(client, roleManager);
+const customCommands = new CustomCommands(client);
+const prefixSettings = new PrefixSettings(client);
+const warningSystem = new WarningSystem(client);
+const verificationSystem = new VerificationSystem(client);
+const messageFilter = new MessageFilter(client);
+const messageLogger = new MessageLogger(client);
+const activityTracker = new ActivityTracker(client);
+const welcomeMessages = new WelcomeMessages(client);
+const voiceManager = new VoiceManager(client);
+const tempVoiceChannels = new TempVoiceChannels(client);
+const messageScheduler = new MessageScheduler(client);
+const channelCleanup = new ChannelCleanup(client);
+const messageArchive = new MessageArchive(client);
+const categoryManager = new CategoryManager(client);
+const topicRotation = new TopicRotation(client);
+const statsGraphs = new StatsGraphs(client);
+const verificationLevels = new VerificationLevels(client);
 
 // --- Helper Functions for Message Handling ---
 async function handleEmailInput(message, userState) {
@@ -198,7 +265,7 @@ async function handlePasswordInput(message, userState) {
     .setFooter({ text: 'Wird verarbeitet...' });
 
   const processingMsg = await message.reply({ embeds: [processingEmbed], ephemeral: true });
-  return { processingMsg }; // Return the processingMsg for further use
+  return { processingMsg };
 }
 
 async function processServerCreation(message, userState, processingMsg) {
@@ -300,37 +367,531 @@ Bitte versuche es später erneut oder kontaktiere einen Administrator.`)
   }
 }
 
-// --- Event Handlers ---
-client.once('ready', () => {
-  console.log(`Bot ist online als ${client.user.tag}`);
+// --- Command Registration Helper ---
+async function registerCommands() {
+  const allCommands = [
+    {
+      name: 'server',
+      description: 'Server-Verwaltungsbefehle',
+      options: [
+        {
+          name: 'create',
+          description: 'Erstelle einen neuen Server',
+          type: 1,
+        }
+      ]
+    },
+    {
+      name: 'setuptickets',
+      description: 'Set up the ticket system in the current channel',
+      type: 1
+    },
+    {
+      name: 'addstaff',
+      description: 'Add a staff member to the current ticket',
+      type: 1,
+      options: [
+        { name: 'user', description: 'The staff member to add', type: 6, required: true }
+      ]
+    },
+    {
+      name: 'removestaff',
+      description: 'Remove a staff member from the current ticket',
+      type: 1,
+      options: [
+        { name: 'user', description: 'The staff member to remove', type: 6, required: true }
+      ]
+    },
+    {
+      name: 'ticketstats',
+      description: 'View ticket statistics',
+      type: 1
+    },
+    {
+      name: 'serverstats',
+      description: 'View your Minecraft server statistics',
+      type: 1,
+      options: [
+        { name: 'player', description: 'Player to check stats for (staff only)', type: 6, required: false }
+      ]
+    },
+    {
+      name: 'leaderboard',
+      description: 'View server statistics leaderboard',
+      type: 1,
+      options: [
+        { name: 'category', description: 'Leaderboard category', type: 3, required: true,
+          choices: [
+            { name: 'Players', value: 'players' },
+            { name: 'Uptime', value: 'uptime' },
+            { name: 'Playtime', value: 'playtime' }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'balance',
+      description: 'Check your balance',
+      type: 1,
+      options: [
+        { name: 'user', description: 'User to check balance for (staff only)', type: 6, required: false }
+      ]
+    },
+    {
+      name: 'pay',
+      description: 'Pay another user',
+      type: 1,
+      options: [
+        { name: 'user', description: 'User to pay', type: 6, required: true },
+        { name: 'amount', description: 'Amount to pay', type: 10, required: true }
+      ]
+    },
+    {
+      name: 'baltop',
+      description: 'View top balances',
+      type: 1
+    },
+    {
+      name: 'ecoadmin',
+      description: 'Manage user balances (Admin only)',
+      type: 1,
+      options: [
+        { name: 'give', description: 'Give money to a user', type: 1,
+          options: [
+            { name: 'user', description: 'User to give money to', type: 6, required: true },
+            { name: 'amount', description: 'Amount to give', type: 10, required: true }
+          ]
+        },
+        { name: 'take', description: 'Take money from a user', type: 1,
+          options: [
+            { name: 'user', description: 'User to take money from', type: 6, required: true },
+            { name: 'amount', description: 'Amount to take', type: 10, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'dashboard',
+      description: 'Create a system dashboard',
+      type: 1
+    },
+    {
+      name: 'ticket',
+      description: 'Advanced ticket system commands',
+      type: 1,
+      options: [
+        { name: 'panel', description: 'Create a ticket panel with categories', type: 1 },
+        { name: 'priority', description: 'Set ticket priority', type: 1,
+          options: [
+            { name: 'level', description: 'Priority level', type: 3, required: true,
+              choices: [
+                { name: 'Low', value: 'low' },
+                { name: 'Medium', value: 'medium' },
+                { name: 'High', value: 'high' },
+                { name: 'Critical', value: 'critical' }
+              ]
+            }
+          ]
+        },
+        { name: 'close', description: 'Close the current ticket with rating', type: 1 }
+      ]
+    },
+    {
+      name: 'status',
+      description: 'Server status commands',
+      type: 1,
+      options: [
+        { name: 'widget', description: 'Create a status widget', type: 1 },
+        { name: 'info', description: 'Show live server status', type: 1 }
+      ]
+    },
+    {
+      name: 'event',
+      description: 'Event scheduling commands',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a new event', type: 1,
+          options: [
+            { name: 'name', description: 'Event name', type: 3, required: true },
+            { name: 'description', description: 'Event description', type: 3, required: true },
+            { name: 'time', description: 'Event time (ISO format or "in 2h")', type: 3, required: true },
+            { name: 'recurring', description: 'Recurring interval (daily/weekly/monthly)', type: 3, required: false,
+              choices: [
+                { name: 'None', value: 'none' },
+                { name: 'Daily', value: 'daily' },
+                { name: 'Weekly', value: 'weekly' },
+                { name: 'Monthly', value: 'monthly' }
+              ]
+            },
+            { name: 'role', description: 'Role to ping', type: 8, required: false }
+          ]
+        },
+        { name: 'list', description: 'List upcoming events', type: 1 },
+        { name: 'remind', description: 'Set a reminder for an event', type: 1,
+          options: [
+            { name: 'id', description: 'Event ID', type: 3, required: true },
+            { name: 'time', description: 'Reminder time before event (e.g. 30m, 1h)', type: 3, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'poll',
+      description: 'Server poll commands',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a poll', type: 1,
+          options: [
+            { name: 'question', description: 'Poll question', type: 3, required: true },
+            { name: 'option1', description: 'Option 1', type: 3, required: true },
+            { name: 'option2', description: 'Option 2', type: 3, required: true },
+            { name: 'option3', description: 'Option 3', type: 3, required: false },
+            { name: 'option4', description: 'Option 4', type: 3, required: false },
+            { name: 'option5', description: 'Option 5', type: 3, required: false },
+            { name: 'duration', description: 'Duration in minutes', type: 4, required: false },
+            { name: 'anonymous', description: 'Anonymous poll', type: 5, required: false }
+          ]
+        },
+        { name: 'vote', description: 'Vote on a poll', type: 1,
+          options: [
+            { name: 'message_id', description: 'Poll message ID', type: 3, required: true },
+            { name: 'option', description: 'Option number (1-5)', type: 4, required: true }
+          ]
+        },
+        { name: 'results', description: 'Show poll results', type: 1,
+          options: [
+            { name: 'message_id', description: 'Poll message ID', type: 3, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'role',
+      description: 'Role management commands',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a new role', type: 1,
+          options: [
+            { name: 'name', description: 'Role name', type: 3, required: true },
+            { name: 'color', description: 'Role color (hex)', type: 3, required: false },
+            { name: 'hoist', description: 'Display role separately', type: 5, required: false }
+          ]
+        },
+        { name: 'delete', description: 'Delete a role', type: 1,
+          options: [
+            { name: 'role', description: 'Role to delete', type: 8, required: true }
+          ]
+        },
+        { name: 'edit', description: 'Edit a role', type: 1,
+          options: [
+            { name: 'role', description: 'Role to edit', type: 8, required: true },
+            { name: 'name', description: 'New name', type: 3, required: false },
+            { name: 'color', description: 'New color (hex)', type: 3, required: false }
+          ]
+        },
+        { name: 'info', description: 'Show role hierarchy info', type: 1 },
+        { name: 'menu', description: 'Create a reaction role menu', type: 1,
+          options: [
+            { name: 'channel', description: 'Target channel', type: 7, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'command',
+      description: 'Custom command management',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a custom command', type: 1,
+          options: [
+            { name: 'name', description: 'Command name', type: 3, required: true },
+            { name: 'response', description: 'Response text', type: 3, required: true },
+            { name: 'embed_title', description: 'Embed title (optional)', type: 3, required: false },
+            { name: 'embed_color', description: 'Embed color (hex)', type: 3, required: false }
+          ]
+        },
+        { name: 'delete', description: 'Delete a custom command', type: 1,
+          options: [
+            { name: 'name', description: 'Command name', type: 3, required: true }
+          ]
+        },
+        { name: 'list', description: 'List all custom commands', type: 1 }
+      ]
+    },
+    {
+      name: 'prefix',
+      description: 'Custom prefix commands',
+      type: 1,
+      options: [
+        { name: 'set', description: 'Set a custom prefix', type: 1,
+          options: [
+            { name: 'prefix', description: 'New prefix', type: 3, required: true }
+          ]
+        },
+        { name: 'reset', description: 'Reset to default prefix', type: 1 }
+      ]
+    },
+    {
+      name: 'warn',
+      description: 'Warn a user',
+      type: 1,
+      options: [
+        { name: 'user', description: 'User to warn', type: 6, required: true },
+        { name: 'reason', description: 'Warning reason', type: 3, required: true }
+      ]
+    },
+    {
+      name: 'warnings',
+      description: 'View warnings for a user',
+      type: 1,
+      options: [
+        { name: 'user', description: 'User to check', type: 6, required: false }
+      ]
+    },
+    {
+      name: 'warnremove',
+      description: 'Remove a warning',
+      type: 1,
+      options: [
+        { name: 'user', description: 'User', type: 6, required: true },
+        { name: 'warning_id', description: 'Warning ID', type: 3, required: true }
+      ]
+    },
+    {
+      name: 'verify',
+      description: 'Verification system',
+      type: 1,
+      options: [
+        { name: 'config', description: 'Configure verification', type: 1,
+          options: [
+            { name: 'channel', description: 'Verification channel', type: 7, required: true },
+            { name: 'role', description: 'Verified role', type: 8, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'filter',
+      description: 'Message filter configuration',
+      type: 1,
+      options: [
+        { name: 'config', description: 'Configure message filter', type: 1,
+          options: [
+            { name: 'action', description: 'Action to take on filtered content', type: 3, required: true,
+              choices: [
+                { name: 'Delete', value: 'delete' },
+                { name: 'Warn', value: 'warn' },
+                { name: 'Timeout', value: 'timeout' }
+              ]
+            },
+            { name: 'log_channel', description: 'Log channel for filter actions', type: 7, required: false }
+          ]
+        },
+        { name: 'badword', description: 'Add a bad word to filter', type: 1,
+          options: [
+            { name: 'word', description: 'Word to filter', type: 3, required: true }
+          ]
+        },
+        { name: 'badword_remove', description: 'Remove a bad word from filter', type: 1,
+          options: [
+            { name: 'word', description: 'Word to remove', type: 3, required: true }
+          ]
+        },
+        { name: 'whitelist', description: 'Whitelist a domain', type: 1,
+          options: [
+            { name: 'domain', description: 'Domain to whitelist', type: 3, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'activity',
+      description: 'Activity tracking',
+      type: 1,
+      options: [
+        { name: 'leaderboard', description: 'Show activity leaderboard', type: 1 },
+        { name: 'stats', description: 'Show your activity stats', type: 1 }
+      ]
+    },
+    {
+      name: 'welcome',
+      description: 'Welcome message configuration',
+      type: 1,
+      options: [
+        { name: 'set', description: 'Set welcome message', type: 1,
+          options: [
+            { name: 'channel', description: 'Welcome channel', type: 7, required: true },
+            { name: 'message', description: 'Welcome message text', type: 3, required: true },
+            { name: 'dm', description: 'Send welcome via DM too', type: 5, required: false }
+          ]
+        },
+        { name: 'preview', description: 'Preview welcome message', type: 1 }
+      ]
+    },
+    {
+      name: 'voice',
+      description: 'Voice channel management',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a temporary voice channel', type: 1,
+          options: [
+            { name: 'name', description: 'Channel name', type: 3, required: true },
+            { name: 'limit', description: 'User limit', type: 4, required: false }
+          ]
+        },
+        { name: 'limit', description: 'Set voice channel user limit', type: 1,
+          options: [
+            { name: 'limit', description: 'User limit', type: 4, required: true }
+          ]
+        },
+        { name: 'lock', description: 'Lock your voice channel', type: 1 },
+        { name: 'unlock', description: 'Unlock your voice channel', type: 1 },
+        { name: 'claim', description: 'Claim voice channel ownership', type: 1 }
+      ]
+    },
+    {
+      name: 'schedule',
+      description: 'Message scheduling',
+      type: 1,
+      options: [
+        { name: 'message', description: 'Schedule a message', type: 1,
+          options: [
+            { name: 'channel', description: 'Target channel', type: 7, required: true },
+            { name: 'content', description: 'Message content', type: 3, required: true },
+            { name: 'time', description: 'Time (ISO format or "in 30m")', type: 3, required: true },
+            { name: 'recurring', description: 'Recurring (cron expression)', type: 3, required: false }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'purge',
+      description: 'Channel cleanup',
+      type: 1,
+      options: [
+        { name: 'all', description: 'Purge all messages', type: 1,
+          options: [
+            { name: 'count', description: 'Number of messages (max 100)', type: 4, required: true }
+          ]
+        },
+        { name: 'user', description: 'Purge messages from a user', type: 1,
+          options: [
+            { name: 'user', description: 'Target user', type: 6, required: true },
+            { name: 'count', description: 'Number of messages (max 100)', type: 4, required: true }
+          ]
+        },
+        { name: 'bot', description: 'Purge bot messages', type: 1,
+          options: [
+            { name: 'count', description: 'Number of messages (max 100)', type: 4, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'archive',
+      description: 'Message archival',
+      type: 1,
+      options: [
+        { name: 'channel', description: 'Archive a channel', type: 1,
+          options: [
+            { name: 'channel', description: 'Channel to archive', type: 7, required: true },
+            { name: 'format', description: 'Export format', type: 3, required: false,
+              choices: [
+                { name: 'JSON', value: 'json' },
+                { name: 'CSV', value: 'csv' },
+                { name: 'TXT', value: 'txt' }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'category',
+      description: 'Channel category management',
+      type: 1,
+      options: [
+        { name: 'create', description: 'Create a new category', type: 1,
+          options: [
+            { name: 'name', description: 'Category name', type: 3, required: true }
+          ]
+        },
+        { name: 'add', description: 'Add a channel to a category', type: 1,
+          options: [
+            { name: 'channel', description: 'Channel to add', type: 7, required: true },
+            { name: 'category', description: 'Target category', type: 7, required: true }
+          ]
+        },
+        { name: 'permissions', description: 'Sync category permissions', type: 1,
+          options: [
+            { name: 'category', description: 'Category to sync', type: 7, required: true }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'verifylevel',
+      description: 'User verification levels',
+      type: 1,
+      options: [
+        { name: 'config', description: 'Configure verification levels', type: 1,
+          options: [
+            { name: 'required_age_days', description: 'Required account age in days', type: 4, required: false },
+            { name: 'required_guild_days', description: 'Required days in server', type: 4, required: false },
+            { name: 'required_role', description: 'Required role', type: 8, required: false }
+          ]
+        }
+      ]
+    }
+  ];
 
-  client.application.commands.create({
-    name: 'server',
-    description: 'Server-Verwaltungsbefehle',
-    options: [
-      {
-        name: 'create',
-        description: 'Erstelle einen neuen Server',
-        type: 1,
-      }
-    ]
-  });
+  try {
+    for (const cmd of allCommands) {
+      await client.application.commands.create(cmd);
+    }
+    console.log(`[Commands] ${allCommands.length} slash commands registered.`);
+  } catch (error) {
+    console.error('[Commands] Error registering commands:', error);
+  }
+}
+
+// --- Event Handlers ---
+client.once('ready', async () => {
+  console.log(`Bot ist online als ${client.user.tag}`);
+  await registerCommands();
+
+  welcomeMessages.initialize(client);
+  messageScheduler.initialize(client);
+  topicRotation.initialize(client);
+  tempVoiceChannels.initialize(client);
+  messageLogger.initialize(client);
+  activityTracker.initialize(client);
+  verificationSystem.initialize(client);
+  serverStatus.initialize(client);
+  eventScheduler.initialize(client);
+});
+
+client.on('guildMemberAdd', async (member) => {
+  welcomeMessages.handleMemberJoin(member);
+  verificationSystem.handleMemberJoin(member);
+  verificationLevels.checkMember(member);
+});
+
+client.on('guildMemberRemove', async (member) => {
+  tempVoiceChannels.handleMemberLeave(member);
+});
+
+client.on('messageDelete', async (message) => {
+  messageLogger.handleMessageDelete(message);
+});
+
+client.on('messageUpdate', async (oldMessage, newMessage) => {
+  messageFilter.handleMessageUpdate(oldMessage, newMessage);
 });
 
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  if (interaction.channelId !== SERVER_CREATION_CHANNEL_ID) {
-    return interaction.reply({
-      content: `Dieser Befehl kann nur im festgelegten Server-Erstellungskanal verwendet werden.`,
-      ephemeral: true
-    });
-  }
-
-  if (interaction.commandName === 'server') {
-    const subcommand = interaction.options.getSubcommand();
-
-    if (subcommand === 'create') {
+  if (interaction.isCommand()) {
+    if (interaction.channelId === SERVER_CREATION_CHANNEL_ID && interaction.commandName === 'server') {
       const serverLimits = loadServerLimits();
       const userServers = serverLimits[interaction.user.id] || [];
 
@@ -356,64 +917,151 @@ client.on('interactionCreate', async (interaction) => {
         .setDescription('Wähle den Typ des Servers, den du erstellen möchtest:')
         .setColor('#007bff');
 
-      await interaction.reply({
+      return interaction.reply({
         embeds: [embed],
         components: [row],
         ephemeral: true
       });
     }
+
+    ticketCommands.handleCommand(interaction);
+    statsCommands.handleCommand(interaction);
+    economyCommands.handleCommand(interaction);
+    advancedTicketSystem.handleCommand(interaction);
+    serverStatus.handleCommand(interaction);
+    eventScheduler.handleCommand(interaction);
+    pollCreator.handleCommand(interaction);
+    roleHierarchy.handleCommand(interaction);
+    customCommands.handleCommand(interaction);
+    prefixSettings.handleCommand(interaction);
+    warningSystem.handleCommand(interaction);
+    activityTracker.handleCommand(interaction);
+    welcomeMessages.handleCommand(interaction);
+    voiceManager.handleCommand(interaction);
+    messageScheduler.handleCommand(interaction);
+    channelCleanup.handleCommand(interaction);
+    messageArchive.handleCommand(interaction);
+    categoryManager.handleCommand(interaction);
+    verificationLevels.handleCommand(interaction);
+
+    if (interaction.commandName === 'dashboard') {
+      dashboard.handleDashboardCommand(interaction);
+    }
+    if (interaction.commandName === 'verify') {
+      verificationSystem.handleCommand(interaction);
+    }
+    if (interaction.commandName === 'filter') {
+      messageFilter.handleCommand(interaction);
+    }
+
+    return;
+  }
+
+  if (interaction.isButton()) {
+    if (interaction.customId.startsWith('servertype_')) {
+      const serverType = interaction.customId.split('_')[1];
+
+      userRegistrationState.set(interaction.user.id, {
+        step: 'email',
+        data: { serverType },
+        messageId: null
+      });
+
+      const embed = new EmbedBuilder()
+        .setTitle('Server-Erstellung')
+        .setDescription(`Du hast ${SERVER_TYPES[serverType].name} ausgewählt.\n\nBitte gib deine E-Mail-Adresse ein:`)
+        .setColor('#007bff')
+        .setFooter({ text: 'Schritt 1 von 3: E-Mail' });
+
+      return interaction.update({
+        embeds: [embed],
+        components: []
+      });
+    }
+
+    ticketSystem.handleTicketCreate(interaction);
+    ticketSystem.handleTicketClose(interaction);
+    dashboard.handleRefreshButton(interaction);
+    advancedTicketSystem.handleButton(interaction);
+    pollCreator.handleButton(interaction);
+    voiceManager.handleButton(interaction);
+    messageFilter.handleButton(interaction);
+    verificationSystem.handleButton(interaction);
+    serverStatus.handleButton(interaction);
+
+    return;
+  }
+
+  if (interaction.isModalSubmit()) {
+    advancedTicketSystem.handleModalSubmit(interaction);
+    eventScheduler.handleModalSubmit(interaction);
+    pollCreator.handleModalSubmit(interaction);
+    warningSystem.handleModalSubmit(interaction);
+    customCommands.handleModalSubmit(interaction);
+    welcomeMessages.handleModalSubmit(interaction);
+    return;
+  }
+
+  if (interaction.isStringSelectMenu()) {
+    advancedTicketSystem.handleSelectMenu(interaction);
+    return;
+  }
+
+  if (interaction.isUserSelect()) {
+    advancedTicketSystem.handleUserSelect(interaction);
+    return;
   }
 });
 
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
+client.on('messageReactionAdd', async (reaction, user) => {
+  roleManager.handleReaction(reaction, user, true);
+  pollCreator.handleReaction(reaction, user, true);
+});
 
-  if (interaction.customId.startsWith('servertype_')) {
-    const serverType = interaction.customId.split('_')[1];
+client.on('messageReactionRemove', async (reaction, user) => {
+  roleManager.handleReaction(reaction, user, false);
+  pollCreator.handleReaction(reaction, user, false);
+});
 
-    userRegistrationState.set(interaction.user.id, {
-      step: 'email',
-      data: { serverType },
-      messageId: null
-    });
-
-    const embed = new EmbedBuilder()
-      .setTitle('Server-Erstellung')
-      .setDescription(`Du hast ${SERVER_TYPES[serverType].name} ausgewählt.\n\nBitte gib deine E-Mail-Adresse ein:`)
-      .setColor('#007bff')
-      .setFooter({ text: 'Schritt 1 von 3: E-Mail' });
-
-    await interaction.update({
-      embeds: [embed],
-      components: []
-    });
-  }
+client.on('voiceStateUpdate', async (oldState, newState) => {
+  tempVoiceChannels.handleVoiceStateUpdate(oldState, newState);
+  activityTracker.handleVoiceStateUpdate(oldState, newState);
 });
 
 client.on('messageCreate', async (message) => {
-  if (message.author.bot || message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
+  if (message.author.bot) return;
+
+  messageFilter.checkMessage(message);
+  activityTracker.trackMessage(message);
+  messageLogger.trackMessage(message);
+  verificationSystem.handleMessage(message);
 
   const userState = userRegistrationState.get(message.author.id);
-  if (!userState) return;
+  if (userState) {
+    if (message.channelId !== SERVER_CREATION_CHANNEL_ID) return;
 
-  try {
-    await message.delete();
-  } catch (error) {
-    console.error('Fehler beim Löschen der Nachricht:', error);
+    try {
+      await message.delete();
+    } catch (error) {
+      console.error('Fehler beim Löschen der Nachricht:', error);
+    }
+
+    switch (userState.step) {
+      case 'email':
+        if (await handleEmailInput(message, userState) === false) return;
+        break;
+      case 'username':
+        if (await handleUsernameInput(message, userState) === false) return;
+        break;
+      case 'password':
+        const { processingMsg } = await handlePasswordInput(message, userState);
+        await processServerCreation(message, userState, processingMsg);
+        break;
+    }
+    return;
   }
 
-  switch (userState.step) {
-    case 'email':
-      if (await handleEmailInput(message, userState) === false) return;
-      break;
-    case 'username':
-      if (await handleUsernameInput(message, userState) === false) return;
-      break;
-    case 'password':
-      const { processingMsg } = await handlePasswordInput(message, userState);
-      await processServerCreation(message, userState, processingMsg);
-      break;
-  }
+  customCommands.handleMessage(message);
 });
 
 // --- Discord Bot Login ---

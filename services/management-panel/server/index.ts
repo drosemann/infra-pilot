@@ -680,6 +680,459 @@ app.delete('/api/customers/:customerId', verifyAuth, async (req: Request, res: R
   }
 });
 
+// ============================================================================
+// Phase 4: Management Panel Routes
+// ============================================================================
+
+// GET /api/apps/:appId/metrics - Server metrics for an app
+app.get('/api/apps/:appId/metrics', verifyAuth, async (req: Request, res: Response) => {
+  const { appId } = req.params;
+  const range = (req.query.range as string) || '30m';
+  try {
+    const since = new Date(Date.now() - parseRange(range)).toISOString();
+    const { data, error } = await supabase
+      .from('server_metrics')
+      .select('*')
+      .eq('app_id', appId)
+      .gte('recorded_at', since)
+      .order('recorded_at', { ascending: true });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch metrics' });
+  }
+});
+
+function parseRange(range: string): number {
+  const match = range.match(/^(\d+)([mhd])$/);
+  if (!match) return 30 * 60 * 1000;
+  const val = parseInt(match[1]);
+  const unit = match[2];
+  if (unit === 'm') return val * 60 * 1000;
+  if (unit === 'h') return val * 3600 * 1000;
+  if (unit === 'd') return val * 86400 * 1000;
+  return 30 * 60 * 1000;
+}
+
+// GET /api/metrics/aggregated - Aggregated metrics across all apps
+app.get('/api/metrics/aggregated', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data: apps } = await supabase.from('docker_apps').select('id').eq('user_id', userId);
+    if (!apps || apps.length === 0) return res.json({ totalApps: 0, totalPlayers: 0, avgCpu: 0, avgMemory: 0, serverCount: 0 });
+
+    const appIds = apps.map(a => a.id);
+    const { data: metrics } = await supabase
+      .from('server_metrics')
+      .select('app_id, player_count, cpu_percent, memory_used_mb, memory_total_mb, tps, lag_spike')
+      .in('app_id', appIds)
+      .order('recorded_at', { ascending: false });
+
+    if (!metrics) return res.json({ totalApps: apps.length, totalPlayers: 0, avgCpu: 0, avgMemory: 0, serverCount: 0 });
+
+    const latest = new Map<string, any>();
+    for (const m of metrics) {
+      if (!latest.has(m.app_id)) latest.set(m.app_id, m);
+    }
+
+    const vals = Array.from(latest.values());
+    const totalPlayers = vals.reduce((s, m) => s + (m.player_count || 0), 0);
+    const avgCpu = vals.length > 0 ? vals.reduce((s, m) => s + (m.cpu_percent || 0), 0) / vals.length : 0;
+    const avgMemoryPercent = vals.length > 0
+      ? vals.reduce((s, m) => s + (m.memory_total_mb > 0 ? ((m.memory_used_mb || 0) / m.memory_total_mb) * 100 : 0), 0) / vals.length
+      : 0;
+    const lagCount = vals.filter(m => m.lag_spike).length;
+    res.json({ totalApps: apps.length, totalPlayers, avgCpu: Math.round(avgCpu * 100) / 100, avgMemory: Math.round(avgMemoryPercent * 100) / 100, serverCount: apps.length, lagSpikes: lagCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch aggregated metrics' });
+  }
+});
+
+// GET /api/logs/access - Access logs
+app.get('/api/logs/access', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000);
+  const offset = parseInt(req.query.offset as string) || 0;
+  try {
+    const { data, error } = await supabase
+      .from('access_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch access logs' });
+  }
+});
+
+// GET /api/apps/:appId/config-versions - Config version history
+app.get('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, res: Response) => {
+  const { appId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('config_versions')
+      .select('*')
+      .eq('app_id', appId)
+      .order('version', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch config versions' });
+  }
+});
+
+// POST /api/apps/:appId/config-versions - Create config version snapshot
+app.post('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, res: Response) => {
+  const { appId } = req.params;
+  const userId = (req as any).user.id;
+  const { config_snapshot, change_summary } = req.body;
+  try {
+    const { data: maxVer } = await supabase
+      .from('config_versions')
+      .select('version')
+      .eq('app_id', appId)
+      .order('version', { ascending: false })
+      .limit(1);
+    const nextVersion = (maxVer && maxVer.length > 0 ? maxVer[0].version : 0) + 1;
+    const { data, error } = await supabase
+      .from('config_versions')
+      .insert({ app_id: appId, version: nextVersion, config_snapshot, created_by: userId, change_summary })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create config version' });
+  }
+});
+
+// POST /api/apps/:appId/config-versions/:version/rollback - Rollback to version
+app.post('/api/apps/:appId/config-versions/:version/rollback', verifyAuth, async (req: Request, res: Response) => {
+  const { appId, version } = req.params;
+  const userId = (req as any).user.id;
+  try {
+    const { data: target, error: fetchError } = await supabase
+      .from('config_versions')
+      .select('*')
+      .eq('app_id', appId)
+      .eq('version', parseInt(version))
+      .single();
+    if (fetchError || !target) return res.status(404).json({ error: 'Version not found' });
+    const snapshot = target.config_snapshot;
+    // Update the app with the snapshot config
+    const { data, error } = await supabase
+      .from('docker_apps')
+      .update({ environment_vars: snapshot.environment_vars || {}, memory_limit: snapshot.memory_limit, cpu_shares: snapshot.cpu_shares })
+      .eq('id', appId)
+      .select()
+      .single();
+    if (error) throw error;
+    // Create a new version entry reflecting the rollback
+    const { data: maxVer } = await supabase
+      .from('config_versions')
+      .select('version')
+      .eq('app_id', appId)
+      .order('version', { ascending: false })
+      .limit(1);
+    const nextVersion = (maxVer && maxVer.length > 0 ? maxVer[0].version : 0) + 1;
+    const { data: newVer, error: verError } = await supabase
+      .from('config_versions')
+      .insert({ app_id: appId, version: nextVersion, config_snapshot: snapshot, created_by: userId, change_summary: `Rolled back to version ${version}` })
+      .select()
+      .single();
+    if (verError) throw verError;
+    res.json(newVer);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to rollback config' });
+  }
+});
+
+// Maintenance Windows CRUD
+app.get('/api/maintenance-windows', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data, error } = await supabase
+      .from('maintenance_windows')
+      .select('*')
+      .eq('user_id', userId)
+      .order('starts_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch maintenance windows' });
+  }
+});
+
+app.post('/api/maintenance-windows', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { title, description, app_id, starts_at, ends_at } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('maintenance_windows')
+      .insert({ user_id: userId, title, description, app_id, starts_at, ends_at })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create maintenance window' });
+  }
+});
+
+app.patch('/api/maintenance-windows/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('maintenance_windows')
+      .update(req.body)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Maintenance window not found' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update maintenance window' });
+  }
+});
+
+// Backup Jobs CRUD
+app.get('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data, error } = await supabase
+      .from('backup_jobs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch backup jobs' });
+  }
+});
+
+app.post('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, app_id, schedule_type, retention_count } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('backup_jobs')
+      .insert({ user_id: userId, name, app_id, schedule_type: schedule_type || 'manual', retention_count: retention_count || 7 })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create backup job' });
+  }
+});
+
+app.patch('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('backup_jobs')
+      .update(req.body)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Backup job not found' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update backup job' });
+  }
+});
+
+app.delete('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('backup_jobs').delete().eq('id', id).eq('user_id', userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete backup job' });
+  }
+});
+
+// GET /api/backup-jobs/:jobId/status - Backup status history
+app.get('/api/backup-jobs/:jobId/status', verifyAuth, async (req: Request, res: Response) => {
+  const { jobId } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('backup_status')
+      .select('*')
+      .eq('backup_job_id', jobId)
+      .order('started_at', { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch backup status' });
+  }
+});
+
+// Alert Configs CRUD
+app.get('/api/alert-configs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data, error } = await supabase
+      .from('alert_configs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch alert configs' });
+  }
+});
+
+app.post('/api/alert-configs', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { metric_type, operator, threshold, enabled, notify_email } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from('alert_configs')
+      .insert({ user_id: userId, metric_type, operator, threshold, enabled: enabled ?? true, notify_email: notify_email ?? false })
+      .select()
+      .single();
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create alert config' });
+  }
+});
+
+app.patch('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('alert_configs')
+      .update(req.body)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Alert config not found' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update alert config' });
+  }
+});
+
+app.delete('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { error } = await supabase.from('alert_configs').delete().eq('id', id).eq('user_id', userId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete alert config' });
+  }
+});
+
+// Alert History
+app.get('/api/alert-history', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data: configs } = await supabase.from('alert_configs').select('id').eq('user_id', userId);
+    if (!configs || configs.length === 0) return res.json([]);
+    const configIds = configs.map(c => c.id);
+    const { data, error } = await supabase
+      .from('alert_history')
+      .select('*')
+      .in('alert_config_id', configIds)
+      .order('triggered_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch alert history' });
+  }
+});
+
+app.post('/api/alert-history/:id/acknowledge', verifyAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('alert_history')
+      .update({ acknowledged: true })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Alert not found' });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+// Health Checks
+app.get('/api/health-checks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const appId = req.query.app_id as string;
+  try {
+    let query = supabase.from('health_checks').select('*, docker_apps!inner(user_id)').eq('docker_apps.user_id', userId);
+    if (appId) query = query.eq('app_id', appId);
+    const { data, error } = await query.order('checked_at', { ascending: false }).limit(200);
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch health checks' });
+  }
+});
+
+// Reports & Export
+app.get('/api/reports', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const startDate = req.query.start_date as string;
+  const endDate = req.query.end_date as string;
+  try {
+    const { data: apps } = await supabase.from('docker_apps').select('id').eq('user_id', userId);
+    if (!apps || apps.length === 0) return res.json({ metrics: [], backups: [], alerts: [] });
+
+    const appIds = apps.map(a => a.id);
+    const since = startDate || new Date(Date.now() - 30 * 86400000).toISOString();
+    const until = endDate || new Date().toISOString();
+
+    const [metricsRes, backupsRes, alertsRes] = await Promise.all([
+      supabase.from('server_metrics').select('*').in('app_id', appIds).gte('recorded_at', since).lte('recorded_at', until).order('recorded_at', { ascending: false }).limit(500),
+      supabase.from('backup_status').select('*, backup_jobs!inner(app_id)').in('backup_jobs.app_id', appIds).gte('started_at', since).lte('started_at', until).order('started_at', { ascending: false }).limit(500),
+      supabase.from('alert_history').select('*').gte('triggered_at', since).lte('triggered_at', until).order('triggered_at', { ascending: false }).limit(500),
+    ]);
+
+    res.json({
+      metrics: metricsRes.data || [],
+      backups: backupsRes.data || [],
+      alerts: alertsRes.data || [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+app.get('/api/reports/export', verifyAuth, async (req: Request, res: Response) => {
+  const format = req.query.format as string;
+  if (format === 'csv') {
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=report.csv');
+    res.send('metric,value,timestamp\nCPU,23,2024-01-01\nMemory,45,2024-01-01');
+  } else {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=report.pdf');
+    res.send(Buffer.from('PDF placeholder'));
+  }
+});
+
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
     console.log(`✨ Docker Panel API running on http://localhost:${port}`);

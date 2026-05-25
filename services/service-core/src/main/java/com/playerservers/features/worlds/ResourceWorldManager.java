@@ -231,4 +231,8 @@ public class ResourceWorldManager {
     public boolean isRegenerating() {
         return isRegenerating;
     }
+
+    public String getWorldName() {
+        return worldName;
+    }
 }

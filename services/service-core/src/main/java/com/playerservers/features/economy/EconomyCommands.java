@@ -36,11 +36,12 @@ public class EconomyCommands {
 
         @Override
         public void execute(CommandSender sender, String[] args) {
-            if (!(sender instanceof ProxiedPlayer player)) {
+            if (!(sender instanceof ProxiedPlayer)) {
                 sender.sendMessage(new ComponentBuilder("This command can only be used by players!").color(ChatColor.RED).create());
                 return;
             }
 
+            ProxiedPlayer player = (ProxiedPlayer) sender;
             double balance = economyManager.getBalance(player.getUniqueId());
             String formattedBalance = formatCurrency(balance);
             sender.sendMessage(new ComponentBuilder("Your balance: ").color(ChatColor.YELLOW)
@@ -55,11 +56,12 @@ public class EconomyCommands {
 
         @Override
         public void execute(CommandSender sender, String[] args) {
-            if (!(sender instanceof ProxiedPlayer player)) {
+            if (!(sender instanceof ProxiedPlayer)) {
                 sender.sendMessage(new ComponentBuilder("This command can only be used by players!").color(ChatColor.RED).create());
                 return;
             }
 
+            ProxiedPlayer player = (ProxiedPlayer) sender;
             if (args.length != 2) {
                 sender.sendMessage(new ComponentBuilder("Usage: /pay <player> <amount>").color(ChatColor.RED).create());
                 return;

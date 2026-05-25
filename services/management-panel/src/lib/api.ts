@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
-import { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset } from './types';
+import { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, AlertConfig, AlertHistoryEntry, HealthCheck } from './types';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -133,6 +133,132 @@ class APIClient {
   // Seed demo data (customers + apps)
   async seedDemo(): Promise<any> {
     const res = await this.api.post('/api/seed-demo');
+    return res.data;
+  }
+
+  // Phase 4: Server Metrics
+  async getServerMetrics(appId: string, range = '30m'): Promise<ServerMetric[]> {
+    const res = await this.api.get(`/api/apps/${appId}/metrics`, { params: { range } });
+    return res.data;
+  }
+
+  async getAggregatedMetrics(): Promise<any> {
+    const res = await this.api.get('/api/metrics/aggregated');
+    return res.data;
+  }
+
+  // Access Logs
+  async getAccessLogs(limit = 50, offset = 0): Promise<AccessLog[]> {
+    const res = await this.api.get('/api/logs/access', { params: { limit, offset } });
+    return res.data;
+  }
+
+  // Config Versions
+  async getConfigVersions(appId: string): Promise<ConfigVersion[]> {
+    const res = await this.api.get(`/api/apps/${appId}/config-versions`);
+    return res.data;
+  }
+
+  async createConfigVersion(appId: string, snapshot: Record<string, any>, summary: string): Promise<ConfigVersion> {
+    const res = await this.api.post(`/api/apps/${appId}/config-versions`, { config_snapshot: snapshot, change_summary: summary });
+    return res.data;
+  }
+
+  async rollbackConfig(appId: string, version: number): Promise<ConfigVersion> {
+    const res = await this.api.post(`/api/apps/${appId}/config-versions/${version}/rollback`);
+    return res.data;
+  }
+
+  // Maintenance Windows
+  async getMaintenanceWindows(): Promise<MaintenanceWindow[]> {
+    const res = await this.api.get('/api/maintenance-windows');
+    return res.data;
+  }
+
+  async createMaintenanceWindow(window: Partial<MaintenanceWindow>): Promise<MaintenanceWindow> {
+    const res = await this.api.post('/api/maintenance-windows', window);
+    return res.data;
+  }
+
+  async updateMaintenanceWindow(id: string, updates: Partial<MaintenanceWindow>): Promise<MaintenanceWindow> {
+    const res = await this.api.patch(`/api/maintenance-windows/${id}`, updates);
+    return res.data;
+  }
+
+  // Backup Jobs
+  async getBackupJobs(): Promise<BackupJob[]> {
+    const res = await this.api.get('/api/backup-jobs');
+    return res.data;
+  }
+
+  async createBackupJob(job: Partial<BackupJob>): Promise<BackupJob> {
+    const res = await this.api.post('/api/backup-jobs', job);
+    return res.data;
+  }
+
+  async updateBackupJob(id: string, updates: Partial<BackupJob>): Promise<BackupJob> {
+    const res = await this.api.patch(`/api/backup-jobs/${id}`, updates);
+    return res.data;
+  }
+
+  async deleteBackupJob(id: string): Promise<void> {
+    await this.api.delete(`/api/backup-jobs/${id}`);
+  }
+
+  async getBackupStatus(jobId: string): Promise<BackupStatusEntry[]> {
+    const res = await this.api.get(`/api/backup-jobs/${jobId}/status`);
+    return res.data;
+  }
+
+  // Alert Configs
+  async getAlertConfigs(): Promise<AlertConfig[]> {
+    const res = await this.api.get('/api/alert-configs');
+    return res.data;
+  }
+
+  async createAlertConfig(config: Partial<AlertConfig>): Promise<AlertConfig> {
+    const res = await this.api.post('/api/alert-configs', config);
+    return res.data;
+  }
+
+  async updateAlertConfig(id: string, updates: Partial<AlertConfig>): Promise<AlertConfig> {
+    const res = await this.api.patch(`/api/alert-configs/${id}`, updates);
+    return res.data;
+  }
+
+  async deleteAlertConfig(id: string): Promise<void> {
+    await this.api.delete(`/api/alert-configs/${id}`);
+  }
+
+  async getAlertHistory(): Promise<AlertHistoryEntry[]> {
+    const res = await this.api.get('/api/alert-history');
+    return res.data;
+  }
+
+  async acknowledgeAlert(id: number): Promise<void> {
+    await this.api.post(`/api/alert-history/${id}/acknowledge`);
+  }
+
+  // Health Checks
+  async getHealthChecks(appId?: string): Promise<HealthCheck[]> {
+    const params = appId ? { app_id: appId } : {};
+    const res = await this.api.get('/api/health-checks', { params });
+    return res.data;
+  }
+
+  async getReports(startDate?: string, endDate?: string): Promise<any> {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const res = await this.api.get('/api/reports', { params });
+    return res.data;
+  }
+
+  async exportReport(format: 'pdf' | 'csv', startDate?: string, endDate?: string): Promise<Blob> {
+    const params: any = { format };
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    const res = await this.api.get('/api/reports/export', { params, responseType: 'blob' });
     return res.data;
   }
 

@@ -28,12 +28,13 @@ public class StatisticsCommand extends Command implements TabExecutor {
 
     @Override
     public void execute(CommandSender sender, String[] args) {
-        if (!(sender instanceof ProxiedPlayer player)) {
+        if (!(sender instanceof ProxiedPlayer)) {
             sender.sendMessage(new ComponentBuilder("This command can only be used by players!")
                 .color(ChatColor.RED).create());
             return;
         }
 
+        final ProxiedPlayer player = (ProxiedPlayer) sender;
         if (args.length == 0) {
             displayOwnStats(player);
         } else if (args.length == 1) {

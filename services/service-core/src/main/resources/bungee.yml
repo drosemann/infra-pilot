@@ -1,9 +1,72 @@
- name: PlayerServerPlugin
- main: PlayerServerPlugin
- version: 1.0
- author: YourName
- description: Allows players to create their own Minecraft servers.
- permissions:
+name: PlayerServerPlugin
+main: com.playerservers.PlayerServerPlugin
+version: 1.0
+author: InfraPilot
+description: A comprehensive Minecraft server management plugin for BungeeCord.
+permissions:
   playerserver.command.server:
-   description: Allows players to use the /server command.
-   default: true
+    description: Allows players to use the /server command.
+    default: true
+  playerservers.economy.balance:
+    default: true
+  playerservers.economy.pay:
+    default: true
+  playerservers.economy.top:
+    default: true
+  playerservers.economy.market:
+    default: true
+  playerservers.achievements:
+    default: true
+  playerservers.playtime:
+    default: true
+  playerservers.vote:
+    default: true
+  playerservers.referral:
+    default: true
+  playerservers.ptime:
+    default: true
+  playerservers.pweather:
+    default: true
+  playerservers.cooldown.bypass:
+    default: op
+  playerservers.maintenance:
+    default: op
+  playerservers.maintenance.bypass:
+    default: op
+  playerservers.limits:
+    default: op
+  playerservers.economy.admin:
+    default: op
+  playerservers.economy.exchange.admin:
+    default: op
+  playerservers.economy.shoptax.admin:
+    default: op
+  playerservers.stats.others:
+    default: op
+  playerservers.stats.reset:
+    default: op
+  playerservers.resworld.regenerate:
+    default: op
+  playerservers.border.admin:
+    default: op
+  playerservers.achievements.admin:
+    default: op
+  playerservers.multiplier.admin:
+    default: op
+  playerservers.customitem.admin:
+    default: op
+  playerservers.craft.admin:
+    default: op
+  playerservers.cooldowns.admin:
+    default: op
+  playerservers.permissions:
+    default: op
+  playerservers.permissions.group:
+    default: op
+  playerservers.vip:
+    default: true
+  playerservers.vip.admin:
+    default: op
+  playerservers.*:
+    description: Wildcard permission
+    default: op

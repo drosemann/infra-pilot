@@ -34,31 +34,27 @@ public class PlayerStatistics {
 
     private void initializeDatabase() {
         try (Connection conn = databaseManager.getConnection()) {
-            String createTable = """
-                CREATE TABLE IF NOT EXISTS player_statistics (
-                    uuid VARCHAR(36) PRIMARY KEY,
-                    total_playtime BIGINT DEFAULT 0,
-                    peak_players INT DEFAULT 0,
-                    peak_memory_usage BIGINT DEFAULT 0,
-                    peak_cpu_usage DOUBLE DEFAULT 0,
-                    total_restarts INT DEFAULT 0,
-                    uptime_percentage DOUBLE DEFAULT 0,
-                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """;
+            String createTable = "CREATE TABLE IF NOT EXISTS player_statistics (" +
+                "uuid VARCHAR(36) PRIMARY KEY," +
+                "total_playtime BIGINT DEFAULT 0," +
+                "peak_players INT DEFAULT 0," +
+                "peak_memory_usage BIGINT DEFAULT 0," +
+                "peak_cpu_usage DOUBLE DEFAULT 0," +
+                "total_restarts INT DEFAULT 0," +
+                "uptime_percentage DOUBLE DEFAULT 0," +
+                "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                ")";
             
-            String createHistoryTable = """
-                CREATE TABLE IF NOT EXISTS statistics_history (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    uuid VARCHAR(36),
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    cpu_usage DOUBLE,
-                    memory_usage BIGINT,
-                    player_count INT,
-                    tps DOUBLE,
-                    FOREIGN KEY (uuid) REFERENCES player_statistics(uuid)
-                )
-            """;
+            String createHistoryTable = "CREATE TABLE IF NOT EXISTS statistics_history (" +
+                "id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                "uuid VARCHAR(36)," +
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "cpu_usage DOUBLE," +
+                "memory_usage BIGINT," +
+                "player_count INT," +
+                "tps DOUBLE," +
+                "FOREIGN KEY (uuid) REFERENCES player_statistics(uuid)" +
+                ")";
             
             conn.createStatement().execute(createTable);
             conn.createStatement().execute(createHistoryTable);
@@ -127,17 +123,15 @@ public class PlayerStatistics {
             conn.setAutoCommit(false);
 
             // Update main statistics
-            String updateStats = """
-                UPDATE player_statistics 
-                SET total_playtime = ?,
-                    peak_players = ?,
-                    peak_memory_usage = ?,
-                    peak_cpu_usage = ?,
-                    total_restarts = ?,
-                    uptime_percentage = ?,
-                    last_updated = CURRENT_TIMESTAMP
-                WHERE uuid = ?
-            """;
+            String updateStats = "UPDATE player_statistics " +
+                "SET total_playtime = ?," +
+                "peak_players = ?," +
+                "peak_memory_usage = ?," +
+                "peak_cpu_usage = ?," +
+                "total_restarts = ?," +
+                "uptime_percentage = ?," +
+                "last_updated = CURRENT_TIMESTAMP " +
+                "WHERE uuid = ?";
 
             PreparedStatement statsStmt = conn.prepareStatement(updateStats);
             statsStmt.setLong(1, currentStats.getTotalPlaytime());
@@ -150,11 +144,9 @@ public class PlayerStatistics {
             statsStmt.execute();
 
             // Record history point
-            String insertHistory = """
-                INSERT INTO statistics_history 
-                (uuid, cpu_usage, memory_usage, player_count, tps)
-                VALUES (?, ?, ?, ?, ?)
-            """;
+            String insertHistory = "INSERT INTO statistics_history " +
+                "(uuid, cpu_usage, memory_usage, player_count, tps) " +
+                "VALUES (?, ?, ?, ?, ?)";
 
             PreparedStatement historyStmt = conn.prepareStatement(insertHistory);
             historyStmt.setString(1, uuid.toString());

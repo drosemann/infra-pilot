@@ -5,26 +5,76 @@ database:
   username: "root"
   password: "password"
 
+server:
+  memory_mb: 1024
+  host: "localhost"
+  start_port: 25566
+  max_port: 26000
+  template_dir: "template"
+  servers_dir: "servers"
+  debug_logging: false
+  allowed_plugins:
+    - "EssentialsX"
+    - "WorldEdit"
+    - "WorldGuard"
+
 server_limits:
   ram_mb: 1024
   storage_mb: 1024
   inactivity_shutdown_minutes: 30
 
-pre_approved_plugins:
-  - "EssentialsX"
-  - "WorldEdit"
+economy:
+  shop_tax_rate: 0.05
+  exchange_rate: 1.0
+  exchange_fee: 0.02
+  market_listing_fee: 5.0
+  market_sale_tax: 0.03
+
+vote:
+  reward_amount: 10.0
+  vote_party_target: 100
+  vote_party_reward: 50.0
+
+referral:
+  referrer_reward: 25.0
+  redeemer_reward: 10.0
+
+death_penalty:
+  worlds: "all"
+  currency_loss_percent: 0.0
+  keep_inventory: true
+  keep_xp: true
+
+maintenance:
+  kick_message: "&cServer is under maintenance. Please check back later!"
+
+anticheat:
+  max_alerts_before_flag: 5
+
+limits:
+  max_entities_per_server: 200
+  max_players_per_server: 20
+  max_chunks_per_server: 400
 
 resource_world:
   enabled: true
   name: "resource_world"
-  regeneration_interval: 10080  # 7 days in minutes
+  regeneration_interval: 10080
   template: "resource_template"
   warning_times:
-    - 1440  # 24 hours
-    - 60    # 1 hour
-    - 15    # 15 minutes
-    - 5     # 5 minutes
-    - 1     # 1 minute
+    - 1440
+    - 60
+    - 15
+    - 5
+    - 1
   auto_teleport: true
   spawn_world: "hub"
   backup_old_world: false
+
+border:
+  worlds:
+    resource_world:
+      starting_size: 100
+      max_size: 10000
+      expansion_rate: 50
+      expansion_interval: 60

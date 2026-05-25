@@ -39,6 +39,12 @@ export const Sidebar = () => {
       route: '/dashboard',
     },
     {
+      id: 'monitoring',
+      label: 'Monitoring',
+      icon: '📈',
+      route: '/monitoring',
+    },
+    {
       id: 'apps',
       label: 'Apps',
       icon: '📦',
@@ -54,7 +60,10 @@ export const Sidebar = () => {
       id: 'logs',
       label: 'Logs',
       icon: '📝',
-      route: '/logs',
+      children: [
+        { id: 'live-logs', label: 'Live Logs', icon: '📋', route: '/logs' },
+        { id: 'access-logs', label: 'Access Logs', icon: '🔐', route: '/logs/access' },
+      ],
     },
     ...(mode === 'business'
       ? [
@@ -79,10 +88,26 @@ export const Sidebar = () => {
         ]
       : []),
     {
+      id: 'backups',
+      label: 'Backups',
+      icon: '💾',
+      route: '/backups',
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: '📄',
+      route: '/reports',
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: '⚙️',
-      route: '/settings',
+      children: [
+        { id: 'general', label: 'General', icon: '🔧', route: '/settings' },
+        { id: 'alerts', label: 'Alerts', icon: '🔔', route: '/settings/alerts' },
+        { id: 'maintenance', label: 'Maintenance', icon: '🛠️', route: '/settings/maintenance' },
+      ],
     },
   ];
 

@@ -9,6 +9,11 @@ import { Dashboard } from './pages/Dashboard';
 import Customers from './pages/Customers';
 import { AppForm } from './pages/AppForm';
 import { AppDetail } from './pages/AppDetail';
+import { Monitoring } from './pages/Monitoring';
+import { AccessLogs } from './pages/AccessLogs';
+import { Backups } from './pages/Backups';
+import { Reports } from './pages/Reports';
+import { SettingsPage } from './pages/Settings';
 import { MainLayout } from './components/MainLayout';
 import { featureGates } from './lib/types';
 
@@ -78,9 +83,16 @@ export default function App() {
             ) : (
               <Route element={<MainLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/monitoring" element={<Monitoring />} />
                 <Route path="/apps/new" element={<AppForm />} />
                 <Route path="/apps/:appId" element={<AppDetail />} />
                 <Route path="/apps/:appId/edit" element={<AppForm />} />
+                <Route path="/logs/access" element={<AccessLogs />} />
+                <Route path="/backups" element={<Backups />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/alerts" element={<SettingsPage />} />
+                <Route path="/settings/maintenance" element={<SettingsPage />} />
                 {featureGates.canManageCustomers(mode) && (
                   <Route path="/customers" element={<Customers />} />
                 )}

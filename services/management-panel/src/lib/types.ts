@@ -98,3 +98,106 @@ export interface ServerPreset {
   ports: Array<{ hostPort: number; containerPort: number; protocol: 'tcp' | 'udp' }>;
   environmentVars: Record<string, string>;
 }
+
+// ============================================================================
+// Phase 4 Types
+// ============================================================================
+
+export interface ServerMetric {
+  id: number;
+  app_id: string;
+  tps: number | null;
+  player_count: number;
+  memory_used_mb: number;
+  memory_total_mb: number;
+  cpu_percent: number;
+  world_size_mb: number;
+  lag_spike: boolean;
+  recorded_at: string;
+}
+
+export interface AccessLog {
+  id: number;
+  user_id: string;
+  action: string;
+  source_ip: string;
+  status: 'success' | 'failed' | 'pending';
+  details: string;
+  created_at: string;
+}
+
+export interface ConfigVersion {
+  id: number;
+  app_id: string;
+  version: number;
+  config_snapshot: Record<string, any>;
+  created_by: string;
+  change_summary: string;
+  created_at: string;
+}
+
+export interface MaintenanceWindow {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  app_id: string;
+  starts_at: string;
+  ends_at: string;
+  status: 'scheduled' | 'active' | 'completed' | 'cancelled';
+  created_at: string;
+}
+
+export interface BackupJob {
+  id: string;
+  user_id: string;
+  app_id: string;
+  name: string;
+  schedule_type: 'manual' | 'hourly' | 'daily' | 'weekly';
+  retention_count: number;
+  next_run: string;
+  last_run: string;
+  status: 'active' | 'paused' | 'archived';
+  created_at: string;
+}
+
+export interface BackupStatusEntry {
+  id: number;
+  backup_job_id: string;
+  status: 'running' | 'success' | 'failed';
+  size_mb: number;
+  error_message: string;
+  started_at: string;
+  completed_at: string;
+}
+
+export interface AlertConfig {
+  id: string;
+  user_id: string;
+  metric_type: string;
+  operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq';
+  threshold: number;
+  enabled: boolean;
+  notify_email: boolean;
+  created_at: string;
+}
+
+export interface AlertHistoryEntry {
+  id: number;
+  alert_config_id: string;
+  metric_type: string;
+  metric_value: number;
+  threshold: number;
+  operator: string;
+  triggered_at: string;
+  acknowledged: boolean;
+}
+
+export interface HealthCheck {
+  id: number;
+  app_id: string;
+  status: 'healthy' | 'degraded' | 'down' | 'unknown';
+  response_time_ms: number;
+  details: Record<string, any>;
+  checked_at: string;
+}

@@ -32,29 +32,25 @@ public class EconomyManager {
 
     private void initializeDatabase() {
         try (Connection conn = databaseManager.getConnection()) {
-            String createTable = """
-                CREATE TABLE IF NOT EXISTS player_economy (
-                    uuid VARCHAR(36) PRIMARY KEY,
-                    balance DOUBLE DEFAULT 0,
-                    total_earned DOUBLE DEFAULT 0,
-                    total_spent DOUBLE DEFAULT 0,
-                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """;
+            String createTable = "CREATE TABLE IF NOT EXISTS player_economy (" +
+                "uuid VARCHAR(36) PRIMARY KEY," +
+                "balance DOUBLE DEFAULT 0," +
+                "total_earned DOUBLE DEFAULT 0," +
+                "total_spent DOUBLE DEFAULT 0," +
+                "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                ")";
             
             conn.createStatement().execute(createTable);
             
-            String createTransactionTable = """
-                CREATE TABLE IF NOT EXISTS economy_transactions (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    uuid VARCHAR(36),
-                    amount DOUBLE,
-                    type VARCHAR(32),
-                    description TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (uuid) REFERENCES player_economy(uuid)
-                )
-            """;
+            String createTransactionTable = "CREATE TABLE IF NOT EXISTS economy_transactions (" +
+                "id BIGINT AUTO_INCREMENT PRIMARY KEY," +
+                "uuid VARCHAR(36)," +
+                "amount DOUBLE," +
+                "type VARCHAR(32)," +
+                "description TEXT," +
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "FOREIGN KEY (uuid) REFERENCES player_economy(uuid)" +
+                ")";
             
             conn.createStatement().execute(createTransactionTable);
         } catch (SQLException e) {

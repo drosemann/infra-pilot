@@ -1,90 +1,108 @@
- import net.md_5.bungee.api.CommandSender;
- import net.md_5.bungee.api.connection.ProxiedPlayer;
- import net.md_5.bungee.api.plugin.Command;
+package com.playerservers;
 
- import java.util.UUID;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.plugin.Command;
 
- public class ServerCommand extends Command {
+import java.util.UUID;
 
-  private final PlayerServerPlugin plugin;
+public class ServerCommand extends Command {
 
-  public ServerCommand(PlayerServerPlugin plugin) {
-   super("server", "playerserver.command.server", "pserver"); // Name, permission, aliases
-   this.plugin = plugin;
-  }
+    private final PlayerServerPlugin plugin;
 
-  @Override
-  public void execute(CommandSender sender, String[] args) {
-   if (!(sender instanceof ProxiedPlayer)) {
-    sender.sendMessage("This command can only be used by players.");
-    return;
-   }
+    public ServerCommand(PlayerServerPlugin plugin) {
+        super("server", "playerserver.command.server", "pserver");
+        this.plugin = plugin;
+    }
 
-   ProxiedPlayer player = (ProxiedPlayer) sender;
-   UUID playerUUID = player.getUniqueId();
+    @Override
+    public void execute(CommandSender sender, String[] args) {
+        if (!(sender instanceof ProxiedPlayer)) {
+            sender.sendMessage(new ComponentBuilder("This command can only be used by players.").color(ChatColor.RED).create());
+            return;
+        }
 
-   if (args.length == 0) {
-    sender.sendMessage("Usage: /server <create|delete|join|list|manage>");
-    return;
-   }
+        ProxiedPlayer player = (ProxiedPlayer) sender;
+        UUID playerUUID = player.getUniqueId();
 
-   switch (args[0].toLowerCase()) {
-    case "create":
-     handleCreate(player, playerUUID);
-     break;
-    case "delete":
-     handleDelete(player, playerUUID);
-     break;
-    case "join":
-     handleJoin(player, playerUUID);
-     break;
-    case "list":
-     handleList(player);
-     break;
-    case "manage":
-     handleManage(player);
-     break;
-    default:
-     sender.sendMessage("Unknown subcommand: " + args[0]);
-   }
-  }
+        if (args.length == 0) {
+            showHelp(player);
+            return;
+        }
 
-  private void handleCreate(ProxiedPlayer player, UUID playerUUID) {
-   if (plugin.getDatabaseManager().hasServer(playerUUID.toString())) {
-    player.sendMessage("You already have a server!");
-    return;
-   }
+        switch (args[0].toLowerCase()) {
+            case "create": handleCreate(player, playerUUID); break;
+            case "delete": handleDelete(player, playerUUID); break;
+            case "join": handleJoin(player, playerUUID); break;
+            case "list": handleList(player); break;
+            case "manage": handleManage(player); break;
+            default: showHelp(player);
+        }
+    }
 
-   plugin.getServerManager().createServer(playerUUID);
-   player.sendMessage("Creating your server...");
-  }
+    private void handleCreate(ProxiedPlayer player, UUID playerUUID) {
+        if (plugin.getDatabaseManager().hasServer(playerUUID.toString())) {
+            player.sendMessage(new ComponentBuilder("You already have a server!").color(ChatColor.RED).create());
+            return;
+        }
+        plugin.getServerManager().createServer(playerUUID);
+        player.sendMessage(new ComponentBuilder("Creating your server...").color(ChatColor.GREEN).create());
+    }
 
-  private void handleDelete(ProxiedPlayer player, UUID playerUUID) {
-   if (!plugin.getDatabaseManager().hasServer(playerUUID.toString())) {
-    player.sendMessage("You don't have a server to delete!");
-    return;
-   }
+    private void handleDelete(ProxiedPlayer player, UUID playerUUID) {
+        if (!plugin.getDatabaseManager().hasServer(playerUUID.toString())) {
+            player.sendMessage(new ComponentBuilder("You don't have a server to delete!").color(ChatColor.RED).create());
+            return;
+        }
+        plugin.getServerManager().deleteServer(playerUUID);
+        player.sendMessage(new ComponentBuilder("Deleting your server...").color(ChatColor.GREEN).create());
+    }
 
-   plugin.getServerManager().deleteServer(playerUUID);
-   player.sendMessage("Deleting your server...");
-  }
+    private void handleJoin(ProxiedPlayer player, UUID playerUUID) {
+        String serverName = plugin.getDatabaseManager().getServerName(playerUUID.toString());
+        if (serverName == null) {
+            player.sendMessage(new ComponentBuilder("You don't have a server to join!").color(ChatColor.RED).create());
+            return;
+        }
+        plugin.getServerManager().startServer(playerUUID);
+        player.connect(plugin.getProxy().getServerInfo(serverName));
+    }
 
-  private void handleJoin(ProxiedPlayer player, UUID playerUUID) {
-   String serverName = plugin.getDatabaseManager().getServerName(playerUUID.toString());
-   if (serverName == null) {
-    player.sendMessage("You don't have a server to join!");
-    return;
-   }
+    private void handleList(ProxiedPlayer player) {
+        player.sendMessage(new ComponentBuilder("=== Player Servers ===").color(ChatColor.GOLD).create());
+        boolean found = false;
+        for (String name : plugin.getProxy().getServers().keySet()) {
+            if (name.contains("-server")) {
+                found = true;
+                String status = plugin.getDatabaseManager().getServerStatus(
+                    name.replace("-server", ""));
+                ChatColor color = "RUNNING".equals(status) ? ChatColor.GREEN : ChatColor.RED;
+                player.sendMessage(new ComponentBuilder(" - " + name).color(ChatColor.YELLOW)
+                    .append(" [" + (status != null ? status : "UNKNOWN") + "]").color(color).create());
+            }
+        }
+        if (!found) {
+            player.sendMessage(new ComponentBuilder("No player servers available.").color(ChatColor.RED).create());
+        }
+    }
 
-   player.connect(plugin.getProxy().getServerInfo(serverName));
-  }
+    private void handleManage(ProxiedPlayer player) {
+        plugin.getGuiManager().openMainMenu(player);
+    }
 
-  private void handleList(ProxiedPlayer player) {
-   // Implement logic to list available player servers
-   player.sendMessage("Listing available servers (not implemented yet)...");
-  }
-
-  private void handleManage(ProxiedPlayer player) {
-   plugin.getGuiManager().openMainMenu(player);
-  }
- }
+    private void showHelp(ProxiedPlayer player) {
+        player.sendMessage(new ComponentBuilder("=== Server Commands ===").color(ChatColor.GOLD).create());
+        player.sendMessage(new ComponentBuilder("/server create").color(ChatColor.YELLOW)
+            .append(" - Create your server").color(ChatColor.WHITE).create());
+        player.sendMessage(new ComponentBuilder("/server delete").color(ChatColor.YELLOW)
+            .append(" - Delete your server").color(ChatColor.WHITE).create());
+        player.sendMessage(new ComponentBuilder("/server join").color(ChatColor.YELLOW)
+            .append(" - Join your server").color(ChatColor.WHITE).create());
+        player.sendMessage(new ComponentBuilder("/server list").color(ChatColor.YELLOW)
+            .append(" - List servers").color(ChatColor.WHITE).create());
+        player.sendMessage(new ComponentBuilder("/server manage").color(ChatColor.YELLOW)
+            .append(" - Manage your server").color(ChatColor.WHITE).create());
+    }
+}

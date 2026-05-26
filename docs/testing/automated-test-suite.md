@@ -19,6 +19,10 @@ Commands:
 - `npm run test:coverage` emits Node test coverage for CI.
 - `npm run test:playwright` runs browser E2E tests.
 
+Shared test infrastructure lives in `tests/helpers/`:
+- `supabase-mock.ts` — reusable `QueryBuilder`, `makeSupabase`, and type aliases for in-memory Supabase mocking.
+- `http-client.ts` — `request` and `requestWithHeaders` helpers for firing HTTP requests at the test server.
+
 Current critical coverage targets:
 
 - Auth/session helpers and token storage.
@@ -28,6 +32,7 @@ Current critical coverage targets:
 - Invalid setup payloads return `400`.
 - Demo flag behavior follows `VITE_DEMO_FEATURE_ENABLED`.
 - Demo seed is idempotent for customers and Docker apps per owner.
+- Rate-limit headers conform to the `RateLimit-*` draft-6 standard.
 
 ## Orchestrator Agent (`services/orchestrator-agent`)
 
@@ -43,7 +48,7 @@ Commands:
 
 - `mvn -B test jacoco:report jacoco:check` runs JUnit 5 tests, emits Surefire reports, and enforces the JaCoCo line-coverage gate.
 
-The test stack is JUnit 5, Mockito, and AssertJ. The initial smoke test verifies the Maven test runtime while the coverage plugin is configured for future lifecycle, database boundary, event, and plugin bootstrap tests.
+The test stack is JUnit 5, Mockito, and AssertJ. The coverage plugin is configured for future lifecycle, database boundary, event, and plugin bootstrap tests. No application tests have been written yet — this is a known gap.
 
 ## CI gates
 

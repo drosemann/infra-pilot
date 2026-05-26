@@ -1,4 +1,3 @@
-import importlib.util
 import pathlib
 import sys
 from dataclasses import dataclass
@@ -6,15 +5,6 @@ from dataclasses import dataclass
 SERVICE_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
-
-
-def load_module(name: str, relative_path: str):
-    spec = importlib.util.spec_from_file_location(name, SERVICE_ROOT / relative_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
 
 
 @dataclass

@@ -182,6 +182,11 @@ services/management-panel/
 │   ├── PERSONAL_MODE.md # Mode architecture
 │   ├── DATABASE_SETUP.md # Setup guide
 │   └── ARCHITECTURE.md   # Technical architecture
+├── tests/
+│   ├── helpers/          # Shared test mocks (supabase-mock, http-client)
+│   ├── unit/             # Unit tests (auth-storage)
+│   ├── integration/      # API integration tests (api, rate-limit)
+│   └── playwright/       # Playwright E2E browser tests
 ├── package.json         # Dependencies
 ├── vite.config.ts       # Frontend build config
 └── tsconfig.json        # TypeScript config

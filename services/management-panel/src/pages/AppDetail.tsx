@@ -3,13 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
 import { DockerApp } from '../lib/types';
 import { toast } from 'sonner';
+import { GitDeployManager } from '../components/GitDeployManager';
+import { DatabaseManager } from '../components/DatabaseManager';
+import { ModpackBrowser } from '../components/ModpackBrowser';
 
 export const AppDetail = () => {
   const navigate = useNavigate();
   const { appId } = useParams();
   const [app, setApp] = useState<DockerApp | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'env' | 'volumes' | 'settings'>(
+  const [activeTab, setActiveTab] = useState<'overview' | 'logs' | 'env' | 'volumes' | 'config' | 'settings' | 'deploy' | 'database' | 'modpacks'>(
     'overview'
   );
   const [logs, setLogs] = useState<Array<any>>([]);
@@ -223,7 +226,7 @@ export const AppDetail = () => {
       <div>
         <div className="flex border-b border-slate-200 dark:border-slate-700 gap-4">
           {(
-            ['overview', 'logs', 'env', 'volumes', 'settings'] as const
+            ['overview', 'logs', 'env', 'volumes', 'config', 'settings', 'deploy', 'database', 'modpacks'] as const
           ).map((tab) => (
             <button
               key={tab}
@@ -336,6 +339,10 @@ export const AppDetail = () => {
             </div>
           )}
 
+          {activeTab === 'config' && appId && (
+            <ConfigEditor appId={appId} />
+          )}
+
           {activeTab === 'settings' && (
             <div className="space-y-4">
               <button
@@ -345,6 +352,18 @@ export const AppDetail = () => {
                 Edit Configuration
               </button>
             </div>
+          )}
+
+          {activeTab === 'deploy' && (
+            <GitDeployManager />
+          )}
+
+          {activeTab === 'database' && appId && (
+            <DatabaseManager appId={appId} />
+          )}
+
+          {activeTab === 'modpacks' && appId && (
+            <ModpackBrowser appId={appId} />
           )}
         </div>
       </div>

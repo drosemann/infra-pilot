@@ -11,6 +11,7 @@ export interface ServerPreset {
   };
   ports: Array<{ hostPort: number; containerPort: number; protocol: 'tcp' | 'udp' }>;
   environmentVars: Record<string, string>;
+  javaVersion?: string;
 }
 
 export const SERVER_PRESETS: ServerPreset[] = [
@@ -23,6 +24,7 @@ export const SERVER_PRESETS: ServerPreset[] = [
     resources: { ram: '2g', cpu: 2, disk: '20g' },
     ports: [{ hostPort: 25565, containerPort: 25565, protocol: 'tcp' }],
     environmentVars: { EULA: 'TRUE', TYPE: 'VANILLA' },
+    javaVersion: '17',
   },
   {
     id: 'minecraft-paper',
@@ -33,6 +35,7 @@ export const SERVER_PRESETS: ServerPreset[] = [
     resources: { ram: '3g', cpu: 2, disk: '30g' },
     ports: [{ hostPort: 25565, containerPort: 25565, protocol: 'tcp' }],
     environmentVars: { EULA: 'TRUE', TYPE: 'PAPER' },
+    javaVersion: '17',
   },
   {
     id: 'discord-bot',

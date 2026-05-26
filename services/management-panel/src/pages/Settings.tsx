@@ -2,6 +2,8 @@ import { useLocation } from 'react-router-dom';
 import { MaintenanceScheduler } from '../components/MaintenanceScheduler';
 import { AlertConfig } from '../components/AlertConfig';
 import { AlertHistory } from '../components/AlertHistory';
+import { TwoFactorSetup } from '../components/TwoFactorSetup';
+import MetricsConfig from '../components/MetricsConfig';
 
 export const SettingsPage = () => {
   const location = useLocation();
@@ -54,6 +56,10 @@ export const SettingsPage = () => {
               </button>
             </div>
           </div>
+
+          <TwoFactorSetup />
+
+          <MetricsConfig />
 
           <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Configuration Management</h2>

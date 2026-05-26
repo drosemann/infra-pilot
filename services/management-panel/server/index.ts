@@ -9,6 +9,8 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import crypto from 'crypto';
+import os from 'os';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 import { SERVER_PRESETS } from './presets.js';
@@ -235,6 +237,53 @@ app.post('/api/setup/init', loginLimiter, async (req: Request, res: Response) =>
 });
 
 // ============================================================================
+// VALIDATION ROUTES (no auth required - utility before setup)
+// ============================================================================
+
+// POST /api/validate/discord-token - Validate a Discord bot token
+app.post('/api/validate/discord-token', async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ valid: false, error: 'Token is required' });
+  }
+
+  try {
+    const response = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: { Authorization: `Bot ${token}` },
+    });
+
+    if (response.status === 401) {
+      return res.json({ valid: false, error: 'Invalid token' });
+    }
+
+    if (!response.ok) {
+      return res.status(response.status).json({ valid: false, error: 'Discord API error' });
+    }
+
+    const userData: any = await response.json();
+    const botName = userData.username;
+
+    let guildCount = 0;
+    try {
+      const guildsResponse = await fetch('https://discord.com/api/v10/users/@me/guilds', {
+        headers: { Authorization: `Bot ${token}` },
+      });
+      if (guildsResponse.ok) {
+        const guilds: any[] = await guildsResponse.json();
+        guildCount = guilds.length;
+      }
+    } catch {
+      // guild count is best-effort
+    }
+
+    res.json({ valid: true, botName, guildCount });
+  } catch (err) {
+    res.status(500).json({ valid: false, error: 'Failed to validate token' });
+  }
+});
+
+// ============================================================================
 // DOCKER APP ROUTES (require auth)
 // ============================================================================
 
@@ -265,13 +314,18 @@ app.get('/api/apps', verifyAuth, async (req: Request, res: Response) => {
 // POST /api/apps - Create a new Docker app
 app.post('/api/apps', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { name, image, ports, environmentVars, volumes, memoryLimit, cpuShares, description } = req.body;
+  const { name, image, ports, environmentVars, volumes, memoryLimit, cpuShares, description, javaVersion } = req.body;
 
   if (!name || !image) {
     return res.status(400).json({ error: 'Name and image are required' });
   }
 
   try {
+    const mergedEnvVars = { ...(environmentVars || {}) };
+    if (javaVersion) {
+      mergedEnvVars.JAVA_VERSION = javaVersion;
+    }
+
     const { data, error } = await supabase
       .from('docker_apps')
       .insert({
@@ -280,7 +334,7 @@ app.post('/api/apps', verifyAuth, async (req: Request, res: Response) => {
         image,
         status: 'stopped',
         ports: ports || [],
-        environment_vars: environmentVars || {},
+        environment_vars: mergedEnvVars,
         volumes: volumes || [],
         memory_limit: memoryLimit,
         cpu_shares: cpuShares,
@@ -324,11 +378,26 @@ app.get('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) => {
 app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
+  const { javaVersion, ...otherFields } = req.body;
 
   try {
+    let updateData = { ...otherFields };
+
+    if (javaVersion) {
+      const { data: current } = await supabase
+        .from('docker_apps')
+        .select('environment_vars')
+        .eq('id', appId)
+        .eq('user_id', userId)
+        .single();
+
+      const envVars = { ...((current?.environment_vars as Record<string, string>) || {}), JAVA_VERSION: javaVersion };
+      updateData.environment_vars = envVars;
+    }
+
     const { data, error } = await supabase
       .from('docker_apps')
-      .update(req.body)
+      .update(updateData)
       .eq('id', appId)
       .eq('user_id', userId)
       .select()
@@ -338,7 +407,7 @@ app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =>
       return res.status(404).json({ error: 'App not found' });
     }
 
-    await logAudit(userId, 'app:update', 'app', appId, null, req.body);
+    await logAudit(userId, 'app:update', 'app', appId, null, updateData);
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update app' });
@@ -462,12 +531,17 @@ app.post('/api/apps/:appId/restart', verifyAuth, async (req: Request, res: Respo
   }
 });
 
-// GET /api/apps/:appId/logs - Stream logs (paginated)
+// GET /api/apps/:appId/logs - Stream logs with search, filtering, pagination
 app.get('/api/apps/:appId/logs', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000);
-  const offset = parseInt(req.query.offset as string) || 0;
+  const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+  const offset = (page - 1) * limit;
+  const search = req.query.search as string;
+  const level = req.query.level as string;
+  const from = req.query.from as string;
+  const to = req.query.to as string;
 
   try {
     // Verify app ownership
@@ -482,16 +556,31 @@ app.get('/api/apps/:appId/logs', verifyAuth, async (req: Request, res: Response)
       return res.status(404).json({ error: 'App not found' });
     }
 
-    // Fetch logs
-    const { data, error } = await supabase
+    // Build query
+    let query = supabase
       .from('app_logs')
-      .select('*')
-      .eq('app_id', appId)
+      .select('*', { count: 'exact' })
+      .eq('app_id', appId);
+
+    if (level) {
+      query = query.eq('level', level.toUpperCase());
+    }
+    if (from) {
+      query = query.gte('created_at', from);
+    }
+    if (to) {
+      query = query.lte('created_at', to);
+    }
+    if (search) {
+      query = query.ilike('message', `%${search}%`);
+    }
+
+    const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) throw error;
-    res.json(data || []);
+    res.json({ data: data || [], total: count || 0, page, limit });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch logs' });
   }
@@ -546,10 +635,249 @@ app.get('/api/config/mode', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// CONFIG EDITOR ROUTES (require auth)
+// ============================================================================
+
+// GET /api/apps/:appId/config - List config files in container
+app.get('/api/apps/:appId/config', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+  const path = (req.query.path as string) || '/';
+
+  try {
+    const { data: app, error } = await supabase
+      .from('docker_apps')
+      .select('container_id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
+
+    const safePath = path.replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
+    const { stdout, stderr } = await execAsync(`docker exec ${app.container_id} ls -la ${safePath}`).catch((err: any) => {
+      throw new Error(`Failed to list directory: ${err.message}`);
+    });
+
+    const lines = stdout.trim().split('\n');
+    const files = lines.filter((l: string) => l.length > 0).slice(1).map((line: string) => {
+      const parts = line.split(/\s+/);
+      const isDir = parts[0]?.startsWith('d') || false;
+      const name = parts.slice(8).join(' ');
+      return {
+        name,
+        path: safePath === '/' ? `/${name}` : `${safePath}/${name}`,
+        size: parseInt(parts[4]) || 0,
+        modifiedAt: `${parts[5]} ${parts[6]} ${parts[7]}`,
+        isDirectory: isDir,
+      };
+    });
+
+    res.json({ files, currentPath: safePath });
+  } catch (err: any) {
+    if (err.message?.includes('App not found')) return res.status(404).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to list config files' });
+  }
+});
+
+// GET /api/apps/:appId/config/read - Read a config file
+app.get('/api/apps/:appId/config/read', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+  const file = req.query.file as string;
+
+  if (!file) return res.status(400).json({ error: 'file query parameter is required' });
+
+  try {
+    const { data: app, error } = await supabase
+      .from('docker_apps')
+      .select('container_id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
+
+    const { stdout, stderr } = await execAsync(`docker exec ${app.container_id} cat ${file}`).catch((err: any) => {
+      throw new Error(`Failed to read file: ${err.message}`);
+    });
+
+    const ext = file.split('.').pop()?.toLowerCase();
+    let language: 'yaml' | 'json' | 'properties' | 'text' = 'text';
+    if (ext === 'yml' || ext === 'yaml') language = 'yaml';
+    else if (ext === 'json') language = 'json';
+    else if (ext === 'properties') language = 'properties';
+
+    res.json({ content: stdout, path: file, language });
+  } catch (err: any) {
+    if (err.message?.includes('App not found')) return res.status(404).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to read config file' });
+  }
+});
+
+// POST /api/apps/:appId/config/write - Write/save a config file
+app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+  const { path: filePath, content } = req.body;
+
+  if (!filePath || content === undefined) return res.status(400).json({ error: 'path and content are required' });
+
+  try {
+    const { data: app, error } = await supabase
+      .from('docker_apps')
+      .select('container_id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
+
+    const timestamp = Date.now();
+    const backupPath = `${filePath}.bak.${timestamp}`;
+
+    // Create backup
+    await execAsync(`docker exec ${app.container_id} cp ${filePath} ${backupPath}`).catch(() => {
+      // Backup is best-effort; file may not exist yet
+    });
+
+    // Write new content
+    const escapedContent = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    await execAsync(`docker exec -i ${app.container_id} tee ${filePath}`, { input: content });
+
+    await logAudit(userId, 'config:write', 'config_file', `${appId}:${filePath}`, null, { backupPath });
+    res.json({ success: true, backupPath });
+  } catch (err: any) {
+    if (err.message?.includes('App not found')) return res.status(404).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to write config file' });
+  }
+});
+
+// GET /api/apps/:appId/config/validate - Validate YAML/JSON syntax
+app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+  const file = req.query.file as string;
+
+  if (!file) return res.status(400).json({ error: 'file query parameter is required' });
+
+  try {
+    const { data: app, error } = await supabase
+      .from('docker_apps')
+      .select('container_id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
+
+    const { stdout } = await execAsync(`docker exec ${app.container_id} cat ${file}`).catch((err: any) => {
+      throw new Error(`Failed to read file: ${err.message}`);
+    });
+
+    const ext = file.split('.').pop()?.toLowerCase();
+    const errors: string[] = [];
+    let valid = true;
+
+    if (ext === 'yml' || ext === 'yaml') {
+      try {
+        JSON.parse(stdout);
+        errors.push('File parsed as JSON but has .yaml extension');
+        valid = false;
+      } catch {
+        // Not JSON, try YAML-like validation
+        const lines = stdout.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.trim().startsWith('- ') || line.trim().match(/^[\w.-]+:/)) continue;
+          if (line.trim() === '' || line.trim().startsWith('#')) continue;
+          if (line.trim().match(/^[a-zA-Z]/) && !line.includes(':')) {
+            errors.push(`Line ${i + 1}: unexpected value "${line.trim()}"`);
+            valid = false;
+          }
+        }
+      }
+    } else if (ext === 'json') {
+      try {
+        JSON.parse(stdout);
+      } catch (e: any) {
+        errors.push(e.message || 'Invalid JSON');
+        valid = false;
+      }
+    } else {
+      errors.push('Unsupported file format for validation');
+      valid = false;
+    }
+
+    res.json({ valid, errors });
+  } catch (err: any) {
+    if (err.message?.includes('App not found')) return res.status(404).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Failed to validate config file' });
+  }
+});
+
 // Health check with basic instrumentation exposure
 app.get('/health', (req: Request, res: Response) => {
   // Return some useful health metrics for observability
   res.json({ status: 'ok', uptime: process.uptime(), version: APP_VERSION, metrics });
+});
+
+// ============================================================================
+// 2FA (Two-Factor Authentication) Routes
+// ============================================================================
+
+const INTEGRATION_SERVICE_URL = process.env.INTEGRATION_SERVICE_URL || 'http://localhost:9000';
+
+async function forwardToIntegration(req: Request, res: Response, path: string) {
+  try {
+    const response = await fetch(`${INTEGRATION_SERVICE_URL}${path}`, {
+      method: req.method,
+      headers: { 'Content-Type': 'application/json' },
+      body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: 'Integration service unavailable' });
+  }
+}
+
+app.post('/api/auth/2fa/setup', async (req: Request, res: Response) => {
+  await forwardToIntegration(req, res, '/api/auth/2fa/setup');
+});
+
+app.post('/api/auth/2fa/verify-setup', async (req: Request, res: Response) => {
+  await forwardToIntegration(req, res, '/api/auth/2fa/verify-setup');
+});
+
+app.post('/api/auth/2fa/verify', async (req: Request, res: Response) => {
+  await forwardToIntegration(req, res, '/api/auth/2fa/verify');
+});
+
+app.post('/api/auth/2fa/disable', async (req: Request, res: Response) => {
+  await forwardToIntegration(req, res, '/api/auth/2fa/disable');
+});
+
+app.get('/api/auth/2fa/backup-codes', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const response = await fetch(`${INTEGRATION_SERVICE_URL}/api/auth/2fa/backup-codes?user_id=${userId}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    res.status(502).json({ error: 'Integration service unavailable' });
+  }
+});
+
+app.post('/api/auth/2fa/verify-backup', async (req: Request, res: Response) => {
+  await forwardToIntegration(req, res, '/api/auth/2fa/verify-backup');
 });
 
 // GET /api/demo/flag - Expose the Demo feature flag for testing/CI verification
@@ -800,6 +1128,162 @@ app.get('/api/metrics/aggregated', verifyAuth, async (req: Request, res: Respons
   }
 });
 
+// GET /api/metrics/realtime - Real-time resource data
+app.get('/api/metrics/realtime', verifyAuth, async (req: Request, res: Response) => {
+  const appId = req.query.appId as string | undefined;
+  try {
+    if (appId) {
+      const { data: app, error } = await supabase
+        .from('docker_apps')
+        .select('container_id')
+        .eq('id', appId)
+        .single();
+      if (error || !app) return res.status(404).json({ error: 'App not found' });
+      if (app.container_id) {
+        const { stdout } = await execAsync(`docker stats ${app.container_id} --no-stream --format "{{json .}}"`).catch(() => ({ stdout: '' }));
+        if (stdout) {
+          const stats = JSON.parse(stdout);
+          const cpuPct = parseFloat(stats.CPUPerc) || 0;
+          const memUsed = parseFloat(stats.MemUsage?.split('/')[0]?.trim()) || 0;
+          const memTotal = parseFloat(stats.MemUsage?.split('/')[1]?.trim()) || 1;
+          const netRx = parseFloat(stats.NetIO?.split('/')[0]?.trim()) || 0;
+          const netTx = parseFloat(stats.NetIO?.split('/')[1]?.trim()) || 0;
+          return res.json({
+            cpu: { current: cpuPct, cores: os.cpus().length, unit: '%' },
+            memory: { current: memUsed, total: memTotal, unit: 'MB', percent: (memUsed / memTotal) * 100 },
+            disk: { current: 0, total: 0, unit: 'GB', percent: 0 },
+            network: { rx: netRx, tx: netTx, unit: 'Mbps' },
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    // System-wide metrics
+    const cpus = os.cpus();
+    const cpuLoad = cpus.reduce((acc, cpu) => {
+      const total = Object.values(cpu.times).reduce((a, b) => a + b, 0);
+      const idle = cpu.times.idle;
+      return acc + ((total - idle) / total) * 100;
+    }, 0) / cpus.length;
+
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memUsed = totalMem - freeMem;
+    const memPercent = (memUsed / totalMem) * 100;
+
+    let diskData = { current: 0, total: 0, percent: 0 };
+    try {
+      const { stdout } = await execAsync('df -k /');
+      const lines = stdout.trim().split('\n');
+      if (lines.length >= 2) {
+        const parts = lines[1].split(/\s+/);
+        const totalKb = parseInt(parts[1]) || 0;
+        const usedKb = parseInt(parts[2]) || 0;
+        const totalGb = totalKb / (1024 * 1024);
+        const usedGb = usedKb / (1024 * 1024);
+        diskData = { current: Math.round(usedGb * 100) / 100, total: Math.round(totalGb * 100) / 100, percent: totalGb > 0 ? (usedGb / totalGb) * 100 : 0 };
+      }
+    } catch {}
+
+    res.json({
+      cpu: { current: Math.round(cpuLoad * 100) / 100, cores: cpus.length, unit: '%' },
+      memory: { current: Math.round(memUsed / (1024 * 1024)), total: Math.round(totalMem / (1024 * 1024)), unit: 'MB', percent: Math.round(memPercent * 100) / 100 },
+      disk: { current: diskData.current, total: diskData.total, unit: 'GB', percent: Math.round(diskData.percent * 100) / 100 },
+      network: { rx: 0, tx: 0, unit: 'Mbps' },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch realtime metrics' });
+  }
+});
+
+// GET /api/metrics/history - Historical time-series metrics
+app.get('/api/metrics/history', verifyAuth, async (req: Request, res: Response) => {
+  const appId = req.query.appId as string | undefined;
+  const period = (req.query.period as string) || '1h';
+  const resolution = (req.query.resolution as string) || '5m';
+
+  const periodMap: Record<string, number> = { '1h': 3600000, '6h': 21600000, '24h': 86400000, '7d': 604800000 };
+  const since = new Date(Date.now() - (periodMap[period] || 3600000)).toISOString();
+
+  try {
+    let query = supabase
+      .from('server_metrics')
+      .select('recorded_at, cpu_percent, memory_used_mb, memory_total_mb, tps, player_count')
+      .gte('recorded_at', since)
+      .order('recorded_at', { ascending: true });
+
+    if (appId) query = query.eq('app_id', appId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Aggregate by resolution interval
+    const aggregated = new Map<string, { cpu: number[]; memory: number[]; tps: number[]; players: number[] }>();
+    const intervalMs = resolution === '1m' ? 60000 : resolution === '5m' ? 300000 : 3600000;
+
+    for (const row of data || []) {
+      const ts = new Date(row.recorded_at);
+      const bucket = new Date(Math.floor(ts.getTime() / intervalMs) * intervalMs).toISOString();
+      if (!aggregated.has(bucket)) aggregated.set(bucket, { cpu: [], memory: [], tps: [], players: [] });
+      const entry = aggregated.get(bucket)!;
+      if (row.cpu_percent != null) entry.cpu.push(row.cpu_percent);
+      if (row.memory_used_mb != null) entry.memory.push(row.memory_used_mb);
+      if (row.tps != null) entry.tps.push(row.tps);
+      if (row.player_count != null) entry.players.push(row.player_count);
+    }
+
+    const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+    const result = Array.from(aggregated.entries()).map(([timestamp, vals]) => ({
+      timestamp,
+      cpu: Math.round(avg(vals.cpu) * 100) / 100,
+      memory: Math.round(avg(vals.memory) * 100) / 100,
+      tps: Math.round(avg(vals.tps) * 10) / 10,
+      players: Math.round(avg(vals.players)),
+    }));
+
+    res.json({ data: result, period, resolution });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// POST /api/metrics/stream/config - Configure Netdata/Grafana data source
+app.post('/api/metrics/stream/config', verifyAuth, async (req: Request, res: Response) => {
+  const { type, url, apiKey } = req.body;
+  if (!type || !url || !['netdata', 'grafana'].includes(type)) {
+    return res.status(400).json({ error: 'type (netdata|grafana) and url are required' });
+  }
+  try {
+    const { error } = await supabase
+      .from('shared_config')
+      .upsert({ key: 'metrics_config', value: { type, url, apiKey: apiKey || null } }, { onConflict: 'key' });
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save metrics config' });
+  }
+});
+
+// GET /api/metrics/grafana-url - Return Grafana embed URL if configured
+app.get('/api/metrics/grafana-url', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const { data } = await supabase
+      .from('shared_config')
+      .select('value')
+      .eq('key', 'metrics_config')
+      .single();
+    const config = data?.value as any;
+    if (config && config.type === 'grafana' && config.url) {
+      return res.json({ url: config.url });
+    }
+    res.json({ url: null });
+  } catch (err) {
+    res.json({ url: null });
+  }
+});
+
 // GET /api/logs/access - Access logs
 app.get('/api/logs/access', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
@@ -950,6 +1434,119 @@ app.patch('/api/maintenance-windows/:id', verifyAuth, async (req: Request, res: 
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update maintenance window' });
+  }
+});
+
+// Scheduled Tasks CRUD (stored in shared_config as JSON array)
+const getScheduledTasks = async (): Promise<any[]> => {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'scheduled_tasks')
+    .single();
+  return (data?.value as any[]) || [];
+};
+
+const setScheduledTasks = async (tasks: any[]): Promise<void> => {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'scheduled_tasks', value: tasks }, { onConflict: 'key' });
+};
+
+app.get('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const tasks = await getScheduledTasks();
+    const userTasks = tasks.filter((t: any) => t.user_id === userId);
+    res.json(userTasks);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch scheduled tasks' });
+  }
+});
+
+app.post('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, description, taskType, targetAppId, cronExpression, command } = req.body;
+
+  if (!name || !taskType || !cronExpression) {
+    return res.status(400).json({ error: 'name, taskType, and cronExpression are required' });
+  }
+
+  if (!['restart', 'command', 'backup', 'custom'].includes(taskType)) {
+    return res.status(400).json({ error: 'taskType must be restart, command, backup, or custom' });
+  }
+
+  try {
+    const tasks = await getScheduledTasks();
+    const newTask = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      name,
+      description: description || '',
+      taskType,
+      targetAppId: targetAppId || null,
+      cronExpression,
+      command: command || null,
+      enabled: true,
+      lastRunAt: null,
+      lastRunStatus: null,
+      nextRunAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    tasks.push(newTask);
+    await setScheduledTasks(tasks);
+    await logAudit(userId, 'scheduled_task:create', 'scheduled_task', newTask.id, null, { name, taskType, cronExpression });
+    res.status(201).json(newTask);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create scheduled task' });
+  }
+});
+
+app.patch('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const tasks = await getScheduledTasks();
+    const index = tasks.findIndex((t: any) => t.id === id && t.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Scheduled task not found' });
+    tasks[index] = { ...tasks[index], ...req.body, id, user_id: userId };
+    await setScheduledTasks(tasks);
+    await logAudit(userId, 'scheduled_task:update', 'scheduled_task', id, null, req.body);
+    res.json(tasks[index]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update scheduled task' });
+  }
+});
+
+app.delete('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const tasks = await getScheduledTasks();
+    const index = tasks.findIndex((t: any) => t.id === id && t.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Scheduled task not found' });
+    tasks.splice(index, 1);
+    await setScheduledTasks(tasks);
+    await logAudit(userId, 'scheduled_task:delete', 'scheduled_task', id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete scheduled task' });
+  }
+});
+
+app.post('/api/scheduled-tasks/:id/toggle', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const tasks = await getScheduledTasks();
+    const index = tasks.findIndex((t: any) => t.id === id && t.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Scheduled task not found' });
+    tasks[index].enabled = !tasks[index].enabled;
+    await setScheduledTasks(tasks);
+    await logAudit(userId, 'scheduled_task:toggle', 'scheduled_task', id, null, { enabled: tasks[index].enabled });
+    res.json(tasks[index]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to toggle scheduled task' });
   }
 });
 
@@ -1194,6 +1791,271 @@ app.get('/api/reports/export', verifyAuth, async (req: Request, res: Response) =
 });
 
 // ============================================================================
+// DATABASE ROUTES (stored in shared_config as JSON array)
+// ============================================================================
+
+const getUserDatabases = async (userId: string): Promise<any[]> => {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'user_databases')
+    .single();
+  const all = (data?.value as any[]) || [];
+  return all.filter((db: any) => db.user_id === userId);
+};
+
+const setUserDatabases = async (databases: any[]): Promise<void> => {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'user_databases', value: databases }, { onConflict: 'key' });
+};
+
+function maskPassword(pwd: string): string {
+  if (!pwd) return '';
+  if (pwd.length <= 4) return '****';
+  return pwd.slice(0, 4) + '****';
+}
+
+// GET /api/databases - List databases for current user
+app.get('/api/databases', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const { data } = await supabase
+      .from('shared_config')
+      .select('value')
+      .eq('key', 'user_databases')
+      .single();
+    const all = (data?.value as any[]) || [];
+    const userDbs = all.filter((db: any) => db.user_id === userId);
+    const masked = userDbs.map((db: any) => ({
+      ...db,
+      password: db.password ? maskPassword(db.password) : undefined,
+    }));
+    res.json(masked);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch databases' });
+  }
+});
+
+// POST /api/databases - Create a new database
+app.post('/api/databases', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, appId } = req.body;
+
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'Database name is required' });
+  }
+
+  if (!/^[a-zA-Z0-9_]+$/.test(name)) {
+    return res.status(400).json({ error: 'Database name must be alphanumeric with underscores only' });
+  }
+
+  try {
+    const { data } = await supabase
+      .from('shared_config')
+      .select('value')
+      .eq('key', 'user_databases')
+      .single();
+    const all = (data?.value as any[]) || [];
+
+    const password = crypto.randomBytes(16).toString('hex');
+    const newDb = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      name,
+      host: process.env.HOST_IP || '127.0.0.1',
+      port: 3306,
+      database: name,
+      username: name,
+      password,
+      appId: appId || null,
+      status: 'creating',
+      createdAt: new Date().toISOString(),
+    };
+
+    all.push(newDb);
+    await supabase
+      .from('shared_config')
+      .upsert({ key: 'user_databases', value: all }, { onConflict: 'key' });
+
+    await logAudit(userId, 'database:create', 'database', newDb.id, null, { name, appId });
+
+    res.status(201).json(newDb);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create database' });
+  }
+});
+
+// GET /api/databases/:id - Get database details
+app.get('/api/databases/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { data } = await supabase
+      .from('shared_config')
+      .select('value')
+      .eq('key', 'user_databases')
+      .single();
+    const all = (data?.value as any[]) || [];
+    const db = all.find((d: any) => d.id === id && d.user_id === userId);
+    if (!db) return res.status(404).json({ error: 'Database not found' });
+    res.json({
+      ...db,
+      password: db.password ? maskPassword(db.password) : undefined,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch database' });
+  }
+});
+
+// DELETE /api/databases/:id - Delete a database
+app.delete('/api/databases/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const { data } = await supabase
+      .from('shared_config')
+      .select('value')
+      .eq('key', 'user_databases')
+      .single();
+    const all = (data?.value as any[]) || [];
+    const index = all.findIndex((d: any) => d.id === id && d.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Database not found' });
+    all.splice(index, 1);
+    await supabase
+      .from('shared_config')
+      .upsert({ key: 'user_databases', value: all }, { onConflict: 'key' });
+    await logAudit(userId, 'database:delete', 'database', id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete database' });
+  }
+});
+
+// ============================================================================
+// MODPACK ROUTES (proxied to Integration Service)
+// ============================================================================
+
+interface ModpackInstallation {
+  id: string;
+  modpackId: string;
+  appId: string;
+  status: 'pending' | 'downloading' | 'installing' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+  createdAt: string;
+}
+
+async function getModpackInstallations(): Promise<ModpackInstallation[]> {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'modpack_installations')
+    .single();
+  return (data?.value as ModpackInstallation[]) || [];
+}
+
+async function setModpackInstallations(installations: ModpackInstallation[]): Promise<void> {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'modpack_installations', value: installations }, { onConflict: 'key' });
+}
+
+// GET /api/modpacks/search - Proxy to Integration Service
+app.get('/api/modpacks/search', verifyAuth, async (req: Request, res: Response) => {
+  const query = req.query.query as string;
+  const platform = (req.query.platform as string) || 'all';
+  try {
+    const response = await fetch(
+      `${INTEGRATION_SERVICE_URL}/api/modpacks/search?query=${encodeURIComponent(query)}&platform=${platform}&limit=20`
+    );
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    res.status(502).json({ error: 'Integration service unavailable' });
+  }
+});
+
+// POST /api/apps/:appId/modpacks/install - Trigger modpack installation
+app.post('/api/apps/:appId/modpacks/install', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+  const { modpackId, platform } = req.body;
+
+  if (!modpackId || !platform) {
+    return res.status(400).json({ error: 'modpackId and platform are required' });
+  }
+
+  try {
+    const { data: app, error: appError } = await supabase
+      .from('docker_apps')
+      .select('container_id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (appError || !app) return res.status(404).json({ error: 'App not found' });
+    if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
+
+    const installations = await getModpackInstallations();
+    const installation: ModpackInstallation = {
+      id: crypto.randomUUID(),
+      modpackId,
+      appId,
+      status: 'pending',
+      progress: 0,
+      createdAt: new Date().toISOString(),
+    };
+    installations.push(installation);
+    await setModpackInstallations(installations);
+    await logAudit(userId, 'modpack:install', 'modpack', appId, null, { modpackId, platform });
+
+    // Fire-and-forget: trigger installation asynchronously
+    fetch(`${INTEGRATION_SERVICE_URL}/api/modpacks/${platform}/${modpackId.split(':')[1]}`)
+      .then(r => r.json())
+      .then(details => {
+        if (details.error) {
+          installation.status = 'failed';
+          installation.error = details.error;
+        } else {
+          installation.status = 'downloading';
+          installation.progress = 50;
+          // In a real scenario this would involve downloading and copying to container
+          setTimeout(() => {
+            installation.status = 'completed';
+            installation.progress = 100;
+            setModpackInstallations(installations);
+          }, 5000);
+        }
+        setModpackInstallations(installations);
+      })
+      .catch(() => {
+        installation.status = 'failed';
+        installation.error = 'Integration service unavailable';
+        setModpackInstallations(installations);
+      });
+
+    res.status(201).json(installation);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to start modpack installation' });
+  }
+});
+
+// GET /api/apps/:appId/modpacks/status - Check installation status
+app.get('/api/apps/:appId/modpacks/status', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.params;
+
+  try {
+    const installations = await getModpackInstallations();
+    const appInstallations = installations.filter((i: ModpackInstallation) => i.appId === appId);
+    res.json(appInstallations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch installation status' });
+  }
+});
+
+// ============================================================================
 // AUDIT LOG ROUTE
 // ============================================================================
 
@@ -1349,6 +2211,116 @@ app.delete('/api/notification-channels/:id', verifyAuth, async (req: Request, re
   }
 });
 
+// ============================================================================
+// GIT DEPLOYMENT ROUTES (stored in shared_config as JSON array)
+// ============================================================================
+
+const getDeployments = async (): Promise<any[]> => {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'git_deployments')
+    .single();
+  return (data?.value as any[]) || [];
+};
+
+const setDeployments = async (deployments: any[]): Promise<void> => {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'git_deployments', value: deployments }, { onConflict: 'key' });
+};
+
+app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const deployments = await getDeployments();
+    const userDeployments = deployments.filter((d: any) => d.user_id === userId);
+    res.json(userDeployments);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch deployments' });
+  }
+});
+
+app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, repoUrl, branch, containerId, targetDir, installCommand, restartCommand } = req.body;
+
+  if (!name || !repoUrl) {
+    return res.status(400).json({ error: 'name and repoUrl are required' });
+  }
+
+  try {
+    const deployments = await getDeployments();
+    const newDeployment = {
+      id: crypto.randomUUID(),
+      user_id: userId,
+      name,
+      repoUrl,
+      repo: repoUrl.replace(/\.git$/, '').split('/').slice(-2).join('/'),
+      branch: branch || 'main',
+      containerId: containerId || null,
+      targetDir: targetDir || '/app',
+      installCommand: installCommand || '',
+      restartCommand: restartCommand || '',
+      enabled: true,
+      webhookSecret: crypto.randomBytes(20).toString('hex'),
+      createdAt: new Date().toISOString(),
+      history: [],
+    };
+    deployments.push(newDeployment);
+    await setDeployments(deployments);
+    await logAudit(userId, 'deployment:create', 'deployment', newDeployment.id, null, { name, repoUrl });
+    res.status(201).json(newDeployment);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create deployment' });
+  }
+});
+
+app.delete('/api/deployments/:id', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const deployments = await getDeployments();
+    const index = deployments.findIndex((d: any) => d.id === id && d.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Deployment not found' });
+    deployments.splice(index, 1);
+    await setDeployments(deployments);
+    await logAudit(userId, 'deployment:delete', 'deployment', id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete deployment' });
+  }
+});
+
+app.patch('/api/deployments/:id/toggle', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const deployments = await getDeployments();
+    const index = deployments.findIndex((d: any) => d.id === id && d.user_id === userId);
+    if (index === -1) return res.status(404).json({ error: 'Deployment not found' });
+    deployments[index].enabled = !deployments[index].enabled;
+    await setDeployments(deployments);
+    await logAudit(userId, 'deployment:toggle', 'deployment', id, null, { enabled: deployments[index].enabled });
+    res.json(deployments[index]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to toggle deployment' });
+  }
+});
+
+app.get('/api/deployments/:id/history', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  try {
+    const deployments = await getDeployments();
+    const deployment = deployments.find((d: any) => d.id === id && d.user_id === userId);
+    if (!deployment) return res.status(404).json({ error: 'Deployment not found' });
+    res.json({ history: deployment.history || [] });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch deployment history' });
+  }
+});
+
 app.post('/api/notification-channels/:id/test', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
@@ -1363,6 +2335,128 @@ app.post('/api/notification-channels/:id/test', verifyAuth, async (req: Request,
     res.json({ success: true, message: `Test notification sent via ${channel.type}` });
   } catch (err) {
     res.status(500).json({ error: 'Failed to send test notification' });
+  }
+});
+
+// ============================================================================
+// BILLING ROUTES (stored in shared_config as JSON)
+// ============================================================================
+
+const getBillingData = async (): Promise<any> => {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'billing_data')
+    .single();
+  return data?.value || { users: {}, rates: { cpuPerCoreHour: 0.05, ramPerGbHour: 0.02, storagePerGbHour: 0.001, backupPerGb: 0.01 } };
+};
+
+const setBillingData = async (value: any): Promise<void> => {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'billing_data', value }, { onConflict: 'key' });
+};
+
+const getOrCreateUserBilling = async (userId: string): Promise<any> => {
+  const billing = await getBillingData();
+  if (!billing.users[userId]) {
+    billing.users[userId] = {
+      balance: 0,
+      totalSpent: 0,
+      totalToppedUp: 0,
+      transactions: [],
+      createdAt: new Date().toISOString(),
+    };
+    await setBillingData(billing);
+  }
+  return billing;
+};
+
+// GET /api/billing/balance - Get current user's balance
+app.get('/api/billing/balance', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    res.json({ balance: user.balance, totalSpent: user.totalSpent, totalToppedUp: user.totalToppedUp });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch balance' });
+  }
+});
+
+// POST /api/billing/topup - Simulate adding funds
+app.post('/api/billing/topup', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { amount } = req.body;
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be positive' });
+  }
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    user.balance += amount;
+    user.totalToppedUp += amount;
+    user.transactions.push({
+      id: crypto.randomUUID().slice(0, 16),
+      amount,
+      description: 'Top-up via management panel',
+      type: 'topup',
+      balanceAfter: user.balance,
+      timestamp: new Date().toISOString(),
+    });
+    user.transactions = user.transactions.slice(-100);
+    await setBillingData(billing);
+    await logAudit(userId, 'billing:topup', 'billing', null, null, { amount });
+    res.json({ balance: user.balance, totalSpent: user.totalSpent, totalToppedUp: user.totalToppedUp });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process top-up' });
+  }
+});
+
+// GET /api/billing/transactions - Get transaction history
+app.get('/api/billing/transactions', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    const txns = (user.transactions || []).map((t: any) => ({
+      id: t.id,
+      amount: t.amount,
+      description: t.description,
+      type: t.type,
+      balanceAfter: t.balanceAfter,
+      timestamp: t.timestamp,
+    }));
+    res.json(txns.reverse());
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+// GET /api/billing/cost-estimate - Calculate cost for given resources
+app.get('/api/billing/cost-estimate', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const billing = await getBillingData();
+    const rates = billing.rates;
+    const cpu = parseFloat(req.query.cpu as string) || 1;
+    const ram = parseFloat(req.query.ram as string) || 1;
+    const storage = parseFloat(req.query.storage as string) || 10;
+    const hourly = cpu * rates.cpuPerCoreHour + ram * rates.ramPerGbHour + storage * rates.storagePerGbHour;
+    const daily = hourly * 24;
+    const monthly = daily * 30;
+    res.json({ hourly: Math.round(hourly * 10000) / 10000, daily: Math.round(daily * 100) / 100, monthly: Math.round(monthly * 100) / 100 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to calculate cost' });
+  }
+});
+
+// GET /api/billing/rates - Get current billing rates
+app.get('/api/billing/rates', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const billing = await getBillingData();
+    res.json(billing.rates);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch rates' });
   }
 });
 

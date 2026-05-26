@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../lib/api';
-import { ServerPreset } from '../lib/types';
+import { ServerPreset, JAVA_VERSIONS } from '../lib/types';
 import { toast } from 'sonner';
 
 export const AppForm = () => {
@@ -14,6 +14,7 @@ export const AppForm = () => {
     image: '',
     description: '',
     memoryLimit: '',
+    javaVersion: '',
     ports: [] as Array<{ hostPort: string; containerPort: string; protocol: string }>,
     environmentVars: {} as Record<string, string>,
     volumes: [] as Array<{ hostPath: string; containerPath: string }>,
@@ -27,6 +28,9 @@ export const AppForm = () => {
   const [newVolume, setNewVolume] = useState({ hostPath: '', containerPath: '' });
   const [presets, setPresets] = useState<ServerPreset[]>([]);
   const [selectedPreset, setSelectedPreset] = useState('');
+  const [discordToken, setDiscordToken] = useState('');
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{valid: boolean; botName?: string; guildCount?: number; error?: string} | null>(null);
 
   useEffect(() => {
     if (isEdit && appId) {
@@ -55,6 +59,7 @@ export const AppForm = () => {
       image: preset.image,
       description: preset.description,
       memoryLimit: preset.resources.ram,
+      javaVersion: preset.javaVersion || '',
       ports: preset.ports.map((port) => ({
         hostPort: String(port.hostPort),
         containerPort: String(port.containerPort),
@@ -72,6 +77,7 @@ export const AppForm = () => {
         image: app.image,
         description: app.description || '',
         memoryLimit: app.memory_limit || '',
+        javaVersion: app.javaVersion || app.environment_vars?.JAVA_VERSION || '',
         ports: app.ports || [],
         environmentVars: app.environment_vars || {},
         volumes: app.volumes || [],
@@ -93,7 +99,7 @@ export const AppForm = () => {
 
     setSubmitting(true);
     try {
-      const payload = {
+      const payload: Record<string, any> = {
         name: formData.name,
         image: formData.image,
         description: formData.description,
@@ -102,6 +108,9 @@ export const AppForm = () => {
         environmentVars: formData.environmentVars,
         volumes: formData.volumes,
       };
+      if (formData.javaVersion) {
+        payload.javaVersion = formData.javaVersion;
+      }
 
       if (isEdit && appId) {
         await apiClient.updateApp(appId, payload);
@@ -116,6 +125,20 @@ export const AppForm = () => {
       toast.error(error.response?.data?.error || 'Failed to save app');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleValidateDiscordToken = async () => {
+    if (!discordToken) return;
+    setValidating(true);
+    setValidationResult(null);
+    try {
+      const result = await apiClient.validateDiscordToken(discordToken);
+      setValidationResult(result);
+    } catch {
+      setValidationResult({ valid: false, error: 'Failed to connect to validation service' });
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -160,6 +183,46 @@ export const AppForm = () => {
                 ))}
               </select>
             </div>
+          </fieldset>
+        )}
+
+        {!isEdit && selectedPreset === 'discord-bot' && (
+          <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Discord Bot Token
+            </h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+              Validate your Discord bot token before starting the container.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="password"
+                value={discordToken}
+                onChange={(e) => {
+                  setDiscordToken(e.target.value);
+                  setValidationResult(null);
+                }}
+                placeholder="Paste your Discord bot token"
+                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleValidateDiscordToken}
+                disabled={validating || !discordToken}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+              >
+                {validating ? 'Validating...' : 'Validate'}
+              </button>
+            </div>
+            {validationResult && (
+              <div className={`text-sm px-3 py-2 rounded ${validationResult.valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
+                {validationResult.valid ? (
+                  <span>✓ Valid — <strong>{validationResult.botName}</strong> (in {validationResult.guildCount} guild{validationResult.guildCount !== 1 ? 's' : ''})</span>
+                ) : (
+                  <span>✗ {validationResult.error}</span>
+                )}
+              </div>
+            )}
           </fieldset>
         )}
 
@@ -223,6 +286,24 @@ export const AppForm = () => {
                 className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {selectedPreset.startsWith('minecraft') && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Java Version
+                </label>
+                <select
+                  value={formData.javaVersion}
+                  onChange={(e) => setFormData({ ...formData, javaVersion: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Java version</option>
+                  {JAVA_VERSIONS.map((v) => (
+                    <option key={v} value={v}>Java {v}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </fieldset>
 

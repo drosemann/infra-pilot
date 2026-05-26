@@ -5,10 +5,75 @@ import json
 import time
 import os
 import secrets
-from typing import Dict, Any, Optional
+import struct
+from typing import Dict, Any, Optional, List
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+TOTP_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'totp')
+
+
+def _get_totp_dir() -> str:
+    d = os.path.abspath(TOTP_DATA_DIR)
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _totp_file(user_id: str) -> str:
+    return os.path.join(_get_totp_dir(), f'{user_id}.json')
+
+
+def _load_totp_data(user_id: str) -> dict:
+    path = _totp_file(user_id)
+    if os.path.exists(path):
+        try:
+            with open(path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f'Failed to load TOTP data for {user_id}: {e}')
+    return {'enabled': False, 'secret': None, 'hashed_backup_codes': []}
+
+
+def _save_totp_data(user_id: str, data: dict):
+    path = _totp_file(user_id)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        logger.error(f'Failed to save TOTP data for {user_id}: {e}')
+
+
+def generate_totp_secret() -> str:
+    secret = os.urandom(16)
+    return base64.b32encode(secret).decode('utf-8').rstrip('=')
+
+
+def get_totp_token_at_time(secret: str, timestamp: float) -> str:
+    key = base64.b32decode(secret, True)
+    counter = struct.pack('>Q', int(timestamp / 30))
+    h = hmac.new(key, counter, hashlib.sha1).digest()
+    offset = h[-1] & 0x0f
+    code = (struct.unpack('>I', h[offset:offset + 4])[0] & 0x7fffffff) % 1000000
+    return f'{code:06d}'
+
+
+def get_totp_token(secret: str) -> str:
+    return get_totp_token_at_time(secret, time.time())
+
+
+def verify_totp_token(secret: str, token: str, window: int = 1) -> bool:
+    for i in range(-window, window + 1):
+        expected = get_totp_token_at_time(secret, time.time() + i * 30)
+        if token == expected:
+            return True
+    return False
+
+
+def generate_totp_uri(secret: str, username: str, issuer: str = 'InfraPilot') -> str:
+    return f'otpauth://totp/{issuer}:{username}?secret={secret}&issuer={issuer}&algorithm=SHA1&digits=6&period=30'
 
 
 class AuthManager:
@@ -78,6 +143,77 @@ class AuthManager:
             logger.debug(f"JWT verify failed: {e}")
             return None
 
+    async def setup_totp(self, user_id: str) -> Dict[str, Any]:
+        secret = generate_totp_secret()
+        data = _load_totp_data(user_id)
+        data['secret'] = secret
+        data['enabled'] = False
+        data['hashed_backup_codes'] = []
+        _save_totp_data(user_id, data)
+        return {
+            'secret': secret,
+            'uri': generate_totp_uri(secret, user_id),
+            'qr_code_url': f'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={generate_totp_uri(secret, user_id)}'
+        }
+
+    async def verify_totp_setup(self, user_id: str, token: str) -> bool:
+        data = _load_totp_data(user_id)
+        if not data.get('secret'):
+            return False
+        if not verify_totp_token(data['secret'], token):
+            return False
+        data['enabled'] = True
+        _save_totp_data(user_id, data)
+        return True
+
+    async def validate_totp(self, user_id: str, token: str) -> bool:
+        data = _load_totp_data(user_id)
+        if not data.get('enabled') or not data.get('secret'):
+            return False
+        return verify_totp_token(data['secret'], token)
+
+    async def disable_totp(self, user_id: str, password: str) -> bool:
+        data = _load_totp_data(user_id)
+        if not data.get('enabled'):
+            return False
+        _save_totp_data(user_id, {
+            'enabled': False,
+            'secret': None,
+            'hashed_backup_codes': []
+        })
+        return True
+
+    async def get_backup_codes(self, user_id: str) -> List[str]:
+        data = _load_totp_data(user_id)
+        if not data.get('enabled'):
+            return []
+        codes = []
+        for _ in range(8):
+            code = secrets.randbelow(100000000)
+            code_str = f'{code:08d}'
+            codes.append(code_str)
+            code_hash = hashlib.sha256(code_str.encode()).hexdigest()
+            if 'hashed_backup_codes' not in data:
+                data['hashed_backup_codes'] = []
+            data['hashed_backup_codes'].append(code_hash)
+        _save_totp_data(user_id, data)
+        return codes
+
+    async def verify_backup_code(self, user_id: str, code: str) -> bool:
+        data = _load_totp_data(user_id)
+        if not data.get('enabled'):
+            return False
+        hashed = hashlib.sha256(code.encode()).hexdigest()
+        if hashed in data.get('hashed_backup_codes', []):
+            data['hashed_backup_codes'].remove(hashed)
+            _save_totp_data(user_id, data)
+            return True
+        return False
+
+    async def is_totp_enabled(self, user_id: str) -> bool:
+        data = _load_totp_data(user_id)
+        return data.get('enabled', False)
+
     async def generate_token(self, user_id: str, role: str = 'user', extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         payload = {
             'user_id': user_id,
@@ -122,6 +258,20 @@ class AuthManager:
 
     async def login(self, email: str, password: str) -> Dict[str, Any]:
         if email and password:
+            if await self.is_totp_enabled(email):
+                temp_token = self._generate_jwt({
+                    'user_id': email,
+                    'role': 'user',
+                    'email': email,
+                    '2fa_pending': True,
+                    'iat': int(time.time()),
+                    'exp': int(time.time()) + 300
+                })
+                return {
+                    '2fa_required': True,
+                    'temp_token': temp_token,
+                    'user_id': email
+                }
             return await self.generate_token(email, 'user', {'email': email})
         raise ValueError('Invalid credentials')
 
@@ -130,6 +280,20 @@ class AuthManager:
         if not payload:
             raise ValueError('Invalid or expired token')
         return {'valid': True, 'user_id': payload['user_id'], 'role': payload['role']}
+
+    async def complete_2fa_login(self, temp_token: str, totp_code: str) -> Dict[str, Any]:
+        payload = self._verify_jwt(temp_token)
+        if not payload:
+            raise ValueError('Invalid or expired temp token')
+        if not payload.get('2fa_pending'):
+            raise ValueError('Invalid temp token')
+        user_id = payload['user_id']
+        backup_verified = await self.verify_backup_code(user_id, totp_code)
+        if not backup_verified:
+            totp_valid = await self.validate_totp(user_id, totp_code)
+            if not totp_valid:
+                raise ValueError('Invalid TOTP code or backup code')
+        return await self.generate_token(user_id, payload.get('role', 'user'), {'email': user_id})
 
     async def oauth2_authorize(self, platform: str, redirect_uri: str) -> Dict[str, Any]:
         state = secrets.token_urlsafe(32)

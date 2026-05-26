@@ -7,6 +7,7 @@ import { SystemGauge } from '../components/SystemGauge';
 import { PlayerCountChart } from '../components/PlayerCountChart';
 import { ResourceMonitor } from '../components/ResourceMonitor';
 import { HealthCheckDashboard } from '../components/HealthCheckDashboard';
+import RealtimeMetrics from '../components/RealtimeMetrics';
 
 export const Monitoring = () => {
   const [apps, setApps] = useState<DockerApp[]>([]);
@@ -15,6 +16,7 @@ export const Monitoring = () => {
   const [playerData, setPlayerData] = useState<Array<{ time: string; count: number }>>([]);
   const [timeRange, setTimeRange] = useState<'5m' | '30m' | '1h'>('30m');
   const [showHealth, setShowHealth] = useState(false);
+  const [showRealtime, setShowRealtime] = useState(false);
 
   useEffect(() => {
     apiClient.listApps().then(setApps).catch(() => {});
@@ -60,11 +62,19 @@ export const Monitoring = () => {
             onChange={(e) => setSelectedApp(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-blue-500"
           >
-            <option value="">Select a server...</option>
+            <option value="">All servers</option>
             {apps.map((app) => (
               <option key={app.id} value={app.id}>{app.name}</option>
             ))}
           </select>
+          <button
+            onClick={() => setShowRealtime(!showRealtime)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showRealtime ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            Realtime
+          </button>
           <button
             onClick={() => setShowHealth(!showHealth)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -76,12 +86,16 @@ export const Monitoring = () => {
         </div>
       </div>
 
-      <MetricsOverview />
-
-      {showHealth ? (
+      {showRealtime ? (
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+          <RealtimeMetrics appId={selectedApp || undefined} />
+        </div>
+      ) : showHealth ? (
         <HealthCheckDashboard />
       ) : (
         <>
+          <MetricsOverview />
+
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">
@@ -150,7 +164,7 @@ export const Monitoring = () => {
                 ))}
                 {tpsData.filter((t) => t < 10).length > 0 && (
                   <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-400">
-                    ⚠ Alert: Low TPS detected ({tpsData.filter((t) => t < 10).length} data points below 10)
+                    Low TPS detected ({tpsData.filter((t) => t < 10).length} data points below 10)
                   </div>
                 )}
               </div>

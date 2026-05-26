@@ -257,6 +257,25 @@ def init_database_tables():
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS scheduled_tasks (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            task_type VARCHAR(50) NOT NULL,
+            target_app_id VARCHAR(255),
+            target_container_id VARCHAR(255),
+            cron_expression VARCHAR(100) NOT NULL,
+            command TEXT,
+            enabled BOOLEAN DEFAULT TRUE,
+            created_by VARCHAR(255),
+            last_run_at TIMESTAMP NULL,
+            last_run_status VARCHAR(50),
+            next_run_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS alerts (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id VARCHAR(255) NOT NULL,

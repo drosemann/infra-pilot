@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { apiClient } from '../lib/api';
 
 interface LogEntry {
   id: string;
@@ -13,6 +14,20 @@ interface LiveLogsProps {
   logs?: LogEntry[];
   isLive?: boolean;
   maxHeight?: string;
+  appId?: string;
+}
+
+const LOG_LEVELS = ['ALL', 'INFO', 'WARN', 'ERROR', 'DEBUG'] as const;
+
+function highlightText(text: string, query: string) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? `<mark class="bg-yellow-500/30 text-yellow-200 rounded px-0.5">${part}</mark>`
+      : part
+  ).join('');
 }
 
 export const LiveLogs = ({
@@ -68,28 +83,64 @@ export const LiveLogs = ({
   ],
   isLive = true,
   maxHeight = 'max-h-96',
+  appId,
 }: LiveLogsProps) => {
   const [isPaused, setIsPaused] = useState(false);
   const [displayLogs, setDisplayLogs] = useState(logs);
+  const [mode, setMode] = useState<'live' | 'search'>('live');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [levelFilter, setLevelFilter] = useState('ALL');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [searchResults, setSearchResults] = useState<LogEntry[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     setDisplayLogs(logs);
   }, [logs]);
 
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'INFO':
-        return 'text-blue-400';
-      case 'WARN':
-        return 'text-yellow-400';
-      case 'ERROR':
-        return 'text-red-400';
-      case 'DEBUG':
-        return 'text-gray-400';
-      default:
-        return 'text-slate-400';
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
+
+  const performSearch = useCallback(async (page = 1) => {
+    if (!appId) return;
+    setLoading(true);
+    try {
+      const result = await apiClient.searchLogs(appId, {
+        query: debouncedSearch || undefined,
+        level: levelFilter === 'ALL' ? undefined : levelFilter,
+        from: fromDate || undefined,
+        to: toDate || undefined,
+        page,
+        limit: 50,
+      });
+      setSearchResults(result.logs);
+      setTotalResults(result.total);
+      setCurrentPage(page);
+    } catch {
+      setSearchResults([]);
+      setTotalResults(0);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [appId, debouncedSearch, levelFilter, fromDate, toDate]);
+
+  useEffect(() => {
+    if (mode === 'search') {
+      performSearch(1);
+    }
+  }, [mode, performSearch]);
 
   const getLevelBackground = (level: string) => {
     switch (level) {
@@ -116,13 +167,15 @@ export const LiveLogs = ({
     });
   };
 
+  const currentLogs = mode === 'search' ? searchResults : displayLogs;
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-xl font-bold text-white">Live Logs (All Containers)</h3>
-          {isLive && (
+          <h3 className="text-xl font-bold text-white">Logs</h3>
+          {mode === 'live' && (
             <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-sm">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               Live
@@ -131,58 +184,145 @@ export const LiveLogs = ({
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsPaused(!isPaused)}
+            onClick={() => setMode(mode === 'live' ? 'search' : 'live')}
             className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              isPaused
+              mode === 'search'
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
-            {isPaused ? '▶ Resume' : '⏸ Pause'}
+            {mode === 'live' ? '🔍 Search' : '🔴 Live'}
           </button>
-          <button className="px-3 py-1.5 text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 rounded transition-colors">
-            🗑 Clear
-          </button>
-          <button className="px-3 py-1.5 text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 rounded transition-colors">
-            ⛶ Fullscreen
-          </button>
+          {mode === 'live' && (
+            <button
+              onClick={() => setIsPaused(!isPaused)}
+              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                isPaused
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {isPaused ? '▶ Resume' : '⏸ Pause'}
+            </button>
+          )}
+          {mode === 'live' && (
+            <button onClick={() => setDisplayLogs([])} className="px-3 py-1.5 text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 rounded transition-colors">
+              🗑 Clear
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Search / Filter Bar */}
+      {mode === 'search' && (
+        <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-800 border border-slate-700 rounded-lg">
+          <input
+            type="text"
+            placeholder="Search logs..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-[200px] px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+          />
+          <select
+            value={levelFilter}
+            onChange={(e) => setLevelFilter(e.target.value)}
+            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+          >
+            {LOG_LEVELS.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+          />
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+          />
+          <button
+            onClick={() => performSearch(1)}
+            className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Search
+          </button>
+          {totalResults > 0 && (
+            <span className="text-sm text-slate-400">
+              Showing {searchResults.length} of {totalResults} results
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Logs Container */}
       <div className={`${maxHeight} overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg`}>
-        <div className="font-mono text-xs">
-          {displayLogs.map((log) => (
-            <div
-              key={log.id}
-              className="flex items-start gap-3 px-4 py-2 border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
-            >
-              {/* Timestamp */}
-              <span className="text-slate-500 flex-shrink-0 w-20">
-                {log.id}
-              </span>
-
-              {/* Timestamp */}
-              <span className="text-slate-500 flex-shrink-0 w-32">
-                {formatTime(log.timestamp)}
-              </span>
-
-              {/* Level */}
-              <span
-                className={`${getLevelBackground(log.level)} px-2 py-0.5 rounded text-xs font-semibold flex-shrink-0 w-16`}
+        {loading ? (
+          <div className="flex items-center justify-center py-8 text-slate-400">
+            Searching logs...
+          </div>
+        ) : currentLogs.length === 0 ? (
+          <div className="flex items-center justify-center py-8 text-slate-500">
+            No results
+          </div>
+        ) : (
+          <div className="font-mono text-xs">
+            {currentLogs.map((log, idx) => (
+              <div
+                key={log.id || idx}
+                className="flex items-start gap-3 px-4 py-2 border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
               >
-                {log.level}
-              </span>
-
-              {/* App */}
-              <span className="text-blue-400 flex-shrink-0 w-24">{log.app}:</span>
-
-              {/* Message */}
-              <span className="text-slate-300 flex-1">{log.message}</span>
-            </div>
-          ))}
-        </div>
+                <span className="text-slate-500 flex-shrink-0 w-20">
+                  {log.id}
+                </span>
+                <span className="text-slate-500 flex-shrink-0 w-32">
+                  {formatTime(log.timestamp)}
+                </span>
+                <span
+                  className={`${getLevelBackground(log.level)} px-2 py-0.5 rounded text-xs font-semibold flex-shrink-0 w-16`}
+                >
+                  {log.level}
+                </span>
+                <span className="text-blue-400 flex-shrink-0 w-24">{log.app}:</span>
+                <span
+                  className="text-slate-300 flex-1"
+                  dangerouslySetInnerHTML={{
+                    __html: mode === 'search' && debouncedSearch
+                      ? highlightText(log.message, debouncedSearch)
+                      : log.message,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Pagination */}
+      {mode === 'search' && totalResults > 50 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            disabled={currentPage <= 1}
+            onClick={() => performSearch(currentPage - 1)}
+            className="px-3 py-1 text-sm bg-slate-700 text-slate-300 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-slate-400">
+            Page {currentPage} of {Math.ceil(totalResults / 50)}
+          </span>
+          <button
+            disabled={currentPage >= Math.ceil(totalResults / 50)}
+            onClick={() => performSearch(currentPage + 1)}
+            className="px-3 py-1 text-sm bg-slate-700 text-slate-300 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

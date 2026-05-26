@@ -23,7 +23,6 @@ export async function onAuthStateChange(callback: (session: Session | null) => v
 }
 
 export function getAccessToken(): string | null {
-  // Try to get from localStorage first (set after setup)
   return localStorage.getItem('sb_access_token');
 }
 
@@ -33,4 +32,55 @@ export function setAccessToken(token: string) {
 
 export function clearAccessToken() {
   localStorage.removeItem('sb_access_token');
+}
+
+const INTEGRATION_API = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+
+export async function verify2FA(tempToken: string, code: string): Promise<string> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ temp_token: tempToken, totp_code: code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '2FA verification failed');
+  return data.token;
+}
+
+export async function setup2FA(userId: string): Promise<{ secret: string; uri: string; qr_code_url: string }> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '2FA setup failed');
+  return data;
+}
+
+export async function verify2FASetup(userId: string, token: string): Promise<boolean> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/verify-setup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, token }),
+  });
+  const data = await res.json();
+  return data.success === true;
+}
+
+export async function disable2FA(userId: string, password: string): Promise<boolean> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/disable`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, password }),
+  });
+  const data = await res.json();
+  return data.success === true;
+}
+
+export async function get2FABackupCodes(userId: string): Promise<string[]> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/backup-codes?user_id=${userId}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to get backup codes');
+  return data.backup_codes || [];
 }

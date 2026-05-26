@@ -95,7 +95,8 @@ class UnifiedLogger:
         self.logger.critical(message, extra=extra)
         self._emit_log('CRITICAL', message, extra)
 
-    async def search_logs(self, query: str, level: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    async def search_logs(self, query: str = '', level: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page: int = 1, limit: int = 100, use_regex: bool = False) -> Dict[str, Any]:
+        import re
         results = self.log_store
         if level:
             results = [l for l in results if l.get('level') == level.upper()]
@@ -104,9 +105,19 @@ class UnifiedLogger:
         if end_date:
             results = [l for l in results if l.get('timestamp', '') <= end_date]
         if query:
-            q = query.lower()
-            results = [l for l in results if q in l.get('message', '').lower() or q in str(l.get('extra', {})).lower()]
-        return results[-limit:]
+            if use_regex:
+                try:
+                    pattern = re.compile(query, re.IGNORECASE)
+                    results = [l for l in results if pattern.search(l.get('message', '')) or pattern.search(str(l.get('extra', {})))]
+                except re.error:
+                    pass
+            else:
+                q = query.lower()
+                results = [l for l in results if q in l.get('message', '').lower() or q in str(l.get('extra', {})).lower()]
+        total = len(results)
+        offset = (page - 1) * limit
+        paged = results[offset:offset + limit]
+        return {'logs': paged, 'total': total, 'page': page, 'limit': limit}
 
     async def get_log_levels(self) -> Dict[str, int]:
         counts = {}

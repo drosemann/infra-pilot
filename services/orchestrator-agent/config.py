@@ -1,5 +1,6 @@
 import os
 from typing import Dict, Any, Set
+import requests
 
 class Config:
     DISCORD_BOT_TOKEN: str = os.getenv("DISCORD_BOT_TOKEN", "")
@@ -109,3 +110,27 @@ class Config:
     COST_PREDICTION_HISTORY_MONTHS: int = 3
 
 config = Config()
+
+
+def validate_discord_token(token: str) -> dict:
+    headers = {"Authorization": f"Bot {token}"}
+    try:
+        resp = requests.get("https://discord.com/api/v10/users/@me", headers=headers, timeout=10)
+        if resp.status_code == 200:
+            user_data = resp.json()
+            guild_resp = requests.get(
+                "https://discord.com/api/v10/users/@me/guilds",
+                headers=headers,
+                timeout=10,
+            )
+            guild_count = len(guild_resp.json()) if guild_resp.ok else 0
+            return {
+                "valid": True,
+                "botName": user_data.get("username", ""),
+                "guildCount": guild_count,
+            }
+        elif resp.status_code == 401:
+            return {"valid": False, "error": "Invalid token"}
+        return {"valid": False, "error": "Discord API error"}
+    except requests.RequestException:
+        return {"valid": False, "error": "Failed to validate token"}

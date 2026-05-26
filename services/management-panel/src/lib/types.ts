@@ -22,6 +22,7 @@ export interface DockerApp {
   cpu_shares?: number;
   description?: string;
   labels?: Record<string, string>;
+  javaVersion?: string;
   created_at: string;
   updated_at: string;
   started_at?: string;
@@ -97,7 +98,10 @@ export interface ServerPreset {
   };
   ports: Array<{ hostPort: number; containerPort: number; protocol: 'tcp' | 'udp' }>;
   environmentVars: Record<string, string>;
+  javaVersion?: string;
 }
+
+export const JAVA_VERSIONS = ['8', '11', '17', '21'] as const;
 
 // ============================================================================
 // Phase 4 Types
@@ -193,6 +197,49 @@ export interface AlertHistoryEntry {
   acknowledged: boolean;
 }
 
+export interface ScheduledTask {
+  id: string;
+  name: string;
+  description?: string;
+  taskType: 'restart' | 'command' | 'backup' | 'custom';
+  targetAppId?: string;
+  cronExpression: string;
+  command?: string;
+  enabled: boolean;
+  lastRunAt?: string;
+  lastRunStatus?: 'success' | 'failed' | 'running';
+  nextRunAt?: string;
+  createdAt: string;
+}
+
+export interface BillingInfo {
+  balance: number;
+  totalSpent: number;
+  totalToppedUp: number;
+}
+
+export interface Transaction {
+  id: string;
+  amount: number;
+  description: string;
+  type: 'topup' | 'charge' | 'refund' | 'bonus';
+  balanceAfter: number;
+  timestamp: string;
+}
+
+export interface BillingRates {
+  cpuPerCoreHour: number;
+  ramPerGbHour: number;
+  storagePerGbHour: number;
+  backupPerGb: number;
+}
+
+export interface CostEstimate {
+  hourly: number;
+  daily: number;
+  monthly: number;
+}
+
 export interface HealthCheck {
   id: number;
   app_id: string;
@@ -200,4 +247,86 @@ export interface HealthCheck {
   response_time_ms: number;
   details: Record<string, any>;
   checked_at: string;
+}
+
+// ============================================================================
+// Config Editor Types
+// ============================================================================
+
+export interface ConfigFile {
+  name: string;
+  path: string;
+  size: number;
+  modifiedAt: string;
+  isDirectory: boolean;
+}
+
+export interface ConfigFileContent {
+  content: string;
+  path: string;
+  language: 'yaml' | 'json' | 'properties' | 'text';
+}
+
+export interface ConfigValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface Modpack {
+  id: string;
+  name: string;
+  platform: 'curseforge' | 'modrinth';
+  summary: string;
+  downloads: number;
+  iconUrl?: string;
+  minecraftVersions: string[];
+  loaders: string[];
+  url: string;
+}
+
+export interface ModpackInstallation {
+  id: string;
+  modpackId: string;
+  appId: string;
+  status: 'pending' | 'downloading' | 'installing' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+  createdAt: string;
+}
+
+export interface Database {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  password?: string;
+  appId?: string;
+  status: 'running' | 'stopped' | 'creating';
+  createdAt: string;
+}
+
+export interface GitDeployment {
+  id: string;
+  name: string;
+  repoUrl: string;
+  repo: string;
+  branch: string;
+  containerId?: string;
+  targetDir: string;
+  installCommand?: string;
+  restartCommand?: string;
+  enabled: boolean;
+  webhookSecret: string;
+  createdAt: string;
+  history: DeploymentEvent[];
+}
+
+export interface DeploymentEvent {
+  deploymentId: string;
+  status: 'success' | 'failed' | 'timeout';
+  commits: number;
+  timestamp: string;
+  error?: string;
 }

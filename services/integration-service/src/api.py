@@ -11,7 +11,8 @@ from integration import (
     UnifiedUserManager,
     CrossPlatformNotifier,
     UnifiedMetrics,
-    SharedConfigManager
+    SharedConfigManager,
+    ModpackService
 )
 from auth import AuthManager
 from users import UserProfileManager
@@ -66,6 +67,7 @@ class IntegrationAPIServer:
         self.resource_sched = ResourceSchedulingCoordinator(self.service.config)
         self.resource_optim = ResourceOptimizationCoordinator(self.service.config, self.resource_tracker)
         self.notification_manager = NotificationManager()
+        self.modpack_service = ModpackService()
         self.app["notification_manager"] = self.notification_manager
 
     @web.middleware
@@ -95,6 +97,12 @@ class IntegrationAPIServer:
         self.app.router.add_post('/api/auth/api-key', self.handle_auth_api_key)
         self.app.router.add_post('/api/auth/oauth2/{platform}', self.handle_auth_oauth2)
         self.app.router.add_post('/api/auth/oauth2/{platform}/callback', self.handle_auth_oauth2_callback)
+        self.app.router.add_post('/api/auth/2fa/setup', self.handle_2fa_setup)
+        self.app.router.add_post('/api/auth/2fa/verify-setup', self.handle_2fa_verify_setup)
+        self.app.router.add_post('/api/auth/2fa/verify', self.handle_2fa_verify)
+        self.app.router.add_post('/api/auth/2fa/disable', self.handle_2fa_disable)
+        self.app.router.add_get('/api/auth/2fa/backup-codes', self.handle_2fa_backup_codes)
+        self.app.router.add_post('/api/auth/2fa/verify-backup', self.handle_2fa_verify_backup)
         self.app.router.add_post('/api/auth/token-exchange', self.handle_auth_token_exchange)
         self.app.router.add_post('/api/users', self.handle_create_user)
         self.app.router.add_get('/api/users/{email}', self.handle_get_user)
@@ -143,6 +151,7 @@ class IntegrationAPIServer:
         self.app.router.add_post('/api/config/rollback/{version}', self.handle_rollback_config)
         self.app.router.add_get('/api/config/diff/{version_a}/{version_b}', self.handle_diff_config)
         self.app.router.add_post('/api/config/validate', self.handle_validate_config)
+        self.app.router.add_get('/api/config/validate', self.handle_validate_content)
         self.app.router.add_post('/api/config/overlay/{env_name}', self.handle_set_overlay)
         self.app.router.add_post('/api/permissions/check', self.handle_check_permission)
         self.app.router.add_post('/api/permissions/grant', self.handle_grant_permission)
@@ -195,6 +204,8 @@ class IntegrationAPIServer:
         self.app.router.add_get('/api/reports', self.handle_list_reports)
         self.app.router.add_get('/api/integrated/resource-management', self.handle_integrated_resource_management)
         self.app.router.add_post('/api/notifications/test', self.handle_test_notification)
+        self.app.router.add_get('/api/modpacks/search', self.handle_modpack_search)
+        self.app.router.add_get('/api/modpacks/{platform}/{id}', self.handle_modpack_details)
 
     async def handle_index(self, request: web.Request) -> web.Response:
         return web.json_response({
@@ -228,6 +239,61 @@ class IntegrationAPIServer:
             return web.json_response(result)
         except ValueError as e:
             return web.json_response({'error': str(e)}, status=401)
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_setup(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            user_id = data.get('user_id', '')
+            result = await self.auth_manager.setup_totp(user_id)
+            return web.json_response(result)
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_verify_setup(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            success = await self.auth_manager.verify_totp_setup(data.get('user_id', ''), data.get('token', ''))
+            if success:
+                return web.json_response({'success': True})
+            return web.json_response({'error': 'Invalid token'}, status=400)
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_verify(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            temp_token = data.get('temp_token', '')
+            totp_code = data.get('totp_code', '')
+            result = await self.auth_manager.complete_2fa_login(temp_token, totp_code)
+            return web.json_response(result)
+        except ValueError as e:
+            return web.json_response({'error': str(e)}, status=401)
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_disable(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            success = await self.auth_manager.disable_totp(data.get('user_id', ''), data.get('password', ''))
+            return web.json_response({'success': success})
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_backup_codes(self, request: web.Request) -> web.Response:
+        try:
+            user_id = request.query.get('user_id', '')
+            codes = await self.auth_manager.get_backup_codes(user_id)
+            return web.json_response({'backup_codes': codes})
+        except Exception as e:
+            return web.json_response({'error': str(e)}, status=500)
+
+    async def handle_2fa_verify_backup(self, request: web.Request) -> web.Response:
+        try:
+            data = await request.json()
+            success = await self.auth_manager.verify_backup_code(data.get('user_id', ''), data.get('code', ''))
+            return web.json_response({'success': success})
         except Exception as e:
             return web.json_response({'error': str(e)}, status=500)
 
@@ -375,6 +441,19 @@ class IntegrationAPIServer:
             return web.json_response({"results": results})
         except Exception as e:
             return web.json_response({"error": str(e)}, status=400)
+
+    async def handle_modpack_search(self, request: web.Request) -> web.Response:
+        query = request.query.get('query', '')
+        platform = request.query.get('platform', 'all')
+        limit = int(request.query.get('limit', 20))
+        results = await self.modpack_service.search_modpacks(query, platform, limit)
+        return web.json_response({'results': results})
+
+    async def handle_modpack_details(self, request: web.Request) -> web.Response:
+        platform = request.match_info['platform']
+        modpack_id = request.match_info['id']
+        details = await self.modpack_service.get_modpack_details(platform, modpack_id)
+        return web.json_response(details)
 
     async def handle_message_bridge(self, request: web.Request) -> web.Response:
         data = await request.json()
@@ -567,6 +646,14 @@ class IntegrationAPIServer:
         result = self.config_manager.validate(schema)
         return web.json_response(result)
 
+    async def handle_validate_content(self, request: web.Request) -> web.Response:
+        content = request.query.get('content', '')
+        format = request.query.get('format', 'json')
+        if not content:
+            return web.json_response({'valid': False, 'errors': ['No content provided']})
+        result = self.config_manager.validate_config(content, format)
+        return web.json_response(result)
+
     async def handle_set_overlay(self, request: web.Request) -> web.Response:
         env_name = request.match_info['env_name']
         config = await request.json()
@@ -723,7 +810,13 @@ class IntegrationAPIServer:
     async def handle_log_search(self, request: web.Request) -> web.Response:
         data = await request.json()
         results = await self.unified_logger.search_logs(
-            data.get('query', ''), data.get('level'), data.get('start_date'), data.get('end_date'), data.get('limit', 100)
+            query=data.get('query', ''),
+            level=data.get('level'),
+            start_date=data.get('start_date') or data.get('from'),
+            end_date=data.get('end_date') or data.get('to'),
+            page=data.get('page', 1),
+            limit=data.get('limit', 100),
+            use_regex=data.get('use_regex', False),
         )
         return web.json_response(results)
 

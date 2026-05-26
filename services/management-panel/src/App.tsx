@@ -14,6 +14,7 @@ import { AccessLogs } from './pages/AccessLogs';
 import { Backups } from './pages/Backups';
 import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
+import { BillingPage } from './pages/Billing';
 import { AuditLog } from './pages/AuditLog';
 import { MainLayout } from './components/MainLayout';
 import { OnboardingWizard } from './components/OnboardingWizard';
@@ -108,6 +109,9 @@ export default function App() {
                 <Route path="/settings/maintenance" element={<SettingsPage />} />
                 {featureGates.canManageCustomers(mode) && (
                   <Route path="/customers" element={<Customers />} />
+                )}
+                {featureGates.canViewBilling(mode) && (
+                  <Route path="/billing" element={<BillingPage />} />
                 )}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Route>

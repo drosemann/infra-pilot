@@ -65,6 +65,31 @@ async function broadcastNotification(message) {
   }
 }
 
+async function notifyGitPush(repo, branch, commits, channelId) {
+  try {
+    const commitLines = (commits || []).slice(0, 5).map(c =>
+      `• \`${c.id?.slice(0, 7) || 'unknown'}\` ${c.message?.split('\n')[0] || 'no message'} — ${c.author?.name || 'unknown'}`
+    ).join('\n');
+
+    const message = {
+      channel_id: channelId,
+      embeds: [{
+        title: `🚀 Push to ${repo}:${branch}`,
+        description: commitLines || 'No commit details',
+        color: 0x2ea043,
+        timestamp: new Date().toISOString(),
+        footer: { text: `${commits?.length || 0} commit(s) pushed` },
+        url: `https://github.com/${repo}/commit/${commits?.[0]?.id || ''}`
+      }]
+    };
+
+    await axios.post(`${INTEGRATION_SERVICE_URL}/api/notifications/discord`, message);
+    console.log(`[Integration] Git push notification sent for ${repo}:${branch}`);
+  } catch (error) {
+    console.error(`[Integration] Git push notification failed:`, error.message);
+  }
+}
+
 module.exports = {
   notifyIntegration,
   notifyServerCreated,
@@ -74,5 +99,6 @@ module.exports = {
   notifyServerError,
   syncUserToIntegration,
   getUnifiedMetrics,
-  broadcastNotification
+  broadcastNotification,
+  notifyGitPush
 };

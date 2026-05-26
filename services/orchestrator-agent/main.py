@@ -29,6 +29,7 @@ async def load_cogs():
         "cogs.vps_commands",
         "cogs.vps_pricing",
         "cogs.vps_billing",
+        "cogs.prepaid_billing",
         "cogs.monitoring",
         "cogs.bot_commands",
     ]
@@ -57,6 +58,10 @@ async def load_cogs():
         "cogs.ssl_manager",
         "cogs.cost_optimizer",
         "cogs.traffic_analysis",
+        "cogs.task_scheduler",
+        "cogs.git_deployer",
+        "cogs.database_manager",
+        "cogs.modpack_installer",
     ]
     for cog in cog_list + new_cogs:
         try:
@@ -76,6 +81,24 @@ async def on_ready():
         logger.warning(f"Database initialization skipped: {e}")
     await bot.tree.sync()
     logger.info("Commands synced")
+
+    asyncio.create_task(start_webhook_server(bot))
+
+
+async def start_webhook_server(bot):
+    from aiohttp import web
+    app = web.Application()
+
+    cog = bot.get_cog('GitDeployer')
+    if cog:
+        app.router.add_post('/webhook/github/{deploy_id}', cog.handle_webhook)
+        app.router.add_post('/webhook/github', cog.handle_webhook)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8500)
+    await site.start()
+    logger.info('Webhook server listening on port 8500')
 
 
 if __name__ == "__main__":

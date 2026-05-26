@@ -492,6 +492,33 @@ class SharedConfigManager:
                 errors.append({'key': key, 'error': f'Expected {expected_type.__name__}, got {type(value).__name__}', 'expected': str(expected_type)})
         return {'valid': len(errors) == 0, 'errors': errors}
 
+    def validate_config(self, content: str, format: str) -> Dict[str, Any]:
+        errors = []
+        valid = False
+        if format == 'json':
+            try:
+                json.loads(content)
+                valid = True
+            except json.JSONDecodeError as e:
+                errors.append(str(e))
+        elif format == 'yaml':
+            try:
+                import yaml
+                yaml.safe_load(content)
+                valid = True
+            except ImportError:
+                try:
+                    import json
+                    json.loads(content)
+                    valid = True
+                except json.JSONDecodeError as e:
+                    errors.append(str(e))
+            except Exception as e:
+                errors.append(str(e))
+        else:
+            errors.append(f'Unsupported format: {format}')
+        return {'valid': valid, 'errors': errors}
+
     def set_overlay(self, env_name: str, config: Dict[str, Any]):
         self.overlays[env_name] = config
 
@@ -504,6 +531,136 @@ class SharedConfigManager:
             self.set(k, v)
             count += 1
         return count
+
+
+class ModpackService:
+    """Modpack search and retrieval from CurseForge and Modrinth."""
+
+    def __init__(self):
+        self.session: Optional[aiohttp.ClientSession] = None
+        self.curseforge_api_key = os.getenv('CURSEFORGE_API_KEY', '')
+
+    async def initialize(self):
+        self.session = aiohttp.ClientSession()
+        logger.info("ModpackService initialized")
+
+    async def close(self):
+        if self.session:
+            await self.session.close()
+
+    async def search_modpacks(self, query: str, platform: str = 'all', limit: int = 20) -> list:
+        results = []
+        if platform in ('all', 'modrinth'):
+            try:
+                async with self.session.get(
+                    'https://api.modrinth.com/v2/search',
+                    params={'query': query, 'limit': limit, 'facets': '[[\"project_type:modpack\"]]'}
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        for hit in data.get('hits', []):
+                            results.append({
+                                'id': f'modrinth:{hit["project_id"]}',
+                                'name': hit['title'],
+                                'platform': 'modrinth',
+                                'summary': hit.get('description', ''),
+                                'downloads': hit.get('downloads', 0),
+                                'iconUrl': hit.get('icon_url', ''),
+                                'minecraftVersions': hit.get('versions', []),
+                                'loaders': hit.get('categories', []),
+                                'url': f'https://modrinth.com/modpack/{hit["slug"]}',
+                            })
+            except Exception as e:
+                logger.error(f'Modrinth search error: {e}')
+        if platform in ('all', 'curseforge'):
+            if not self.curseforge_api_key:
+                logger.warning('CURSEFORGE_API_KEY not set')
+            else:
+                try:
+                    async with self.session.get(
+                        'https://api.curseforge.com/v1/mods/search',
+                        params={'gameId': 432, 'slug': query, 'pageSize': limit},
+                        headers={'x-api-key': self.curseforge_api_key}
+                    ) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            for mod in data.get('data', []):
+                                if mod.get('classId') == 4471:
+                                    latest = mod.get('latestFiles', [{}])[0] if mod.get('latestFiles') else {}
+                                    results.append({
+                                        'id': f'curseforge:{mod["id"]}',
+                                        'name': mod['name'],
+                                        'platform': 'curseforge',
+                                        'summary': mod.get('summary', ''),
+                                        'downloads': mod.get('downloadCount', 0),
+                                        'iconUrl': mod.get('logo', {}).get('url', ''),
+                                        'minecraftVersions': [latest.get('gameVersion', '')] if latest else [],
+                                        'loaders': latest.get('modLoaders', []) if latest else [],
+                                        'url': mod.get('links', {}).get('websiteUrl', ''),
+                                    })
+                except Exception as e:
+                    logger.error(f'CurseForge search error: {e}')
+        results.sort(key=lambda r: r['downloads'], reverse=True)
+        return results[:limit]
+
+    async def get_modpack_details(self, platform: str, modpack_id: str) -> dict:
+        if platform == 'modrinth':
+            try:
+                async with self.session.get(
+                    f'https://api.modrinth.com/v2/project/{modpack_id}/version'
+                ) as resp:
+                    if resp.status == 200:
+                        versions = await resp.json()
+                        if versions:
+                            latest = versions[0]
+                            files = []
+                            for f in latest.get('files', []):
+                                files.append({
+                                    'url': f['url'],
+                                    'filename': f.get('filename', ''),
+                                    'primary': f.get('primary', False),
+                                    'size': f.get('size', 0),
+                                })
+                            return {
+                                'id': f'modrinth:{modpack_id}',
+                                'platform': 'modrinth',
+                                'versions': [{
+                                    'id': latest['id'],
+                                    'name': latest.get('name', ''),
+                                    'version_number': latest.get('version_number', ''),
+                                    'game_versions': latest.get('game_versions', []),
+                                    'loaders': latest.get('loaders', []),
+                                    'files': files,
+                                }],
+                            }
+            except Exception as e:
+                logger.error(f'Modrinth details error: {e}')
+        elif platform == 'curseforge':
+            if not self.curseforge_api_key:
+                return {'error': 'CURSEFORGE_API_KEY not set'}
+            try:
+                async with self.session.get(
+                    f'https://api.curseforge.com/v1/mods/{modpack_id}/files',
+                    headers={'x-api-key': self.curseforge_api_key}
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        files = []
+                        for f in data.get('data', []):
+                            files.append({
+                                'url': f.get('downloadUrl', ''),
+                                'filename': f.get('fileName', ''),
+                                'primary': f.get('isPrimary', False),
+                                'size': f.get('fileLength', 0),
+                            })
+                        return {
+                            'id': f'curseforge:{modpack_id}',
+                            'platform': 'curseforge',
+                            'files': files,
+                        }
+            except Exception as e:
+                logger.error(f'CurseForge details error: {e}')
+        return {'error': 'Not found'}
 
 
 class IntegrationService:

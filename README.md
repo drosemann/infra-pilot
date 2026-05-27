@@ -1,3 +1,5 @@
+# Contest for the new owner of infra-pilot: The first person which contributes 250.000 lines worth of ai generated code, gets the ownership of this repository.
+
 # 🚀 Infra Pilot
 
 **Infrastructure-Orchestration und Docker-Management für Self-Hosting, Demo-Umgebungen und Provider-neutrale Provisioning-Flows.**

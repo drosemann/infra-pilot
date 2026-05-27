@@ -2524,7 +2524,8 @@ app.delete('/api/kb/articles/:id', verifyAuth, async (req: Request, res: Respons
 
 app.get('/api/kb/search', verifyAuth, async (req: Request, res: Response) => {
   try {
-    const q = req.query.q as string;
+    const qParam = req.query.q;
+    const q = typeof qParam === 'string' ? qParam : '';
     if (!q || q.length < 2) return res.json([]);
     const articles = await kb.searchArticles(q);
     res.json(articles);

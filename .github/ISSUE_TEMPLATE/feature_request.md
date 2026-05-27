@@ -1,34 +1,34 @@
 ---
-name: Feature Request
-about: Suggest a new feature or enhancement for Infra Pilot
-title: "[FEATURE] "
+name: feature request
+about: suggest a new feature or enhancement for infra pilot
+title: "[feature] "
 labels: enhancement
 assignees: ''
 ---
 
-## Description
+## description
 
-<!-- Clear description of the feature you want -->
+<!-- clear description of the feature you want -->
 
-## Use Case / Problem
+## use case / problem
 
-<!-- Why is this feature needed? What problem does it solve? -->
+<!-- why is this feature needed? what problem does it solve? -->
 
-## Proposed Solution
+## proposed solution
 
-<!-- How would you like this feature to work? -->
+<!-- how would you like this feature to work? -->
 
-## Alternatives Considered
+## alternatives considered
 
-<!-- What other approaches have you considered? -->
+<!-- what other approaches have you considered? -->
 
-## Additional Context
+## additional context
 
-<!-- Any other context, examples, or screenshots -->
+<!-- any other context, examples, or screenshots -->
 
-## Component(s) Affected
+## component(s) affected
 
-<!-- Which service(s) would this impact? -->
+<!-- which service(s) would this impact? -->
 - [ ] service-core
 - [ ] orchestrator-agent
 - [ ] discord-service
@@ -36,9 +36,7 @@ assignees: ''
 - [ ] documentation
 - [ ] other
 
----
-
-**Notes:**
-- Please search for existing feature requests before creating a new one
-- Features are evaluated based on alignment with project goals
-- Community contributions are welcome!
+notes:
+• please search for existing feature requests before creating a new one
+• features are evaluated based on alignment with project goals
+• community contributions are welcome!

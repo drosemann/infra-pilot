@@ -1,25 +1,25 @@
-# Docker Panel - Mode Architecture
+# docker panel - mode architecture
 
-## Overview
+## overview
 
-Docker Panel supports two distinct operation modes:
+docker panel supports two distinct operation modes:
 
-1. **Personal Mode** (default) - Simple self-hosted Docker container management
-2. **Hosting Business Mode** - Full-featured hosting control panel with customer management, billing, and white-label options
+• **personal mode** (default) - simple self-hosted docker container management
+• **hosting business mode** - full-featured hosting control panel with customer management, billing, and white-label options
 
-The mode is selected during initial setup and controls which features are available throughout the application.
+the mode is selected during initial setup and controls which features are available throughout the application.
 
-## Mode Selection & Initialization
+## mode selection & initialization
 
-### First-Time Setup
+### first-time setup
 
-When the panel is first accessed, users see the **Setup Wizard**:
+when the panel is first accessed, users see the **setup wizard**:
 
 ```
 Step 1: Mode Selection
-├─ 🏠 Personal Mode (default, recommended)
+├─ Personal Mode (default, recommended)
 │   └─ Simple Docker app management for self-hosters
-└─ 🚀 Hosting Business Mode
+└─ Hosting Business Mode
     └─ Full-featured hosting control panel
 
 Step 2: Create Admin Account
@@ -29,81 +29,75 @@ Step 2: Create Admin Account
 └─ Mode confirmation (from Step 1)
 ```
 
-Database: The selected mode is stored in `setup_config.mode` and `user_profiles.mode_at_signup`.
+database: the selected mode is stored in `setup_config.mode` and `user_profiles.mode_at_signup`.
 
-### After Setup
+### after setup
 
-Subsequent logins display the panel based on the configured mode. Settings may allow mode switching (future enhancement).
+subsequent logins display the panel based on the configured mode. settings may allow mode switching (future enhancement).
 
----
+## personal mode features
 
-## Personal Mode Features
+**focused on individual self-hosters and hobby projects**
 
-**Focused on individual self-hosters and hobby projects**
+### core features
+- docker app creation and management
+- port mapping and environment variables
+- volume/mount configuration
+- start/stop/restart controls
+- logs streaming (paginated)
+- basic container status monitoring
+- simple admin account management
+- basic settings and configuration
 
-### Core Features
-- ✅ Docker app creation and management
-- ✅ Port mapping and environment variables
-- ✅ Volume/mount configuration
-- ✅ Start/stop/restart controls
-- ✅ Logs streaming (paginated)
-- ✅ Basic container status monitoring
-- ✅ Simple admin account management
-- ✅ Basic settings and configuration
+### hidden features
+- customer account management
+- plans and pricing
+- billing integration
+- white-label options
+- team/staff roles
+- resource quotas (per-customer)
+- audit logs (business context)
+- advanced multi-user rbac
 
-### Hidden Features
-- ❌ Customer account management
-- ❌ Plans and pricing
-- ❌ Billing integration
-- ❌ White-label options
-- ❌ Team/staff roles
-- ❌ Resource quotas (per-customer)
-- ❌ Audit logs (business context)
-- ❌ Advanced multi-user RBAC
+### ui/ux
+- minimal, focused navigation
+- "docker panel" branding
+- simple dashboard with app list
+- single-user perspective
+- settings are personal, not organizational
 
-### UI/UX
-- Minimal, focused navigation
-- "Docker Panel" branding
-- Simple dashboard with app list
-- Single-user perspective
-- Settings are personal, not organizational
+## hosting business mode features
 
----
+**full hosting control panel for managing multiple customers**
 
-## Hosting Business Mode Features
+### core features (from personal mode)
+- all personal mode features
+- docker infrastructure abstraction
 
-**Full hosting control panel for managing multiple customers**
+### business-specific features
+- customer account creation and management
+- plans and pricing tiers
+- resource quotas per customer
+- billing integration hooks (placeholder)
+- white-label and branding customization
+- team and staff role management
+- audit logs for compliance
+- advanced rbac (admin, staff, customer)
+- customer onboarding workflows
+- dashboard with business analytics
 
-### Core Features (from Personal Mode)
-- ✅ All Personal Mode features
-- ✅ Docker infrastructure abstraction
+### ui/ux
+- expanded navigation with business features
+- customizable branding
+- multi-user and team management
+- customer management interface
+- advanced settings and configurations
 
-### Business-Specific Features
-- ✅ Customer account creation and management
-- ✅ Plans and pricing tiers
-- ✅ Resource quotas per customer
-- ✅ Billing integration hooks (placeholder)
-- ✅ White-label and branding customization
-- ✅ Team and staff role management
-- ✅ Audit logs for compliance
-- ✅ Advanced RBAC (admin, staff, customer)
-- ✅ Customer onboarding workflows
-- ✅ Dashboard with business analytics
+## feature gates implementation
 
-### UI/UX
-- Expanded navigation with business features
-- Customizable branding
-- Multi-user and team management
-- Customer management interface
-- Advanced settings and configurations
+### architecture
 
----
-
-## Feature Gates Implementation
-
-### Architecture
-
-Feature availability is controlled via the `featureGates` utility in `lib/types.ts`:
+feature availability is controlled via the `featureGates` utility in `lib/types.ts`:
 
 ```typescript
 export const featureGates = {
@@ -126,7 +120,7 @@ export const featureGates = {
 };
 ```
 
-### Usage in Components
+### usage in components
 
 ```tsx
 import { useConfig } from '../lib/types';
@@ -143,7 +137,7 @@ export const SettingsPage = () => {
 };
 ```
 
-### Usage in Backend Routes
+### usage in backend routes
 
 ```typescript
 // In server/index.ts
@@ -158,41 +152,37 @@ app.get('/api/customers', verifyAuth, async (req, res) => {
 });
 ```
 
----
+## database schema - mode segregation
 
-## Database Schema - Mode Segregation
+### shared tables (all modes)
+- `user_profiles` - user account info and roles
+- `docker_apps` - docker applications and containers
+- `app_logs` - application logs
+- `setup_config` - mode and initialization state
 
-### Shared Tables (All Modes)
-- `user_profiles` - User account info and roles
-- `docker_apps` - Docker applications and containers
-- `app_logs` - Application logs
-- `setup_config` - Mode and initialization state
+### business mode tables (todo)
+- `customers` - customer accounts
+- `plans` - pricing plans
+- `resource_quotas` - per-customer resource limits
+- `billing_events` - billing transactions
+- `audit_logs` - operational audit trail
+- `team_members` - staff and administrators
+- `branding_config` - white-label settings
 
-### Business Mode Tables (TODO)
-- `customers` - Customer accounts
-- `plans` - Pricing plans
-- `resource_quotas` - Per-customer resource limits
-- `billing_events` - Billing transactions
-- `audit_logs` - Operational audit trail
-- `team_members` - Staff and administrators
-- `branding_config` - White-label settings
+### multi-tenancy consideration
 
-### Multi-Tenancy Consideration
+in personal mode, all `docker_apps` belong to a single admin user.
 
-In Personal Mode, all `docker_apps` belong to a single admin user.
-
-In Business Mode (future), `docker_apps` can be scoped to customers:
+in business mode (future), `docker_apps` can be scoped to customers:
 ```sql
 ALTER TABLE docker_apps ADD COLUMN customer_id UUID REFERENCES customers(id);
 ```
 
----
+## environment variable configuration
 
-## Environment Variable Configuration
+### development setup
 
-### Development Setup
-
-Create `.env.local` based on `.env.local.example`:
+create `.env.local` based on `.env.local.example`:
 
 ```
 # Supabase
@@ -206,9 +196,9 @@ VITE_API_URL=http://localhost:3001
 DOCKER_HOST=unix:///var/run/docker.sock
 ```
 
-### Production Configuration
+### production configuration
 
-Suggested environment variables:
+suggested environment variables:
 
 ```
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -218,9 +208,7 @@ DOCKER_HOST=tcp://docker-daemon:2375
 NODE_ENV=production
 ```
 
----
-
-## Data Flow: Setup Initialization
+## data flow: setup initialization
 
 ```
 User arrives at /
@@ -247,9 +235,7 @@ If initialized:
 └─ Render Dashboard with feature gates
 ```
 
----
-
-## Data Flow: Feature Access
+## data flow: feature access
 
 ```
 Component renders
@@ -267,105 +253,95 @@ If gate is true:
 └─ API call proceeds if authorized
 ```
 
----
+## migration path: personal → business (future)
 
-## Migration Path: Personal → Business (Future)
+if a user wants to upgrade personal mode to business mode:
 
-If a user wants to upgrade Personal Mode to Business Mode:
+• **admin flag in ui**: "upgrade to business mode" button (disabled/hidden in first release)
+• **data migration**: run migration script to:
+   - create business mode tables
+   - map existing admin user to a staff member
+   - create default plan for existing docker_apps
+   - initial audit log entries
+• **mode flag update**: `update setup_config set mode = 'business'`
+• **redirect**: refresh ui to show new business features
 
-1. **Admin flag in UI**: "Upgrade to Business Mode" button (disabled/hidden in first release)
-2. **Data migration**: Run migration script to:
-   - Create business mode tables
-   - Map existing admin user to a staff member
-   - Create default plan for existing docker_apps
-   - Initial audit log entries
-3. **Mode flag update**: `UPDATE setup_config SET mode = 'business'`
-4. **Redirect**: Refresh UI to show new business features
+implementation deferred to phase 2.
 
-Implementation deferred to Phase 2.
+## testing the modes
 
----
+### personal mode test scenario
+• start fresh setup
+• select "personal mode"
+• create admin account
+• create a docker app
+• verify business features are hidden
+• verify docker app crud works
 
-## Testing the Modes
+### business mode test scenario
+• start fresh setup
+• select "hosting business mode"
+• create admin account
+• verify business feature placeholders appear (todo)
+• verify docker app crud still works
 
-### Personal Mode Test Scenario
-1. Start fresh setup
-2. Select "Personal Mode"
-3. Create admin account
-4. Create a Docker app
-5. Verify business features are hidden
-6. Verify docker app CRUD works
+## security considerations
 
-### Business Mode Test Scenario
-1. Start fresh setup
-2. Select "Hosting Business Mode"
-3. Create admin account
-4. Verify business feature placeholders appear (TODO)
-5. Verify docker app CRUD still works
+### row-level security (rls)
 
----
+all tables use supabase rls policies to ensure:
+- users can only see their own docker_apps
+- users can only see their own user_profile
+- in business mode (future): customers see only their owned resources
 
-## Security Considerations
+### authentication
 
-### Row-Level Security (RLS)
+- supabase auth handles user authentication (email + password)
+- jwt token stored in localstorage
+- token passed in `authorization: bearer <token>` header
+- backend validates token on every api call
 
-All tables use Supabase RLS policies to ensure:
-- Users can only see their own docker_apps
-- Users can only see their own user_profile
-- In Business Mode (future): Customers see only their owned resources
+### mode-based access control
 
-### Authentication
+- feature gates prevent unauthorized ui rendering
+- backend api routes check mode before returning data
+- business features return 403 forbidden if mode is personal
 
-- Supabase Auth handles user authentication (email + password)
-- JWT token stored in localStorage
-- Token passed in `Authorization: Bearer <token>` header
-- Backend validates token on every API call
+## roadmap
 
-### Mode-Based Access Control
+### phase 1 (current)
+- personal mode fully functional
+- setup wizard with mode selection
+- docker app crud
+- basic logs and controls
+- feature gate framework
 
-- Feature gates prevent unauthorized UI rendering
-- Backend API routes check mode before returning data
-- Business features return 403 Forbidden if mode is personal
+### phase 2 (business mode mvp)
+- customer management ui
+- plans and pricing configuration
+- billing integration hooks
+- audit logging
+- team/staff management
 
----
+### phase 3 (advanced business)
+- white-label branding
+- advanced rbac
+- multi-region deployment
+- advanced analytics dashboard
 
-## Roadmap
+## faq
 
-### Phase 1 (Current)
-- ✅ Personal Mode fully functional
-- ✅ Setup wizard with mode selection
-- ✅ Docker app CRUD
-- ✅ Basic logs and controls
-- ✅ Feature gate framework
+**q: can i switch from personal to business mode later?**
+a: yes (planned for phase 2). your docker_apps and user data will be preserved.
 
-### Phase 2 (Business Mode MVP)
-- ⏳ Customer management UI
-- ⏳ Plans and pricing configuration
-- ⏳ Billing integration hooks
-- ⏳ Audit logging
-- ⏳ Team/staff management
+**q: does personal mode limit me to one server?**
+a: no. personal mode supports unlimited docker_apps on one (or multiple) servers. it's just a single-user panel without business/customer management.
 
-### Phase 3 (Advanced Business)
-- ⏳ White-label branding
-- ⏳ Advanced RBAC
-- ⏳ Multi-region deployment
-- ⏳ Advanced analytics dashboard
+**q: where is the business mode code?**
+a: business mode tables and routes are stubbed in the database schema. routes return `{ error: 'not available in personal mode' }` for now. full implementation is phase 2.
 
----
+**q: how does authentication work?**
+a: supabase auth (email/password) creates the user account. a jwt is issued and stored locally. the api validates the token on each request.
 
-## FAQ
-
-**Q: Can I switch from Personal to Business Mode later?**
-A: Yes (planned for Phase 2). Your docker_apps and user data will be preserved.
-
-**Q: Does Personal Mode limit me to one server?**
-A: No. Personal Mode supports unlimited docker_apps on one (or multiple) servers. It's just a single-user panel without business/customer management.
-
-**Q: Where is the business mode code?**
-A: Business mode tables and routes are stubbed in the database schema. Routes return `{ error: 'Not available in Personal Mode' }` for now. Full implementation is Phase 2.
-
-**Q: How does authentication work?**
-A: Supabase Auth (email/password) creates the user account. A JWT is issued and stored locally. The API validates the token on each request.
-
-**Q: Can I make my own custom feature gates?**
-A: Yes. Add new gates to `lib/types.ts` featureGates object. Use them in components with `featureGates.yourNewGate(mode)`.
+**q: can i make my own custom feature gates?**
+a: yes. add new gates to `lib/types.ts` featuregates object. use them in components with `featureGates.yourNewGate(mode)`.

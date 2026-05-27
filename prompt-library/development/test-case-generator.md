@@ -1,14 +1,14 @@
-# Test Case Generator
+# test case generator
 
-## Description
+## description
 
-Generates comprehensive test cases and testing strategies for software applications. Creates unit tests, integration tests, user acceptance tests, and edge case scenarios based on code, requirements, or functionality descriptions.
+generates comprehensive test cases and testing strategies for software applications. creates unit tests, integration tests, user acceptance tests, and edge case scenarios based on code, requirements, or functionality descriptions.
 
-## Usage
+## usage
 
-Provide code, feature requirements, or API specifications that need testing. Specify the testing framework, level of coverage needed, and types of tests required. Works for all programming languages and testing approaches.
+provide code, feature requirements, or api specifications that need testing. specify the testing framework, level of coverage needed, and types of tests required. works for all programming languages and testing approaches.
 
-## Prompt
+## prompt
 
 ```markdown
 Generate comprehensive test cases for the following:
@@ -69,7 +69,7 @@ Please provide:
 - Comments explaining complex test logic
 ```
 
-## Example Input
+## example input
 
 ```markdown
 **Testing Target:** User authentication function
@@ -112,7 +112,7 @@ async function authenticateUser(email, password) {
 
 ```
 
-## Example Output
+## example output
 ```javascript
 // authenticateUser.test.js
 const bcrypt = require('bcrypt');
@@ -357,16 +357,16 @@ describe('authenticateUser Performance', () => {
 });
 ```
 
-## Test Coverage Report
+## test coverage report
 
-The above test suite provides:
+the above test suite provides:
 
-- **Function Coverage**: 100% - All functions are tested
-- **Branch Coverage**: 100% - All conditional paths tested
-- **Statement Coverage**: 100% - All code lines executed
-- **Edge Case Coverage**: Comprehensive boundary testing
+• function coverage: 100% - all functions are tested
+• branch coverage: 100% - all conditional paths tested
+• statement coverage: 100% - all code lines executed
+• edge case coverage: comprehensive boundary testing
 
-## Test Data Setup
+## test data setup
 
 ```javascript
 // testData/users.js
@@ -392,29 +392,29 @@ export const invalidEmails = [
 ];
 ```
 
-## Variations
+## variations
 
-- **API Testing**: Focus on HTTP endpoint testing with request/response validation
-- **Frontend Testing**: UI component testing with user interactions
-- **Database Testing**: Data layer testing with setup/teardown procedures
-- **Security Testing**: Penetration testing and vulnerability assessment
+• api testing: focus on http endpoint testing with request/response validation
+• frontend testing: ui component testing with user interactions
+• database testing: data layer testing with setup/teardown procedures
+• security testing: penetration testing and vulnerability assessment
 
-## Tips
+## tips
 
-- Always test both positive and negative scenarios
-- Include boundary value testing for numeric inputs
-- Mock external dependencies to isolate unit tests
-- Use descriptive test names that explain the scenario
-- Group related tests using `describe` blocks
-- Include performance tests for critical functions
-- Test error conditions as thoroughly as success conditions
+• always test both positive and negative scenarios
+• include boundary value testing for numeric inputs
+• mock external dependencies to isolate unit tests
+• use descriptive test names that explain the scenario
+• group related tests using `describe` blocks
+• include performance tests for critical functions
+• test error conditions as thoroughly as success conditions
 
-## Related Prompts
+## related prompts
 
-- `code-review.md` - For reviewing test quality and coverage
-- `bug-hunter.md` - For creating tests that reproduce bugs
-- `documentation-generator.md` - For documenting test procedures
+• `code-review.md` - for reviewing test quality and coverage
+• `bug-hunter.md` - for creating tests that reproduce bugs
+• `documentation-generator.md` - for documenting test procedures
 
-## Tags
+## tags
 
 `testing` `unit-tests` `test-automation` `quality-assurance` `development` `debugging`

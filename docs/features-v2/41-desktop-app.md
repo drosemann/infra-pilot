@@ -1,33 +1,29 @@
-# Feature 41: Desktop App
+﻿# feature 41: desktop app
 
-- **Feature ID:** 41
-- **Primary Service:** Management Panel (Tauri)
-- **Effort:** Large (7-10 PT)
-- **Phase:** Phase 5 (UX, Mobile & Compliance)
-- **Dependencies:** Management Panel v1 (React/Vite), Convex backend, zero-native shell (existing)
+- feature id: 41
+- primary service: management panel (tauri)
+- effort: large (7-10 pt)
+- phase: phase 5 (ux, mobile & compliance)
+- dependencies: management panel v1 (react/vite), convex backend, zero-native shell (existing)
 
----
+## overview
 
-## Overview
+native desktop application built with tauri that wraps the existing management panel (react/vite) into a fully native experience. goes beyond the current zero-native webview shell by adding offline-first local state, system tray integration, native os notifications, an auto-updater, and deep link protocol handling.
 
-Native desktop application built with Tauri that wraps the existing Management Panel (React/Vite) into a fully native experience. Goes beyond the current zero-native WebView shell by adding offline-first local state, system tray integration, native OS notifications, an auto-updater, and deep link protocol handling.
+the desktop app targets power users and server administrators who prefer a dedicated native window with system-level integration — taskbar/dock presence, global hotkeys, background running in system tray, and native file dialogs.
 
-The desktop app targets power users and server administrators who prefer a dedicated native window with system-level integration — taskbar/dock presence, global hotkeys, background running in system tray, and native file dialogs.
+### key capabilities
 
-### Key Capabilities
+- native window — frameless or standard window with custom titlebar, draggable regions
+- system tray — minimize to tray, context menu with quick actions (quick restart, status overview)
+- native notifications — os-native toast/banner notifications, notification center integration
+- offline-first — local state persistence via sqlite, offline action queuing, sync on reconnect
+- auto-updater — silent background updates, differential downloads, rollback capability
+- deep links — `infrapilot://` protocol handler for server access, action triggers
+- global hotkeys — custom keyboard shortcuts for quick actions (ctrl+shift+s for server search)
+- touch bar / widgets — macos touch bar integration, desktop widgets (future)
 
-- **Native Window** — Frameless or standard window with custom titlebar, draggable regions
-- **System Tray** — Minimize to tray, context menu with quick actions (quick restart, status overview)
-- **Native Notifications** — OS-native toast/banner notifications, notification center integration
-- **Offline-First** — Local state persistence via SQLite, offline action queuing, sync on reconnect
-- **Auto-Updater** — Silent background updates, differential downloads, rollback capability
-- **Deep Links** — `infrapilot://` protocol handler for server access, action triggers
-- **Global Hotkeys** — Custom keyboard shortcuts for quick actions (Ctrl+Shift+S for server search)
-- **Touch Bar / Widgets** — macOS Touch Bar integration, desktop widgets (future)
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -75,34 +71,32 @@ The desktop app targets power users and server administrators who prefer a dedic
 └───────────────────────────────────────────────────────────┘
 ```
 
-### Technology Stack
+### technology stack
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| Desktop Shell | Tauri 2.x (Rust) | Smaller binary than Electron (5 MB vs 150+), lower memory, Rust safety |
-| Frontend | React 18 + Vite + Tailwind CSS | Reuse existing Management Panel, zero migration needed |
-| Local Database | SQLite via tauri-plugin-sql | Offline state, server cache, action queue |
-| IPC Bridge | @tauri-apps/api + Tauri Commands | TypeScript ↔ Rust bidirectional communication |
-| System Tray | tauri-plugin-tray (custom) | Cross-platform tray with dynamic context menu |
-| Notifications | tauri-plugin-notification | Native notification center integration |
-| Auto-Updater | tauri-plugin-updater | Differential updates, checksum verification |
-| Deep Links | tauri-plugin-deep-link | OS-level protocol handler registration |
-| Global Hotkeys | tauri-plugin-global-shortcut | System-wide keyboard shortcuts |
-| State Sync | CRDT / last-write-wins merge | Conflict resolution for offline edits |
+| layer | technology | rationale |
+|---|---|---|
+| desktop shell | tauri 2.x (rust) | smaller binary than electron (5 mb vs 150+), lower memory, rust safety |
+| frontend | react 18 + vite + tailwind css | reuse existing management panel, zero migration needed |
+| local database | sqlite via tauri-plugin-sql | offline state, server cache, action queue |
+| ipc bridge | @tauri-apps/api + tauri commands | typescript ↔ rust bidirectional communication |
+| system tray | tauri-plugin-tray (custom) | cross-platform tray with dynamic context menu |
+| notifications | tauri-plugin-notification | native notification center integration |
+| auto-updater | tauri-plugin-updater | differential updates, checksum verification |
+| deep links | tauri-plugin-deep-link | os-level protocol handler registration |
+| global hotkeys | tauri-plugin-global-shortcut | system-wide keyboard shortcuts |
+| state sync | crdt / last-write-wins merge | conflict resolution for offline edits |
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: tauri shell & migration (2 pt)
 
-### Phase 1: Tauri Shell & Migration (2 PT)
-
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 1.1 | Tauri project scaffolding | `src-tauri/` directory, Cargo.toml, tauri.conf.json |
-| 1.2 | WebView integration | Load existing Vite dev/build into WebView, verify asset paths |
-| 1.3 | IPC bridge setup | Tauri commands for core operations, TypeScript bindings |
-| 1.4 | Window customization | Frameless window, custom titlebar, draggable regions, min-size |
-| 1.5 | Dev workflow | `npm run tauri dev`, hot-reload across Rust + React |
+| step | description | deliverables |
+|---|---|---|
+| 1.1 | tauri project scaffolding | `src-tauri/` directory, cargo.toml, tauri.conf.json |
+| 1.2 | webview integration | load existing vite dev/build into webview, verify asset paths |
+| 1.3 | ipc bridge setup | tauri commands for core operations, typescript bindings |
+| 1.4 | window customization | frameless window, custom titlebar, draggable regions, min-size |
+| 1.5 | dev workflow | `npm run tauri dev`, hot-reload across rust + react |
 
 **tauri.conf.json:**
 
@@ -150,7 +144,7 @@ The desktop app targets power users and server administrators who prefer a dedic
 }
 ```
 
-**Folder structure:**
+**folder structure:**
 
 ```
 services/management-panel/
@@ -181,17 +175,17 @@ services/management-panel/
 └── vite.config.ts
 ```
 
-### Phase 2: System Tray & Native Notifications (2 PT)
+### phase 2: system tray & native notifications (2 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 2.1 | System tray menu | Tray icon, context menu (Open, Quick Restart, Status Dashboard, Quit) |
-| 2.2 | Dynamic tray updates | Server status badge counter, connection indicator |
-| 2.3 | Minimize-to-tray | Close button minimizes, Ctrl+Q to quit, double-click to restore |
-| 2.4 | Native notification dispatch | Forward Panel alerts to OS notification center |
-| 2.5 | Notification click handling | Click notification → open window → navigate to relevant view |
+| step | description | deliverables |
+|---|---|---|
+| 2.1 | system tray menu | tray icon, context menu (open, quick restart, status dashboard, quit) |
+| 2.2 | dynamic tray updates | server status badge counter, connection indicator |
+| 2.3 | minimize-to-tray | close button minimizes, ctrl+q to quit, double-click to restore |
+| 2.4 | native notification dispatch | forward panel alerts to os notification center |
+| 2.5 | notification click handling | click notification → open window → navigate to relevant view |
 
-**System tray diagram:**
+**system tray diagram:**
 
 ```
 System Tray Icon (dynamic badge):
@@ -217,16 +211,16 @@ Context Menu:
   └──────────────────────┘
 ```
 
-### Phase 3: Offline-First Local State (2 PT)
+### phase 3: offline-first local state (2 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 3.1 | SQLite schema | Local cache tables (servers, events, settings, action_queue) |
-| 3.2 | Sync engine | Background sync on connectivity change, delta updates |
-| 3.3 | Offline action queue | Queue mutations, replay on reconnect, conflict detection |
-| 3.4 | Connectivity indicator | Global offline banner, stale data badges |
+| step | description | deliverables |
+|---|---|---|
+| 3.1 | sqlite schema | local cache tables (servers, events, settings, action_queue) |
+| 3.2 | sync engine | background sync on connectivity change, delta updates |
+| 3.3 | offline action queue | queue mutations, replay on reconnect, conflict detection |
+| 3.4 | connectivity indicator | global offline banner, stale data badges |
 
-**Local state data flow:**
+**local state data flow:**
 
 ```
 ┌──────────┐    Online?    ┌──────────┐
@@ -244,7 +238,7 @@ Context Menu:
 └──────────┘
 ```
 
-**SQLite schema:**
+**sqlite schema:**
 
 ```sql
 -- Local server cache
@@ -295,16 +289,16 @@ CREATE TABLE notification_log (
 );
 ```
 
-### Phase 4: Auto-Updater (1 PT)
+### phase 4: auto-updater (1 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 4.1 | Update server setup | Static JSON manifest on CDN, signed release artifacts |
-| 4.2 | Update check interval | Check on launch + every 6 hours, user-initiated check |
-| 4.3 | Download & install | Background download, progress bar, prompt on ready |
-| 4.4 | Rollback mechanism | Backup previous version, restore on crash loop detection |
+| step | description | deliverables |
+|---|---|---|
+| 4.1 | update server setup | static json manifest on cdn, signed release artifacts |
+| 4.2 | update check interval | check on launch + every 6 hours, user-initiated check |
+| 4.3 | download & install | background download, progress bar, prompt on ready |
+| 4.4 | rollback mechanism | backup previous version, restore on crash loop detection |
 
-**Update manifest format (`releases.json`):**
+**update manifest format (`releases.json`):**
 
 ```json
 {
@@ -331,16 +325,16 @@ CREATE TABLE notification_log (
 }
 ```
 
-### Phase 5: Deep Links & Global Hotkeys (1 PT)
+### phase 5: deep links & global hotkeys (1 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 5.1 | Protocol registration | `infrapilot://` scheme on all platforms |
-| 5.2 | Route resolver | Parse deep link → React Router navigation |
-| 5.3 | Global hotkeys | Configurable shortcuts via Settings UI |
-| 5.4 | Hotkey presets | Default profiles (Administrator, Developer, Game Host) |
+| step | description | deliverables |
+|---|---|---|
+| 5.1 | protocol registration | `infrapilot://` scheme on all platforms |
+| 5.2 | route resolver | parse deep link → react router navigation |
+| 5.3 | global hotkeys | configurable shortcuts via settings ui |
+| 5.4 | hotkey presets | default profiles (administrator, developer, game host) |
 
-**Deep link URL scheme:**
+**deep link url scheme:**
 
 ```
 infrapilot://servers                              → Open server list
@@ -352,11 +346,9 @@ infrapilot://action/restart?server={id}           → Confirm restart dialog
 infrapilot://search?q={query}                     → Open search with query
 ```
 
----
+## api design (backend additions)
 
-## API Design (Backend Additions)
-
-The desktop app uses the existing API but requires new endpoints for updater and state sync:
+the desktop app uses the existing api but requires new endpoints for updater and state sync:
 
 ```yaml
 # Update check endpoint (called by Tauri plugin)
@@ -388,70 +380,60 @@ POST /api/v2/desktop/sync
     conflicts: []                     # Server-side wins for conflicting edits
 ```
 
----
+## service assignments
 
-## Service Assignments
+| service | role | ownership |
+|---|---|---|
+| management panel | tauri shell, rust plugins, frontend integration | desktop team (2 devs) |
+| integration service | state sync endpoint, notification proxy | backend team |
+| infrastructure | update cdn, release ci/cd pipeline signing | devops team |
 
-| Service | Role | Ownership |
-|---------|------|-----------|
-| **Management Panel** | Tauri shell, Rust plugins, frontend integration | Desktop team (2 devs) |
-| **Integration Service** | State sync endpoint, notification proxy | Backend team |
-| **Infrastructure** | Update CDN, release CI/CD pipeline signing | DevOps team |
+## offline-first conflict resolution
 
----
+| scenario | resolution strategy |
+|---|---|
+| server status changed while offline | server wins — discard local stale status on sync |
+| user queued action while online elsewhere | server deduplicates by action + timestamp |
+| settings changed on two devices | last-write-wins with server timestamp |
+| action failed on server (e.g., server already stopped) | action marked `failed` with error message, notify user |
 
-## Offline-First Conflict Resolution
+## security considerations
 
-| Scenario | Resolution Strategy |
-|----------|-------------------|
-| Server status changed while offline | Server wins — discard local stale status on sync |
-| User queued action while online elsewhere | Server deduplicates by action + timestamp |
-| Settings changed on two devices | Last-write-wins with server timestamp |
-| Action failed on server (e.g., server already stopped) | Action marked `failed` with error message, notify user |
+| concern | mitigation |
+|---|---|
+| update tampering | ed25519 signature verification via tauri-plugin-updater |
+| deep link injection | url scheme validated in rust before passing to frontend |
+| local data exposure | sqlite encryption via tauri-plugin-sql with os keychain |
+| backend token storage | encrypted in os keychain (windows credential manager, macos keychain, linux secret-service) |
 
----
+## effort estimate: large (7-10 pt)
 
-## Security Considerations
+| phase | pt | dependencies |
+|---|---|---|
+| phase 1: tauri shell & migration | 2 | management panel v1 (existing) |
+| phase 2: system tray & notifications | 2 | phase 1 |
+| phase 3: offline-first local state | 2 | phase 1 |
+| phase 4: auto-updater | 1 | phase 1, update cdn |
+| phase 5: deep links & hotkeys | 1 | phase 1-2 |
+| packaging, signing & ci/cd | 1 | all phases |
+| total | **9** | |
 
-| Concern | Mitigation |
-|---------|-----------|
-| Update tampering | Ed25519 signature verification via tauri-plugin-updater |
-| Deep link injection | URL scheme validated in Rust before passing to frontend |
-| Local data exposure | SQLite encryption via tauri-plugin-sql with OS keychain |
-| Backend token storage | Encrypted in OS keychain (Windows Credential Manager, macOS Keychain, Linux secret-service) |
+### staffing recommendation
 
----
+- 1 senior rust developer — tauri core, plugins, ipc commands, auto-updater
+- 1 full-stack developer — react integration, offline state sync, frontend ipc bindings
+- 1 devops engineer — 25% time, release pipeline, code signing, update cdn
 
-## Effort Estimate: Large (7-10 PT)
+## comparison: zero-native shell vs. tauri
 
-| Phase | PT | Dependencies |
-|-------|----|-------------|
-| Phase 1: Tauri Shell & Migration | 2 | Management Panel v1 (existing) |
-| Phase 2: System Tray & Notifications | 2 | Phase 1 |
-| Phase 3: Offline-First Local State | 2 | Phase 1 |
-| Phase 4: Auto-Updater | 1 | Phase 1, Update CDN |
-| Phase 5: Deep Links & Hotkeys | 1 | Phase 1-2 |
-| Packaging, signing & CI/CD | 1 | All phases |
-| **Total** | **9** | |
-
-### Staffing Recommendation
-
-- **1 Senior Rust Developer** — Tauri core, plugins, IPC commands, auto-updater
-- **1 Full-Stack Developer** — React integration, offline state sync, frontend IPC bindings
-- **1 DevOps Engineer** — 25% time, release pipeline, code signing, update CDN
-
----
-
-## Comparison: zero-native Shell vs. Tauri
-
-| Aspect | Current zero-native Shell | Proposed Tauri App |
-|--------|--------------------------|-------------------|
-| Binary size | ~5 MB (Zig + system WebView) | ~5-8 MB |
-| System tray | Manual implementation | Plugin ecosystem |
-| Offline state | None — requires network | SQLite local cache |
-| Auto-updater | Manual | Built-in plugin |
-| Deep links | Not supported | Plugin-supported |
-| Global hotkeys | Not possible | Plugin-supported |
-| Native file dialogs | Via WebView only | Tauri plugin |
-| Development maturity | Experimental | Battle-tested (v2 stable) |
-| Effort to add features | High (custom Zig) | Low (plugin ecosystem) |
+| aspect | current zero-native shell | proposed tauri app |
+|---|---|---|
+| binary size | ~5 mb (zig + system webview) | ~5-8 mb |
+| system tray | manual implementation | plugin ecosystem |
+| offline state | none — requires network | sqlite local cache |
+| auto-updater | manual | built-in plugin |
+| deep links | not supported | plugin-supported |
+| global hotkeys | not possible | plugin-supported |
+| native file dialogs | via webview only | tauri plugin |
+| development maturity | experimental | battle-tested (v2 stable) |
+| effort to add features | high (custom zig) | low (plugin ecosystem) |

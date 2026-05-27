@@ -1,30 +1,26 @@
-# Feature 25: Disaster Recovery Orchestrator
+# feature 25: disaster recovery orchestrator
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 25 |
-| Feature Name | Disaster Recovery Orchestrator |
-| Primary Service | Orchestrator Agent |
-| Effort Estimate | Large (7–10 PT) |
-| Status | Planned |
+| feature id | 25 |
+| feature name | disaster recovery orchestrator |
+| primary service | orchestrator agent |
+| effort estimate | large (7-10 pt) |
+| status | planned |
 
----
+## 1. overview
 
-## 1. Overview
+a comprehensive disaster recovery (dr) orchestration framework that enables users to define, test, and execute recovery plans across multiple regions or providers. supports three dr topologies -- **active-passive**, **pilot light**, and **warm standby** -- with one-click drill execution, automated rto/rpo measurement, and compliance reporting.
 
-A comprehensive Disaster Recovery (DR) orchestration framework that enables users to define, test, and execute recovery plans across multiple regions or providers. Supports three DR topologies — **active-passive**, **pilot light**, and **warm standby** — with one-click drill execution, automated RTO/RPO measurement, and compliance reporting.
+### goals
 
-### Goals
+- reduce recovery time from hours to minutes via automated runbooks
+- provide auditable, repeatable dr drills with zero production impact
+- track and report rto (recovery time objective) and rpo (recovery point objective) per application
+- support heterogeneous dr topologies within the same organisation
+- generate compliance-ready reports for soc2, iso 27001, pci-dss
 
-- Reduce recovery time from hours to minutes via automated runbooks
-- Provide auditable, repeatable DR drills with zero production impact
-- Track and report RTO (Recovery Time Objective) and RPO (Recovery Point Objective) per application
-- Support heterogeneous DR topologies within the same organisation
-- Generate compliance-ready reports for SOC2, ISO 27001, PCI-DSS
-
----
-
-## 2. Architecture
+## 2. architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -72,152 +68,152 @@ A comprehensive Disaster Recovery (DR) orchestration framework that enables user
 └────────────┘   └────────────┘   └────────────┘  └──────────────┘
 ```
 
-### Component Responsibilities
+### component responsibilities
 
-| Component | Role |
+| component | role |
 |-----------|------|
-| DR Plan Manager | Defines topology, replication config, and step-by-step runbooks |
-| Topology Validator | Validates the DR plan for correctness and resource coverage |
-| Replication Configurator | Sets up database sync, volume replication, log shipping |
-| Drill Engine | Executes failover, failback, with snapshotting and rollback |
-| RTO/RPO Engine | Measures elapsed time and data loss during drills |
-| Compliance Reporter | Generates audit-ready DR reports |
+| dr plan manager | defines topology, replication config, and step-by-step runbooks |
+| topology validator | validates the dr plan for correctness and resource coverage |
+| replication configurator | sets up database sync, volume replication, log shipping |
+| drill engine | executes failover, failback, with snapshotting and rollback |
+| rto/rpo engine | measures elapsed time and data loss during drills |
+| compliance reporter | generates audit-ready dr reports |
 
----
+## 3. dr topologies
 
-## 3. DR Topologies
-
-### 3.1 Active-Passive
+### 3.1 active-passive
 
 ```
-[Primary] ── replication ──► [Standby]
+
+[Primary] ── replication ── [Standby]
   ▲                              │
   │                              │
   └────────── failover ──────────┘
-```
-
-- **Primary**: handles all production traffic
-- **Standby**: idle replica, receives continuous replication
-- **RTO**: 5–15 minutes | **RPO**: < 1 minute
-- **Replication**: synchronous or semi-synchronous database replication
-
-### 3.2 Pilot Light
 
 ```
-[Primary] ──► [S3/GCS Bucket] ──► [Minimal DR Stack]
+
+- **primary**: handles all production traffic
+- **standby**: idle replica, receives continuous replication
+- **rto**: 5-15 minutes | **rpo**: < 1 minute
+- **replication**: synchronous or semi-synchronous database replication
+
+### 3.2 pilot light
+
+```
+
+[Primary] ── [S3/GCS Bucket] ── [Minimal DR Stack]
   ▲                                        │
   │                                        │
   └───────── scale-up + redirect ──────────┘
-```
-
-- **Primary**: full production stack
-- **DR**: Core data (DB snapshots + S3) replicated; compute scaled to zero
-- **On failover**: auto-scale DR compute, restore from snapshots, redirect DNS
-- **RTO**: 15–45 minutes | **RPO**: 5–15 minutes
-
-### 3.3 Warm Standby
 
 ```
-[Primary] ── replication ──► [DR with reduced capacity]
+
+- **primary**: full production stack
+- **dr**: core data (db snapshots + s3) replicated; compute scaled to zero
+- **on failover**: auto-scale dr compute, restore from snapshots, redirect dns
+- **rto**: 15-45 minutes | **rpo**: 5-15 minutes
+
+### 3.3 warm standby
+
+```
+
+[Primary] ── replication ── [DR with reduced capacity]
   ▲                                      │
   │                                      │
   └────────── scale-up + failover ────────┘
+
 ```
 
-- **DR**: runs with a smaller instance count but fully operational
-- **On failover**: scale up DR, redirect traffic
-- **RTO**: 5–15 minutes | **RPO**: < 5 minutes
+- **dr**: runs with a smaller instance count but fully operational
+- **on failover**: scale up dr, redirect traffic
+- **rto**: 5-15 minutes | **rpo**: < 5 minutes
 
----
-
-## 4. Data Model
+## 4. data model
 
 ### `dr_plans`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| environment_id | UUID | FK → environments.id |
-| name | VARCHAR | Human-readable plan name |
-| description | TEXT | |
-| topology | ENUM | active_passive, pilot_light, warm_standby |
-| status | ENUM | draft, validated, active, archived |
-| primary_region | VARCHAR | e.g. "us-east-1" or "gcp-us-central1" |
-| dr_region | VARCHAR | e.g. "eu-west-1" or "gcp-europe-west1" |
-| provider | ENUM | aws, gcp, azure, hetzner, multi |
-| rpo_seconds | INT | Target recovery point objective |
-| rto_seconds | INT | Target recovery time objective |
-| config | JSONB | Provider-specific DR config |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| environment_id | uuid | fk to environments.id |
+| name | varchar | human-readable plan name |
+| description | text | |
+| topology | enum | active_passive, pilot_light, warm_standby |
+| status | enum | draft, validated, active, archived |
+| primary_region | varchar | e.g. "us-east-1" or "gcp-us-central1" |
+| dr_region | varchar | e.g. "eu-west-1" or "gcp-europe-west1" |
+| provider | enum | aws, gcp, azure, hetzner, multi |
+| rpo_seconds | int | target recovery point objective |
+| rto_seconds | int | target recovery time objective |
+| config | jsonb | provider-specific dr config |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `dr_plan_steps`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| plan_id | UUID | FK → dr_plans.id |
-| step_order | INT | Execution order |
-| name | VARCHAR | e.g. "Stop primary app", "Promote replica" |
-| action_type | ENUM | script, api_call, dns_update, wait, manual |
-| action_config | JSONB | Script path, API endpoint, DNS record, timeout |
-| timeout_seconds | INT | Max execution time before failure |
-| retry_count | INT | How many retries on failure |
-| critical | BOOLEAN | If true, abort entire drill on failure |
-| created_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| plan_id | uuid | fk to dr_plans.id |
+| step_order | int | execution order |
+| name | varchar | e.g. "stop primary app", "promote replica" |
+| action_type | enum | script, api_call, dns_update, wait, manual |
+| action_config | jsonb | script path, api endpoint, dns record, timeout |
+| timeout_seconds | int | max execution time before failure |
+| retry_count | int | how many retries on failure |
+| critical | boolean | if true, abort entire drill on failure |
+| created_at | timestamptz | |
 
 ### `dr_replication_configs`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| plan_id | UUID | FK → dr_plans.id |
-| resource_type | VARCHAR | "database", "storage", "volume", "config" |
-| source | VARCHAR | Source identifier |
-| target | VARCHAR | Target identifier |
-| method | VARCHAR | "streaming_replication", "s3_cross_region", "rsync", "acm" |
-| schedule | VARCHAR | Cron expression for sync (pilot light) |
-| monitoring | JSONB | Lag threshold alerts |
-| enabled | BOOLEAN | |
-| created_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| plan_id | uuid | fk to dr_plans.id |
+| resource_type | varchar | "database", "storage", "volume", "config" |
+| source | varchar | source identifier |
+| target | varchar | target identifier |
+| method | varchar | "streaming_replication", "s3_cross_region", "rsync", "acm" |
+| schedule | varchar | cron expression for sync (pilot light) |
+| monitoring | jsonb | lag threshold alerts |
+| enabled | boolean | |
+| created_at | timestamptz | |
 
 ### `dr_drills`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| plan_id | UUID | FK → dr_plans.id |
-| name | VARCHAR | e.g. "Q3 DR Drill — Active-Passive" |
-| status | ENUM | running, completed_success, completed_with_issues, failed, rolled_back |
-| started_at | TIMESTAMPTZ | |
-| completed_at | TIMESTAMPTZ | |
-| measured_rto_seconds | INT | Actual RTO achieved |
-| measured_rpo_seconds | INT | Actual RPO achieved |
-| rto_met | BOOLEAN | |
-| rpo_met | BOOLEAN | |
-| results | JSONB | Step-by-step results and logs |
-| initiated_by | UUID | FK → users.id |
-| notes | TEXT | |
+| id | uuid | primary key |
+| plan_id | uuid | fk to dr_plans.id |
+| name | varchar | e.g. "q3 dr drill -- active-passive" |
+| status | enum | running, completed_success, completed_with_issues, failed, rolled_back |
+| started_at | timestamptz | |
+| completed_at | timestamptz | |
+| measured_rto_seconds | int | actual rto achieved |
+| measured_rpo_seconds | int | actual rpo achieved |
+| rto_met | boolean | |
+| rpo_met | boolean | |
+| results | jsonb | step-by-step results and logs |
+| initiated_by | uuid | fk to users.id |
+| notes | text | |
 
 ### `dr_audit_log`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| drill_id | UUID | FK → dr_drills.id |
-| plan_id | UUID | FK → dr_plans.id |
-| step_id | UUID | FK → dr_plan_steps.id (nullable) |
-| action | VARCHAR | |
-| status | VARCHAR | |
-| message | TEXT | |
-| duration_ms | INT | |
-| timestamp | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| drill_id | uuid | fk to dr_drills.id |
+| plan_id | uuid | fk to dr_plans.id |
+| step_id | uuid | fk to dr_plan_steps.id (nullable) |
+| action | varchar | |
+| status | varchar | |
+| message | text | |
+| duration_ms | int | |
+| timestamp | timestamptz | |
 
----
+## 5. api design
 
-## 5. API Design
-
-### DR Plans
+### dr plans
 
 ```
 POST   /api/v2/dr/plans                      — Create DR plan
@@ -228,7 +224,7 @@ DELETE /api/v2/dr/plans/:id                   — Archive plan
 POST   /api/v2/dr/plans/:id/validate          — Validate topology & config
 ```
 
-### Plan Steps
+### plan steps
 
 ```
 GET    /api/v2/dr/plans/:id/steps             — List steps
@@ -238,7 +234,7 @@ DELETE /api/v2/dr/plans/:id/steps/:sid        — Remove step
 POST   /api/v2/dr/plans/:id/steps/reorder     — Reorder steps
 ```
 
-### Replication
+### replication
 
 ```
 GET    /api/v2/dr/plans/:id/replication       — List replication configs
@@ -248,7 +244,7 @@ DELETE /api/v2/dr/plans/:id/replication/:rid   — Remove
 POST   /api/v2/dr/plans/:id/replication/sync  — Trigger manual sync (pilot light)
 ```
 
-### Drills
+### drills
 
 ```
 POST   /api/v2/dr/plans/:id/drills            — Start a DR drill
@@ -258,7 +254,7 @@ POST   /api/v2/dr/drills/:did/cancel          — Cancel running drill
 POST   /api/v2/dr/drills/:did/rollback        — Roll back to pre-drill state
 ```
 
-### RTO/RPO & Compliance
+### rto/rpo & compliance
 
 ```
 GET    /api/v2/dr/plans/:id/compliance        — Compliance report for a plan
@@ -267,68 +263,64 @@ GET    /api/v2/dr/compliance/summary          — Org-wide compliance summary
 GET    /api/v2/dr/compliance/export           — Export as PDF/CSV
 ```
 
----
+## 6. implementation plan
 
-## 6. Implementation Plan
+### phase 1 -- dr plan definition & validation (2 pt)
 
-### Phase 1 — DR Plan Definition & Validation (2 PT)
+• define `dr_plans`, `dr_plan_steps`, `dr_replication_configs` tables and crud
+• implement `topologyvalidator`:
+   - checks that primary and dr regions are distinct
+   - validates network connectivity between sites
+   - ensures required resources exist in dr region
+• build dr plan designer ui -- drag-and-drop topology selection, step builder
 
-1. Define `dr_plans`, `dr_plan_steps`, `dr_replication_configs` tables and CRUD
-2. Implement `TopologyValidator`:
-   - Checks that primary and DR regions are distinct
-   - Validates network connectivity between sites
-   - Ensures required resources exist in DR region
-3. Build DR plan designer UI — drag-and-drop topology selection, step builder
+### phase 2 -- replication configuration (2 pt)
 
-### Phase 2 — Replication Configuration (2 PT)
+• implement `replicationconfigurator`:
+   - database replication (postgresql streaming, mysql binlog, cross-region rds)
+   - volume/block storage replication (ebs snapshots, persistent disk snapshots)
+   - object storage cross-region replication (s3 crr, gcs object retention)
+• build sync status monitoring with lag alerts
+• add manual sync trigger for pilot-light topology
 
-1. Implement `ReplicationConfigurator`:
-   - Database replication (PostgreSQL streaming, MySQL binlog, cross-region RDS)
-   - Volume/block storage replication (EBS snapshots, persistent disk snapshots)
-   - Object storage cross-region replication (S3 CRR, GCS Object Retention)
-2. Build sync status monitoring with lag alerts
-3. Add manual sync trigger for pilot-light topology
+### phase 3 -- drill engine (3 pt)
 
-### Phase 3 — Drill Engine (3 PT)
+• implement `failoverexecutor`:
+   - executes each step in order with timeout and retry
+   - promotes replica database to primary
+   - updates dns / traffic routing
+   - switches monitoring and alerting to dr region
+• implement `failbackexecutor`:
+   - reverses the failover process
+   - resyncs data back to the original primary
+   - restores dns to primary
+• implement `snapshotmanager` -- takes pre-drill snapshots for rollback
+• implement `validationandrollback` -- post-step validation hooks + full rollback on critical failure
 
-1. Implement `FailoverExecutor`:
-   - Executes each step in order with timeout and retry
-   - Promotes replica database to primary
-   - Updates DNS / traffic routing
-   - Switches monitoring and alerting to DR region
-2. Implement `FailbackExecutor`:
-   - Reverses the failover process
-   - Resyncs data back to the original primary
-   - Restores DNS to primary
-3. Implement `SnapshotManager` — takes pre-drill snapshots for rollback
-4. Implement `ValidationAndRollback` — post-step validation hooks + full rollback on critical failure
+### phase 4 -- rto/rpo measurement (1 pt)
 
-### Phase 4 — RTO/RPO Measurement (1 PT)
+• `rtotimer` -- starts on drill initiation, stops when application health check passes on dr
+• `rpomonitor` -- measures data lag by comparing latest replicated record timestamps
+• store measured metrics in `dr_drills` and compare against targets
+• alert on rto/rpo breach
 
-1. `RtoTimer` — starts on drill initiation, stops when application health check passes on DR
-2. `RpoMonitor` — measures data lag by comparing latest replicated record timestamps
-3. Store measured metrics in `dr_drills` and compare against targets
-4. Alert on RTO/RPO breach
+### phase 5 -- compliance reporting (0.5 pt)
 
-### Phase 5 — Compliance Reporting (0.5 PT)
+• build report templates for soc2, iso 27001, pci-dss
+• generate pdf reports with drill history, rto/rpo summaries, and step logs
+• export as csv for siem ingestion
 
-1. Build report templates for SOC2, ISO 27001, PCI-DSS
-2. Generate PDF reports with drill history, RTO/RPO summaries, and step logs
-3. Export as CSV for SIEM ingestion
+### phase 6 -- ui & polish (1-1.5 pt)
 
-### Phase 6 — UI & Polish (1–1.5 PT)
+• dr plan designer (visual topology picker)
+• drill console (real-time step log streaming)
+• rto/rpo dashboard with historical trends
+• compliance report viewer
+• scheduled drill capability (e.g., first sunday of every quarter)
 
-1. DR plan designer (visual topology picker)
-2. Drill console (real-time step log streaming)
-3. RTO/RPO dashboard with historical trends
-4. Compliance report viewer
-5. Scheduled drill capability (e.g., first Sunday of every quarter)
+## 7. configuration examples
 
----
-
-## 7. Configuration Examples
-
-### DR Plan Definition (POST /api/v2/dr/plans)
+### dr plan definition (post /api/v2/dr/plans)
 
 ```json
 {
@@ -350,7 +342,7 @@ GET    /api/v2/dr/compliance/export           — Export as PDF/CSV
 }
 ```
 
-### Drill Runbook Step Example
+### drill runbook step example
 
 ```json
 {
@@ -418,7 +410,7 @@ GET    /api/v2/dr/compliance/export           — Export as PDF/CSV
 }
 ```
 
-### Drill Result (GET /api/v2/dr/drills/:did)
+### drill result (get /api/v2/dr/drills/:did)
 
 ```json
 {
@@ -446,46 +438,40 @@ GET    /api/v2/dr/compliance/export           — Export as PDF/CSV
 }
 ```
 
----
+## 8. service assignments
 
-## 8. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|------------------|
-| **Orchestrator Agent** | DR plan engine, drill orchestration, RTO/RPO measurement, compliance report generation |
-| **Integration Service** | Provider-specific replication setup (DB, storage, DNS) |
-| **Panel** | DR plan designer, drill console, RTO/RPO dashboard, compliance reports |
-| **Database** | `dr_plans`, `dr_plan_steps`, `dr_replication_configs`, `dr_drills`, `dr_audit_log` |
-| **Scheduler** | Scheduled drills, periodic sync operations, compliance report generation |
-| **Notification Service** | Drill start/completion/failure alerts |
+| **orchestrator agent** | dr plan engine, drill orchestration, rto/rpo measurement, compliance report generation |
+| **integration service** | provider-specific replication setup (db, storage, dns) |
+| **panel** | dr plan designer, drill console, rto/rpo dashboard, compliance reports |
+| **database** | `dr_plans`, `dr_plan_steps`, `dr_replication_configs`, `dr_drills`, `dr_audit_log` |
+| **scheduler** | scheduled drills, periodic sync operations, compliance report generation |
+| **notification service** | drill start/completion/failure alerts |
 
----
+## 9. effort breakdown
 
-## 9. Effort Breakdown
-
-| Task | PT | Dependencies |
+| task | pt | dependencies |
 |------|----|-------------|
-| Data model + CRUD for DR plans, steps, replication | 0.5 | — |
-| Topology validator | 0.5 | Data model |
-| DR plan designer UI | 1.0 | CRUD APIs |
-| Replication configurator (DB, storage, DNS) | 1.5 | — |
-| Replication monitoring + lag alerts | 0.5 | Replication config |
-| Failover executor | 1.5 | Step model |
-| Failback executor | 1.0 | Failover executor |
-| Snapshot manager + rollback | 0.5 | Provider APIs |
-| Drill console + real-time logs | 1.0 | Drill engine |
-| RTO/RPO measurement engine | 1.0 | Drill engine |
-| Compliance report generator | 0.5 | Audit log |
-| RTO/RPO dashboard | 0.5 | Measurement engine |
-| Documentation & tests | 0.5 | — |
+| data model + crud for dr plans, steps, replication | 0.5 | -- |
+| topology validator | 0.5 | data model |
+| dr plan designer ui | 1.0 | crud apis |
+| replication configurator (db, storage, dns) | 1.5 | -- |
+| replication monitoring + lag alerts | 0.5 | replication config |
+| failover executor | 1.5 | step model |
+| failback executor | 1.0 | failover executor |
+| snapshot manager + rollback | 0.5 | provider apis |
+| drill console + real-time logs | 1.0 | drill engine |
+| rto/rpo measurement engine | 1.0 | drill engine |
+| compliance report generator | 0.5 | audit log |
+| rto/rpo dashboard | 0.5 | measurement engine |
+| documentation & tests | 0.5 | -- |
 
----
+## 10. risks & mitigations
 
-## 10. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Failover damages primary due to split-brain | Data loss / corruption | Implement health-check fencing; never promote DR if primary is reachable |
-| Replication lag exceeds RPO during a real disaster | Data loss beyond acceptable threshold | Hard RPO enforcement — alert + auto-throttle source writes |
-| DNS propagation delay invalidates RTO target | RTO breach despite fast app startup | Use low-TTL DNS (60s), Traffic Manager / Global Load Balancer |
-| Rollback fails after failed drill | Stuck in partial failover state | Each step has a rollback plan; always test rollback in drills |
+| failover damages primary due to split-brain | data loss / corruption | implement health-check fencing; never promote dr if primary is reachable |
+| replication lag exceeds rpo during a real disaster | data loss beyond acceptable threshold | hard rpo enforcement -- alert + auto-throttle source writes |
+| dns propagation delay invalidates rto target | rto breach despite fast app startup | use low-ttl dns (60s), traffic manager / global load balancer |
+| rollback fails after failed drill | stuck in partial failover state | each step has a rollback plan; always test rollback in drills |

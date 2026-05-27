@@ -1,54 +1,52 @@
 ---
-name: Bug Report
-about: Report a bug or issue with Infra Pilot
-title: "[BUG] "
+name: bug report
+about: report a bug or issue with infra pilot
+title: "[bug] "
 labels: bug
 assignees: ''
 ---
 
-## Description
+## description
 
-<!-- Clearly describe the bug you encountered -->
+<!-- clearly describe the bug you encountered -->
 
-## Steps to Reproduce
+## steps to reproduce
 
-1.
-2.
-3.
+•
+•
+•
 
-## Expected Behavior
+## expected behavior
 
-<!-- What should happen? -->
+<!-- what should happen? -->
 
-## Actual Behavior
+## actual behavior
 
-<!-- What actually happens? -->
+<!-- what actually happens? -->
 
-## Environment
+## environment
 
-- **OS:** (Linux/macOS/Windows)
-- **Component:** (service-core/orchestrator-agent/discord-service/management-panel)
-- **Version:** (e.g., main, v1.0.0)
-- **Docker:** Yes/No
+• os: (linux/macos/windows)
+• component: (service-core/orchestrator-agent/discord-service/management-panel)
+• version: (e.g., main, v1.0.0)
+• docker: yes/no
 
-## Error Log / Screenshots
+## error log / screenshots
 
 ```
-<!-- Paste error logs or stack traces here -->
+<!-- paste error logs or stack traces here -->
 ```
 
-## Possible Solution
+## possible solution
 
-<!-- Optional: suggest a fix or solution -->
+<!-- optional: suggest a fix or solution -->
 
-## Related Issues
+## related issues
 
-<!-- Link any related issues -->
-Closes #
+<!-- link any related issues -->
+closes #
 
----
-
-**Notes:**
-- Please include as much detail as possible
-- Do not include secrets or credentials in the issue
-- Check existing issues before creating a duplicate
+notes:
+• please include as much detail as possible
+• do not include secrets or credentials in the issue
+• check existing issues before creating a duplicate

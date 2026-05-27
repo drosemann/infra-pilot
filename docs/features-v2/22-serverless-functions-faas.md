@@ -1,32 +1,30 @@
-# Feature 22: Serverless Functions (FaaS)
+# feature 22: serverless functions (faas)
 
-- **Plan ID:** #22
-- **Category:** Advanced Infrastructure
-- **Primary Service:** Orchestrator Agent
-- **Effort:** Large (7-10 PT)
-- **Dependencies:** Feature 19 (Kubernetes Cluster Manager), Feature 21 (Edge Compute Nodes)
+- plan id: #22
+- category: advanced infrastructure
+- primary service: orchestrator agent
+- effort: large (7-10 pt)
+- dependencies: feature 19 (kubernetes cluster manager), feature 21 (edge compute nodes)
 
-## Overview
+## overview
 
-Knative/OpenFaaS integration enabling serverless function deployment from Git repositories. Functions auto-scale to zero when idle, scale up on demand, and are billed per-invocation. Supports multiple runtimes (Node.js, Python, Go, Rust, Java), event triggers (HTTP, Pub/Sub, cron), and seamless integration with the Infra Pilot ecosystem.
+knative/openfaas integration enabling serverless function deployment from git repositories. functions auto-scale to zero when idle, scale up on demand, and are billed per-invocation. supports multiple runtimes (node.js, python, go, rust, java), event triggers (http, pub/sub, cron), and seamless integration with the infra pilot ecosystem.
 
-### Key Capabilities
+### key capabilities
 
-| Capability | Description |
+| capability | description |
 |---|---|
-| Function Registry | Central registry for functions with versioning, tags, and metadata |
-| Git-Based Deploy | Connect Git repos — auto-build and deploy on push via webhooks |
-| Auto-Scaling to Zero | Scale down when idle (Knative/OpenFaaS), cold-start optimization |
-| Per-Invocation Billing | Track invocations, duration, resource usage for granular billing |
-| Multiple Runtimes | Node.js, Python, Go, Rust, Java, custom container images |
-| Event Triggers | HTTP endpoints, CloudEvents, cron schedules, queue-based triggers |
-| Invocation Metrics | Duration, memory, concurrency, error rates, cold start frequency |
+| function registry | central registry for functions with versioning, tags, and metadata |
+| git-based deploy | connect git repos -- auto-build and deploy on push via webhooks |
+| auto-scaling to zero | scale down when idle (knative/openfaas), cold-start optimization |
+| per-invocation billing | track invocations, duration, resource usage for granular billing |
+| multiple runtimes | node.js, python, go, rust, java, custom container images |
+| event triggers | http endpoints, cloudevents, cron schedules, queue-based triggers |
+| invocation metrics | duration, memory, concurrency, error rates, cold start frequency |
 
----
+## architecture
 
-## Architecture
-
-### System Context
+### system context
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -61,7 +59,7 @@ Knative/OpenFaaS integration enabling serverless function deployment from Git re
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Component Architecture
+### component architecture
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -94,7 +92,7 @@ Knative/OpenFaaS integration enabling serverless function deployment from Git re
 └──────────────────────────────────────────────────────┘
 ```
 
-### Interaction Flow
+### interaction flow
 
 ```
 Git-Based Deploy:
@@ -140,66 +138,62 @@ Function Invocation:
     Billing: record invocation (function_id, user_id, duration_ms, mem_mb)
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: function registry & crud (2 pt)
 
-### Phase 1: Function Registry & CRUD (2 PT)
-
-| Task | Description |
+| task | description |
 |---|---|
-| 1.1 | Function metadata model and database schema |
-| 1.2 | CRUD API for functions (create, read, update, delete, list) |
-| 1.3 | Function versioning (semver tags, alias management) |
-| 1.4 | Runtime detection and validation (supported runtimes, buildpacks) |
-| 1.5 | Secrets and environment variable management for functions |
+| 1.1 | function metadata model and database schema |
+| 1.2 | crud api for functions (create, read, update, delete, list) |
+| 1.3 | function versioning (semver tags, alias management) |
+| 1.4 | runtime detection and validation (supported runtimes, buildpacks) |
+| 1.5 | secrets and environment variable management for functions |
 
-### Phase 2: Git Integration (2 PT)
+### phase 2: git integration (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 2.1 | Git webhook receiver (GitHub/GitLab/Bitbucket) |
-| 2.2 | Auto-build pipeline integration (Docker build, buildpacks, source-to-image) |
-| 2.3 | Deploy-on-push workflow with status callbacks (commit status checks) |
-| 2.4 | Rollback to previous version on deploy failure |
+| 2.1 | git webhook receiver (github/gitlab/bitbucket) |
+| 2.2 | auto-build pipeline integration (docker build, buildpacks, source-to-image) |
+| 2.3 | deploy-on-push workflow with status callbacks (commit status checks) |
+| 2.4 | rollback to previous version on deploy failure |
 
-### Phase 3: Knative/OpenFaaS Adapter (1.5 PT)
+### phase 3: knative/openfaas adapter (1.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 3.1 | Abstraction layer for FaaS engine (Knative Serving, OpenFaaS) |
-| 3.2 | Service creation/deletion/update via K8s API |
-| 3.3 | Auto-scaling configuration (concurrency, scale-to-zero, cooldown) |
-| 3.4 | Domain and TLS management for function endpoints |
+| 3.1 | abstraction layer for faas engine (knative serving, openfaas) |
+| 3.2 | service creation/deletion/update via k8s api |
+| 3.3 | auto-scaling configuration (concurrency, scale-to-zero, cooldown) |
+| 3.4 | domain and tls management for function endpoints |
 
-### Phase 4: Event Triggers (1 PT)
+### phase 4: event triggers (1 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 4.1 | HTTP trigger with path/header routing |
-| 4.2 | Cron/schedule trigger (Kubernetes CronJob → invoke function) |
-| 4.3 | Pub/Sub trigger (CloudEvents, NATS/Kafka integration) |
-| 4.4 | Custom event source registration API |
+| 4.1 | http trigger with path/header routing |
+| 4.2 | cron/schedule trigger (kubernetes cronjob → invoke function) |
+| 4.3 | pub/sub trigger (cloudevents, nats/kafka integration) |
+| 4.4 | custom event source registration api |
 
-### Phase 5: Billing & Metrics (1.5 PT)
+### phase 5: billing & metrics (1.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 5.1 | Invocation counting and duration tracking middleware |
-| 5.2 | Per-invocation billing calculator (price per GB-second) |
-| 5.3 | Monthly usage aggregation and invoice generation |
-| 5.4 | Invocation monitoring dashboard (Grafana) |
-| 5.5 | Cold start optimization (pre-warm pools, provisioned concurrency) |
+| 5.1 | invocation counting and duration tracking middleware |
+| 5.2 | per-invocation billing calculator (price per gb-second) |
+| 5.3 | monthly usage aggregation and invoice generation |
+| 5.4 | invocation monitoring dashboard (grafana) |
+| 5.5 | cold start optimization (pre-warm pools, provisioned concurrency) |
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
+all endpoints are prefixed with `/api/v2/faas`.
 
-All endpoints are prefixed with `/api/v2/faas`.
-
-#### Functions
+#### functions
 
 ```
 GET    /api/v2/faas/functions                    — List functions
@@ -211,14 +205,14 @@ POST   /api/v2/faas/functions/{function_id}/deploy  — Trigger deploy
 POST   /api/v2/faas/functions/{function_id}/rollback — Rollback to version
 ```
 
-#### Versions
+#### versions
 
 ```
 GET    /api/v2/faas/functions/{function_id}/versions     — List versions
 GET    /api/v2/faas/functions/{function_id}/versions/{v} — Get version details
 ```
 
-#### Triggers
+#### triggers
 
 ```
 GET    /api/v2/faas/triggers                       — List triggers
@@ -228,7 +222,7 @@ PATCH  /api/v2/faas/triggers/{trigger_id}           — Update trigger
 DELETE /api/v2/faas/triggers/{trigger_id}           — Delete trigger
 ```
 
-#### Invocations
+#### invocations
 
 ```
 GET    /api/v2/faas/invocations                    — List invocations
@@ -236,7 +230,7 @@ GET    /api/v2/faas/invocations/{invocation_id}    — Get invocation details
 GET    /api/v2/faas/stats                          — Aggregate statistics
 ```
 
-#### Billing
+#### billing
 
 ```
 GET    /api/v2/faas/billing/usage                  — Current billing period usage
@@ -245,7 +239,7 @@ GET    /api/v2/faas/billing/invoices               — List invoices
 GET    /api/v2/faas/billing/invoices/{invoice_id}  — Invoice details
 ```
 
-#### Git Integration
+#### git integration
 
 ```
 POST   /api/v2/faas/git/webhook                    — Receive git webhook payload
@@ -254,9 +248,9 @@ POST   /api/v2/faas/git/repos                      — Connect git repo
 DELETE /api/v2/faas/git/repos/{repo_id}            — Disconnect repo
 ```
 
-### Request/Response Examples
+### request/response examples
 
-#### Create Function
+#### create function
 
 ```json
 POST /api/v2/faas/functions
@@ -304,7 +298,7 @@ POST /api/v2/faas/functions
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -317,7 +311,7 @@ Response:
 }
 ```
 
-#### Invocation Record
+#### invocation record
 
 ```json
 GET /api/v2/faas/invocations/inv-xyz789
@@ -343,11 +337,9 @@ GET /api/v2/faas/invocations/inv-xyz789
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Function
+### function
 
 ```sql
 CREATE TABLE faas_functions (
@@ -371,7 +363,7 @@ CREATE TABLE faas_functions (
 );
 ```
 
-### Function Version
+### function version
 
 ```sql
 CREATE TABLE faas_function_versions (
@@ -391,7 +383,7 @@ CREATE TABLE faas_function_versions (
 );
 ```
 
-### Trigger
+### trigger
 
 ```sql
 CREATE TABLE faas_triggers (
@@ -406,7 +398,7 @@ CREATE TABLE faas_triggers (
 );
 ```
 
-### Invocation
+### invocation
 
 ```sql
 CREATE TABLE faas_invocations (
@@ -436,7 +428,7 @@ CREATE INDEX idx_faas_invocations_date
     ON faas_invocations (started_at);
 ```
 
-### Billing
+### billing
 
 ```sql
 CREATE TABLE faas_billing_records (
@@ -466,7 +458,7 @@ CREATE TABLE faas_billing_invoices (
 );
 ```
 
-### Git Repositories
+### git repositories
 
 ```sql
 CREATE TABLE faas_git_repos (
@@ -483,50 +475,44 @@ CREATE TABLE faas_git_repos (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Component | Service | Responsibilities |
+| component | service | responsibilities |
 |---|---|---|
-| Function Manager | **Orchestrator Agent** | Function CRUD, versioning, deployment workflow |
-| Git Integration | **Orchestrator Agent** | Webhook receiver, build pipeline, commit status |
-| Knative/OpenFaaS Adapter | **Orchestrator Agent** | FaaS engine abstraction, service lifecycle, scaling |
-| Invocation Router | **Integration Service** | API gateway, auth, rate limiting, request routing |
-| Billing Engine | **Integration Service** | Usage tracking, cost calculation, invoicing |
-| Metrics Collector | **Orchestrator Agent** | Prometheus metrics, invocation logs |
-| Function UI | **Management Panel** | Function editor, deploy UI, invocation log viewer |
-| Event Bus | **Integration Service** (+ Feature 13) | Pub/Sub triggers, event source management |
-| Secret Store | **Integration Service** (+ Feature 47) | Encrypted env vars, function secrets |
+| function manager | **orchestrator agent** | function crud, versioning, deployment workflow |
+| git integration | **orchestrator agent** | webhook receiver, build pipeline, commit status |
+| knative/openfaas adapter | **orchestrator agent** | faas engine abstraction, service lifecycle, scaling |
+| invocation router | **integration service** | api gateway, auth, rate limiting, request routing |
+| billing engine | **integration service** | usage tracking, cost calculation, invoicing |
+| metrics collector | **orchestrator agent** | prometheus metrics, invocation logs |
+| function ui | **management panel** | function editor, deploy ui, invocation log viewer |
+| event bus | **integration service** (+ feature 13) | pub/sub triggers, event source management |
+| secret store | **integration service** (+ feature 47) | encrypted env vars, function secrets |
 
----
+## effort estimate
 
-## Effort Estimate
-
-| Phase | Tasks | PT |
+| phase | tasks | pt |
 |---|---|---|
-| Phase 1: Function Registry & CRUD | 1.1–1.5 | 2 |
-| Phase 2: Git Integration | 2.1–2.4 | 2 |
-| Phase 3: Knative/OpenFaaS Adapter | 3.1–3.4 | 1.5 |
-| Phase 4: Event Triggers | 4.1–4.4 | 1 |
-| Phase 5: Billing & Metrics | 5.1–5.5 | 1.5 |
-| **Total** | **22 tasks** | **8 PT** |
+| phase 1: function registry & crud | 1.1–1.5 | 2 |
+| phase 2: git integration | 2.1–2.4 | 2 |
+| phase 3: knative/openfaas adapter | 3.1–3.4 | 1.5 |
+| phase 4: event triggers | 4.1–4.4 | 1 |
+| phase 5: billing & metrics | 5.1–5.5 | 1.5 |
+| **total** | **22 tasks** | **8 pt** |
 
-### Risk Factors
+### risk factors
 
-| Risk | Mitigation |
+| risk | mitigation |
 |---|---|
-| Cold start latency for infrequent functions | Provisioned concurrency (always-on replicas), pre-warm pools, Wasm for sub-100ms startups |
-| Knative/OpenFaaS complexity for users | Abstract via unified Infra Pilot FaaS layer; hide K8s details |
-| Billing accuracy at high throughput | Atomic counters in Redis, batch-write to PostgreSQL, reconciliation jobs |
-| Resource contention under scale | Per-function resource quotas, namespace isolation, cluster autoscaler |
-| Function build pipeline security | Container image scanning (Trivy), signature verification, sandboxed builds |
+| cold start latency for infrequent functions | provisioned concurrency (always-on replicas), pre-warm pools, wasm for sub-100ms startups |
+| knative/openfaas complexity for users | abstract via unified infra pilot faas layer; hide k8s details |
+| billing accuracy at high throughput | atomic counters in redis, batch-write to postgresql, reconciliation jobs |
+| resource contention under scale | per-function resource quotas, namespace isolation, cluster autoscaler |
+| function build pipeline security | container image scanning (trivy), signature verification, sandboxed builds |
 
----
+## monitoring & observability
 
-## Monitoring & Observability
-
-### Prometheus Metrics
+### prometheus metrics
 
 ```python
 # Functions
@@ -555,7 +541,7 @@ faas_trigger_executions_total{type,status}     # Counter — trigger executions
 faas_trigger_latency_seconds{type}             # Histogram — trigger delivery latency
 ```
 
-### Logging
+### logging
 
 ```json
 {
@@ -586,18 +572,14 @@ faas_trigger_latency_seconds{type}             # Histogram — trigger delivery 
 }
 ```
 
----
+## related documents
 
-## Related Documents
+- [architecture overview](../architecture/overview.md)
+- [orchestrator agent architecture](../architecture/orchestrator-agent.md)
+- [feature 19: kubernetes cluster manager](19-kubernetes-cluster-manager.md)
+- [feature 21: edge compute nodes](21-edge-compute-nodes.md)
+- [feature 13: webhook event bus](13-webhook-event-bus.md)
+- [feature 47: secrets management](47-secrets-management.md)
+- [implementation plan v2](../feature-implementation-plan-v2.md)
 
-- [Architecture Overview](../architecture/overview.md)
-- [Orchestrator Agent Architecture](../architecture/orchestrator-agent.md)
-- [Feature 19: Kubernetes Cluster Manager](19-kubernetes-cluster-manager.md)
-- [Feature 21: Edge Compute Nodes](21-edge-compute-nodes.md)
-- [Feature 13: Webhook Event Bus](13-webhook-event-bus.md)
-- [Feature 47: Secrets Management](47-secrets-management.md)
-- [Implementation Plan v2](../feature-implementation-plan-v2.md)
-
----
-
-**Last Updated:** May 2026
+**last updated:** may 2026

@@ -1,14 +1,14 @@
-# Architecture Planner
+# architecture planner
 
-## Description
+## description
 
-Helps design and plan software architecture, including system design, component relationships, technology stack decisions, and scalability considerations. Provides structured architectural guidance for projects of any size.
+helps design and plan software architecture, including system design, component relationships, technology stack decisions, and scalability considerations. provides structured architectural guidance for projects of any size.
 
-## Usage
+## usage
 
-Describe your project requirements, constraints, and goals. Include information about expected scale, performance requirements, team size, and any existing systems. Works for both new projects and architectural refactoring.
+describe your project requirements, constraints, and goals. include information about expected scale, performance requirements, team size, and any existing systems. works for both new projects and architectural refactoring.
 
-## Prompt
+## prompt
 
 ```markdown
 Help me design the software architecture for the following project:
@@ -71,7 +71,7 @@ Please provide:
    - Risk mitigation strategies
 ```
 
-## Example Input
+## example input
 
 ```markdown
 **Project Overview:**
@@ -98,7 +98,7 @@ A real-time collaboration platform for remote teams, similar to Slack but with i
 - **Technology**: Team has experience with React, Node.js, PostgreSQL
 ```
 
-## Example Output
+## example output
 
 ```markdown
 # Collaboration Platform Architecture Design
@@ -109,64 +109,64 @@ A real-time collaboration platform for remote teams, similar to Slack but with i
 ```
 
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Client    │    │  Mobile Client  │    │  Desktop App    │
-│    (React)      │    │   (React Native)│    │   (Electron)    │
+│   web client    │    │  mobile client  │    │  desktop app    │
+│    (react)      │    │   (react native)│    │   (electron)    │
 └─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
           │                      │                      │
           └──────────────────────┼──────────────────────┘
                                  │
                     ┌─────────────┴─────────────┐
-                    │     API Gateway           │
-                    │   (Authentication +       │
-                    │    Load Balancing)        │
+                    │     api gateway           │
+                    │   (authentication +       │
+                    │    load balancing)        │
                     └─────────────┬─────────────┘
                                   │
     ┌─────────────┬───────────────┼───────────────┬─────────────┐
     │             │               │               │             │
 ┌───▼───┐    ┌───▼───┐       ┌───▼───┐      ┌───▼───┐    ┌───▼───┐
-│Message│    │ User  │       │ File  │      │Video  │    │Project│
-│Service│    │Service│       │Service│      │Service│    │Service│
+│message│    │ user  │       │ file  │      │video  │    │project│
+│service│    │service│       │service│      │service│    │service│
 └───┬───┘    └───┬───┘       └───┬───┘      └───┬───┘    └───┬───┘
     │            │               │              │            │
     └────────────┼───────────────┼──────────────┼────────────┘
                  │               │              │
             ┌────▼────┐     ┌────▼────┐    ┌────▼────┐
-            │PostgreSQL│     │   S3    │    │  Redis  │
-            │(Primary) │     │(Files)  │    │(Cache)  │
+            │postgresql│     │   s3    │    │  redis  │
+            │(primary) │     │(files)  │    │(cache)  │
             └─────────┘     └─────────┘    └─────────┘
 
 ```
 
-## Technology Stack Recommendations
+## technology stack recommendations
 
-### Backend
-- **Language**: Node.js with TypeScript (team familiarity)
-- **Framework**: Express.js with Fastify for high-performance services
-- **Real-time**: Socket.io for WebSocket connections
-- **Message Queue**: Redis for pub/sub and job queues
-- **Video**: WebRTC with Kurento Media Server for large calls
+### backend
+- language: node.js with typescript (team familiarity)
+- framework: express.js with fastify for high-performance services
+- real-time: socket.io for websocket connections
+- message queue: redis for pub/sub and job queues
+- video: webrtc with kurento media server for large calls
 
-### Database
-- **Primary**: PostgreSQL for structured data (users, teams, projects)
-- **Cache**: Redis for sessions, real-time data, and message caching
-- **File Storage**: AWS S3 or MinIO for file uploads
-- **Search**: Elasticsearch for message search functionality
+### database
+- primary: postgresql for structured data (users, teams, projects)
+- cache: redis for sessions, real-time data, and message caching
+- file storage: aws s3 or minio for file uploads
+- search: elasticsearch for message search functionality
 
-### Frontend
-- **Framework**: React with TypeScript
-- **State Management**: Redux Toolkit for complex state
-- **Real-time**: Socket.io client
-- **UI Library**: Material-UI or Ant Design for rapid development
+### frontend
+- framework: react with typescript
+- state management: redux toolkit for complex state
+- real-time: socket.io client
+- ui library: material-ui or ant design for rapid development
 
-### Infrastructure
-- **Containerization**: Docker with Docker Compose for development
-- **Orchestration**: Kubernetes for production (or start with simple VPS)
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Prometheus + Grafana
+### infrastructure
+- containerization: docker with docker compose for development
+- orchestration: kubernetes for production (or start with simple vps)
+- ci/cd: github actions
+- monitoring: prometheus + grafana
 
-## Detailed Component Design
+## detailed component design
 
-### 1. Message Service
+### 1. message service
 ```typescript
 interface MessageService {
   sendMessage(channelId: string, message: MessagePayload): Promise<void>
@@ -175,11 +175,11 @@ interface MessageService {
 }
 ```
 
-- Real-time message delivery via Socket.io
-- Message persistence in PostgreSQL
-- Redis for message caching and pub/sub
+- real-time message delivery via socket.io
+- message persistence in postgresql
+- redis for message caching and pub/sub
 
-### 2. User Service
+### 2. user service
 
 ```typescript
 interface UserService {
@@ -189,143 +189,147 @@ interface UserService {
 }
 ```
 
-- JWT-based authentication
-- User management and team assignments
-- Integration with external OAuth providers
+- jwt-based authentication
+- user management and team assignments
+- integration with external oauth providers
 
-### 3. File Service
+### 3. file service
 
-- Secure file upload with virus scanning
-- Progressive upload for large files
-- Automatic thumbnail generation for images
-- CDN integration for fast delivery
+- secure file upload with virus scanning
+- progressive upload for large files
+- automatic thumbnail generation for images
+- cdn integration for fast delivery
 
-### 4. Video Service
+### 4. video service
 
-- WebRTC peer-to-peer for small calls (<5 people)
-- Selective Forwarding Unit (SFU) for larger calls
-- Recording capabilities with cloud storage
-- Screen sharing support
+- webrtc peer-to-peer for small calls (<5 people)
+- selective forwarding unit (sfu) for larger calls
+- recording capabilities with cloud storage
+- screen sharing support
 
-## Scalability Strategy
+## scalability strategy
 
-### Phase 1 (MVP): Monolithic Start
+### phase 1 (mvp): monolithic start
 
-- Single Node.js application
-- PostgreSQL primary database
-- Redis for caching
-- Supports up to 1,000 concurrent users
+- single node.js application
+- postgresql primary database
+- redis for caching
+- supports up to 1,000 concurrent users
 
-### Phase 2 (Growth): Service Separation
+### phase 2 (growth): service separation
 
-- Extract message service for independent scaling
-- Add read replicas for database
-- Implement horizontal scaling for video services
-- CDN for static assets
+- extract message service for independent scaling
+- add read replicas for database
+- implement horizontal scaling for video services
+- cdn for static assets
 
-### Phase 3 (Scale): Full Microservices
+### phase 3 (scale): full microservices
 
-- Complete service decomposition
-- Database sharding by team/organization
-- Multi-region deployment
-- Advanced caching strategies
+- complete service decomposition
+- database sharding by team/organization
+- multi-region deployment
+- advanced caching strategies
 
-## Security Architecture
+## security architecture
 
-### Authentication & Authorization
+### authentication & authorization
 
 ```
 User → API Gateway → JWT Validation → Service Authorization
 ```
 
-- JWT tokens with short expiry (15 minutes)
-- Refresh token rotation
-- Role-based access control (RBAC)
-- Rate limiting per user/IP
+- jwt tokens with short expiry (15 minutes)
+- refresh token rotation
+- role-based access control (rbac)
+- rate limiting per user/ip
 
-### Data Protection
+### data protection
 
-- End-to-end encryption for sensitive messages
-- At-rest encryption for database and files
-- HTTPS everywhere with HSTS headers
-- Input validation and sanitization
+- end-to-end encryption for sensitive messages
+- at-rest encryption for database and files
+- https everywhere with hsts headers
+- input validation and sanitization
 
-## Implementation Roadmap
+## implementation roadmap
 
-### Phase 1 (Months 1-2): Core MVP
+### phase 1 (months 1-2): core mvp
 
-**Goal**: Basic messaging and user management
+goal: basic messaging and user management
 
-- User authentication and team creation
-- Real-time messaging in channels
-- Basic file sharing
-- Simple web client
+- user authentication and team creation
+- real-time messaging in channels
+- basic file sharing
+- simple web client
 
-**MVP Features:**
+mvp features:
 
-- Login/signup
-- Create teams and channels
-- Send/receive messages
-- Upload/download files
+- login/signup
+- create teams and channels
+- send/receive messages
+- upload/download files
 
-### Phase 2 (Months 3-4): Enhanced Features
+### phase 2 (months 3-4): enhanced features
 
-- Video calling (up to 10 participants)
-- Message search
-- Mobile-responsive design
-- Basic project management features
+- video calling (up to 10 participants)
+- message search
+- mobile-responsive design
+- basic project management features
 
-### Phase 3 (Months 5-6): Production Ready
+### phase 3 (months 5-6): production ready
 
-- Advanced video features (screen sharing, recording)
-- Full project management integration
-- Admin dashboard
-- Comprehensive security features
+- advanced video features (screen sharing, recording)
+- full project management integration
+- admin dashboard
+- comprehensive security features
 
-### Risk Mitigation
+### risk mitigation
 
-1. **Technical Risks**:
-   - Start with proven technologies
-   - Build comprehensive testing early
-   - Plan for database migration strategies
+• technical risks:
+   - start with proven technologies
+   - build comprehensive testing early
+   - plan for database migration strategies
 
-2. **Scalability Risks**:
-   - Design with microservices in mind from day 1
-   - Use feature flags for gradual rollouts
-   - Monitor performance metrics continuously
+• scalability risks:
+   - design with microservices in mind from day 1
+   - use feature flags for gradual rollouts
+   - monitor performance metrics continuously
 
-3. **Security Risks**:
-   - Regular security audits
-   - Implement logging and monitoring
-   - Have incident response plan ready
+• security risks:
+   - regular security audits
+   - implement logging and monitoring
+   - have incident response plan ready
 
-## Success Metrics
+## success metrics
 
-- Message delivery latency <200ms
+- message delivery latency <200ms
 - 99.9% uptime
-- Support 10,000 concurrent users
-- File upload success rate >99%
-- Video call quality metrics
+- support 10,000 concurrent users
+- file upload success rate >99%
+- video call quality metrics
 
 ```
 
-## Variations
-- **Enterprise Architecture**: Focus on enterprise patterns and governance
-- **Microservices Design**: Deep dive into service decomposition
-- **Cloud-Native**: Emphasize cloud services and serverless architectures
-- **Legacy Migration**: Focus on modernizing existing systems
+## variations
 
-## Tips
-- Be specific about scale and performance requirements
-- Include budget and timeline constraints for realistic recommendations
-- Mention team expertise to align technology choices
-- Consider starting simple and evolving the architecture over time
-- Always include security and compliance considerations
+• enterprise architecture: focus on enterprise patterns and governance
+• microservices design: deep dive into service decomposition
+• cloud-native: emphasize cloud services and serverless architectures
+• legacy migration: focus on modernizing existing systems
 
-## Related Prompts
-- `code-review.md` - For reviewing architectural decisions in code
-- `documentation-generator.md` - For creating architecture documentation
-- `test-case-generator.md` - For testing architectural components
+## tips
 
-## Tags
+• be specific about scale and performance requirements
+• include budget and timeline constraints for realistic recommendations
+• mention team expertise to align technology choices
+• consider starting simple and evolving the architecture over time
+• always include security and compliance considerations
+
+## related prompts
+
+• `code-review.md` - for reviewing architectural decisions in code
+• `documentation-generator.md` - for creating architecture documentation
+• `test-case-generator.md` - for testing architectural components
+
+## tags
+
 `architecture` `system-design` `scalability` `technology-stack` `development` `planning`

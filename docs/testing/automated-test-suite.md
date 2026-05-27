@@ -1,55 +1,55 @@
-# Automated Test Suite
+# automated test suite
 
-Infra Pilot uses service-local test suites so each component can run quickly with deterministic mocks and still feed CI coverage reports.
+infra pilot uses service-local test suites so each component can run quickly with deterministic mocks and still feed ci coverage reports.
 
-## One-command local run
+## one-command local run
 
 ```bash
 tools/run-all-tests.sh --offline
 ```
 
-Use `--offline` when dependencies are already installed. Without it, the script installs each service's dependencies before executing the service test command.
+use `--offline` when dependencies are already installed. without it, the script installs each service's dependencies before executing the service test command.
 
-## Management Panel (`services/management-panel`)
+## management panel (`services/management-panel`)
 
-Commands:
+commands:
 
-- `npm run test:unit` runs fast Node test-runner unit tests.
-- `npm run test:api` runs Express API integration tests against an in-memory Supabase mock.
-- `npm run test:coverage` emits Node test coverage for CI.
-- `npm run test:playwright` runs browser E2E tests.
+• `npm run test:unit` runs fast node test-runner unit tests.
+• `npm run test:api` runs express api integration tests against an in-memory supabase mock.
+• `npm run test:coverage` emits node test coverage for ci.
+• `npm run test:playwright` runs browser e2e tests.
 
-Shared test infrastructure lives in `tests/helpers/`:
-- `supabase-mock.ts` — reusable `QueryBuilder`, `makeSupabase`, and type aliases for in-memory Supabase mocking.
-- `http-client.ts` — `request` and `requestWithHeaders` helpers for firing HTTP requests at the test server.
+shared test infrastructure lives in `tests/helpers/`:
+• `supabase-mock.ts` — reusable `querybuilder`, `makesupabase`, and type aliases for in-memory supabase mocking.
+• `http-client.ts` — `request` and `requestwithheaders` helpers for firing http requests at the test server.
 
-Current critical coverage targets:
+current critical coverage targets:
 
-- Auth/session helpers and token storage.
-- Unauthorized API access returns `401`.
-- Docker app ownership filtering.
-- Personal Mode blocks Business Mode endpoints.
-- Invalid setup payloads return `400`.
-- Demo flag behavior follows `VITE_DEMO_FEATURE_ENABLED`.
-- Demo seed is idempotent for customers and Docker apps per owner.
-- Rate-limit headers conform to the `RateLimit-*` draft-6 standard.
+• auth/session helpers and token storage.
+• unauthorized api access returns `401`.
+• docker app ownership filtering.
+• personal mode blocks business mode endpoints.
+• invalid setup payloads return `400`.
+• demo flag behavior follows `vite_demo_feature_enabled`.
+• demo seed is idempotent for customers and docker apps per owner.
+• rate-limit headers conform to the `ratelimit-*` draft-6 standard.
 
-## Orchestrator Agent (`services/orchestrator-agent`)
+## orchestrator agent (`services/orchestrator-agent`)
 
-Commands:
+commands:
 
-- `pytest -q` runs unit and smoke tests with `pytest-cov`.
+• `pytest -q` runs unit and smoke tests with `pytest-cov`.
 
-The suite provides reusable Docker mocks in `tests/conftest.py` and currently covers VPS configuration translation, Docker runtime error handling, and Docker statistics normalization. The service-level coverage gate starts at 35% for the currently tested orchestration module and should be raised as command handlers, provider adapters, and monitoring helpers are hardened.
+the suite provides reusable docker mocks in `tests/conftest.py` and currently covers vps configuration translation, docker runtime error handling, and docker statistics normalization. the service-level coverage gate starts at 35% for the currently tested orchestration module and should be raised as command handlers, provider adapters, and monitoring helpers are hardened.
 
-## Service Core (`services/service-core`)
+## service core (`services/service-core`)
 
-Commands:
+commands:
 
-- `mvn -B test jacoco:report jacoco:check` runs JUnit 5 tests, emits Surefire reports, and enforces the JaCoCo line-coverage gate.
+• `mvn -B test jacoco:report jacoco:check` runs junit 5 tests, emits surefire reports, and enforces the jacoco line-coverage gate.
 
-The test stack is JUnit 5, Mockito, and AssertJ. The coverage plugin is configured for future lifecycle, database boundary, event, and plugin bootstrap tests. No application tests have been written yet — this is a known gap.
+the test stack is junit 5, mockito, and assertj. the coverage plugin is configured for future lifecycle, database boundary, event, and plugin bootstrap tests. no application tests have been written yet — this is a known gap.
 
-## CI gates
+## ci gates
 
-The GitHub workflows run lint/build/test jobs per service and upload coverage reports. Playwright failures are now fatal in CI; do not reintroduce `|| true` around E2E test commands.
+the github workflows run lint/build/test jobs per service and upload coverage reports. playwright failures are now fatal in ci; do not reintroduce `|| true` around e2e test commands.

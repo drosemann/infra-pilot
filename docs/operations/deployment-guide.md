@@ -1,22 +1,22 @@
-# Production Deployment Guide
+# production deployment guide
 
-Deploy Infra Pilot to production environments with confidence.
+deploy infra pilot to production environments with confidence.
 
-## 🚀 Deployment Options
+## deployment options
 
-### Option 1: Docker Compose (Suitable for small-to-medium deployments)
+### option 1: docker compose (suitable for small-to-medium deployments)
 
-**Pros:** Simple, all-in-one  
-**Cons:** Single point of failure, harder to scale
+pros: simple, all-in-one
+cons: single point of failure, harder to scale
 
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Option 2: Kubernetes (Recommended for production)
+### option 2: kubernetes (recommended for production)
 
-**Pros:** High availability, auto-scaling, self-healing  
-**Cons:** Higher complexity
+pros: high availability, auto-scaling, self-healing
+cons: higher complexity
 
 ```bash
 kubectl apply -f infrastructure/kubernetes/namespace.yaml
@@ -25,10 +25,10 @@ kubectl apply -f infrastructure/kubernetes/services/
 kubectl apply -f infrastructure/kubernetes/ingress.yaml
 ```
 
-### Option 3: Terraform + Cloud Provider
+### option 3: terraform + cloud provider
 
-**Pros:** Infrastructure as code, repeatable, multi-region  
-**Cons:** Cloud provider knowledge required
+pros: infrastructure as code, repeatable, multi-region
+cons: cloud provider knowledge required
 
 ```bash
 cd infrastructure/terraform/aws
@@ -37,24 +37,20 @@ terraform plan
 terraform apply
 ```
 
----
+## pre-deployment checklist
 
-## 🔐 Pre-Deployment Checklist
+• [ ] all tests passing in ci/cd
+• [ ] code reviewed and approved
+• [ ] secrets configured (api keys, tokens)
+• [ ] database backed up
+• [ ] ssl/tls certificates configured
+• [ ] monitoring and alerting set up
+• [ ] rollback plan documented
+• [ ] change logged and approved
 
-- [ ] All tests passing in CI/CD
-- [ ] Code reviewed and approved
-- [ ] Secrets configured (API keys, tokens)
-- [ ] Database backed up
-- [ ] SSL/TLS certificates configured
-- [ ] Monitoring and alerting set up
-- [ ] Rollback plan documented
-- [ ] Change logged and approved
+## docker compose production deployment
 
----
-
-## 🐳 Docker Compose Production Deployment
-
-### Prerequisites
+### prerequisites
 
 ```bash
 # Install Docker
@@ -66,9 +62,9 @@ sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-c
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-### Deployment Steps
+### deployment steps
 
-#### 1. Prepare Server
+#### prepare server
 
 ```bash
 # SSH into production server
@@ -82,7 +78,7 @@ cd /opt/gemini
 git clone https://github.com/DaaanielTV/infra-pilot.git .
 ```
 
-#### 2. Configure Environment
+#### configure environment
 
 ```bash
 # Copy and edit production environment
@@ -92,7 +88,7 @@ cp .env.example .env.prod
 nano .env.prod
 ```
 
-**Production .env.prod example:**
+production `.env.prod` example:
 ```env
 NODE_ENV=production
 DEBUG=false
@@ -125,7 +121,7 @@ SSL_CERT_PATH=/etc/ssl/certs/your-cert.crt
 SSL_KEY_PATH=/etc/ssl/private/your-key.key
 ```
 
-#### 3. Start Services
+#### start services
 
 ```bash
 # Pull latest images
@@ -138,7 +134,7 @@ docker-compose -f docker-compose.prod.yml up -d
 docker-compose -f docker-compose.prod.yml ps
 ```
 
-#### 4. Verify Deployment
+#### verify deployment
 
 ```bash
 # Check service health
@@ -152,11 +148,9 @@ docker-compose -f docker-compose.prod.yml logs -f
 docker stats
 ```
 
----
+## kubernetes deployment
 
-## ☸️ Kubernetes Deployment
-
-### Prerequisites
+### prerequisites
 
 ```bash
 # Install kubectl
@@ -166,16 +160,16 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 # Access to Kubernetes cluster (AWS EKS, GCP GKE, Azure AKS, etc)
 ```
 
-### Deployment Steps
+### deployment steps
 
-#### 1. Create Namespace
+#### create namespace
 
 ```bash
 kubectl create namespace gemini
 kubectl label namespace gemini environment=production
 ```
 
-#### 2. Create Secrets
+#### create secrets
 
 ```bash
 # Database credentials
@@ -198,7 +192,7 @@ kubectl create secret tls tls-secret \
   -n gemini
 ```
 
-#### 3. Deploy Services
+#### deploy services
 
 ```bash
 # Apply all manifests
@@ -211,7 +205,7 @@ kubectl rollout status deployment -n gemini
 kubectl get pods -n gemini
 ```
 
-#### 4. Set Up Ingress
+#### set up ingress
 
 ```bash
 # If using Nginx Ingress
@@ -221,11 +215,9 @@ kubectl apply -f infrastructure/kubernetes/ingress.yaml
 kubectl get svc -n gemini
 ```
 
----
+## multi-region deployment
 
-## 🌍 Multi-Region Deployment
-
-### Strategy
+### strategy
 
 ```
 ┌─────────────────┐     ┌─────────────────┐
@@ -242,7 +234,7 @@ kubectl get svc -n gemini
            └─────────────────┘
 ```
 
-### Implementation
+### implementation
 
 ```bash
 # Deploy to region 1
@@ -257,11 +249,9 @@ kubectl apply -f infrastructure/kubernetes/
 # Set up DNS failover policies
 ```
 
----
+## monitoring deployment
 
-## 📊 Monitoring Deployment
-
-### Prometheus
+### prometheus
 
 ```bash
 # Check metrics
@@ -269,7 +259,7 @@ kubectl port-forward -n gemini svc/prometheus 9090:9090
 # Navigate to http://localhost:9090
 ```
 
-### Grafana
+### grafana
 
 ```bash
 # Access Grafana
@@ -278,7 +268,7 @@ kubectl port-forward -n gemini svc/grafana 3000:3000
 # Default credentials: admin/admin
 ```
 
-### Logs
+### logs
 
 ```bash
 # View service logs
@@ -288,11 +278,9 @@ kubectl logs -n gemini deployment/orchestrator-agent -f
 kubectl logs -n gemini --all-containers=true -f
 ```
 
----
+## updates & rollbacks
 
-## 🔄 Updates & Rollbacks
-
-### Rolling Update
+### rolling update
 
 ```bash
 # Update image
@@ -307,7 +295,7 @@ kubectl rollout status deployment/orchestrator-agent -n gemini
 kubectl rollout history deployment/orchestrator-agent -n gemini
 ```
 
-### Rollback
+### rollback
 
 ```bash
 # Rollback to previous version
@@ -317,9 +305,9 @@ kubectl rollout undo deployment/orchestrator-agent -n gemini
 kubectl rollout undo deployment/orchestrator-agent --to-revision=3 -n gemini
 ```
 
-### Zero-Downtime Deployment
+### zero-downtime deployment
 
-Set in deployment manifest:
+set in deployment manifest:
 ```yaml
 strategy:
   type: RollingUpdate
@@ -328,17 +316,15 @@ strategy:
     maxUnavailable: 0
 ```
 
----
+## security hardening
 
-## 🔐 Security Hardening
-
-### Network Policies
+### network policies
 
 ```bash
 kubectl apply -f infrastructure/kubernetes/network-policies/
 ```
 
-### Pod Security Policies
+### pod security policies
 
 ```yaml
 apiVersion: policy/v1beta1
@@ -369,7 +355,7 @@ spec:
   readOnlyRootFilesystem: false
 ```
 
-### Resource Limits
+### resource limits
 
 ```yaml
 resources:
@@ -381,11 +367,9 @@ resources:
     memory: 1Gi
 ```
 
----
+## troubleshooting deployment
 
-## 🆘 Troubleshooting Deployment
-
-### Service Won't Start
+### service won't start
 
 ```bash
 # Check pod status
@@ -398,7 +382,7 @@ kubectl logs <pod-name> -n gemini
 kubectl get events -n gemini --sort-by='.lastTimestamp'
 ```
 
-### Connectivity Issues
+### connectivity issues
 
 ```bash
 # Test DNS
@@ -408,7 +392,7 @@ kubectl run -it --image=busybox:1.28 --restart=Never --rm debug -- nslookup kube
 kubectl port-forward service/orchestrator-agent 8000:8000 -n gemini
 ```
 
-### Database Connectivity
+### database connectivity
 
 ```bash
 # Test connection from pod
@@ -416,11 +400,9 @@ kubectl run -it --image=postgres:15 --restart=Never --rm -- \
   psql postgresql://user:password@db-host:5432/gemini -c "SELECT 1;"
 ```
 
----
+## performance tuning
 
-## 📈 Performance Tuning
-
-### Database Connection Pooling
+### database connection pooling
 
 ```env
 DATABASE_POOL_SIZE=20
@@ -428,28 +410,24 @@ DATABASE_POOL_IDLE_TIMEOUT=300
 DATABASE_MAX_LIFETIME=1800
 ```
 
-### Cache Configuration
+### cache configuration
 
 ```env
 REDIS_POOL_SIZE=10
 REDIS_TIMEOUT=5000
 ```
 
-### Service Replicas
+### service replicas
 
 ```yaml
 replicas: 3  # Increase for higher load
 ```
 
----
+## related documentation
 
-## 📚 Related Documentation
+• [kubernetes setup](../setup/kubernetes-deploy.md)
+• [monitoring & observability](monitoring-observability.md)
+• [scaling strategy](scaling-strategy.md)
+• [troubleshooting](troubleshooting.md)
 
-- [Kubernetes Setup](../setup/kubernetes-deploy.md)
-- [Monitoring & Observability](monitoring-observability.md)
-- [Scaling Strategy](scaling-strategy.md)
-- [Troubleshooting](troubleshooting.md)
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

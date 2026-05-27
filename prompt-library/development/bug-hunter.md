@@ -1,14 +1,14 @@
-# Bug Hunter - Debug Assistant
+# bug hunter - debug assistant
 
-## Description
+## description
 
-A systematic debugging assistant that helps identify, analyze, and resolve software bugs and errors. Provides step-by-step troubleshooting approaches and suggests fixes for various types of issues.
+a systematic debugging assistant that helps identify, analyze, and resolve software bugs and errors. provides step-by-step troubleshooting approaches and suggests fixes for various types of issues.
 
-## Usage
+## usage
 
-Provide error messages, problematic code, or describe unexpected behavior. Include relevant context like environment, inputs, and expected vs. actual outcomes. Works across all programming languages.
+provide error messages, problematic code, or describe unexpected behavior. include relevant context like environment, inputs, and expected vs. actual outcomes. works across all programming languages.
 
-## Prompt
+## prompt
 
 ```markdown
 Help me debug the following issue. Please provide a systematic analysis:
@@ -62,7 +62,7 @@ Additional context:
 [ANY OTHER RELEVANT INFORMATION]
 ```
 
-## Example Input
+## example input
 
 ```markdown
 **Problem Description:**
@@ -102,7 +102,7 @@ def scrape_data():
 
 ```
 
-## Example Output
+## example output
 ```
 
 ### Debug Analysis Report
@@ -232,23 +232,27 @@ def test_scraper():
 
 ```
 
-## Variations
-- **Performance Issues**: Focus on optimization and profiling
-- **Security Bugs**: Emphasize vulnerability analysis and secure coding
-- **Integration Issues**: Focus on API and service integration problems
-- **Frontend Debugging**: Specialized for JavaScript/browser issues
+## variations
 
-## Tips
-- Include full error stack traces when possible
-- Provide minimal reproducible examples
-- Mention any recent changes that might have introduced the bug
-- Include relevant log files or console output
-- Specify if the issue is intermittent or consistent
+• performance issues: focus on optimization and profiling
+• security bugs: emphasize vulnerability analysis and secure coding
+• integration issues: focus on api and service integration problems
+• frontend debugging: specialized for javascript/browser issues
 
-## Related Prompts
-- `code-review.md` - For preventing bugs through better code quality
-- `test-case-generator.md` - For creating tests to catch bugs
-- `refactoring-assistant.md` - For improving code structure to prevent issues
+## tips
 
-## Tags
+• include full error stack traces when possible
+• provide minimal reproducible examples
+• mention any recent changes that might have introduced the bug
+• include relevant log files or console output
+• specify if the issue is intermittent or consistent
+
+## related prompts
+
+• `code-review.md` - for preventing bugs through better code quality
+• `test-case-generator.md` - for creating tests to catch bugs
+• `refactoring-assistant.md` - for improving code structure to prevent issues
+
+## tags
+
 `debugging` `troubleshooting` `error-analysis` `bug-fixing` `development` `problem-solving`

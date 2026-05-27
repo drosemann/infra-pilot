@@ -1,91 +1,88 @@
-# Security Policy
+# security policy
 
-## Reporting Security Vulnerabilities
+## reporting security vulnerabilities
 
-**Do not open public issues for security vulnerabilities!**
+do not open public issues for security vulnerabilities!
 
-If you discover a security vulnerability in Infra Pilot, please report it responsibly by emailing the maintainers directly instead of using the public issue tracker.
+if you discover a security vulnerability in infra pilot, please report it responsibly by emailing the maintainers directly instead of using the public issue tracker.
 
-### Reporting Process
+### reporting process
 
-1. **Email the maintainers** with details of the vulnerability
-2. **Include:**
-   - Description of the vulnerability
-   - Affected component(s) and version(s)
-   - Steps to reproduce (if applicable)
-   - Potential impact
-   - Suggested fix (if you have one)
+• email the maintainers with details of the vulnerability
+• include:
+  • description of the vulnerability
+  • affected component(s) and version(s)
+  • steps to reproduce (if applicable)
+  • potential impact
+  • suggested fix (if you have one)
+• do not include:
+  • full exploit code in the initial report
+  • unnecessary details that could aid malicious actors
+  • information about other vulnerabilities
 
-3. **Do not include:**
-   - Full exploit code in the initial report
-   - Unnecessary details that could aid malicious actors
-   - Information about other vulnerabilities
+### response
 
-### Response
+• we will acknowledge receipt of your report within 48 hours
+• we'll work on a fix / mitigation with you as necessary
+• we'll provide a timeline for a patch release
+• we request that you refrain from publicly disclosing the vulnerability until we've had a reasonable time to prepare and deliver a fix
 
-- We will acknowledge receipt of your report within 48 hours
-- We'll work on a fix / mitigation with you as necessary
-- We'll provide a timeline for a patch release
-- We request that you refrain from publicly disclosing the vulnerability until we've had a reasonable time to prepare and deliver a fix
+### security best practices
 
-### Security Best Practices
+#### for users
 
-#### For Users
+• keep software updated - always use the latest stable release
+• use secrets management - never hardcode credentials; use environment variables or secret vaults
+• enable ssl/tls - use https in production
+• restrict access - use firewalls, vpns, and proper authentication
+• monitor logs - regularly review application and infrastructure logs
+• backup data - maintain regular backups and test recovery procedures
 
-- **Keep software updated** - Always use the latest stable release
-- **Use secrets management** - Never hardcode credentials; use environment variables or secret vaults
-- **Enable SSL/TLS** - Use HTTPS in production
-- **Restrict access** - Use firewalls, VPNs, and proper authentication
-- **Monitor logs** - Regularly review application and infrastructure logs
-- **Backup data** - Maintain regular backups and test recovery procedures
+#### for developers
 
-#### For Developers
+• validate input - always validate and sanitize user input
+• parameterize queries - use parameterized statements / orms to prevent sql injection
+• use strong auth - implement strong authentication and authorization mechanisms
+• secure credentials - never commit secrets; use environment variables
+• encrypt sensitive data - use tls for transport, encryption at rest for stored data
+• dependency updates - keep dependencies up to date and monitor for vulnerabilities
+• code review - use peer review before merging changes
+• security testing - include security checks in ci/cd pipelines
 
-- **Validate input** - Always validate and sanitize user input
-- **Parameterize queries** - Use parameterized statements / ORMs to prevent SQL injection
-- **Use strong auth** - Implement strong authentication and authorization mechanisms
-- **Secure credentials** - Never commit secrets; use environment variables
-- **Encrypt sensitive data** - Use TLS for transport, encryption at rest for stored data
-- **Dependency updates** - Keep dependencies up to date and monitor for vulnerabilities
-- **Code review** - Use peer review before merging changes
-- **Security testing** - Include security checks in CI/CD pipelines
+### known security measures
 
-### Known Security Measures
+• input validation: all api inputs are validated and sanitized
+• authentication: jwt-based authentication with secure token handling
+• authorization: role-based access control (rbac) for operations
+• secrets: environment variable-based secret management
+• dependencies: regular vulnerability scanning with `safety` and `npm audit`
+• ci/cd: security checks in github actions workflows
 
-- **Input Validation:** All API inputs are validated and sanitized
-- **Authentication:** JWT-based authentication with secure token handling
-- **Authorization:** Role-based access control (RBAC) for operations
-- **Secrets:** Environment variable-based secret management
-- **Dependencies:** Regular vulnerability scanning with `safety` and `npm audit`
-- **CI/CD:** Security checks in GitHub Actions workflows
+### vulnerability scanning
 
-### Vulnerability Scanning
+we use the following tools to identify and prevent vulnerabilities:
 
-We use the following tools to identify and prevent vulnerabilities:
+• python: `bandit`, `safety`
+• javascript: `npm audit`, eslint security plugins
+• java: maven plugins for dependency checking
+• docker: image scanning with `trivy` or similar
 
-- **Python:** `bandit`, `safety`
-- **JavaScript:** `npm audit`, ESLint security plugins
-- **Java:** Maven plugins for dependency checking
-- **Docker:** Image scanning with `trivy` or similar
+### supported versions
 
-### Supported Versions
+security updates are provided for:
 
-Security updates are provided for:
+• current release: all patches and minor updates
+• previous major version: critical security fixes only
+• older versions: no support
 
-- **Current Release:** All patches and minor updates
-- **Previous Major Version:** Critical security fixes only
-- **Older Versions:** No support
+### disclosure timeline
 
-### Disclosure Timeline
+we follow responsible disclosure practices:
 
-We follow responsible disclosure practices:
+• day 0: vulnerability reported
+• day 1-2: vulnerability confirmed and assessed
+• day 3-7: fix developed and tested
+• day 7-14: patch released (depending on severity)
+• day 14: public disclosure of the fixed vulnerability (after release)
 
-1. **Day 0:** Vulnerability reported
-2. **Day 1-2:** Vulnerability confirmed and assessed
-3. **Day 3-7:** Fix developed and tested
-4. **Day 7-14:** Patch released (depending on severity)
-5. **Day 14:** Public disclosure of the fixed vulnerability (after release)
-
----
-
-**Thank you for helping us keep Infra Pilot secure!**
+thank you for helping us keep infra pilot secure!

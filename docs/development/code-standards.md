@@ -1,10 +1,10 @@
-# Code Standards & Best Practices
+# code standards & best practices
 
-Maintain consistency and quality across Infra Pilot services.
+maintain consistency and quality across infra pilot services.
 
-## 🐍 Python Standards (Orchestrator Agent)
+## python standards (orchestrator agent)
 
-### PEP 8 Compliance
+### pep 8 compliance
 
 ```python
 # ✅ Good
@@ -37,14 +37,14 @@ def provision(id,conf):
         return False
 ```
 
-### Code Style
+### code style
 
-- Line length: 120 characters maximum
-- Indentation: 4 spaces
-- Imports: `black`, `isort` for formatting
-- Type hints: Required for all functions
+• line length: 120 characters maximum
+• indentation: 4 spaces
+• imports: `black`, `isort` for formatting
+• type hints: required for all functions
 
-### Naming Conventions
+### naming conventions
 
 ```python
 # Classes: PascalCase
@@ -64,7 +64,7 @@ def _internal_method():
     pass
 ```
 
-### Testing
+### testing
 
 ```python
 # tests/test_provisioning.py
@@ -89,7 +89,7 @@ async def test_provision_server_invalid_config(orchestrator):
         await orchestrator.provision_server("srv-002", {})
 ```
 
-### Async/Await
+### async/await
 
 ```python
 # ✅ Good - Use async context managers
@@ -108,11 +108,9 @@ except ConnectionError as e:
     raise
 ```
 
----
+## typescript/react standards (dashboard)
 
-## 🎭 TypeScript/React Standards (Dashboard)
-
-### Type Safety
+### type safety
 
 ```typescript
 // ✅ Good: Strict typing
@@ -142,7 +140,7 @@ const getServer = async (id: any): Promise<any> => {
 };
 ```
 
-### React Components
+### react components
 
 ```typescript
 // ✅ Good: Functional component with hooks
@@ -192,7 +190,7 @@ export const ServerList: React.FC<ServerListProps> = ({ onSelect, filter = 'all'
 };
 ```
 
-### Styling
+### styling
 
 ```typescript
 // ✅ Good: Tailwind CSS with clsx
@@ -217,11 +215,9 @@ const Button: React.FC<ButtonProps> = ({ variant, disabled, children }) => {
 };
 ```
 
----
+## java standards (service core)
 
-## ☕ Java Standards (Service Core)
-
-### Code Style
+### code style
 
 ```java
 // ✅ Good: Clear class structure
@@ -260,7 +256,7 @@ public class ServerManager {
 }
 ```
 
-### Maven Build
+### maven build
 
 ```xml
 <!-- Use established frameworks -->
@@ -273,9 +269,7 @@ public class ServerManager {
 <!-- Use dependabot or similar for updates -->
 ```
 
----
-
-## 📋 Commit Message Format
+## commit message format
 
 ```
 <type>(<scope>): <subject>
@@ -285,17 +279,18 @@ public class ServerManager {
 <footer>
 ```
 
-### Types
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Code style
-- `refactor`: Refactoring
-- `perf`: Performance
-- `test`: Tests
-- `chore`: Build, deps
+### types
 
-### Example
+• `feat`: new feature
+• `fix`: bug fix
+• `docs`: documentation
+• `style`: code style
+• `refactor`: refactoring
+• `perf`: performance
+• `test`: tests
+• `chore`: build, deps
+
+### example
 
 ```
 feat(orchestrator): add auto-scaling policy
@@ -310,20 +305,19 @@ servers based on CPU and memory metrics.
 Closes #789
 ```
 
----
+## documentation standards
 
-## 📝 Documentation Standards
+### readme sections
 
-### README Sections
-1. What is it?
-2. Quick start
-3. Architecture overview
-4. API endpoints
-5. Development setup
-6. Testing
-7. Contributing
+• what is it?
+• quick start
+• architecture overview
+• api endpoints
+• development setup
+• testing
+• contributing
 
-### Code Comments
+### code comments
 
 ```python
 # ✅ Good: Explains WHY, not WHAT
@@ -348,16 +342,15 @@ if condition:  # Check condition
     do_something()  # Do something
 ```
 
----
+## testing coverage
 
-## 🧪 Testing Coverage
+### minimum coverage
 
-### Minimum Coverage
-- Python: 80%
-- TypeScript: 70%
-- Java: 75%
+• python: 80%
+• typescript: 70%
+• java: 75%
 
-### Test Organization
+### test organization
 
 ```python
 # tests/
@@ -369,31 +362,25 @@ if condition:  # Check condition
 #       └── test_api.py
 ```
 
----
+## security best practices
 
-## ⚠️ Security Best Practices
+• no hardcoded secrets (use environment variables)
+• validate all user input
+• use parameterized queries
+• always hash passwords
+• use https only
+• implement rate limiting
+• log security events (without sensitive data)
+• keep dependencies updated
 
-- No hardcoded secrets (use environment variables)
-- Validate all user input
-- Use parameterized queries
-- Always hash passwords
-- Use HTTPS only
-- Implement rate limiting
-- Log security events (without sensitive data)
-- Keep dependencies updated
+## pull request checklist
 
----
+• [ ] code follows style guide
+• [ ] tests added/updated
+• [ ] documentation updated
+• [ ] no console errors/warnings
+• [ ] commits are clean
+• [ ] feature branches created properly
+• [ ] no hardcoded secrets
 
-## 🎯 Pull Request Checklist
-
-- [ ] Code follows style guide
-- [ ] Tests added/updated
-- [ ] Documentation updated
-- [ ] No console errors/warnings
-- [ ] Commits are clean
-- [ ] Feature branches created properly
-- [ ] No hardcoded secrets
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

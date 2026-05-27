@@ -1,31 +1,29 @@
-# Feature 20: Multi-Region Failover
+# feature 20: multi-region failover
 
-- **Plan ID:** #20
-- **Category:** Advanced Infrastructure
-- **Primary Service:** Integration Service
-- **Effort:** Large (7-10 PT)
-- **Dependencies:** Feature 13 (Webhook Event Bus), Feature 25 (Disaster Recovery Orchestrator)
+- plan id: #20
+- category: advanced infrastructure
+- primary service: integration service
+- effort: large (7-10 pt)
+- dependencies: feature 13 (webhook event bus), feature 25 (disaster recovery orchestrator)
 
-## Overview
+## overview
 
-Active-passive multi-region failover for services managed by Infra Pilot. Health-based DNS failover automatically redirects traffic from a degraded primary region to a healthy standby region. Includes data replication lag monitoring, automatic traffic switching, and scheduled cutover testing.
+active-passive multi-region failover for services managed by infra pilot. health-based dns failover automatically redirects traffic from a degraded primary region to a healthy standby region. includes data replication lag monitoring, automatic traffic switching, and scheduled cutover testing.
 
-### Key Capabilities
+### key capabilities
 
-| Capability | Description |
+| capability | description |
 |---|---|
-| Region Health Monitoring | Multi-probe health checks across regions, composite health scores |
-| DNS Failover | Route53 (AWS) and Cloudflare DNS failover policies |
-| Data Replication Monitoring | Track replication lag, sync status, consistency checks |
-| Automatic Traffic Switch | Configurable thresholds trigger region switch with rollback |
-| Cutover Testing | Scheduled drills with automated validation, report generation |
-| Traffic Draining | Graceful connection draining before region switch |
+| region health monitoring | multi-probe health checks across regions, composite health scores |
+| dns failover | route53 (aws) and cloudflare dns failover policies |
+| data replication monitoring | track replication lag, sync status, consistency checks |
+| automatic traffic switch | configurable thresholds trigger region switch with rollback |
+| cutover testing | scheduled drills with automated validation, report generation |
+| traffic draining | graceful connection draining before region switch |
 
----
+## architecture
 
-## Architecture
-
-### System Context
+### system context
 
 ```
                          ┌─────────────────┐
@@ -69,7 +67,7 @@ Active-passive multi-region failover for services managed by Infra Pilot. Health
                   └───────────────────────────────────────┘
 ```
 
-### Interaction Flow
+### interaction flow
 
 ```
 Normal Operation (Active-Passive)
@@ -111,65 +109,61 @@ Automatic Rollback
         5. Region B back to Standby
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: health monitoring (2 pt)
 
-### Phase 1: Health Monitoring (2 PT)
-
-| Task | Description |
+| task | description |
 |---|---|
-| 1.1 | Multi-probe health check system (HTTP, TCP, custom checks per region) |
-| 1.2 | Composite health scoring algorithm (weighted probes, degrading thresholds) |
-| 1.3 | Health check history store with trend analysis |
-| 1.4 | Alert integration — trigger notification when score drops below threshold |
+| 1.1 | multi-probe health check system (http, tcp, custom checks per region) |
+| 1.2 | composite health scoring algorithm (weighted probes, degrading thresholds) |
+| 1.3 | health check history store with trend analysis |
+| 1.4 | alert integration -- trigger notification when score drops below threshold |
 
-### Phase 2: DNS Failover Engine (2 PT)
+### phase 2: dns failover engine (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 2.1 | Route53 failover routing policy manager (weighted, failover, latency) |
-| 2.2 | Cloudflare DNS failover via API (load balancing pools, monitors) |
-| 2.3 | TTL management — automatic TTL reduction during failover events |
-| 2.4 | Multi-provider DNS abstraction layer |
+| 2.1 | route53 failover routing policy manager (weighted, failover, latency) |
+| 2.2 | cloudflare dns failover via api (load balancing pools, monitors) |
+| 2.3 | ttl management -- automatic ttl reduction during failover events |
+| 2.4 | multi-provider dns abstraction layer |
 
-### Phase 3: Replication Monitoring (2 PT)
+### phase 3: replication monitoring (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 3.1 | PostgreSQL replication lag monitoring (WAL position tracking) |
-| 3.2 | MySQL/MariaDB replication lag monitoring (seconds_behind_master) |
-| 3.3 | Redis replication sync status monitoring |
-| 3.4 | Custom replication check API for arbitrary data stores |
-| 3.5 | Lag threshold alerting and pre-failover lag validation |
+| 3.1 | postgresql replication lag monitoring (wal position tracking) |
+| 3.2 | mysql/mariadb replication lag monitoring (seconds_behind_master) |
+| 3.3 | redis replication sync status monitoring |
+| 3.4 | custom replication check api for arbitrary data stores |
+| 3.5 | lag threshold alerting and pre-failover lag validation |
 
-### Phase 4: Traffic Switching & Draining (1.5 PT)
+### phase 4: traffic switching & draining (1.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 4.1 | Connection draining strategy per service type (LB, app, DB) |
-| 4.2 | Automatic database promotion (replica → primary) |
-| 4.3 | Graceful traffic cutover with canary verification |
-| 4.4 | Rollback mechanism — automated reversion on failure |
+| 4.1 | connection draining strategy per service type (lb, app, db) |
+| 4.2 | automatic database promotion (replica → primary) |
+| 4.3 | graceful traffic cutover with canary verification |
+| 4.4 | rollback mechanism -- automated reversion on failure |
 
-### Phase 5: Cutover Testing (1.5 PT)
+### phase 5: cutover testing (1.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 5.1 | Scheduled failover drill executor |
-| 5.2 | Pre-flight checklists (DNS propagation, DB lag, service health) |
-| 5.3 | Automated test validation (end-to-end smoke tests after cutover) |
-| 5.4 | Drill report generation (RTO/RPO metrics, pass/fail status) |
+| 5.1 | scheduled failover drill executor |
+| 5.2 | pre-flight checklists (dns propagation, db lag, service health) |
+| 5.3 | automated test validation (end-to-end smoke tests after cutover) |
+| 5.4 | drill report generation (rto/rpo metrics, pass/fail status) |
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
+all endpoints are prefixed with `/api/v2/failover`.
 
-All endpoints are prefixed with `/api/v2/failover`.
-
-#### Region Configuration
+#### region configuration
 
 ```
 GET    /api/v2/failover/regions                    — List configured regions
@@ -179,7 +173,7 @@ PATCH  /api/v2/failover/regions/{region_id}         — Update region config
 DELETE /api/v2/failover/regions/{region_id}         — Remove region
 ```
 
-#### Health
+#### health
 
 ```
 GET    /api/v2/failover/health                     — Current health scores all regions
@@ -187,7 +181,7 @@ GET    /api/v2/failover/health/{region_id}          — Health details for one r
 GET    /api/v2/failover/health/history?region=X&window=24h  — Health history
 ```
 
-#### Failover
+#### failover
 
 ```
 POST   /api/v2/failover/switch                     — Trigger failover to standby region
@@ -196,14 +190,14 @@ GET    /api/v2/failover/status                     — Current failover state
 GET    /api/v2/failover/history                    — Failover event history
 ```
 
-#### Replication
+#### replication
 
 ```
 GET    /api/v2/failover/replication/{region_id}    — Replication status
 GET    /api/v2/failover/replication/lag            — All regions lag metrics
 ```
 
-#### Cutover Tests
+#### cutover tests
 
 ```
 GET    /api/v2/failover/drills                     — List cutover drills
@@ -211,9 +205,9 @@ POST   /api/v2/failover/drills                     — Schedule/start drill
 GET    /api/v2/failover/drills/{drill_id}          — Drill results
 ```
 
-### Request/Response Examples
+### request/response examples
 
-#### Configure Region
+#### configure region
 
 ```json
 POST /api/v2/failover/regions
@@ -251,7 +245,7 @@ POST /api/v2/failover/regions
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -264,7 +258,7 @@ Response:
 }
 ```
 
-#### Trigger Failover
+#### trigger failover
 
 ```json
 POST /api/v2/failover/switch
@@ -278,7 +272,7 @@ POST /api/v2/failover/switch
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -295,11 +289,9 @@ Response:
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Region
+### region
 
 ```sql
 CREATE TABLE failover_regions (
@@ -318,7 +310,7 @@ CREATE TABLE failover_regions (
 );
 ```
 
-### Health Checks
+### health checks
 
 ```sql
 CREATE TABLE failover_health_checks (
@@ -337,7 +329,7 @@ CREATE INDEX idx_health_checks_region_time
     ON failover_health_checks (region_id, checked_at DESC);
 ```
 
-### Replication Lag
+### replication lag
 
 ```sql
 CREATE TABLE failover_replication_lag (
@@ -352,7 +344,7 @@ CREATE TABLE failover_replication_lag (
 );
 ```
 
-### Failover Events
+### failover events
 
 ```sql
 CREATE TABLE failover_events (
@@ -374,7 +366,7 @@ CREATE TABLE failover_events (
 );
 ```
 
-### Cutover Drills
+### cutover drills
 
 ```sql
 CREATE TABLE failover_drills (
@@ -393,7 +385,7 @@ CREATE TABLE failover_drills (
 );
 ```
 
-### State Machine
+### state machine
 
 ```
                      ┌──────────┐
@@ -417,49 +409,43 @@ CREATE TABLE failover_drills (
                     └──────────┘
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Component | Service | Responsibilities |
+| component | service | responsibilities |
 |---|---|---|
-| Health Monitor | **Integration Service** | Multi-probe health checks, scoring, alerting |
-| DNS Manager | **Integration Service** | Route53/Cloudflare API, failover routing policies |
-| Replication Monitor | **Integration Service** | Lag tracking, consistency checks |
-| Traffic Switch Engine | **Integration Service** | Connection draining, DB promotion, DNS cutover |
-| Cutover Test Scheduler | **Integration Service** | Drill scheduling, execution, report generation |
-| Failover UI | **Management Panel** | Region config, health dashboards, failover controls |
-| Notifications | **Integration Service** | Slack/Discord/email alerts on failover events |
-| DR Integration | **Orchestrator Agent** (+ Feature 25) | DR plan definition, cross-feature coordination |
+| health monitor | **integration service** | multi-probe health checks, scoring, alerting |
+| dns manager | **integration service** | route53/cloudflare api, failover routing policies |
+| replication monitor | **integration service** | lag tracking, consistency checks |
+| traffic switch engine | **integration service** | connection draining, db promotion, dns cutover |
+| cutover test scheduler | **integration service** | drill scheduling, execution, report generation |
+| failover ui | **management panel** | region config, health dashboards, failover controls |
+| notifications | **integration service** | slack/discord/email alerts on failover events |
+| dr integration | **orchestrator agent** (+ feature 25) | dr plan definition, cross-feature coordination |
 
----
+## effort estimate
 
-## Effort Estimate
-
-| Phase | Tasks | PT |
+| phase | tasks | pt |
 |---|---|---|
-| Phase 1: Health Monitoring | 1.1–1.4 | 2 |
-| Phase 2: DNS Failover Engine | 2.1–2.4 | 2 |
-| Phase 3: Replication Monitoring | 3.1–3.5 | 2 |
-| Phase 4: Traffic Switching & Draining | 4.1–4.4 | 1.5 |
-| Phase 5: Cutover Testing | 5.1–5.4 | 1.5 |
-| **Total** | **21 tasks** | **9 PT** |
+| phase 1: health monitoring | 1.1–1.4 | 2 |
+| phase 2: dns failover engine | 2.1–2.4 | 2 |
+| phase 3: replication monitoring | 3.1–3.5 | 2 |
+| phase 4: traffic switching & draining | 4.1–4.4 | 1.5 |
+| phase 5: cutover testing | 5.1–5.4 | 1.5 |
+| **total** | **21 tasks** | **9 pt** |
 
-### Risk Factors
+### risk factors
 
-| Risk | Mitigation |
+| risk | mitigation |
 |---|---|
-| DNS propagation delay undermines RTO | Use low TTL (60s) during normal ops, Route53 health checks for near-instant failover |
-| Replication lag too high at failover time | Pre-failover lag check with configurable max threshold; abort if exceeded |
-| Data inconsistency after split-brain | Use strict active-passive model; automated fencing of old primary |
-| Cutover drill causes real disruption | Drills run in isolated test region first; production drills during maintenance windows |
-| Multi-provider DNS inconsistencies | Abstract via unified DNS provider interface with provider-specific adapters |
+| dns propagation delay undermines rto | use low ttl (60s) during normal ops, route53 health checks for near-instant failover |
+| replication lag too high at failover time | pre-failover lag check with configurable max threshold; abort if exceeded |
+| data inconsistency after split-brain | use strict active-passive model; automated fencing of old primary |
+| cutover drill causes real disruption | drills run in isolated test region first; production drills during maintenance windows |
+| multi-provider dns inconsistencies | abstract via unified dns provider interface with provider-specific adapters |
 
----
+## monitoring & observability
 
-## Monitoring & Observability
-
-### Prometheus Metrics
+### prometheus metrics
 
 ```python
 # Health
@@ -482,7 +468,7 @@ failover_drill_total{status}                 # Counter — drill outcomes
 failover_drill_duration_seconds              # Histogram — drill duration
 ```
 
-### Logging
+### logging
 
 ```json
 {
@@ -512,16 +498,12 @@ failover_drill_duration_seconds              # Histogram — drill duration
 }
 ```
 
----
+## related documents
 
-## Related Documents
+- [architecture overview](../architecture/overview.md)
+- [feature 13: webhook event bus](13-webhook-event-bus.md)
+- [feature 25: disaster recovery orchestrator](25-disaster-recovery-orchestrator.md)
+- [feature 38: cost allocation & chargeback](38-cost-allocation-chargeback.md)
+- [implementation plan v2](../feature-implementation-plan-v2.md)
 
-- [Architecture Overview](../architecture/overview.md)
-- [Feature 13: Webhook Event Bus](13-webhook-event-bus.md)
-- [Feature 25: Disaster Recovery Orchestrator](25-disaster-recovery-orchestrator.md)
-- [Feature 38: Cost Allocation & Chargeback](38-cost-allocation-chargeback.md)
-- [Implementation Plan v2](../feature-implementation-plan-v2.md)
-
----
-
-**Last Updated:** May 2026
+**last updated:** may 2026

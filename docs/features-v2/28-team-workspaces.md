@@ -1,40 +1,36 @@
-# Feature 28: Team Workspaces
+# feature 28: team workspaces
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 28 |
-| Feature Name | Team Workspaces |
-| Primary Service | Integration Service |
-| Effort Estimate | Medium (4–6 PT) |
-| Dependencies | Auth Service, Resource Manager, Approval Engine |
-| Priority | High |
+| feature id | 28 |
+| feature name | team workspaces |
+| primary service | integration service |
+| effort estimate | medium (4-6 pt) |
+| dependencies | auth service, resource manager, approval engine |
+| priority | high |
 
----
+## 1. overview
 
-## 1. Overview
+team workspaces provide isolated environments where teams manage their infrastructure resources collaboratively. each workspace has its own member roster, resource quotas, activity audit trail, and sharing policies. cross-workspace resource sharing is supported via an approval workflow.
 
-Team Workspaces provide isolated environments where teams manage their infrastructure resources collaboratively. Each workspace has its own member roster, resource quotas, activity audit trail, and sharing policies. Cross-workspace resource sharing is supported via an approval workflow.
+### 1.1 goals
 
-### 1.1 Goals
+- enable multi-team isolation within a single infra pilot deployment
+- provide per-workspace resource quotas (servers, networks, etc.)
+- maintain a complete audit log of all workspace activity
+- support cross-workspace resource sharing with admin approval
+- simplify member management with role-based access
 
-- Enable multi-team isolation within a single Infra Pilot deployment
-- Provide per-workspace resource quotas (servers, networks, etc.)
-- Maintain a complete audit log of all workspace activity
-- Support cross-workspace resource sharing with admin approval
-- Simplify member management with role-based access
+### 1.2 non-goals
 
-### 1.2 Non-Goals
+- hierarchical workspace nesting (flat model)
+- automatic resource rebalancing between workspaces
+- cross-workspace secret sharing
+- billing or cost allocation per workspace (future)
 
-- Hierarchical workspace nesting (flat model)
-- Automatic resource rebalancing between workspaces
-- Cross-workspace secret sharing
-- Billing or cost allocation per workspace (future)
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### 2.1 High-Level Diagram
+### 2.1 high-level diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -71,9 +67,9 @@ Team Workspaces provide isolated environments where teams manage their infrastru
 └─────────────┘  └──────────────────┘  └─────────────────────────┘
 ```
 
-### 2.2 Workspace Model
+### 2.2 workspace model
 
-Each workspace is a top-level organizational unit:
+each workspace is a top-level organizational unit:
 
 ```
 Workspace
@@ -98,45 +94,41 @@ Workspace
     └── Outgoing shares (resources shared FROM this workspace)
 ```
 
----
+## 3. implementation plan
 
-## 3. Implementation Plan
+### phase 1: core workspace crud (pt 1.5-2)
 
-### Phase 1: Core Workspace CRUD (PT 1.5–2)
-
-| Task | Description |
+| task | description |
 |------|-------------|
-| 1.1 | Define data models and migrations (workspaces, memberships, roles) |
-| 1.2 | Implement workspace CRUD endpoints |
-| 1.3 | Implement member management (add, remove, role change) |
-| 1.4 | RBAC enforcement on all workspace-scoped operations |
-| 1.5 | Workspace-scoped resource creation (bind resource to workspace) |
+| 1.1 | define data models and migrations (workspaces, memberships, roles) |
+| 1.2 | implement workspace crud endpoints |
+| 1.3 | implement member management (add, remove, role change) |
+| 1.4 | rbac enforcement on all workspace-scoped operations |
+| 1.5 | workspace-scoped resource creation (bind resource to workspace) |
 
-### Phase 2: Quotas & Audit (PT 1.5–2)
+### phase 2: quotas & audit (pt 1.5-2)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 2.1 | Quota definition and enforcement middleware |
-| 2.2 | Quota usage tracking (aggregated counts per resource type) |
-| 2.3 | Audit log ingestion pipeline (intercept create/update/delete) |
-| 2.4 | Audit log query API with filters (actor, action, time range) |
-| 2.5 | Quota alerting (warn at 80%, block at 100%) |
+| 2.1 | quota definition and enforcement middleware |
+| 2.2 | quota usage tracking (aggregated counts per resource type) |
+| 2.3 | audit log ingestion pipeline (intercept create/update/delete) |
+| 2.4 | audit log query api with filters (actor, action, time range) |
+| 2.5 | quota alerting (warn at 80%, block at 100%) |
 
-### Phase 3: Cross-Workspace Sharing (PT 1–2)
+### phase 3: cross-workspace sharing (pt 1-2)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 3.1 | Share request API (source workspace → target workspace) |
-| 3.2 | Approval workflow integration (target workspace admin approves) |
-| 3.3 | Resource access delegation at the IAM/cloud level |
-| 3.4 | Share revocation and cleanup |
-| 3.5 | UI: sharing dashboard, pending requests, shared resources view |
+| 3.1 | share request api (source workspace to target workspace) |
+| 3.2 | approval workflow integration (target workspace admin approves) |
+| 3.3 | resource access delegation at the iam/cloud level |
+| 3.4 | share revocation and cleanup |
+| 3.5 | ui: sharing dashboard, pending requests, shared resources view |
 
----
+## 4. api design
 
-## 4. API Design
-
-### 4.1 Workspace Endpoints
+### 4.1 workspace endpoints
 
 ```
 POST   /api/v2/workspaces                          Create workspace
@@ -156,7 +148,7 @@ PUT    /api/v2/workspaces/:id/quotas                Update quota limits (admin)
 GET    /api/v2/workspaces/:id/audit                 Query audit log
 ```
 
-### 4.2 Cross-Workspace Sharing Endpoints
+### 4.2 cross-workspace sharing endpoints
 
 ```
 POST   /api/v2/workspace-shares                     Create share request
@@ -167,9 +159,9 @@ PUT    /api/v2/workspace-shares/:id/reject           Reject share
 DELETE /api/v2/workspace-shares/:id                  Revoke/withdraw share
 ```
 
-### 4.3 Request/Response Examples
+### 4.3 request/response examples
 
-**Create Workspace:**
+**create workspace:**
 ```json
 POST /api/v2/workspaces
 {
@@ -194,7 +186,7 @@ Response 201:
 }
 ```
 
-**Add Member:**
+**add member:**
 ```json
 POST /api/v2/workspaces/ws_prod_sre/members
 {
@@ -212,7 +204,7 @@ Response 201:
 }
 ```
 
-**Create Share Request:**
+**create share request:**
 ```json
 POST /api/v2/workspace-shares
 {
@@ -234,7 +226,7 @@ Response 201:
 }
 ```
 
-**List Audit Log:**
+**list audit log:**
 ```json
 GET /api/v2/workspaces/ws_prod_sre/audit?limit=10&offset=0
 
@@ -258,93 +250,87 @@ Response 200:
 }
 ```
 
----
-
-## 5. Data Model
+## 5. data model
 
 ### 5.1 `workspaces`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | VARCHAR(32) (PK) | Human-readable slug (e.g., `ws_prod_sre`) |
-| name | VARCHAR(128) | Display name |
-| description | TEXT | Optional description |
-| settings | JSONB | Feature flags, TTLs, policies |
-| created_by | UUID (FK → users) | Creator |
-| created_at | TIMESTAMPTZ | Creation timestamp |
-| updated_at | TIMESTAMPTZ | Last modification |
-| deleted_at | TIMESTAMPTZ | Soft delete (nullable) |
+| id | varchar(32) (pk) | human-readable slug (e.g., `ws_prod_sre`) |
+| name | varchar(128) | display name |
+| description | text | optional description |
+| settings | jsonb | feature flags, ttls, policies |
+| created_by | uuid (fk to users) | creator |
+| created_at | timestamptz | creation timestamp |
+| updated_at | timestamptz | last modification |
+| deleted_at | timestamptz | soft delete (nullable) |
 
 ### 5.2 `workspace_members`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| workspace_id | VARCHAR(32) (FK) | Parent workspace |
-| user_id | UUID (FK → users) | Member |
-| role | ENUM | `owner`, `admin`, `member`, `viewer` |
-| invited_by | UUID (FK → users) | Who invited |
-| joined_at | TIMESTAMPTZ | When membership was activated |
-| updated_at | TIMESTAMPTZ | Role change timestamp |
+| id | uuid (pk) | auto-generated |
+| workspace_id | varchar(32) (fk) | parent workspace |
+| user_id | uuid (fk to users) | member |
+| role | enum | `owner`, `admin`, `member`, `viewer` |
+| invited_by | uuid (fk to users) | who invited |
+| joined_at | timestamptz | when membership was activated |
+| updated_at | timestamptz | role change timestamp |
 
 ### 5.3 `workspace_quotas`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| workspace_id | VARCHAR(32) (PK/FK) | Parent workspace |
-| max_servers | INT | Default: 10 |
-| max_cores | INT | Default: 32 |
-| max_ram_gb | INT | Default: 128 |
-| max_networks | INT | Default: 5 |
-| max_storage_gb | INT | Default: 500 |
-| updated_by | UUID (FK → users) | Last modifier |
-| updated_at | TIMESTAMPTZ | Last modification |
+| workspace_id | varchar(32) (pk/fk) | parent workspace |
+| max_servers | int | default: 10 |
+| max_cores | int | default: 32 |
+| max_ram_gb | int | default: 128 |
+| max_networks | int | default: 5 |
+| max_storage_gb | int | default: 500 |
+| updated_by | uuid (fk to users) | last modifier |
+| updated_at | timestamptz | last modification |
 
 ### 5.4 `workspace_audit_log`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | BIGSERIAL (PK) | Auto-increment |
-| workspace_id | VARCHAR(32) (FK) | Parent workspace |
-| actor_id | UUID (FK → users) | Who performed the action |
-| action | VARCHAR(64) | e.g., `workspace.create`, `member.add`, `resource.delete` |
-| detail | JSONB | Action-specific payload |
-| ip_address | INET | Originating IP |
-| created_at | TIMESTAMPTZ | When action occurred |
+| id | bigserial (pk) | auto-increment |
+| workspace_id | varchar(32) (fk) | parent workspace |
+| actor_id | uuid (fk to users) | who performed the action |
+| action | varchar(64) | e.g., `workspace.create`, `member.add`, `resource.delete` |
+| detail | jsonb | action-specific payload |
+| ip_address | inet | originating ip |
+| created_at | timestamptz | when action occurred |
 
 ### 5.5 `workspace_shares`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| source_workspace_id | VARCHAR(32) (FK) | Owning workspace |
-| target_workspace_id | VARCHAR(32) (FK) | Receiving workspace |
-| resource_type | VARCHAR(64) | e.g., `server`, `network` |
-| resource_id | VARCHAR(128) | Identifier of shared resource |
-| permissions | TEXT[] | Array of granted permissions |
-| status | ENUM | `pending_approval`, `approved`, `rejected`, `revoked` |
-| requested_by | UUID (FK → users) | Requester |
-| approved_by | UUID (FK → users, nullable) | Approver |
-| approved_at | TIMESTAMPTZ | When approved |
-| expires_at | TIMESTAMPTZ | When share auto-revokes |
-| reason | TEXT | Justification for share |
-| created_at | TIMESTAMPTZ | Creation timestamp |
+| id | uuid (pk) | auto-generated |
+| source_workspace_id | varchar(32) (fk) | owning workspace |
+| target_workspace_id | varchar(32) (fk) | receiving workspace |
+| resource_type | varchar(64) | e.g., `server`, `network` |
+| resource_id | varchar(128) | identifier of shared resource |
+| permissions | text[] | array of granted permissions |
+| status | enum | `pending_approval`, `approved`, `rejected`, `revoked` |
+| requested_by | uuid (fk to users) | requester |
+| approved_by | uuid (fk to users, nullable) | approver |
+| approved_at | timestamptz | when approved |
+| expires_at | timestamptz | when share auto-revokes |
+| reason | text | justification for share |
+| created_at | timestamptz | creation timestamp |
 
----
+## 6. service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|-----------------|
-| **Integration Service** (primary) | Workspace CRUD, member management, quota enforcement, audit pipeline, cross-workspace sharing logic |
-| **Auth Service** | Role resolution, permission checks for workspace-scoped actions |
-| **Resource Manager** | Resource-to-workspace binding, quota validation on resource creation |
-| **Notification Service** | Invite emails, approval request notifications, quota warning alerts |
-| **Database** | All workspace metadata, membership, quotas, audit log, share records |
+| **integration service** (primary) | workspace crud, member management, quota enforcement, audit pipeline, cross-workspace sharing logic |
+| **auth service** | role resolution, permission checks for workspace-scoped actions |
+| **resource manager** | resource-to-workspace binding, quota validation on resource creation |
+| **notification service** | invite emails, approval request notifications, quota warning alerts |
+| **database** | all workspace metadata, membership, quotas, audit log, share records |
 
----
-
-## 7. Quota Enforcement Flow
+## 7. quota enforcement flow
 
 ```
 Request: Create Server in Workspace "ws_prod_sre"
@@ -363,23 +349,19 @@ Request: Create Server in Workspace "ws_prod_sre"
 4. If usage < quota → allow; else → return 403 with quota_exceeded error
 ```
 
----
+## 8. effort estimate
 
-## 8. Effort Estimate
-
-| Phase | Person-Days |
+| phase | person-days |
 |-------|-------------|
-| Phase 1: Core Workspace CRUD | 1.5–2 PT |
-| Phase 2: Quotas & Audit | 1.5–2 PT |
-| Phase 3: Cross-Workspace Sharing | 1–2 PT |
-| **Total** | **4–6 PT** |
+| phase 1: core workspace crud | 1.5-2 pt |
+| phase 2: quotas & audit | 1.5-2 pt |
+| phase 3: cross-workspace sharing | 1-2 pt |
+| **total** | **4-6 pt** |
 
----
+## 9. future enhancements
 
-## 9. Future Enhancements
-
-- Hierarchical workspaces (sub-workspaces with inherited quotas)
-- Usage dashboards with billing/cost allocation
-- Workspace templates (pre-configured quotas + member roles)
-- SAML/SCIM group sync for workspace membership
-- Automated resource cleanup based on TTL policies
+- hierarchical workspaces (sub-workspaces with inherited quotas)
+- usage dashboards with billing/cost allocation
+- workspace templates (pre-configured quotas + member roles)
+- saml/scim group sync for workspace membership
+- automated resource cleanup based on ttl policies

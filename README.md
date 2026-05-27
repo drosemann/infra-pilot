@@ -1,107 +1,107 @@
-# Contest for the new owner of infra-pilot: The first person which contributes 250.000 lines worth of ai generated code, gets the ownership of this repository.
+# contest for the new owner of infra-pilot: the first person which contributes 250.000 lines worth of ai generated code, gets the ownership of this repository.
 
-# 🚀 Infra Pilot
+# infra pilot
 
-**Infrastructure-Orchestration und Docker-Management für Self-Hosting, Demo-Umgebungen und Provider-neutrale Provisioning-Flows.**
+infrastructure-orchestration und docker-management für self-hosting, demo-umgebungen und provider-neutrale provisioning-flows.
 
-Infra Pilot bündelt mehrere Services und Hilfsbibliotheken, um Container-/Game-Server-Verwaltung, Discord-gesteuerte Provisionierung, Provider-neutrale Testdaten und ein modernes Management-Panel in einem Repository zu entwickeln.
+infra pilot bündelt mehrere services und hilfsbibliotheken, um container-/game-server-verwaltung, discord-gesteuerte provisionierung, provider-neutrale testdaten und ein modernes management-panel in einem repository zu entwickeln.
 
-> **Orchestrate. Automate. Scale.**
+orchestrate. automate. scale.
 
-## Inhaltsverzeichnis
+## inhaltsverzeichnis
 
-- [Aktueller Projektstatus](#aktueller-projektstatus)
-- [Quick Start](#quick-start)
-- [Repository-Struktur](#repository-struktur)
-- [Services](#services)
-- [Konfiguration](#konfiguration)
-- [Development & Testing](#development--testing)
-- [Docker & Deployment](#docker--deployment)
-- [Dokumentation](#dokumentation)
-- [Security](#security)
-- [Contributing](#contributing)
-- [License & Warranty](#license--warranty)
+• [aktueller projektstatus](#aktueller-projektstatus)
+• [quick start](#quick-start)
+• [repository-struktur](#repository-struktur)
+• [services](#services)
+• [konfiguration](#konfiguration)
+• [development & testing](#development--testing)
+• [docker & deployment](#docker--deployment)
+• [dokumentation](#dokumentation)
+• [security](#security)
+• [contributing](#contributing)
+• [license & warranty](#license--warranty)
 
-## Aktueller Projektstatus
+## aktueller projektstatus
 
-- ✅ **Management Panel:** React/Vite-Frontend mit Express-API, Personal Mode, optionalem Business Mode, Supabase/PostgreSQL-Anbindung und Seed-Demo-Feature-Gate.
-- ✅ **Orchestrator Agent:** Python-Service mit Discord-/VPS-Provisioning-Komponenten, Provider-neutraler Namensauflösung und eigenen Tests.
-- ✅ **Discord Service:** Node.js/Discord.js-Integration für Pterodactyl-/Provisioning-Flows. Alle 28 Module sind eingebunden und verdrahtet.
-- ✅ **Provider-neutrales Test-Framework:** Token-Mapping unter `infra/naming/` und Tests unter `tests/`.
-- ✅ **Real-Time WebSocket:** Live Container-Logs und Metrik-Streaming via WebSocket-Server im Management Panel.
-- ✅ **Audit Trail:** Append-Only-Audit-Log für alle Mutationen (Apps, Backups, Alerts, Config) mit Timeline-Viewer.
-- ✅ **Globale Suche:** Cmd+K-Palette durchsucht Apps, Backups und Audit-Logs via PostgreSQL ILIKE.
-- ✅ **Notification Channels:** Verwaltung mehrerer Benachrichtigungskanäle (Email, Webhook, Telegram) mit integrierten Providern.
-- ✅ **PWA Support:** Manifest + Service Worker für installierbare Desktop-App und Offline-Caching.
-- ✅ **Onboarding Wizard:** 5-schrittige geführte Tour nach der Ersteinrichtung.
-- ✅ **Mobile-Responsive Layout:** Hamburger-Menü, Slide-In-Sidebar für Mobilgeräte.
-- ✅ **Web Terminal:** In-Browser-Container-Terminal via WebSocket + Docker exec.
-- ✅ **Modpack-Installer** — One-click modpack install from CurseForge/Modrinth (Orchestrator cog, Management Panel UI, Integration API)
-- ✅ **Discord Token Validation** — Validate bot token before container start (Management Panel endpoint + UI, Orchestrator Python util)
-- ✅ **Config Editor** — In-browser YAML/JSON config editor with syntax highlighting (Management Panel component, backend endpoints)
-- ✅ **MySQL Database per Click** — Instant MySQL container provisioning (Orchestrator cog, Management Panel UI + API)
-- ✅ **Java Version Selector** — Switch between Java 8/11/17/21 per server (Management Panel form + presets)
-- ✅ **2FA (TOTP)** — Two-factor authentication via TOTP (Integration Service auth, Management Panel setup UI, Settings)
-- ✅ **Git Deployment Webhook** — Auto-deploy on GitHub push (Orchestrator cog + webhook server, Management Panel UI, Discord notification)
-- ✅ **Cronjob Scheduler** — Scheduled tasks (restart/command/backup) via cron expressions (Orchestrator cog, Management Panel UI + API)
-- ✅ **Real-time Resource Graphs** — Live CPU/memory/disk gauges + sparklines, Netdata/Grafana integration (Management Panel component + backend metrics)
-- ✅ **Log Search** — Full-text log search with filters, pagination, highlighting (Management Panel LiveLogs upgrade, Integration Service search API)
-- ✅ **Prepaid Billing** — Pay-as-you-go balance system with top-ups, cost calculator, transaction history (Orchestrator cog, Management Panel page + API)
-- ✅ **AI Log Anomaly Detector** — ML-based anomaly detection on container logs (Integration Service module)
-- ✅ **AI Resource Optimizer** — Trend analysis, right-sizing recommendations, idle detection (Orchestrator cog)
-- ✅ **AI Assistant Chatbot** — Natural-language server management interface (Integration Service)
-- ✅ **AI Threat Detection** — Behavioral analysis of processes, logins, network traffic (Orchestrator cog)
-- ✅ **AI Backup Validator** — Ephemeral restore + integrity checks + validation scoring (Integration Service)
-- ✅ **AI Config Advisor** — Config analysis against 50+ best-practice rules (Management Panel component)
-- ✅ **AI Code Review Bot** — GitHub PR review with security scanning, Discord summary (Discord Service module)
-- ✅ **AI Performance Profiler** — Minecraft tick profiling, lag source identification (Service Core)
-- ✅ **AI Ticket Triage** — Ticket classification, urgency scoring, auto-routing (Integration Service)
-- ✅ **AI Capacity Forecaster** — 30/60/90 day resource prediction (Orchestrator cog)
-- ✅ **Infra Pilot CLI** — `ipilot` CLI tool with server management, logs, deploy (new `cli/` directory)
-- ✅ **Terraform Provider** — `terraform-provider-infrapilot` for IaC (new `infra/terraform/` directory)
-- ✅ **Webhook Event Bus** — Outgoing webhooks with retry, signing, templating (Integration Service)
-- ✅ **API Gateway & Rate Limiting** — Central gateway with token bucket rate limiting (Integration Service)
-- ✅ **Plugin Marketplace** — Community plugin ecosystem with one-click install (Management Panel)
-- ✅ **GitOps Sync** — Two-way Git config sync with drift detection (Orchestrator cog)
-- ✅ **OpenTelemetry Export** — OTLP trace/metric/log export (Integration Service)
-- ✅ **GraphQL API** — GraphQL layer alongside REST with subscriptions (Integration Service)
-- ✅ **Kubernetes Cluster Manager** — K3s/K8s cluster deploy + Helm management (Orchestrator cog)
-- ✅ **Multi-Region Failover** — Active-passive regions with DNS failover (Integration Service)
-- ✅ **Edge Compute Nodes** — Edge function/container deployment (Orchestrator cog)
-- ✅ **Serverless Functions (FaaS)** — Knative/OpenFaaS integration with auto-scaling (Orchestrator cog)
-- ✅ **CDN & WAF Integration** — One-click Cloudflare/Bunny CDN + WAF rules (Integration Service)
-- ✅ **Multi-Cloud Cost Optimizer** — Cross-provider pricing comparison (Orchestrator cog)
-- ✅ **Disaster Recovery Orchestrator** — DR plans, drills, RTO/RPO tracking (Orchestrator cog)
-- ✅ **Service Mesh Integration** — Istio/Linkerd mTLS + canary deployments (Integration Service)
-- ✅ **Collaborative Terminal** — Multi-user terminal sessions via WebSocket (Management Panel)
-- ✅ **Team Workspaces** — Isolated workspaces with quotas + sharing (Integration Service)
-- ✅ **Change Approval Workflow** — 2nd-person approval for destructive actions (Management Panel)
-- ✅ **Incident Management** — On-call schedules, escalation, post-mortems (Integration Service)
-- ✅ **Runbook Automation** — YAML-based executable runbooks with rollback (Orchestrator cog)
-- ✅ **Internal Knowledge Base** — Markdown wiki linked to resources (Management Panel)
-- ✅ **Team Activity Feed** — Unified chronological event stream (Management Panel)
-- ✅ **Distributed Tracing** — Jaeger/Zipkin span collection + flamegraphs (Integration Service)
-- ✅ **Custom Dashboard Builder** — Drag-and-drop Grafana-like dashboards (Management Panel)
-- ✅ **SLA / SLO Tracking** — SLO definitions, error budgets, burn rate alerts (Integration Service)
-- ✅ **Synthetic Monitoring** — Global probes: HTTP, TCP, ping, SSL, DNS (Orchestrator cog)
-- ✅ **Cost Allocation & Chargeback** — Resource tagging + per-team cost breakdown (Integration Service)
-- ✅ **Alert Fatigue Reduction** — Dedup, correlation, suppression, digest mode (Integration Service)
-- ✅ **Mobile App** — React Native/Expo app with server mgmt, push notifications (new `mobile/` directory)
-- ✅ **Desktop App** — Tauri native shell with system tray, offline mode, auto-updater (new `src-tauri/`)
-- ✅ **i18n / l10n** — 11 locales, RTL support, Crowdin integration (Management Panel)
-- ✅ **WCAG 2.1 AA Compliance** — ARIA, keyboard nav, screen reader support (Management Panel)
-- ✅ **Theme Studio** — Visual theme builder with live preview + gallery (Management Panel)
-- ✅ **Bulk Operations Manager** — Multi-select batch actions with rollback (Management Panel)
-- ✅ **Compliance Framework Reports** — SOC 2, HIPAA, PCI-DSS report generation (Integration Service)
-- ✅ **Secrets Management** — HashiCorp Vault + Fernet encryption + rotation (Integration Service)
-- ✅ **Container Image Scanner** — Trivy/Grype CVE scanning with policy enforcement (Orchestrator cog)
-- ✅ **SIEM Export** — Audit log streaming to Splunk/ELK/Datadog/syslog (Integration Service)
-- ✅ **GDPR & Data Retention** — Data lifecycle, right-to-erasure, consent management (Integration Service)
-- ⚠️ **Docker Compose:** `docker-compose.yml` ist als Stack-Scaffold vorhanden. Aktuell besitzt nur `services/orchestrator-agent/` ein Dockerfile; die Compose-Definitionen für Management Panel, Discord Service, Service Core und Monitoring benötigen vor einem vollständigen Stack-Start noch Dockerfiles bzw. Infrastrukturdateien.
+• management panel: react/vite-frontend mit express-api, personal mode, optionalem business mode, supabase/postgresql-anbindung und seed-demo-feature-gate.
+• orchestrator agent: python-service mit discord-/vps-provisioning-komponenten, provider-neutraler namensauflösung und eigenen tests.
+• discord service: node.js/discord.js-integration für pterodactyl-/provisioning-flows. alle 28 module sind eingebunden und verdrahtet.
+• provider-neutrales test-framework: token-mapping unter `infra/naming/` und tests unter `tests/`.
+• real-time websocket: live container-logs und metrik-streaming via websocket-server im management panel.
+• audit trail: append-only-audit-log für alle mutationen (apps, backups, alerts, config) mit timeline-viewer.
+• globale suche: cmd+k-palette durchsucht apps, backups und audit-logs via postgresql ilike.
+• notification channels: verwaltung mehrerer benachrichtigungskanäle (email, webhook, telegram) mit integrierten providern.
+• pwa support: manifest + service worker für installierbare desktop-app und offline-caching.
+• onboarding wizard: 5-schrittige geführte tour nach der ersteinrichtung.
+• mobile-responsive layout: hamburger-menü, slide-in-sidebar für mobilgeräte.
+• web terminal: in-browser-container-terminal via websocket + docker exec.
+• modpack-installer — one-click modpack install from curseforge/modrinth (orchestrator cog, management panel ui, integration api)
+• discord token validation — validate bot token before container start (management panel endpoint + ui, orchestrator python util)
+• config editor — in-browser yaml/json config editor with syntax highlighting (management panel component, backend endpoints)
+• mysql database per click — instant mysql container provisioning (orchestrator cog, management panel ui + api)
+• java version selector — switch between java 8/11/17/21 per server (management panel form + presets)
+• 2fa (totp) — two-factor authentication via totp (integration service auth, management panel setup ui, settings)
+• git deployment webhook — auto-deploy on github push (orchestrator cog + webhook server, management panel ui, discord notification)
+• cronjob scheduler — scheduled tasks (restart/command/backup) via cron expressions (orchestrator cog, management panel ui + api)
+• real-time resource graphs — live cpu/memory/disk gauges + sparklines, netdata/grafana integration (management panel component + backend metrics)
+• log search — full-text log search with filters, pagination, highlighting (management panel livelogs upgrade, integration service search api)
+• prepaid billing — pay-as-you-go balance system with top-ups, cost calculator, transaction history (orchestrator cog, management panel page + api)
+• ai log anomaly detector — ml-based anomaly detection on container logs (integration service module)
+• ai resource optimizer — trend analysis, right-sizing recommendations, idle detection (orchestrator cog)
+• ai assistant chatbot — natural-language server management interface (integration service)
+• ai threat detection — behavioral analysis of processes, logins, network traffic (orchestrator cog)
+• ai backup validator — ephemeral restore + integrity checks + validation scoring (integration service)
+• ai config advisor — config analysis against 50+ best-practice rules (management panel component)
+• ai code review bot — github pr review with security scanning, discord summary (discord service module)
+• ai performance profiler — minecraft tick profiling, lag source identification (service core)
+• ai ticket triage — ticket classification, urgency scoring, auto-routing (integration service)
+• ai capacity forecaster — 30/60/90 day resource prediction (orchestrator cog)
+• infra pilot cli — `ipilot` cli tool with server management, logs, deploy (new `cli/` directory)
+• terraform provider — `terraform-provider-infrapilot` for iac (new `infra/terraform/` directory)
+• webhook event bus — outgoing webhooks with retry, signing, templating (integration service)
+• api gateway & rate limiting — central gateway with token bucket rate limiting (integration service)
+• plugin marketplace — community plugin ecosystem with one-click install (management panel)
+• gitops sync — two-way git config sync with drift detection (orchestrator cog)
+• opentelemetry export — otlp trace/metric/log export (integration service)
+• graphql api — graphql layer alongside rest with subscriptions (integration service)
+• kubernetes cluster manager — k3s/k8s cluster deploy + helm management (orchestrator cog)
+• multi-region failover — active-passive regions with dns failover (integration service)
+• edge compute nodes — edge function/container deployment (orchestrator cog)
+• serverless functions (faas) — knative/openfaas integration with auto-scaling (orchestrator cog)
+• cdn & waf integration — one-click cloudflare/bunny cdn + waf rules (integration service)
+• multi-cloud cost optimizer — cross-provider pricing comparison (orchestrator cog)
+• disaster recovery orchestrator — dr plans, drills, rto/rpo tracking (orchestrator cog)
+• service mesh integration — istio/linkerd mtls + canary deployments (integration service)
+• collaborative terminal — multi-user terminal sessions via websocket (management panel)
+• team workspaces — isolated workspaces with quotas + sharing (integration service)
+• change approval workflow — 2nd-person approval for destructive actions (management panel)
+• incident management — on-call schedules, escalation, post-mortems (integration service)
+• runbook automation — yaml-based executable runbooks with rollback (orchestrator cog)
+• internal knowledge base — markdown wiki linked to resources (management panel)
+• team activity feed — unified chronological event stream (management panel)
+• distributed tracing — jaeger/zipkin span collection + flamegraphs (integration service)
+• custom dashboard builder — drag-and-drop grafana-like dashboards (management panel)
+• sla / slo tracking — slo definitions, error budgets, burn rate alerts (integration service)
+• synthetic monitoring — global probes: http, tcp, ping, ssl, dns (orchestrator cog)
+• cost allocation & chargeback — resource tagging + per-team cost breakdown (integration service)
+• alert fatigue reduction — dedup, correlation, suppression, digest mode (integration service)
+• mobile app — react native/expo app with server mgmt, push notifications (new `mobile/` directory)
+• desktop app — tauri native shell with system tray, offline mode, auto-updater (new `src-tauri/`)
+• i18n / l10n — 11 locales, rtl support, crowdin integration (management panel)
+• wcag 2.1 aa compliance — aria, keyboard nav, screen reader support (management panel)
+• theme studio — visual theme builder with live preview + gallery (management panel)
+• bulk operations manager — multi-select batch actions with rollback (management panel)
+• compliance framework reports — soc 2, hipaa, pci-dss report generation (integration service)
+• secrets management — hashicorp vault + fernet encryption + rotation (integration service)
+• container image scanner — trivy/grype cve scanning with policy enforcement (orchestrator cog)
+• siem export — audit log streaming to splunk/elk/datadog/syslog (integration service)
+• gdpr & data retention — data lifecycle, right-to-erasure, consent management (integration service)
+• docker compose: `docker-compose.yml` ist als stack-scaffold vorhanden. aktuell besitzt nur `services/orchestrator-agent/` ein dockerfile; die compose-definitionen für management panel, discord service, service core und monitoring benötigen vor einem vollständigen stack-start noch dockerfiles bzw. infrastrukturdateien.
 
-## Quick Start
+## quick start
 
-### Option 1: Management Panel lokal starten (empfohlen)
+### option 1: management panel lokal starten (empfohlen)
 
 ```bash
 git clone https://github.com/DaaanielTV/infra-pilot.git
@@ -116,15 +116,15 @@ ENV
 npm run dev
 ```
 
-Danach öffnen:
+danach öffnen:
 
-- Frontend: <http://localhost:5173>
-- Backend-API: <http://localhost:3001>
-- Health Check: <http://localhost:3001/health>
+• frontend: <http://localhost:5173>
+• backend-api: <http://localhost:3001>
+• health check: <http://localhost:3001/health>
 
-Weitere Details: [Management Panel README](services/management-panel/README.md) und [Docker Panel Quick Start](services/management-panel/README-DOCKER-PANEL.md).
+weitere details: [management panel readme](services/management-panel/README.md) und [docker panel quick start](services/management-panel/README-DOCKER-PANEL.md).
 
-### Option 2: Orchestrator Agent lokal starten
+### option 2: orchestrator agent lokal starten
 
 ```bash
 git clone https://github.com/DaaanielTV/infra-pilot.git
@@ -135,33 +135,33 @@ pip install -r requirements.txt
 python bot.py
 ```
 
-Weitere Details: [Orchestrator Agent README](services/orchestrator-agent/README.md).
+weitere details: [orchestrator agent readme](services/orchestrator-agent/README.md).
 
-### Option 3: Discord Service prüfen
+### option 3: discord service prüfen
 
 ```bash
 git clone https://github.com/DaaanielTV/infra-pilot.git
 cd infra-pilot/services/discord-service
 npm install
 cp .env.example .env
-# .env mit Discord- und Pterodactyl-Werten befüllen
+# .env mit discord- und pterodactyl-werten befüllen
 node --check index.js
 ```
 
-Weitere Details: [Discord Service README](services/discord-service/README.md).
+weitere details: [discord service readme](services/discord-service/README.md).
 
-## Voraussetzungen
+## voraussetzungen
 
-| Bereich | Voraussetzung |
+| bereich | voraussetzung |
 | --- | --- |
-| Allgemein | Git, Bash-kompatible Shell |
-| Management Panel | Node.js 18+, npm |
-| Orchestrator Agent | Python 3.9+, pip, optional pytest |
-| Discord Service | Node.js 18+, npm, Discord-Bot, Pterodactyl-API-Zugang |
-| Service Core | Java/Maven, sofern `services/service-core` genutzt oder erweitert wird |
-| Optional | Docker, Docker Compose, Zig 0.16.0+ und zero-native CLI für die native Desktop-Shell |
+| allgemein | git, bash-kompatible shell |
+| management panel | node.js 18+, npm |
+| orchestrator agent | python 3.9+, pip, optional pytest |
+| discord service | node.js 18+, npm, discord-bot, pterodactyl-api-zugang |
+| service core | java/maven, sofern `services/service-core` genutzt oder erweitert wird |
+| optional | docker, docker compose, zig 0.16.0+ und zero-native cli für die native desktop-shell |
 
-## Repository-Struktur
+## repository-struktur
 
 ```text
 .
@@ -180,98 +180,98 @@ Weitere Details: [Discord Service README](services/discord-service/README.md).
 └── docs/                             # Projekt-, Architektur-, Testing- und Operations-Doku
 ```
 
-## Services
+## services
 
-### Management Panel (`services/management-panel/`)
+### management panel (`services/management-panel/`)
 
-Modernes Docker-Management-Panel für Self-Hoster und Hosting-Workflows.
+modernes docker-management-panel für self-hoster und hosting-workflows.
 
-- **Stack:** React 19, TypeScript, Vite, Tailwind CSS, Express.js, Supabase/PostgreSQL, WebSocket (ws).
-- **Modi:** Personal Mode als Standard, Business Mode für Kunden-, Plan- und Demo-Datenflüsse.
-- **Features:** App-/Container-CRUD, Logs, Ressourcenlimits, Setup-Flow, Seed Demo Feature Gate, optionale zero-native Desktop-Shell.
-- **Dashboards/Seiten:** Dashboard, AppDetail, AppForm, Monitoring, AccessLogs, Backups, Reports, Settings, **AuditLog**, Customers, **Billing**, **ConfigEditor**, **CronJobManager**, **DatabaseManager**, **GitDeployManager**, **RealtimeMetrics**, **ModpackBrowser**, **TwoFactorSetup**, **Marketplace**, **DashboardBuilder**, **KnowledgeBase**, **ThemeStudio**, **CollaborativeTerminal**.
-- **Real-Time:** WebSocket-Server für Live-Container-Logs (`docker logs -f`) und Metrik-Streaming (`docker stats`, 2s-Intervall). Live-CPU/Memory/Disk-Gauges mit Sparklines und Netdata/Grafana-Integration.
-- **Globale Suche:** Cmd+K-Palette mit Echtzeit-Suche über Apps, Backups und Audit-Logs.
-- **Audit Trail:** Append-Only-Log aller Mutationen mit Timeline-Viewer und Filterung.
-- **Benachrichtigungen:** Verwaltung von Email-/Webhook-/Telegram-Kanälen mit Testversand.
-- **Web Terminal:** In-Browser-Container-Shell via WebSocket + Docker exec.
-- **PWA:** Installierbare App mit Service Worker und Offline-Caching.
-- **Onboarding:** Geführte 5-Schritt-Tour nach Ersteinrichtung.
-- **Theme Persistenz:** Dark/Light-Mode wird in localStorage gespeichert.
-- **Mobile-Responsive:** Hamburger-Menü und Slide-In-Sidebar.
-- **Config Editor:** YAML/JSON-Editor mit Syntax-Highlighting im Browser (CodeMirror-basiert).
-- **Java Version Selector:** Auswahl zwischen Java 8/11/17/21 pro Server über UI-Formular.
-- **MySQL Database per Click:** Ein-Klick-Provisionsierung von MySQL-Containern über UI + API.
-- **Git Deployment Webhook:** Auto-Deploy bei GitHub-Push mit Webhook-Server und Discord-Benachrichtigung.
-- **Cronjob Scheduler:** Geplante Tasks (Restart/Command/Backup) über Cron-Ausdrücke.
-- **Real-time Resource Graphs:** Live-CPU/Memory/Disk-Gauges mit Sparklines, Netdata/Grafana-Integration.
-- **Log Search:** Volltext-Logsuche mit Filtern, Paginierung und Highlighting.
-- **Prepaid Billing:** Pay-as-you-go-Guthabensystem mit Aufladungen, Kostenrechner und Transaktionshistorie.
-- **Discord Token Validation:** Bot-Token-Validierung vor Container-Start.
-- **Modpack-Installer:** Ein-Klick-Modpack-Installation von CurseForge/Modrinth.
-- **2FA (TOTP):** Zwei-Faktor-Authentifizierung über TOTP mit Setup-UI und Backup-Codes.
-- **AI Config Advisor:** Server-Konfigurationsanalyse mit 50+ Best-Practice-Regeln und Ein-Klick-Fix.
-- **Plugin Marketplace:** Community-Plugin-Ökosystem mit Suchen, Installieren und Veröffentlichen.
-- **Collaborative Terminal:** Multi-User-Terminal-Sessions via WebSocket mit Chat und Cursor-Sharing.
-- **Change Approval Workflow:** Genehmigungspflicht für destruktive Aktionen mit Break-Glass-Notfallmodus.
-- **Knowledge Base:** Markdown-basiertes Wiki mit ressourcenverknüpften Artikeln und Volltextsuche.
-- **Activity Feed:** Chronologischer, filterbarer Event-Stream aller Team-Aktionen.
-- **Dashboard Builder:** Drag-and-Drop-Grafana-ähnlicher Dashboard-Editor mit multiplen Panel-Typen.
-- **i18n / l10n:** Vollständige Internationalisierung mit 11 Sprachen, RTL-Support und Crowdin-Integration.
-- **WCAG 2.1 AA:** Screenreader-Support, Tastaturnavigation, Focus-Management und ARIA-Labels.
-- **Theme Studio:** Visueller Theme-Builder mit Live-Vorschau, Export/Import und Community-Galerie.
-- **Bulk Operations Manager:** Batch-Aktionen mit Mehrfachauswahl, Fortschrittsanzeige und Rollback.
-- **Desktop App:** Tauri-basierte native Desktop-App mit System Tray, Offline-Modus und Auto-Updater.
-- **Wichtige Skripte:**
-  - `npm run dev` startet Frontend und Backend parallel.
-  - `npm run dev:frontend` startet nur Vite.
-  - `npm run dev:backend` startet nur die Express-API.
-  - `npm run test`, `npm run test:unit`, `npm run test:api` führen Node-Test-Suites aus.
-  - `npm run lint` führt den TypeScript-Check aus.
+• stack: react 19, typescript, vite, tailwind css, express.js, supabase/postgresql, websocket (ws).
+• modi: personal mode als standard, business mode für kunden-, plan- und demo-datenflüsse.
+• features: app-/container-crud, logs, ressourcenlimits, setup-flow, seed demo feature gate, optionale zero-native desktop-shell.
+• dashboards/seiten: dashboard, appdetail, appform, monitoring, accesslogs, backups, reports, settings, auditlog, customers, billing, configeditor, cronjobmanager, databasemanager, gitdeploymanager, realtimemetrics, modpackbrowser, twofactorsetup, marketplace, dashboardbuilder, knowledgebase, themestudio, collaborativeterminal.
+• real-time: websocket-server für live-container-logs (`docker logs -f`) und metrik-streaming (`docker stats`, 2s-intervall). live-cpu/memory/disk-gauges mit sparklines und netdata/grafana-integration.
+• globale suche: cmd+k-palette mit echtzeit-suche über apps, backups und audit-logs.
+• audit trail: append-only-log aller mutationen mit timeline-viewer und filterung.
+• benachrichtigungen: verwaltung von email-/webhook-/telegram-kanälen mit testversand.
+• web terminal: in-browser-container-shell via websocket + docker exec.
+• pwa: installierbare app mit service worker und offline-caching.
+• onboarding: geführte 5-schritt-tour nach ersteinrichtung.
+• theme persistenz: dark/light-mode wird in localstorage gespeichert.
+• mobile-responsive: hamburger-menü und slide-in-sidebar.
+• config editor: yaml/json-editor mit syntax-highlighting im browser (codemirror-basiert).
+• java version selector: auswahl zwischen java 8/11/17/21 pro server über ui-formular.
+• mysql database per click: ein-klick-provisionsierung von mysql-containern über ui + api.
+• git deployment webhook: auto-deploy bei github-push mit webhook-server und discord-benachrichtigung.
+• cronjob scheduler: geplante tasks (restart/command/backup) über cron-ausdrücke.
+• real-time resource graphs: live-cpu/memory/disk-gauges mit sparklines, netdata/grafana-integration.
+• log search: volltext-logsuche mit filtern, paginierung und highlighting.
+• prepaid billing: pay-as-you-go-guthabensystem mit aufladungen, kostenrechner und transaktionshistorie.
+• discord token validation: bot-token-validierung vor container-start.
+• modpack-installer: ein-klick-modpack-installation von curseforge/modrinth.
+• 2fa (totp): zwei-faktor-authentifizierung über totp mit setup-ui und backup-codes.
+• ai config advisor: server-konfigurationsanalyse mit 50+ best-practice-regeln und ein-klick-fix.
+• plugin marketplace: community-plugin-ökosystem mit suchen, installieren und veröffentlichen.
+• collaborative terminal: multi-user-terminal-sessions via websocket mit chat und cursor-sharing.
+• change approval workflow: genehmigungspflicht für destruktive aktionen mit break-glass-notfallmodus.
+• knowledge base: markdown-basiertes wiki mit ressourcenverknüpften artikeln und volltextsuche.
+• activity feed: chronologischer, filterbarer event-stream aller team-aktionen.
+• dashboard builder: drag-and-drop-grafana-ähnlicher dashboard-editor mit multiplen panel-typen.
+• i18n / l10n: vollständige internationalisierung mit 11 sprachen, rtl-support und crowdin-integration.
+• wcag 2.1 aa: screenreader-support, tastaturnavigation, focus-management und aria-labels.
+• theme studio: visueller theme-builder mit live-vorschau, export/import und community-galerie.
+• bulk operations manager: batch-aktionen mit mehrfachauswahl, fortschrittsanzeige und rollback.
+• desktop app: tauri-basierte native desktop-app mit system tray, offline-modus und auto-updater.
+• wichtige skripte:
+  • `npm run dev` startet frontend und backend parallel.
+  • `npm run dev:frontend` startet nur vite.
+  • `npm run dev:backend` startet nur die express-api.
+  • `npm run test`, `npm run test:unit`, `npm run test:api` führen node-test-suites aus.
+  • `npm run lint` führt den typescript-check aus.
 
-### Orchestrator Agent (`services/orchestrator-agent/`)
+### orchestrator agent (`services/orchestrator-agent/`)
 
-Python-basierte Provisioning- und Orchestrierungslogik.
+python-basierte provisioning- und orchestrierungslogik.
 
-- **Stack:** Python 3.9+, Discord.py/aiohttp-Umfeld laut Requirements.
-- **Features:** VPS-Management, Billing-/Pricing-Cogs, Ressourcenmonitoring, Integration Hooks, AI/ML-Optimierung, GitOps, Container-Scanning, Synthetisches Monitoring.
-- **Cogs (47):** **ai_capacity_forecaster**, **ai_resource_optimizer**, **ai_threat_detection**, alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, **container_scanner**, cost_optimizer, cost_prediction, **cron_scheduler**, **database_manager**, **disaster_recovery**, dns_manager, **edge_compute**, **faas_manager**, **git_deploy**, **gitops_sync**, health_checks, **kubernetes_manager**, load_balancer, **modpack_installer**, monitoring, **multi_cloud_cost**, network_monitor, performance_optimizer, **prepaid_billing**, quota_manager, recovery, resource_manager, **runbook_automation**, security_audit, server_migration, snapshot_system, ssl_manager, **synthetic_monitoring**, template_manager, traffic_analysis, troubleshoot, update_manager, vps_billing, vps_commands, vps_pricing.
-- **Einstiegspunkt:** `main.py` lädt alle 47 Cogs. `bot.py` und `b2.py` sind Legacy-Dateien (deprecated), die nur noch als Referenz dienen.
-- **Docker:** Enthält aktuell ein Dockerfile und ist damit der einzige Service, der im Repository direkt als Image gebaut werden kann.
+• stack: python 3.9+, discord.py/aiohttp-umfeld laut requirements.
+• features: vps-management, billing-/pricing-cogs, ressourcenmonitoring, integration hooks, ai/ml-optimierung, gitops, container-scanning, synthetisches monitoring.
+• cogs (47): ai_capacity_forecaster, ai_resource_optimizer, ai_threat_detection, alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, container_scanner, cost_optimizer, cost_prediction, cron_scheduler, database_manager, disaster_recovery, dns_manager, edge_compute, faas_manager, git_deploy, gitops_sync, health_checks, kubernetes_manager, load_balancer, modpack_installer, monitoring, multi_cloud_cost, network_monitor, performance_optimizer, prepaid_billing, quota_manager, recovery, resource_manager, runbook_automation, security_audit, server_migration, snapshot_system, ssl_manager, synthetic_monitoring, template_manager, traffic_analysis, troubleshoot, update_manager, vps_billing, vps_commands, vps_pricing.
+• einstiegspunkt: `main.py` lädt alle 47 cogs. `bot.py` und `b2.py` sind legacy-dateien (deprecated), die nur noch als referenz dienen.
+• docker: enthält aktuell ein dockerfile und ist damit der einzige service, der im repository direkt als image gebaut werden kann.
 
-### Discord Service (`services/discord-service/`)
+### discord service (`services/discord-service/`)
 
-Discord.js-Service für Pterodactyl-nahe Server-Erstellungsflüsse.
+discord.js-service für pterodactyl-nahe server-erstellungsflüsse.
 
-- **Stack:** Node.js 18+, CommonJS, Discord.js/Axios/Dotenv (package.json jetzt vorhanden).
-- **Features:** `/server create`-Flow, Pterodactyl-User-/Server-Erstellung, Rollen-/Limit-Konfiguration.
-- **Module (29, alle verdrahtet):** activityTracker, advancedTicketSystem, categoryManager, channelCleanup, **codeReviewBot**, customCommands, dashboard, economyCommands, eventScheduler, messageArchive, messageFilter, messageLogger, messageScheduler, pollCreator, prefixSettings, roleHierarchy, roleManager, serverStatus, statsCommands, statsGraphs, tempVoiceChannels, ticketCommands, ticketSystem, topicRotation, verificationLevels, verificationSystem, voiceManager, warningSystem, welcomeMessages.
-- **Token Validation:** Bot-Token-Validierungs-Utility prüft `DISCORD_TOKEN` vor Service-Start.
-- **Git Deployment Notification:** Empfängt und leitet Git-Deployment-Benachrichtigungen vom Orchestrator weiter.
-- **Konfiguration:** siehe `services/discord-service/.env.example`.
+• stack: node.js 18+, commonjs, discord.js/axios/dotenv (package.json jetzt vorhanden).
+• features: `/server create`-flow, pterodactyl-user-/server-erstellung, rollen-/limit-konfiguration.
+• module (29, alle verdrahtet): activitytracker, advancedticketsystem, categorymanager, channelcleanup, codereviewbot, customcommands, dashboard, economycommands, eventscheduler, messagearchive, messagefilter, messagelogger, messagescheduler, pollcreator, prefixsettings, rolehierarchy, rolemanager, serverstatus, statscommands, statsgraphs, tempvoicechannels, ticketcommands, ticketsystem, topicrotation, verificationlevels, verificationsystem, voicemanager, warningsystem, welcomemessages.
+• token validation: bot-token-validierungs-utility prüft `discord_token` vor service-start.
+• git deployment notification: empfängt und leitet git-deployment-benachrichtigungen vom orchestrator weiter.
+• konfiguration: siehe `services/discord-service/.env.example`.
 
-### Integration Service (`services/integration-service/`)
+### integration service (`services/integration-service/`)
 
-Python-basierter Cross-Plattform-Hub für serviceübergreifende Kommunikation.
+python-basierter cross-plattform-hub für serviceübergreifende kommunikation.
 
-- **Stack:** Python 3.9+, aiohttp.
-- **Module (36):** alerts, **alert_fatigue**, announcements, api, **api_gateway**, auth, **auth_2fa**, backup, **backup_validator**, **cdn_waf**, commands, **compliance_reports**, **cost_allocation**, **distributed_tracing**, events, **gdpr_manager**, **graphql_api**, **incident_manager**, integration, **log_analyzer**, logging, messaging, **multi_region**, **opentelemetry_exporter**, permissions, resource_tracker, **secrets_manager**, **service_mesh**, **siem_exporter**, **slo_tracker**, **ticket_triage**, **webhook_bus**, **workspaces**
-- **2FA/TOTP:** Vollständiger TOTP-Authentifizierungs-Flow (Setup, Verify, Disable, Backup-Codes).
-- **Modpack Search:** CurseForge/Modrinth-Suche und -Details über einheitliche API.
-- **Log Search:** Erweiterte Volltext-Logsuche mit Paginierung und Filterung.
-- **Notification Providers:** Email (SMTP mit TLS), Webhook (HTTP POST mit konfigurierbaren Headern), Telegram (Bot API) – alle über einen zentralen `NotificationManager` orchestriert.
-- **Aufgabe:** Zentraler Nerv des Gesamtsystems – verbindet Discord-Bot, Minecraft-Plugin, Orchestrator und Management Panel über eine einheitliche API.
+• stack: python 3.9+, aiohttp.
+• module (36): alerts, alert_fatigue, announcements, api, api_gateway, auth, auth_2fa, backup, backup_validator, cdn_waf, commands, compliance_reports, cost_allocation, distributed_tracing, events, gdpr_manager, graphql_api, incident_manager, integration, log_analyzer, logging, messaging, multi_region, opentelemetry_exporter, permissions, resource_tracker, secrets_manager, service_mesh, siem_exporter, slo_tracker, ticket_triage, webhook_bus, workspaces
+• 2fa/totp: vollständiger totp-authentifizierungs-flow (setup, verify, disable, backup-codes).
+• modpack search: curseforge/modrinth-suche und -details über einheitliche api.
+• log search: erweiterte volltext-logsuche mit paginierung und filterung.
+• notification providers: email (smtp mit tls), webhook (http post mit konfigurierbaren headern), telegram (bot api) – alle über einen zentralen `notificationmanager` orchestriert.
+• aufgabe: zentraler nerv des gesamtsystems – verbindet discord-bot, minecraft-plugin, orchestrator und management panel über eine einheitliche api.
 
-### Service Core (`services/service-core/`)
+### service core (`services/service-core/`)
 
-Java/Maven-Minecraft-Plugin mit vollständigem Feature-Set.
+java/maven-minecraft-plugin mit vollständigem feature-set.
 
-- **Stack:** Java, Maven, Paper/Bukkit-API, PlayerServerPlugin als Entry Point.
-- **Feature-Module:** economy (CurrencyExchangeManager, MarketManager, ShopTaxManager), statistics (AchievementsManager, PlayerStatistics, StatisticsCommand), worlds (BorderManager, ResourceWorldManager, WorldCommands), gameplay (DeathPenaltyManager, PlayerTimeWeatherManager, PlaytimeRewardsManager, ResourceMultiplierManager), items (CustomCraftingManager, CustomItemManager), server (AntiCheatManager, CommandCooldownManager, MaintenanceManager, PermissionManager, ResourceLimitsManager, VIPPerksManager), community (ReferralManager, VoteRewardsManager), plus InactivityShutdownTask und PluginMessageListener.
+• stack: java, maven, paper/bukkit-api, playerserverplugin als entry point.
+• feature-module: economy (currencyexchangemanager, marketmanager, shoptaxmanager), statistics (achievementsmanager, playerstatistics, statisticscommand), worlds (bordermanager, resourceworldmanager, worldcommands), gameplay (deathpenaltymanager, playertimeweathermanager, playtimerewardsmanager, resourcemultipliermanager), items (customcraftingmanager, customitemmanager), server (anticheatmanager, commandcooldownmanager, maintenancemanager, permissionmanager, resourcelimitsmanager, vipperksmanager), community (referralmanager, voterewardsmanager), plus inactivityshutdowntask und pluginmessagelistener.
 
-## Provider-neutrales Token-System
+## provider-neutrales token-system
 
-Provider-spezifische Identitäten werden über neutrale Tokens abstrahiert. Das erleichtert Tests, Demos und Providerwechsel.
+provider-spezifische identitäten werden über neutrale tokens abstrahiert. das erleichtert tests, demos und providerwechsel.
 
 ```yaml
 # infra/naming/provider_map.yaml
@@ -282,7 +282,7 @@ REGION_MOCK_US_EAST: mock-us-east
 SKU_MOCK_SMALL: mock-small
 ```
 
-Beispiel in Python:
+beispiel in python:
 
 ```python
 from infra.naming.resolver import resolve_token
@@ -290,18 +290,18 @@ from infra.naming.resolver import resolve_token
 provider = resolve_token("PROVIDER_MOCK")  # "mock-provider"
 ```
 
-Weitere Informationen: [Provider Neutral Mapping](docs/testing/provider_neutral_mapping.md).
+weitere informationen: [provider neutral mapping](docs/testing/provider_neutral_mapping.md).
 
-## Konfiguration
+## konfiguration
 
-### Root-Konfiguration
+### root-konfiguration
 
-- `.env.example` enthält eine repo-weite Vorlage für Datenbank-, Redis-, Discord-, Orchestrator- und Frontend-Variablen.
-- Für lokale Secrets immer `.env` oder service-spezifische `.env.local`-Dateien nutzen und niemals echte Zugangsdaten committen.
+• `.env.example` enthält eine repo-weite vorlage für datenbank-, redis-, discord-, orchestrator- und frontend-variablen.
+• für lokale secrets immer `.env` oder service-spezifische `.env.local`-dateien nutzen und niemals echte zugangsdaten committen.
 
-### Management Panel
+### management panel
 
-Minimalwerte für lokale Entwicklung:
+minimalwerte für lokale entwicklung:
 
 ```env
 VITE_API_URL=http://localhost:3001
@@ -310,20 +310,20 @@ VITE_SUPABASE_ANON_KEY=test-anon-key
 VITE_DEMO_FEATURE_ENABLED=false
 ```
 
-`VITE_DEMO_FEATURE_ENABLED=true` zeigt Demo-Seeding-Funktionen in der UI an. Für produktionsähnliche Umgebungen sollte der Wert `false` bleiben.
+`VITE_DEMO_FEATURE_ENABLED=true` zeigt demo-seeding-funktionen in der ui an. für produktionsähnliche umgebungen sollte der wert `false` bleiben.
 
-### Discord Service
+### discord service
 
-Die benötigten Variablen sind in [services/discord-service/.env.example](services/discord-service/.env.example) dokumentiert, insbesondere:
+die benötigten variablen sind in [services/discord-service/.env.example](services/discord-service/.env.example) dokumentiert, insbesondere:
 
-- `DISCORD_TOKEN`
-- `PTERODACTYL_API_URL`
-- `PTERODACTYL_API_KEY`
-- Channel-, Rollen-, Egg- und Location-IDs
+• `discord_token`
+• `pterodactyl_api_url`
+• `pterodactyl_api_key`
+• channel-, rollen-, egg- und location-ids
 
-## Development & Testing
+## development & testing
 
-### Häufige Befehle
+### häufige befehle
 
 ```bash
 # Repo-weite Tests über Script
@@ -345,81 +345,81 @@ cd services/orchestrator-agent
 pytest tests/
 ```
 
-### Testdokumentation
+### testdokumentation
 
-- [Testing Overview](docs/TESTING.md)
-- [Running Tests](docs/testing/running_tests.md)
-- [Automated Test Suite](docs/testing/automated-test-suite.md)
-- [Test Plan](docs/testing/test_plan.md)
-- [CI Demo Gate](docs/CI_DEMO_GATE.md)
+• [testing overview](docs/TESTING.md)
+• [running tests](docs/testing/running_tests.md)
+• [automated test suite](docs/testing/automated-test-suite.md)
+• [test plan](docs/testing/test_plan.md)
+• [ci demo gate](docs/CI_DEMO_GATE.md)
 
-### Code- und Workflow-Dokumentation
+### code- und workflow-dokumentation
 
-- [Development Workflow](docs/development/development-workflow.md)
-- [Code Standards](docs/development/code-standards.md)
-- [CI Architecture](docs/development/ci-architecture.md)
-- [AI Assistant Playbook](docs/development/ai-assistant-playbook.md)
+• [development workflow](docs/development/development-workflow.md)
+• [code standards](docs/development/code-standards.md)
+• [ci architecture](docs/development/ci-architecture.md)
+• [ai assistant playbook](docs/development/ai-assistant-playbook.md)
 
-## Docker & Deployment
+## docker & deployment
 
-### Aktueller Stand
+### aktueller stand
 
-- `scripts/docker-build.sh` überspringt Services ohne Dockerfile automatisch.
-- Aktuell besitzt `services/orchestrator-agent/` ein Dockerfile.
-- `docker-compose.yml` beschreibt den Ziel-Stack mit PostgreSQL, Redis, Service Core, Orchestrator, Discord Service, Management Panel und optionalem Monitoring, ist aber ohne zusätzliche Dockerfiles/Monitoring-Konfiguration noch nicht als vollständiger Ein-Befehl-Stack nutzbar.
+• `scripts/docker-build.sh` überspringt services ohne dockerfile automatisch.
+• aktuell besitzt `services/orchestrator-agent/` ein dockerfile.
+• `docker-compose.yml` beschreibt den ziel-stack mit postgresql, redis, service core, orchestrator, discord service, management panel und optionalem monitoring, ist aber ohne zusätzliche dockerfiles/monitoring-konfiguration noch nicht als vollständiger ein-befehl-stack nutzbar.
 
-### Aktuell sinnvoller Docker-Befehl
+### aktuell sinnvoller docker-befehl
 
 ```bash
 ./scripts/docker-build.sh
 ```
 
-Der Befehl baut vorhandene Service-Images und meldet fehlende Dockerfiles als Warnung.
+der befehl baut vorhandene service-images und meldet fehlende dockerfiles als warnung.
 
-### Deployment-Dokumentation
+### deployment-dokumentation
 
-- [Deployment Guide](docs/operations/deployment-guide.md)
-- [Workflow Optimization Audit](docs/operations/workflow-optimization-audit.md)
-- [Local Development Setup](docs/setup/local-development.md)
-- [zero-native Management Panel](docs/desktop/zero-native-management-panel.md)
+• [deployment guide](docs/operations/deployment-guide.md)
+• [workflow optimization audit](docs/operations/workflow-optimization-audit.md)
+• [local development setup](docs/setup/local-development.md)
+• [zero-native management panel](docs/desktop/zero-native-management-panel.md)
 
-## Dokumentation
+## dokumentation
 
-Der zentrale Dokumentationsindex liegt unter [docs/README.md](docs/README.md).
+der zentrale dokumentationsindex liegt unter [docs/README.md](docs/README.md).
 
-### Wichtige Einstiege
+### wichtige einstiege
 
-- [Quickstart](docs/quickstart.md)
-- [Architecture Overview](docs/architecture/overview.md)
-- [Orchestrator Agent Architecture](docs/architecture/orchestrator-agent.md)
-- [Management Panel README](services/management-panel/README.md)
-- [Discord Service README](services/discord-service/README.md)
-- [Integration Service README](services/integration-service/README.md)
-- [Branding Guidelines](docs/branding-guidelines.md)
-- [Design System](docs/design-system.md)
-- [Design Tokens](docs/design-tokens.md)
-- [Feature Implementation Plan v2](docs/feature-implementation-plan-v2.md) (50 neue Features: AI, Developer Ecosystem, Advanced Infra, Collaboration, Observability, UX, Compliance)
-- [CLI README](cli/README.md) (Infra Pilot CLI - `ipilot`)
-- [Terraform Provider Docs](infra/terraform/docs/index.md) (Terraform Provider for Infra Pilot)
-- [Mobile App](mobile/app.json) (React Native/Expo mobile app)
+• [quickstart](docs/quickstart.md)
+• [architecture overview](docs/architecture/overview.md)
+• [orchestrator agent architecture](docs/architecture/orchestrator-agent.md)
+• [management panel readme](services/management-panel/README.md)
+• [discord service readme](services/discord-service/README.md)
+• [integration service readme](services/integration-service/README.md)
+• [branding guidelines](docs/branding-guidelines.md)
+• [design system](docs/design-system.md)
+• [design tokens](docs/design-tokens.md)
+• [feature implementation plan v2](docs/feature-implementation-plan-v2.md) (50 neue features: ai, developer ecosystem, advanced infra, collaboration, observability, ux, compliance)
+• [cli readme](cli/README.md) (infra pilot cli - `ipilot`)
+• [terraform provider docs](infra/terraform/docs/index.md) (terraform provider for infra pilot)
+• [mobile app](mobile/app.json) (react native/expo mobile app)
 
-## Security
+## security
 
-- Sicherheitsmeldungen bitte gemäß [SECURITY.md](SECURITY.md) einreichen.
-- Produktive Umgebungen sollten echte Secrets ausschließlich über geeignete Secret Stores oder Deployment-Variablen bereitstellen.
-- Demo-Seeding (`VITE_DEMO_FEATURE_ENABLED`) in produktionsähnlichen Umgebungen deaktiviert lassen.
-- Vor produktiver Nutzung Dockerfiles, Compose-/Monitoring-Dateien, Authentifizierung, TLS, Backups und Berechtigungen gezielt härten.
+• sicherheitsmeldungen bitte gemäß [security.md](SECURITY.md) einreichen.
+• produktive umgebungen sollten echte secrets ausschließlich über geeignete secret stores oder deployment-variablen bereitstellen.
+• demo-seeding (`VITE_DEMO_FEATURE_ENABLED`) in produktionsähnlichen umgebungen deaktiviert lassen.
+• vor produktiver nutzung dockerfiles, compose-/monitoring-dateien, authentifizierung, tls, backups und berechtigungen gezielt härten.
 
-## Contributing
+## contributing
 
-Beiträge sind willkommen. Bitte vorab lesen:
+beiträge sind willkommen. bitte vorab lesen:
 
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)
-- [Code Standards](docs/development/code-standards.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+• [contributing.md](CONTRIBUTING.md)
+• [docs/contributing.md](docs/CONTRIBUTING.md)
+• [code standards](docs/development/code-standards.md)
+• [code of conduct](CODE_OF_CONDUCT.md)
 
-Kurzablauf:
+kurzablauf:
 
 ```bash
 git checkout -b feature/my-feature
@@ -428,20 +428,18 @@ git commit -m "feat: describe change"
 git push origin feature/my-feature
 ```
 
-## License & Warranty
+## license & warranty
 
-### License
+### license
 
-Dieses Projekt ist unter der **MIT License** lizenziert. Details stehen in [LICENSE](LICENSE).
+dieses projekt ist unter der mit license lizenziert. details stehen in [license](LICENSE).
 
-### Warranty & Liability
+### warranty & liability
 
-⚠️ Diese Software wird ohne Gewährleistung bereitgestellt.
+diese software wird ohne gewährleistung bereitgestellt.
 
-- Die MIT License enthält den vollständigen Haftungsausschluss.
-- Testen Sie Änderungen gründlich, bevor Sie Infra Pilot in produktionsnahen Umgebungen einsetzen.
-- Betreiber sind selbst dafür verantwortlich, Secrets, Provider-Zugänge, Discord-Bots, Datenbanken und Deployments sicher zu konfigurieren.
+• die mit license enthält den vollständigen haftungsausschluss.
+• testen sie änderungen gründlich, bevor sie infra pilot in produktionsnahen umgebungen einsetzen.
+• betreiber sind selbst dafür verantwortlich, secrets, provider-zugänge, discord-bots, datenbanken und deployments sicher zu konfigurieren.
 
----
-
-**[⬆ Zurück nach oben](#-infra-pilot)**
+[zurück nach oben](#infra-pilot)

@@ -1,31 +1,30 @@
-# Development Prompts
+# development prompts
 
-This directory contains prompts specifically designed for software development tasks.
+this directory contains prompts specifically designed for software development tasks.
 
-## Categories
+## categories
 
-- **Code Review**: Prompts for analyzing and improving code quality
-- **Documentation**: Generating technical documentation and comments
-- **Debugging**: Finding and fixing issues in code
-- **Architecture**: Planning system design and structure
-- **Testing**: Creating test cases and testing strategies
-- **Refactoring**: Improving code structure and maintainability
+• code review: prompts for analyzing and improving code quality
+• documentation: generating technical documentation and comments
+• debugging: finding and fixing issues in code
+• architecture: planning system design and structure
+• testing: creating test cases and testing strategies
+• refactoring: improving code structure and maintainability
 
-## Example Prompts
+## example prompts
 
-- `code-review.md` - Comprehensive code review assistant
-- `documentation-generator.md` - Auto-generate documentation from code
-- `bug-hunter.md` - Debug assistance and error analysis
-- `architecture-planner.md` - System design and planning
-- `test-case-generator.md` - Create comprehensive test suites
-- `refactoring-assistant.md` - Code improvement suggestions
+• `code-review.md` - comprehensive code review assistant
+• `documentation-generator.md` - auto-generate documentation from code
+• `bug-hunter.md` - debug assistance and error analysis
+• `architecture-planner.md` - system design and planning
+• `test-case-generator.md` - create comprehensive test suites
+• `refactoring-assistant.md` - code improvement suggestions
 
-## Getting Started
+## getting started
 
-1. Choose a prompt that matches your development task
-2. Customize the prompt with your specific code or requirements
-3. Run it through your preferred AI model
-4. Iterate and refine based on the results
+• choose a prompt that matches your development task
+• customize the prompt with your specific code or requirements
+• run it through your preferred ai model
+• iterate and refine based on the results
 
----
-*Add your development prompts to this directory following the template structure.*
+add your development prompts to this directory following the template structure.

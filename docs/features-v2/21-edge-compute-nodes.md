@@ -1,31 +1,29 @@
-# Feature 21: Edge Compute Nodes
+# feature 21: edge compute nodes
 
-- **Plan ID:** #21
-- **Category:** Advanced Infrastructure
-- **Primary Service:** Orchestrator Agent
-- **Effort:** Large (7-10 PT)
-- **Dependencies:** Feature 19 (Kubernetes Cluster Manager), Feature 23 (CDN & WAF Integration)
+- plan id: #21
+- category: advanced infrastructure
+- primary service: orchestrator agent
+- effort: large (7-10 pt)
+- dependencies: feature 19 (kubernetes cluster manager), feature 23 (cdn & waf integration)
 
-## Overview
+## overview
 
-Deploy lightweight functions and containers at distributed edge locations for low-latency execution. Edge nodes run small-footprint compute workloads close to end users — ideal for game logic processing, geolocated caching, real-time data transformation, and IoT message handling.
+deploy lightweight functions and containers at distributed edge locations for low-latency execution. edge nodes run small-footprint compute workloads close to end users -- ideal for game logic processing, geolocated caching, real-time data transformation, and iot message handling.
 
-### Key Capabilities
+### key capabilities
 
-| Capability | Description |
+| capability | description |
 |---|---|
-| Edge Node Registration | Auto-registration of edge nodes with capability discovery |
-| Function Deployment | Deploy lightweight containers/functions to edge nodes |
-| Geo-Routing | Route requests to nearest healthy edge node via DNS/latency-based routing |
-| Latency Monitoring | Real-time latency metrics from edge nodes to end users |
-| Edge Caching | Distributed caching layer at edge (Redis, CDN-style content cache) |
-| Node Lifecycle | Remote management, OTA updates, health reporting |
+| edge node registration | auto-registration of edge nodes with capability discovery |
+| function deployment | deploy lightweight containers/functions to edge nodes |
+| geo-routing | route requests to nearest healthy edge node via dns/latency-based routing |
+| latency monitoring | real-time latency metrics from edge nodes to end users |
+| edge caching | distributed caching layer at edge (redis, cdn-style content cache) |
+| node lifecycle | remote management, ota updates, health reporting |
 
----
+## architecture
 
-## Architecture
-
-### System Context
+### system context
 
 ```
                          ┌──────────────────┐
@@ -65,7 +63,7 @@ Deploy lightweight functions and containers at distributed edge locations for lo
                          └────────────────────┘
 ```
 
-### Component Architecture
+### component architecture
 
 ```
 ┌────────────────────────────────────────────────────┐
@@ -93,7 +91,7 @@ Deploy lightweight functions and containers at distributed edge locations for lo
 └────────────────────────────────────────────────────┘
 ```
 
-### Interaction Flow
+### interaction flow
 
 ```
 Edge Node Registration:
@@ -137,66 +135,62 @@ Geo-Routed Request:
                 │                           └── Return result
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: edge node agent (2 pt)
 
-### Phase 1: Edge Node Agent (2 PT)
-
-| Task | Description |
+| task | description |
 |---|---|
-| 1.1 | Build edge node agent binary (Go/Rust — minimal footprint) |
-| 1.2 | Registration handshake with control plane (mTLS, token-based auth) |
-| 1.3 | Heartbeat and health reporting protocol (gRPC streaming) |
-| 1.4 | Capability discovery (CPU arch, available runtimes, GPU, storage) |
-| 1.5 | OTA update mechanism for edge agent itself |
+| 1.1 | build edge node agent binary (go/rust -- minimal footprint) |
+| 1.2 | registration handshake with control plane (mtls, token-based auth) |
+| 1.3 | heartbeat and health reporting protocol (grpc streaming) |
+| 1.4 | capability discovery (cpu arch, available runtimes, gpu, storage) |
+| 1.5 | ota update mechanism for edge agent itself |
 
-### Phase 2: Workload Deployment (2.5 PT)
+### phase 2: workload deployment (2.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 2.1 | Container workload runner (containerd/podman integration) |
-| 2.2 | Function workload runner (isolated process per invocation) |
-| 2.3 | Image/function registry integration (pull, cache, verify signatures) |
-| 2.4 | Resource isolation (cgroups, namespace limits per workload) |
-| 2.5 | Workload lifecycle management (start, stop, restart, migrate) |
+| 2.1 | container workload runner (containerd/podman integration) |
+| 2.2 | function workload runner (isolated process per invocation) |
+| 2.3 | image/function registry integration (pull, cache, verify signatures) |
+| 2.4 | resource isolation (cgroups, namespace limits per workload) |
+| 2.5 | workload lifecycle management (start, stop, restart, migrate) |
 
-### Phase 3: Geo-Routing & Latency Monitoring (2 PT)
+### phase 3: geo-routing & latency monitoring (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 3.1 | Latency probe network (ICMP/HTTP probes from edge nodes to users) |
-| 3.2 | Geo-DNS integration (Route53 latency routing, Cloudflare geo-steering) |
-| 3.3 | Request routing at edge node level (reverse proxy with affinity) |
-| 3.4 | Latency dashboard in Panel (heatmap, percentile charts) |
+| 3.1 | latency probe network (icmp/http probes from edge nodes to users) |
+| 3.2 | geo-dns integration (route53 latency routing, cloudflare geo-steering) |
+| 3.3 | request routing at edge node level (reverse proxy with affinity) |
+| 3.4 | latency dashboard in panel (heatmap, percentile charts) |
 
-### Phase 4: Edge Caching (1.5 PT)
+### phase 4: edge caching (1.5 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 4.1 | Edge cache daemon (Redis-based distributed cache) |
-| 4.2 | Cache invalidation propagation (control plane broadcasts invalidation) |
-| 4.3 | Read-through / write-through cache policies |
-| 4.4 | Cache hit ratio monitoring and optimization suggestions |
+| 4.1 | edge cache daemon (redis-based distributed cache) |
+| 4.2 | cache invalidation propagation (control plane broadcasts invalidation) |
+| 4.3 | read-through / write-through cache policies |
+| 4.4 | cache hit ratio monitoring and optimization suggestions |
 
-### Phase 5: Panel & Management UI (1 PT)
+### phase 5: panel & management ui (1 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 5.1 | Edge node inventory and status dashboard |
-| 5.2 | Workload deployment form (image, resources, geo-targeting) |
-| 5.3 | Edge function logs viewer (streaming logs per node) |
-| 5.4 | Geo-latency heatmap visualization |
+| 5.1 | edge node inventory and status dashboard |
+| 5.2 | workload deployment form (image, resources, geo-targeting) |
+| 5.3 | edge function logs viewer (streaming logs per node) |
+| 5.4 | geo-latency heatmap visualization |
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
+all endpoints are prefixed with `/api/v2/edge`.
 
-All endpoints are prefixed with `/api/v2/edge`.
-
-#### Node Management
+#### node management
 
 ```
 GET    /api/v2/edge/nodes                       — List all edge nodes
@@ -207,7 +201,7 @@ DELETE /api/v2/edge/nodes/{node_id}              — Deregister node
 POST   /api/v2/edge/nodes/{node_id}/upgrade      — Trigger OTA upgrade
 ```
 
-#### Workloads
+#### workloads
 
 ```
 GET    /api/v2/edge/workloads                   — List deployed workloads
@@ -218,7 +212,7 @@ DELETE /api/v2/edge/workloads/{workload_id}      — Remove workload
 POST   /api/v2/edge/workloads/{workload_id}/restart  — Restart workload
 ```
 
-#### Routing
+#### routing
 
 ```
 GET    /api/v2/edge/routing/rules               — List geo-routing rules
@@ -227,7 +221,7 @@ PATCH  /api/v2/edge/routing/rules/{rule_id}     — Update rule
 DELETE /api/v2/edge/routing/rules/{rule_id}     — Delete rule
 ```
 
-#### Cache
+#### cache
 
 ```
 GET    /api/v2/edge/cache/stats                 — Global cache statistics
@@ -235,7 +229,7 @@ POST   /api/v2/edge/cache/invalidate            — Invalidate cache keys
 GET    /api/v2/edge/cache/keys                  — List cached keys
 ```
 
-#### Latency
+#### latency
 
 ```
 GET    /api/v2/edge/latency                     — Current latency map
@@ -243,9 +237,9 @@ GET    /api/v2/edge/latency/{node_id}           — Node-specific latency
 GET    /api/v2/edge/latency/history?window=24h  — Latency history
 ```
 
-### Request/Response Examples
+### request/response examples
 
-#### Register Edge Node
+#### register edge node
 
 ```json
 POST /api/v2/edge/nodes/register
@@ -274,7 +268,7 @@ POST /api/v2/edge/nodes/register
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -290,7 +284,7 @@ Response:
 }
 ```
 
-#### Deploy Workload
+#### deploy workload
 
 ```json
 POST /api/v2/edge/workloads
@@ -332,7 +326,7 @@ POST /api/v2/edge/workloads
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -348,7 +342,7 @@ Response:
 }
 ```
 
-#### Edge Function (FaaS-style)
+#### edge function (faas-style)
 
 ```json
 POST /api/v2/edge/workloads
@@ -371,11 +365,9 @@ POST /api/v2/edge/workloads
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Edge Node
+### edge node
 
 ```sql
 CREATE TABLE edge_nodes (
@@ -405,7 +397,7 @@ CREATE INDEX idx_edge_nodes_region ON edge_nodes (region);
 CREATE INDEX idx_edge_nodes_status ON edge_nodes (status);
 ```
 
-### Workload
+### workload
 
 ```sql
 CREATE TABLE edge_workloads (
@@ -430,7 +422,7 @@ CREATE TABLE edge_workloads (
 );
 ```
 
-### Workload Deployment (Node Assignment)
+### workload deployment (node assignment)
 
 ```sql
 CREATE TABLE edge_workload_deployments (
@@ -450,7 +442,7 @@ CREATE TABLE edge_workload_deployments (
 );
 ```
 
-### Geo-Routing Rules
+### geo-routing rules
 
 ```sql
 CREATE TABLE edge_routing_rules (
@@ -470,7 +462,7 @@ CREATE TABLE edge_routing_rules (
 );
 ```
 
-### Edge Cache
+### edge cache
 
 ```sql
 CREATE TABLE edge_cache_stats (
@@ -495,49 +487,43 @@ CREATE TABLE edge_cache_keys (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Component | Service | Responsibilities |
+| component | service | responsibilities |
 |---|---|---|
-| Edge Manager | **Orchestrator Agent** | Node registry, deployment controller, workload scheduler |
-| Edge Node Agent | **Orchestrator Agent** (new subcomponent) | Agent binary on each edge node, runs workloads |
-| Geo-Routing Controller | **Orchestrator Agent** | DNS integration, latency routing, request routing |
-| Edge Cache Daemon | **Orchestrator Agent** (new subcomponent) | Redis-based distributed cache per edge node |
-| Monitoring & Latency | **Orchestrator Agent** | Latency probes, metrics collection, reporting |
-| Edge UI | **Management Panel** | Node dashboard, workload deploy, latency heatmap |
-| CDN Integration | **Integration Service** (+ Feature 23) | CDN + WAF rules for edge endpoints |
-| Auth & Secrets | **Integration Service** (+ Feature 47) | Edge node auth tokens, workload secrets |
+| edge manager | **orchestrator agent** | node registry, deployment controller, workload scheduler |
+| edge node agent | **orchestrator agent** (new subcomponent) | agent binary on each edge node, runs workloads |
+| geo-routing controller | **orchestrator agent** | dns integration, latency routing, request routing |
+| edge cache daemon | **orchestrator agent** (new subcomponent) | redis-based distributed cache per edge node |
+| monitoring & latency | **orchestrator agent** | latency probes, metrics collection, reporting |
+| edge ui | **management panel** | node dashboard, workload deploy, latency heatmap |
+| cdn integration | **integration service** (+ feature 23) | cdn + waf rules for edge endpoints |
+| auth & secrets | **integration service** (+ feature 47) | edge node auth tokens, workload secrets |
 
----
+## effort estimate
 
-## Effort Estimate
-
-| Phase | Tasks | PT |
+| phase | tasks | pt |
 |---|---|---|
-| Phase 1: Edge Node Agent | 1.1–1.5 | 2 |
-| Phase 2: Workload Deployment | 2.1–2.5 | 2.5 |
-| Phase 3: Geo-Routing & Latency Monitoring | 3.1–3.4 | 2 |
-| Phase 4: Edge Caching | 4.1–4.4 | 1.5 |
-| Phase 5: Panel & Management UI | 5.1–5.4 | 1 |
-| **Total** | **23 tasks** | **9 PT** |
+| phase 1: edge node agent | 1.1–1.5 | 2 |
+| phase 2: workload deployment | 2.1–2.5 | 2.5 |
+| phase 3: geo-routing & latency monitoring | 3.1–3.4 | 2 |
+| phase 4: edge caching | 4.1–4.4 | 1.5 |
+| phase 5: panel & management ui | 5.1–5.4 | 1 |
+| **total** | **23 tasks** | **9 pt** |
 
-### Risk Factors
+### risk factors
 
-| Risk | Mitigation |
+| risk | mitigation |
 |---|---|
-| Edge node hardware diversity | Capability discovery at registration, workload scheduling respects constraints |
-| Network partitions | Store-and-forward for heartbeats; agent runs autonomously for defined period |
-| Cache inconsistency across nodes | Centralized invalidation broadcast via control plane; short TTL fallback |
-| Cold start latency for functions | Pre-warm pools for critical functions; Wasm-based runtimes for sub-millisecond startup |
-| Agent compromise at edge | mTLS with short-lived certs, workload isolation, resource limits, audit logging |
+| edge node hardware diversity | capability discovery at registration, workload scheduling respects constraints |
+| network partitions | store-and-forward for heartbeats; agent runs autonomously for defined period |
+| cache inconsistency across nodes | centralized invalidation broadcast via control plane; short ttl fallback |
+| cold start latency for functions | pre-warm pools for critical functions; wasm-based runtimes for sub-millisecond startup |
+| agent compromise at edge | mtls with short-lived certs, workload isolation, resource limits, audit logging |
 
----
+## monitoring & observability
 
-## Monitoring & Observability
-
-### Prometheus Metrics
+### prometheus metrics
 
 ```python
 # Nodes
@@ -565,7 +551,7 @@ edge_cache_memory_used_bytes{node}           # Gauge — cache memory
 edge_latency_ms{source_node,target_region}   # Gauge — inter-node latency
 ```
 
-### Logging
+### logging
 
 ```json
 {
@@ -594,17 +580,13 @@ edge_latency_ms{source_node,target_region}   # Gauge — inter-node latency
 }
 ```
 
----
+## related documents
 
-## Related Documents
+- [architecture overview](../architecture/overview.md)
+- [orchestrator agent architecture](../architecture/orchestrator-agent.md)
+- [feature 19: kubernetes cluster manager](19-kubernetes-cluster-manager.md)
+- [feature 22: serverless functions (faas)](22-serverless-functions-faas.md)
+- [feature 23: cdn & waf integration](23-cdn-waf-integration.md)
+- [implementation plan v2](../feature-implementation-plan-v2.md)
 
-- [Architecture Overview](../architecture/overview.md)
-- [Orchestrator Agent Architecture](../architecture/orchestrator-agent.md)
-- [Feature 19: Kubernetes Cluster Manager](19-kubernetes-cluster-manager.md)
-- [Feature 22: Serverless Functions (FaaS)](22-serverless-functions-faas.md)
-- [Feature 23: CDN & WAF Integration](23-cdn-waf-integration.md)
-- [Implementation Plan v2](../feature-implementation-plan-v2.md)
-
----
-
-**Last Updated:** May 2026
+**last updated:** may 2026

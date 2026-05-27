@@ -1,29 +1,29 @@
-# Local Development Setup
+# local development setup
 
-Get the Infra Pilot platform running on your local machine in 15 minutes.
+get the infra pilot platform running on your local machine in 15 minutes.
 
-## ⚙️ Prerequisites
+## prerequisites
 
-### System Requirements
+### system requirements
 
-- **OS:** Linux, macOS, Windows (WSL2)
-- **Memory:** 4GB minimum (8GB recommended)
-- **Disk:** 10GB free space
-- **Network:** Internet access
+• os: linux, macos, windows (wsl2)
+• memory: 4gb minimum (8gb recommended)
+• disk: 10gb free space
+• network: internet access
 
-### Software Requirements
+### software requirements
 
-| Tool | Version | Purpose |
+| tool | version | purpose |
 |------|---------|---------|
-| Git | 2.30+ | Version control |
-| Docker | 20.10+ | Containerization |
-| Docker Compose | 1.29+ | Multi-container orchestration |
-| Node.js | 18 LTS | Dashboard & Discord bot |
-| Python | 3.9+ | Orchestrator agent |
-| Java | 8+ | Service core |
-| Maven | 3.6+ | Java build tool |
+| git | 2.30+ | version control |
+| docker | 20.10+ | containerization |
+| docker compose | 1.29+ | multi-container orchestration |
+| node.js | 18 lts | dashboard & discord bot |
+| python | 3.9+ | orchestrator agent |
+| java | 8+ | service core |
+| maven | 3.6+ | java build tool |
 
-### Verify Installation
+### verify installation
 
 ```bash
 git --version              # Git 2.30+
@@ -35,11 +35,9 @@ java -version              # Java 8+
 mvn --version              # Maven 3.6+
 ```
 
----
+## quick start (docker compose)
 
-## 🚀 Quick Start (Docker Compose)
-
-### Option A: Fastest (Recommended)
+### option a: fastest (recommended)
 
 ```bash
 # 1. Clone repository
@@ -59,7 +57,7 @@ docker-compose ps
 open http://localhost:5173  # Management Dashboard
 ```
 
-### Option B: With Log Viewing
+### option b: with log viewing
 
 ```bash
 # Start services and view logs
@@ -70,30 +68,28 @@ docker-compose logs -f orchestrator-agent
 docker-compose logs -f management-dashboard
 ```
 
-### Access Points
+### access points
 
-| Service | URL | Purpose |
+| service | url | purpose |
 |---------|-----|---------|
-| **Dashboard** | http://localhost:5173 | Web operations UI |
-| **Orchestrator API** | http://localhost:8000 | API endpoint |
-| **Service Core** | http://localhost:8080 | Server management |
-| **PostgreSQL** | localhost:5432 | Database |
-| **Redis** | localhost:6379 | Cache |
+| dashboard | http://localhost:5173 | web operations ui |
+| orchestrator api | http://localhost:8000 | api endpoint |
+| service core | http://localhost:8080 | server management |
+| postgresql | localhost:5432 | database |
+| redis | localhost:6379 | cache |
 
----
+## manual setup (local development)
 
-## 🛠️ Manual Setup (Local Development)
+if you prefer running services locally without docker:
 
-If you prefer running services locally without Docker:
-
-### Step 1: Clone Repository
+### step 1: clone repository
 
 ```bash
 git clone https://github.com/DaaanielTV/infra-pilot.git
 cd infra-pilot
 ```
 
-### Step 2: Configure Environment
+### step 2: configure environment
 
 ```bash
 # Copy environment template
@@ -105,7 +101,7 @@ nano .env
 code .env  # If using VS Code
 ```
 
-**Key variables to configure:**
+key variables to configure:
 
 ```bash
 # Database
@@ -122,9 +118,9 @@ PTERODACTYL_API_KEY=your-key
 DISCORD_BOT_TOKEN=your-token
 ```
 
-### Step 3: Install Dependencies
+### step 3: install dependencies
 
-#### Management Dashboard
+#### management dashboard
 
 ```bash
 cd services/management-dashboard
@@ -133,7 +129,7 @@ npm run dev
 # Opens at http://localhost:5173
 ```
 
-#### Orchestrator Agent
+#### orchestrator agent
 
 ```bash
 # In new terminal
@@ -145,7 +141,7 @@ python main.py
 # Runs at http://localhost:8000
 ```
 
-#### Discord Service
+#### discord service
 
 ```bash
 # In new terminal
@@ -155,7 +151,7 @@ npm start
 # Connects to Discord
 ```
 
-#### Service Core (Java)
+#### service core (java)
 
 ```bash
 # In new terminal
@@ -165,7 +161,7 @@ mvn spring-boot:run
 # Runs at http://localhost:8080
 ```
 
-### Step 4: Setup Databases
+### step 4: setup databases
 
 ```bash
 # Option A: Using Docker containers
@@ -188,13 +184,11 @@ brew services start postgresql
 brew services start redis
 ```
 
----
+## configuration
 
-## 📝 Configuration
+### environment variables
 
-### Environment Variables
-
-Create `.env` file in root directory:
+create `.env` file in root directory:
 
 ```env
 # Application
@@ -228,32 +222,30 @@ SENTRY_DSN=optional
 LOG_LEVEL=debug
 ```
 
-### Service-Specific Config
+### service-specific config
 
-**Management Dashboard:** `services/management-dashboard/.env`
+**management dashboard:** `services/management-dashboard/.env`
 ```env
 VITE_API_URL=http://localhost:8000
 VITE_CONVEX_URL=http://localhost:3210
 ```
 
-**Orchestrator Agent:** `services/orchestrator-agent/.env`
+**orchestrator agent:** `services/orchestrator-agent/.env`
 ```env
 ORCHESTRATOR_PORT=8000
 LOG_LEVEL=DEBUG
 DATABASE_ECHO=true
 ```
 
----
+## running tests
 
-## 🧪 Running Tests
-
-### Test All Services
+### test all services
 
 ```bash
 ./scripts/test.sh
 ```
 
-### Test Individual Services
+### test individual services
 
 ```bash
 # Dashboard tests
@@ -276,11 +268,9 @@ mvn test
 mvn test -DskipTests=false -Dtest=TestClass  # Specific test
 ```
 
----
+## development workflow
 
-## 🐛 Development Workflow
-
-### 1. Creating a Feature
+### creating a feature
 
 ```bash
 # Create feature branch from main
@@ -299,9 +289,9 @@ git commit -m "feat: add new provisioning flow"
 git push origin feature/my-feature
 ```
 
-### 2. Debugging
+### debugging
 
-#### Docker Containers
+#### docker containers
 
 ```bash
 # View logs
@@ -314,7 +304,7 @@ docker-compose exec orchestrator-agent bash
 docker-compose restart management-dashboard
 ```
 
-#### Local Services
+#### local services
 
 ```bash
 # Python debugging
@@ -329,7 +319,7 @@ mvn -Dagentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 spring-b
 # Connect in IDE to localhost:5005
 ```
 
-#### Logs
+#### logs
 
 ```bash
 # View all logs
@@ -345,11 +335,9 @@ docker-compose logs --tail=50 management-dashboard
 docker-compose logs -f --timestamps
 ```
 
----
+## common tasks
 
-## 🔄 Common Tasks
-
-### Update Dependencies
+### update dependencies
 
 ```bash
 # Dashboard
@@ -368,7 +356,7 @@ mvn dependency:tree
 mvn versions:display-dependency-updates
 ```
 
-### Database Operations
+### database operations
 
 ```bash
 # Connect to PostgreSQL
@@ -385,7 +373,7 @@ pg_dump -h localhost -U gemini -d gemini > backup.sql
 psql -h localhost -U gemini -d gemini < backup.sql
 ```
 
-### Clear Cache & Rebuild
+### clear cache & rebuild
 
 ```bash
 # Stop all services
@@ -401,7 +389,7 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-### Monitor Resource Usage
+### monitor resource usage
 
 ```bash
 # Docker stats
@@ -412,11 +400,9 @@ top          # macOS/Linux
 Get-Process  # Windows
 ```
 
----
+## troubleshooting
 
-## 🆘 Troubleshooting
-
-### Service Won't Start
+### service won't start
 
 ```bash
 # Check port is available
@@ -434,7 +420,7 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-### Database Connection Issues
+### database connection issues
 
 ```bash
 # Test connection
@@ -445,7 +431,7 @@ docker-compose down -v
 docker-compose up -d
 ```
 
-### Memory Issues
+### memory issues
 
 ```bash
 # Increase Docker memory
@@ -461,7 +447,7 @@ services:
           memory: 1G
 ```
 
-### API Connection Issues
+### api connection issues
 
 ```bash
 # Test API endpoint
@@ -474,30 +460,24 @@ docker-compose ps
 docker-compose logs orchestrator-agent
 ```
 
----
+## additional resources
 
-## 📚 Additional Resources
+• [docker deployment](docker-setup.md) - production docker setup
+• [development workflow](../development/development-workflow.md) - contributing guidelines
+• [testing strategy](../development/testing-strategy.md) - testing best practices
+• [troubleshooting](../operations/troubleshooting.md) - advanced troubleshooting
 
-- [Docker Deployment](docker-setup.md) - Production Docker setup
-- [Development Workflow](../development/development-workflow.md) - Contributing guidelines
-- [Testing Strategy](../development/testing-strategy.md) - Testing best practices
-- [Troubleshooting](../operations/troubleshooting.md) - Advanced troubleshooting
+## verification checklist
 
----
+after setup, verify everything works:
 
-## ✅ Verification Checklist
+• [ ] dashboard loads at http://localhost:5173
+• [ ] can login to dashboard
+• [ ] orchestrator api responds to `curl http://localhost:8000/health`
+• [ ] can view services in dashboard
+• [ ] database connection works
+• [ ] all tests pass: `./scripts/test.sh`
 
-After setup, verify everything works:
+if all checks pass, you're ready to develop!
 
-- [ ] Dashboard loads at http://localhost:5173
-- [ ] Can login to dashboard
-- [ ] Orchestrator API responds to `curl http://localhost:8000/health`
-- [ ] Can view services in dashboard
-- [ ] Database connection works
-- [ ] All tests pass: `./scripts/test.sh`
-
-If all checks pass, you're ready to develop! 🎉
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

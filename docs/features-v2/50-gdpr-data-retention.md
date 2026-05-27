@@ -1,32 +1,28 @@
-# GDPR & Data Retention
+﻿# gdpr & data retention
 
-> **Feature ID:** 50  
-> **Category:** Security & Compliance  
-> **Primary Service:** Integration Service  
-> **Effort Estimate:** Medium (4-6 PT)  
-> **Status:** Planned
+- feature id: 50
+- category: security & compliance
+- primary service: integration service
+- effort estimate: medium (4-6 pt)
+- status: planned
 
----
+## overview
 
-## Overview
+implement a comprehensive data lifecycle management system that ensures compliance with the general data protection regulation (gdpr) and similar privacy frameworks. the system manages automated data retention policies, right-to-erasure (article 17) workflows, data inventory exports (article 30), and consent management across all infra pilot services.
 
-Implement a comprehensive data lifecycle management system that ensures compliance with the General Data Protection Regulation (GDPR) and similar privacy frameworks. The system manages automated data retention policies, right-to-erasure (Article 17) workflows, data inventory exports (Article 30), and consent management across all Infra Pilot services.
+all personally identifiable information (pii) stored within the platform — including user profiles, audit logs, billing records, and support tickets — is classified, tagged, and subject to configurable lifecycle policies.
 
-All personally identifiable information (PII) stored within the platform — including user profiles, audit logs, billing records, and support tickets — is classified, tagged, and subject to configurable lifecycle policies.
+### goals
 
-### Goals
+• auto-purge logs and records older than configurable retention periods
+• provide a fully auditable right-to-erasure workflow (forget me)
+• generate gdpr article 30 data inventory exports in machine-readable format
+• classify all stored data by pii sensitivity level
+• manage user consent records for data processing activities
+• generate data processing agreement (dpa) documents on demand
+• maintain a tamper-proof audit trail for all data lifecycle operations
 
-- Auto-purge logs and records older than configurable retention periods
-- Provide a fully auditable right-to-erasure workflow (forget me)
-- Generate GDPR Article 30 data inventory exports in machine-readable format
-- Classify all stored data by PII sensitivity level
-- Manage user consent records for data processing activities
-- Generate Data Processing Agreement (DPA) documents on demand
-- Maintain a tamper-proof audit trail for all data lifecycle operations
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -70,29 +66,27 @@ All personally identifiable information (PII) stored within the platform — inc
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: data classification & policy engine (2 pt)
 
-### Phase 1: Data Classification & Policy Engine (2 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | PII classification schema across all services | `internal/gdpr/classifier.go` — scan database schemas, tag columns by PII category |
-| 1.2 | Retention policy definition & storage | `internal/gdpr/policy.go` — YAML-driven retention rules per data category |
-| 1.3 | Policy engine (evaluate + schedule) | `internal/gdpr/engine.go` — cron-driven evaluation, schedules purge jobs |
-| 1.4 | Metadata registry for tracked data locations | `internal/gdpr/registry.go` — tracks database tables, columns, object storage paths |
+| 1.1 | pii classification schema across all services | `internal/gdpr/classifier.go` — scan database schemas, tag columns by pii category |
+| 1.2 | retention policy definition & storage | `internal/gdpr/policy.go` — yaml-driven retention rules per data category |
+| 1.3 | policy engine (evaluate + schedule) | `internal/gdpr/engine.go` — cron-driven evaluation, schedules purge jobs |
+| 1.4 | metadata registry for tracked data locations | `internal/gdpr/registry.go` — tracks database tables, columns, object storage paths |
 
-**PII Classification Levels:**
+**pii classification levels:**
 
-| Level | Label | Examples | Retention Default |
+| level | label | examples | retention default |
 |-------|-------|----------|------------------|
-| L0 | None | System metrics, anonymised aggregates | Indefinite |
-| L1 | Internal | Email addresses, usernames | 3 years |
-| L2 | Sensitive | IP addresses, user-agent strings | 1 year |
-| L3 | Critical | Payment tokens, passwords (hashed), government IDs | 90 days (or legal minimum) |
+| l0 | none | system metrics, anonymised aggregates | indefinite |
+| l1 | internal | email addresses, usernames | 3 years |
+| l2 | sensitive | ip addresses, user-agent strings | 1 year |
+| l3 | critical | payment tokens, passwords (hashed), government ids | 90 days (or legal minimum) |
 
-**Retention policy definition:**
+**retention policy definition:**
 
 ```yaml
 # config/data_retention.yaml
@@ -148,17 +142,17 @@ retention_policies:
       - integration
 ```
 
-### Phase 2: Purge Executor & Right-to-Erasure (1.5 PT)
+### phase 2: purge executor & right-to-erasure (1.5 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Purge executor service | `internal/gdpr/purge.go` — executes delete/anonymize/archive across all services |
-| 2.2 | Anonymization engine | `internal/gdpr/anonymize.go` — field-level masking, hashing, aggregation |
-| 2.3 | Archive storage backend | Cold storage (S3/Blob) with encryption-at-rest |
-| 2.4 | Right-to-erasure workflow | `internal/gdpr/erasure.go` — multi-step verification + execution |
-| 2.5 | Erasure request API | `POST /api/v1/gdpr/erasure` — submit + track erasure requests |
+| 2.1 | purge executor service | `internal/gdpr/purge.go` — executes delete/anonymize/archive across all services |
+| 2.2 | anonymization engine | `internal/gdpr/anonymize.go` — field-level masking, hashing, aggregation |
+| 2.3 | archive storage backend | cold storage (s3/blob) with encryption-at-rest |
+| 2.4 | right-to-erasure workflow | `internal/gdpr/erasure.go` — multi-step verification + execution |
+| 2.5 | erasure request api | `post /api/v1/gdpr/erasure` — submit + track erasure requests |
 
-**Anonymization strategies:**
+**anonymization strategies:**
 
 ```python
 # pseudocode: anonymize.py
@@ -174,7 +168,7 @@ def anonymize_field(value: str, strategy: str) -> str:
     return strategies.get(strategy, "[REDACTED]")
 ```
 
-**Right-to-erasure flow:**
+**right-to-erasure flow:**
 
 ```
 User Request          Verification          Execution              Confirmation
@@ -198,29 +192,27 @@ via Panel / API                                    │  stores   │
                                                     └──────────┘
 ```
 
-### Phase 3: Data Inventory, Consent & DPA (0.5-1 PT)
+### phase 3: data inventory, consent & dpa (0.5-1 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Data inventory scanner | `internal/gdpr/inventory.go` — scans all connected data stores |
-| 3.2 | GDPR Article 30 export | `internal/gdpr/report.go` — generates CSV/JSON/PDF inventory report |
-| 3.3 | Consent management CRUD | `internal/gdpr/consent.go` — record + version user consent for processing purposes |
-| 3.4 | DPA template & generator | `internal/gdpr/dpa.go` — fills organisation details into GDPR-compliant DPA template |
-| 3.5 | Expiry notification service | Automated alerts to admins before retention periods elapse |
+| 3.1 | data inventory scanner | `internal/gdpr/inventory.go` — scans all connected data stores |
+| 3.2 | gdpr article 30 export | `internal/gdpr/report.go` — generates csv/json/pdf inventory report |
+| 3.3 | consent management crud | `internal/gdpr/consent.go` — record + version user consent for processing purposes |
+| 3.4 | dpa template & generator | `internal/gdpr/dpa.go` — fills organisation details into gdpr-compliant dpa template |
+| 3.5 | expiry notification service | automated alerts to admins before retention periods elapse |
 
----
+## api design
 
-## API Design
+### data retention rules
 
-### Data Retention Rules
-
-#### List Retention Policies
+#### list retention policies
 
 ```
 GET /api/v1/gdpr/retention-policies
 ```
 
-Response:
+response:
 ```json
 {
   "policies": [
@@ -238,13 +230,13 @@ Response:
 }
 ```
 
-#### Update Retention Policy
+#### update retention policy
 
 ```
 PATCH /api/v1/gdpr/retention-policies/{category}
 ```
 
-Request:
+request:
 ```json
 {
   "default_days": 730,
@@ -253,13 +245,13 @@ Request:
 }
 ```
 
-#### Trigger Manual Purge
+#### trigger manual purge
 
 ```
 POST /api/v1/gdpr/retention-policies/{category}/purge
 ```
 
-Response:
+response:
 ```json
 {
   "job_id": "purge-20260527-a1b2c3",
@@ -270,15 +262,15 @@ Response:
 }
 ```
 
-### Right-to-Erasure
+### right-to-erasure
 
-#### Submit Erasure Request
+#### submit erasure request
 
 ```
 POST /api/v1/gdpr/erasure
 ```
 
-Request:
+request:
 ```json
 {
   "user_id": "user-789",
@@ -288,7 +280,7 @@ Request:
 }
 ```
 
-Response: `201 Created`
+response: `201 Created`
 ```json
 {
   "request_id": "erasure-20260527-xyz789",
@@ -299,20 +291,20 @@ Response: `201 Created`
 }
 ```
 
-#### Verify Erasure Request
+#### verify erasure request
 
 ```
 POST /api/v1/gdpr/erasure/{request_id}/verify
 ```
 
-Request:
+request:
 ```json
 {
   "verification_token": "abc123def456"
 }
 ```
 
-Response:
+response:
 ```json
 {
   "request_id": "erasure-20260527-xyz789",
@@ -329,13 +321,13 @@ Response:
 }
 ```
 
-#### Confirm Erasure
+#### confirm erasure
 
 ```
 POST /api/v1/gdpr/erasure/{request_id}/confirm
 ```
 
-Response:
+response:
 ```json
 {
   "request_id": "erasure-20260527-xyz789",
@@ -345,27 +337,27 @@ Response:
 }
 ```
 
-#### Get Erasure Status
+#### get erasure status
 
 ```
 GET /api/v1/gdpr/erasure/{request_id}
 ```
 
-#### List Erasure Requests (Admin)
+#### list erasure requests (admin)
 
 ```
 GET /api/v1/gdpr/erasure?status=completed&from=2026-01-01&limit=50
 ```
 
-### Data Inventory
+### data inventory
 
-#### Generate Inventory Report
+#### generate inventory report
 
 ```
 POST /api/v1/gdpr/inventory/export
 ```
 
-Request:
+request:
 ```json
 {
   "format": "csv",
@@ -374,9 +366,9 @@ Request:
 }
 ```
 
-Response: `200 OK` (file download)
+response: `200 OK` (file download)
 
-**Sample CSV output:**
+**sample csv output:**
 
 ```csv
 category,service,table,column,pii_level,purge_action,retention_days,record_count
@@ -389,15 +381,15 @@ support.tickets,support,tickets,message_body,L2,anonymize,730,89000
 consent.records,integration,consents,all,L1,none,-1,12500
 ```
 
-### Consent Management
+### consent management
 
-#### Record Consent
+#### record consent
 
 ```
 POST /api/v1/gdpr/consent
 ```
 
-Request:
+request:
 ```json
 {
   "user_id": "user-789",
@@ -423,27 +415,27 @@ Request:
 }
 ```
 
-#### Get Consent Record
+#### get consent record
 
 ```
 GET /api/v1/gdpr/consent/{user_id}
 ```
 
-#### Get Consent History
+#### get consent history
 
 ```
 GET /api/v1/gdpr/consent/{user_id}/history
 ```
 
-### DPA Generation
+### dpa generation
 
-#### Generate DPA
+#### generate dpa
 
 ```
 POST /api/v1/gdpr/dpa/generate
 ```
 
-Request:
+request:
 ```json
 {
   "organisation_name": "ACME Corp GmbH",
@@ -477,11 +469,9 @@ Request:
 }
 ```
 
-Response: `200 OK` (DPA document download)
+response: `200 OK` (dpa document download)
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/gdpr.py
@@ -589,7 +579,7 @@ class DPATemplate:
     valid_until: datetime
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- Retention policies (configuration, cached from YAML)
@@ -684,9 +674,7 @@ CREATE TABLE lifecycle_audit_log (
 );
 ```
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/data_retention.yaml
@@ -740,51 +728,45 @@ retention:
     notify_channels: ["email", "panel"]
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | Data lifecycle engine — classification, retention policy engine, purge executor, anonymization, right-to-erasure workflow, consent management, data inventory, DPA generator, audit trail |
-| **Management Panel** | GDPR dashboard — retention policy management UI, erasure request submission & tracking, consent preference UI, data inventory viewer, DPA download, compliance reporting |
-| **Orchestrator Agent** | Coordinate cross-service purge execution; ensure all worker nodes respect data retention policies; deploy anonymization sidecars |
-| **Notification Service** | Send erasure verification emails, expiry warnings, compliance alerts to designated roles |
+| **integration service** | data lifecycle engine — classification, retention policy engine, purge executor, anonymization, right-to-erasure workflow, consent management, data inventory, dpa generator, audit trail |
+| **management panel** | gdpr dashboard — retention policy management ui, erasure request submission & tracking, consent preference ui, data inventory viewer, dpa download, compliance reporting |
+| **orchestrator agent** | coordinate cross-service purge execution; ensure all worker nodes respect data retention policies; deploy anonymization sidecars |
+| **notification service** | send erasure verification emails, expiry warnings, compliance alerts to designated roles |
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | PII classification schema & scanner | 1 | Data schemas across all services |
-| 1.2 | Retention policy definition & YAML config | 0.5 | Classification schema |
-| 1.3 | Policy engine (scheduler + evaluator) | 1 | Policy definitions |
-| 1.4 | Metadata registry for tracked data | 0.5 | Scanner |
-| 2.1 | Purge executor (delete/anonymize/archive) | 1 | Policy engine |
-| 2.2 | Anonymization engine | 0.5 | Purge executor |
-| 2.3 | Archive storage backend (S3/Blob) | 0.5 | Purge executor |
-| 2.4 | Right-to-erasure workflow | 1 | Purge executor, anonymization |
-| 2.5 | Erasure request API | 0.5 | Workflow |
-| 3.1 | Data inventory scanner | 0.5 | Classification |
-| 3.2 | GDPR Article 30 export | 0.5 | Inventory |
-| 3.3 | Consent management CRUD | 0.5 | Database schema |
-| 3.4 | DPA template & generator | 0.5 | Consent management |
-| 3.5 | Expiry notification service | 0.25 | Policy engine |
-| 3.6 | Lifecycle audit trail | 0.25 | All phases |
-| | **Total** | **8.75** | |
+| 1.1 | pii classification schema & scanner | 1 | data schemas across all services |
+| 1.2 | retention policy definition & yaml config | 0.5 | classification schema |
+| 1.3 | policy engine (scheduler + evaluator) | 1 | policy definitions |
+| 1.4 | metadata registry for tracked data | 0.5 | scanner |
+| 2.1 | purge executor (delete/anonymize/archive) | 1 | policy engine |
+| 2.2 | anonymization engine | 0.5 | purge executor |
+| 2.3 | archive storage backend (s3/blob) | 0.5 | purge executor |
+| 2.4 | right-to-erasure workflow | 1 | purge executor, anonymization |
+| 2.5 | erasure request api | 0.5 | workflow |
+| 3.1 | data inventory scanner | 0.5 | classification |
+| 3.2 | gdpr article 30 export | 0.5 | inventory |
+| 3.3 | consent management crud | 0.5 | database schema |
+| 3.4 | dpa template & generator | 0.5 | consent management |
+| 3.5 | expiry notification service | 0.25 | policy engine |
+| 3.6 | lifecycle audit trail | 0.25 | all phases |
+| | **total** | **8.75** | |
 
-> **Note:** Phases 1–3 overlap where possible. Consolidated effort is **4–6 PT** as stated in the plan.
+**note:** phases 1-3 overlap where possible. consolidated effort is **4-6 pt** as stated in the plan.
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Accidental data deletion before retention expiry | Permanent data loss, compliance violation | Dry-run mode enforced on first execution; confirmation step for all purge jobs; soft-delete with 30-day recovery window |
-| Incomplete erasure (missed PII in backups/derived data) | GDPR non-compliance, fines | Backup scanning integrated into inventory; `lifecycle_audit_log` tracks all copies; follow-up scan 24h post-erasure |
-| Legal hold conflict with retention purge | Wrongful deletion of evidence | Legal hold API check before every purge; hold flag overrides retention policy; all overrides logged |
-| Cross-service consistency during purge | Partial purge, inconsistent state | Distributed saga pattern with compensating actions; two-phase commit across services |
-| Consent version drift (user consented to old policy) | Invalid consent basis | Versioned consent records; prompt re-consent on policy changes; deny processing until re-consent |
-| DPA template becomes outdated (law changes) | Non-compliant DPA | Versioned templates with expiry dates; automated notification when new template available |
+| accidental data deletion before retention expiry | permanent data loss, compliance violation | dry-run mode enforced on first execution; confirmation step for all purge jobs; soft-delete with 30-day recovery window |
+| incomplete erasure (missed pii in backups/derived data) | gdpr non-compliance, fines | backup scanning integrated into inventory; `lifecycle_audit_log` tracks all copies; follow-up scan 24h post-erasure |
+| legal hold conflict with retention purge | wrongful deletion of evidence | legal hold api check before every purge; hold flag overrides retention policy; all overrides logged |
+| cross-service consistency during purge | partial purge, inconsistent state | distributed saga pattern with compensating actions; two-phase commit across services |
+| consent version drift (user consented to old policy) | invalid consent basis | versioned consent records; prompt re-consent on policy changes; deny processing until re-consent |
+| dpa template becomes outdated (law changes) | non-compliant dpa | versioned templates with expiry dates; automated notification when new template available |

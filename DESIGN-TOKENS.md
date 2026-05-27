@@ -1,54 +1,54 @@
-# Design Tokens — Starter Template
+# design tokens — starter template
 
-A token-based foundation for colors, typography, spacing, radii, and shadows that powers the UI design system. This document describes the token taxonomy, how to consume tokens in code, and how to extend them.
+a token-based foundation for colors, typography, spacing, radii, and shadows that powers the ui design system. this document describes the token taxonomy, how to consume tokens in code, and how to extend them.
 
-## Goals
-- Provide a single source of truth for visual language (colors, typography, spacing, radii, shadows).
-- Expose tokens as both TypeScript modules and CSS variables for broad consumption.
-- Enable rapid theming and branding swaps without touching component code.
+## goals
+• provide a single source of truth for visual language (colors, typography, spacing, radii, shadows).
+• expose tokens as both typescript modules and css variables for broad consumption.
+• enable rapid theming and branding swaps without touching component code.
 
-## Token Taxonomy
+## token taxonomy
 
-- Colors
-  - Semantic surface tokens: surface, surface-2
-  - Text tokens: text, text-secondary
-  - UI chrome: border
-  - Core palette: primary, accent, surface-accent, success, warning, danger, info
-- Typography
-  - fontFamily, fontSizeScale, lineHeightScale, fontWeight
-  - A compact scale (e.g., 12, 14, 16, 20, 24, 32)
-- Spacing
-  - A single spacing scale: 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64
-- Radii
-  - radii: none, small, medium, large, pill
-- Shadows/Elevation
-  - elevation-1, elevation-2, focus-ring
-- Breakpoints
-  - desktop, tablet, mobile
+• colors
+  • semantic surface tokens: surface, surface-2
+  • text tokens: text, text-secondary
+  • ui chrome: border
+  • core palette: primary, accent, surface-accent, success, warning, danger, info
+• typography
+  • fontfamily, fontsizecale, lineheightscale, fontweight
+  • a compact scale (e.g., 12, 14, 16, 20, 24, 32)
+• spacing
+  • a single spacing scale: 0, 4, 8, 12, 16, 20, 24, 32, 40, 48, 64
+• radii
+  • radii: none, small, medium, large, pill
+• shadows/elevation
+  • elevation-1, elevation-2, focus-ring
+• breakpoints
+  • desktop, tablet, mobile
 
-## Token Sources and Formats
+## token sources and formats
 
-- TypeScript modules
-  - src/design-tokens/colors.ts
-  - src/design-tokens/typography.ts
-  - src/design-tokens/space.ts
-  - src/design-tokens/radius.ts
-  - src/design-tokens/shadow.ts
-  - src/design-tokens/breakpoints.ts
-- CSS Variables (CSS-internal theme)
-  - themes.css (or generated at runtime)
-- Optional JSON interchange format
-  - tokens/colors.json, tokens/typography.json, etc.
+• typescript modules
+  • src/design-tokens/colors.ts
+  • src/design-tokens/typography.ts
+  • src/design-tokens/space.ts
+  • src/design-tokens/radius.ts
+  • src/design-tokens/shadow.ts
+  • src/design-tokens/breakpoints.ts
+• css variables (css-internal theme)
+  • themes.css (or generated at runtime)
+• optional json interchange format
+  • tokens/colors.json, tokens/typography.json, etc.
 
-## Token Export Strategy
+## token export strategy
 
-- TS tokens for type-safe imports in components.
-- CSS variables for plain CSS usage and CSS-in-JS fallback.
-- ThemeProvider (React) to bridge TS tokens to components.
+• ts tokens for type-safe imports in components.
+• css variables for plain css usage and css-in-js fallback.
+• themeprovider (react) to bridge ts tokens to components.
 
-## Starter Token Files (Examples)
+## starter token files (examples)
 
-- Example colors.ts
+• example colors.ts
   ```ts
   // src/design-tokens/colors.ts
   export const colors = {
@@ -66,7 +66,7 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
     info: "#58a6ff",
   };
   ```
-- Example typography.ts
+• example typography.ts
   ```ts
   // src/design-tokens/typography.ts
   export const typography = {
@@ -92,7 +92,7 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
     },
   };
   ```
-- Example space.ts
+• example space.ts
   ```ts
   // src/design-tokens/space.ts
   export const space = {
@@ -105,7 +105,7 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
     xxl: 32,
   };
   ```
-- Example breakpoints.ts
+• example breakpoints.ts
   ```ts
   // src/design-tokens/breakpoints.ts
   export const breakpoints = {
@@ -115,15 +115,15 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
   };
   ```
 
-## Token Export Strategy
+## token export strategy
 
-- TS tokens for type-safe imports in components.
-- CSS variables for plain CSS usage and CSS-in-JS fallback.
-- ThemeProvider (React) to bridge TS tokens to components.
+• ts tokens for type-safe imports in components.
+• css variables for plain css usage and css-in-js fallback.
+• themeprovider (react) to bridge ts tokens to components.
 
-## Starter Token Files (Examples)
+## starter token files (examples)
 
-- Example colors.ts
+• example colors.ts
   ```ts
   // src/design-tokens/colors.ts
   export const colors = {
@@ -142,10 +142,10 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
   };
   ```
 
-## ThemeProvider — starter concept
+## themeprovider — starter concept
 
-- Purpose: provide tokens via React context to components.
-- Basic structure (conceptual):
+• purpose: provide tokens via react context to components.
+• basic structure (conceptual):
   ```tsx
   // src/design-system/theme/ThemeProvider.tsx
   import React from 'react';
@@ -167,21 +167,21 @@ A token-based foundation for colors, typography, spacing, radii, and shadows tha
   export const useTheme = () => React.useContext(ThemeContext);
   ```
 
-## Consuming Tokens
+## consuming tokens
 
-- In TS components: import { useTheme } from '.../ThemeProvider' and read theme.colors.primary, etc.
-- In CSS: reference CSS vars like var(--color-primary) if you emit CSS vars from tokens.
+• in ts components: import { useTheme } from '.../themeprovider' and read theme.colors.primary, etc.
+• in css: reference css vars like var(--color-primary) if you emit css vars from tokens.
 
-## Quick Start
+## quick start
 
-- Add tokens to your repo (colors.ts, typography.ts, space.ts, etc.).
-- Wrap your app with ThemeProvider at the root.
-- Start consuming tokens in components.
+• add tokens to your repo (colors.ts, typography.ts, space.ts, etc.).
+• wrap your app with themeprovider at the root.
+• start consuming tokens in components.
 
-## Documentation and Maintenance
-- Update this file whenever you introduce new tokens or token changes.
-- Maintain a changelog for token evolution.
+## documentation and maintenance
+• update this file whenever you introduce new tokens or token changes.
+• maintain a changelog for token evolution.
 
-## Contributing
-- PRs should add token tests (where relevant) and update token docs if needed.
-- Follow the repo’s contribution guidelines.
+## contributing
+• prs should add token tests (where relevant) and update token docs if needed.
+• follow the repo's contribution guidelines.

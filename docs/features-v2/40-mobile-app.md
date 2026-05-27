@@ -1,32 +1,28 @@
-# Feature 40: Mobile App
+# feature 40: mobile app
 
-- **Feature ID:** 40
-- **Primary Service:** New `mobile/` directory
-- **Effort:** Extra Large (11+ PT)
-- **Phase:** Phase 5 (UX, Mobile & Compliance)
-- **Dependencies:** Stable REST API (Phase 1-2), Webhook Event Bus (#13), Push notification infrastructure
+- feature id: 40
+- primary service: new `mobile/` directory
+- effort: extra large (11+ pt)
+- phase: phase 5 (ux, mobile & compliance)
+- dependencies: stable rest api (phase 1-2), webhook event bus (#13), push notification infrastructure
 
----
+## overview
 
-## Overview
+native mobile application (ios & android) for on-the-go server management. provides real-time server monitoring, push notifications for alerts, quick-action toggles (restart, stop, start), a mobile-optimized terminal emulator, and biometric authentication.
 
-Native mobile application (iOS & Android) for on-the-go server management. Provides real-time server monitoring, push notifications for alerts, quick-action toggles (restart, stop, start), a mobile-optimized terminal emulator, and biometric authentication.
+the mobile app targets server administrators and game server owners who need immediate visibility and control from their phone without launching a desktop browser.
 
-The mobile app targets server administrators and game server owners who need immediate visibility and control from their phone without launching a desktop browser.
+### key capabilities
 
-### Key Capabilities
+- dashboard — server list with health status, cpu/ram/disk gauges
+- push notifications — alert on server down, backup complete, high resource usage
+- quick actions — start/stop/restart servers, one-tap ssh keys
+- mobile terminal — optimized terminal emulator with touch-friendly keyboard
+- biometric auth — face id / touch id / fingerprint for app unlock
+- offline support — cached server list, queued actions, offline-first data model
+- deep links — `infrapilot://server/{id}` to open specific server views
 
-- **Dashboard** — Server list with health status, CPU/RAM/disk gauges
-- **Push Notifications** — Alert on server down, backup complete, high resource usage
-- **Quick Actions** — Start/stop/restart servers, one-tap SSH keys
-- **Mobile Terminal** — Optimized terminal emulator with touch-friendly keyboard
-- **Biometric Auth** — Face ID / Touch ID / fingerprint for app unlock
-- **Offline Support** — Cached server list, queued actions, offline-first data model
-- **Deep Links** — `infrapilot://server/{id}` to open specific server views
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -59,37 +55,35 @@ The mobile app targets server administrators and game server owners who need imm
 └────────────────────────────────────────────────────┘
 ```
 
-### Technology Stack
+### technology stack
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| Framework | Flutter 3.x | Single codebase, strong mobile terminal ecosystem, excellent perf |
-| State Management | Riverpod + flutter_bloc | Testable, reactive, scalable |
-| Local DB | drift (SQLite) | Offline-first, type-safe queries, migrations |
-| HTTP Client | Dio | Interceptors, retry, SSL pinning |
-| WebSocket | web_socket_channel | Native WebSocket support |
-| Push Notifications | firebase_messaging + local_notifications | FCM for Android, APNs via FCM proxy |
-| Terminal Emulator | flutter_xterm / terminal_xterm | Full VT100/xterm emulation |
-| Biometrics | local_auth | Platform biometric API |
-| Secure Storage | flutter_secure_storage | Keychain/Keystore for tokens |
-| Deep Linking | app_links + uni_links | Universal links / App Links |
-| CI/CD | Codemagic / GitHub Actions | iOS + Android builds in parallel |
+| layer | technology | rationale |
+|---|---|---|
+| framework | flutter 3.x | single codebase, strong mobile terminal ecosystem, excellent perf |
+| state management | riverpod + flutter_bloc | testable, reactive, scalable |
+| local db | drift (sqlite) | offline-first, type-safe queries, migrations |
+| http client | dio | interceptors, retry, ssl pinning |
+| websocket | web_socket_channel | native websocket support |
+| push notifications | firebase_messaging + local_notifications | fcm for android, apns via fcm proxy |
+| terminal emulator | flutter_xterm / terminal_xterm | full vt100/xterm emulation |
+| biometrics | local_auth | platform biometric api |
+| secure storage | flutter_secure_storage | keychain/keystore for tokens |
+| deep linking | app_links + uni_links | universal links / app links |
+| ci/cd | codemagic / github actions | ios + android builds in parallel |
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: foundation (3 pt)
 
-### Phase 1: Foundation (3 PT)
+| step | description | deliverables |
+|---|---|---|
+| 1.1 | project scaffolding | flutter project, folder structure, ci/cd pipeline |
+| 1.2 | api client layer | dio-based rest client with auth token refresh, error handling |
+| 1.3 | state management setup | riverpod providers, app state models, repository pattern |
+| 1.4 | local database | drift schema for cached servers, users, settings |
+| 1.5 | navigation shell | bottom tab navigation (dashboard, servers, terminal, settings) |
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 1.1 | Project scaffolding | Flutter project, folder structure, CI/CD pipeline |
-| 1.2 | API client layer | Dio-based REST client with auth token refresh, error handling |
-| 1.3 | State management setup | Riverpod providers, app state models, repository pattern |
-| 1.4 | Local database | drift schema for cached servers, users, settings |
-| 1.5 | Navigation shell | Bottom tab navigation (Dashboard, Servers, Terminal, Settings) |
-
-**Folder structure:**
+**folder structure:**
 
 ```
 mobile/
@@ -120,17 +114,17 @@ mobile/
 └── README.md
 ```
 
-### Phase 2: Authentication & Server Management (3 PT)
+### phase 2: authentication & server management (3 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 2.1 | Login flow | API token auth, OAuth2 PKCE flow, session persistence |
-| 2.2 | Biometric unlock | local_auth integration, app lock screen |
-| 2.3 | Server list | Paginated list with search, sort, status indicators |
-| 2.4 | Server detail view | Metrics gauges, recent events, quick actions |
-| 2.5 | Server control | Start/stop/restart with confirmation, action history |
+| step | description | deliverables |
+|---|---|---|
+| 2.1 | login flow | api token auth, oauth2 pkce flow, session persistence |
+| 2.2 | biometric unlock | local_auth integration, app lock screen |
+| 2.3 | server list | paginated list with search, sort, status indicators |
+| 2.4 | server detail view | metrics gauges, recent events, quick actions |
+| 2.5 | server control | start/stop/restart with confirmation, action history |
 
-**API Endpoints consumed:**
+**api endpoints consumed:**
 
 ```yaml
 # Core mobile API endpoints
@@ -173,16 +167,16 @@ endpoints:
       frames: [ { cpu, ram, disk, net_rx, net_tx, timestamp } ]
 ```
 
-### Phase 3: Push Notifications (2 PT)
+### phase 3: push notifications (2 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 3.1 | FCM registration | Token registration on login, refresh on token change |
-| 3.2 | Notification handlers | Foreground (in-app banner), background (system tray), data-only (silent sync) |
-| 3.3 | Notification preferences | Per-category toggle (alerts, backups, deployments), quiet hours |
-| 3.4 | Deep link routing | Parse notification payload → navigate to relevant screen |
+| step | description | deliverables |
+|---|---|---|
+| 3.1 | fcm registration | token registration on login, refresh on token change |
+| 3.2 | notification handlers | foreground (in-app banner), background (system tray), data-only (silent sync) |
+| 3.3 | notification preferences | per-category toggle (alerts, backups, deployments), quiet hours |
+| 3.4 | deep link routing | parse notification payload → navigate to relevant screen |
 
-**Notification payload format:**
+**notification payload format:**
 
 ```json
 {
@@ -201,16 +195,16 @@ endpoints:
 }
 ```
 
-### Phase 4: Mobile Terminal (2 PT)
+### phase 4: mobile terminal (2 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 4.1 | Terminal widget | xterm.js-based Flutter terminal emulator widget |
-| 4.2 | SSH/WebSocket relay | Connect via REST API WebSocket proxy, not direct SSH |
-| 4.3 | Touch keyboard | Custom toolbar: Tab, Ctrl, Esc, arrow keys, function keys |
-| 4.4 | Session persistence | Restore terminal session, scrollback buffer caching |
+| step | description | deliverables |
+|---|---|---|
+| 4.1 | terminal widget | xterm.js-based flutter terminal emulator widget |
+| 4.2 | ssh/websocket relay | connect via rest api websocket proxy, not direct ssh |
+| 4.3 | touch keyboard | custom toolbar: tab, ctrl, esc, arrow keys, function keys |
+| 4.4 | session persistence | restore terminal session, scrollback buffer caching |
 
-**Terminal architecture:**
+**terminal architecture:**
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -233,18 +227,16 @@ endpoints:
 └─────────────────────────────────────────────┘
 ```
 
-### Phase 5: Offline Support & Polish (1 PT)
+### phase 5: offline support & polish (1 pt)
 
-| Step | Description | Deliverables |
-|------|-------------|-------------|
-| 5.1 | Offline-first data model | Read from local DB, sync in background on connectivity |
-| 5.2 | Action queue | Queue server actions when offline, execute on reconnect |
-| 5.3 | Connectivity awareness | Banner when offline, graceful degradation |
-| 5.4 | Error states | Empty states, retry widgets, timeout handling |
+| step | description | deliverables |
+|---|---|---|
+| 5.1 | offline-first data model | read from local db, sync in background on connectivity |
+| 5.2 | action queue | queue server actions when offline, execute on reconnect |
+| 5.3 | connectivity awareness | banner when offline, graceful degradation |
+| 5.4 | error states | empty states, retry widgets, timeout handling |
 
----
-
-## Data Model
+## data model
 
 ```yaml
 # Core mobile-local data models (drift/SQLite)
@@ -290,13 +282,11 @@ ActionQueue:
     error_message: TEXT
 ```
 
----
+## api design (backend additions)
 
-## API Design (Backend Additions)
+the mobile app consumes the existing rest api but requires several new/adapted endpoints:
 
-The mobile app consumes the existing REST API but requires several new/adapted endpoints:
-
-### New Endpoints
+### new endpoints
 
 ```yaml
 # Push notification registration
@@ -332,20 +322,16 @@ POST /api/v2/auth/biometric-login
   Response: { access_token, refresh_token }
 ```
 
----
+## service assignments
 
-## Service Assignments
+| service | role | ownership |
+|---|---|---|
+| new: `mobile/` | flutter app codebase, builds, app store deployment | mobile team (2-3 devs) |
+| integration service | push notification fcm/apns proxy, terminal ws relay, device registration api | backend team |
+| management panel | shared api client types & openapi spec; no mobile ui changes | shared |
+| service core | no direct changes; mobile relies on existing core api | — |
 
-| Service | Role | Ownership |
-|---------|------|-----------|
-| **New: `mobile/`** | Flutter app codebase, builds, app store deployment | Mobile team (2-3 devs) |
-| **Integration Service** | Push notification FCM/APNs proxy, terminal WS relay, device registration API | Backend team |
-| **Management Panel** | Shared API client types & OpenAPI spec; no mobile UI changes | Shared |
-| **Service Core** | No direct changes; mobile relies on existing core API | — |
-
----
-
-## Push Notification Architecture
+## push notification architecture
 
 ```
 ┌──────────┐    FCM/APNs    ┌────────────┐   HTTPS   ┌──────────────────┐
@@ -356,67 +342,59 @@ POST /api/v2/auth/biometric-login
        ▲                                             │  │ Event      │   │
        │ WebSocket (app open)                        │  │ Router     │   │
        └─────────────────────────────────────────────│  │ (webhook)  │   │
-                                                     │  └────────────┘   │
-                                                     │         ▲         │
-                                                     │    ┌───────────┐  │
-                                                     │    │ Event Bus │  │
-                                                     │    │ (#13)     │  │
-                                                     │    └───────────┘  │
-                                                     └──────────────────┘
+                                                      │  └────────────┘   │
+                                                      │         ▲         │
+                                                      │    ┌───────────┐  │
+                                                      │    │ Event Bus │  │
+                                                      │    │ (#13)     │  │
+                                                      │    └───────────┘  │
+                                                      └──────────────────┘
 ```
 
----
+## offline-first strategy
 
-## Offline-First Strategy
+| scenario | behavior |
+|---|---|
+| no connectivity at launch | show cached server list with "offline" badge, stale data indicator |
+| action while offline | queue action in local db, show "pending" indicator, execute on reconnect |
+| connectivity restored | sync pending actions, refresh server data, clear stale indicators |
+| partial connectivity | retry with exponential backoff, show per-item error states |
+| token expired offline | store refresh token securely, re-auth on reconnect transparently |
 
-| Scenario | Behavior |
-|----------|----------|
-| No connectivity at launch | Show cached server list with "offline" badge, stale data indicator |
-| Action while offline | Queue action in local DB, show "pending" indicator, execute on reconnect |
-| Connectivity restored | Sync pending actions, refresh server data, clear stale indicators |
-| Partial connectivity | Retry with exponential backoff, show per-item error states |
-| Token expired offline | Store refresh token securely, re-auth on reconnect transparently |
+## mobile terminal ux
 
----
+the mobile terminal requires careful ux decisions:
 
-## Mobile Terminal UX
+- gesture handling — pinch-to-zoom font size, swipe to scroll buffer, long-press for paste
+- touch keyboard toolbar — persistent bottom bar with: ctrl, tab, esc, arrow keys, function keys (f1-f12), clipboard paste
+- color scheme — match desktop terminal theme, optionally customisable
+- session timeout — auto-disconnect after 15 min inactivity, reconnect prompt
+- buffer limit — 10,000 line scrollback, overflow truncation with "buffer full" indicator
 
-The mobile terminal requires careful UX decisions:
+## security considerations
 
-- **Gesture handling** — Pinch-to-zoom font size, swipe to scroll buffer, long-press for paste
-- **Touch keyboard toolbar** — Persistent bottom bar with: Ctrl, Tab, Esc, Arrow keys, Function keys (F1-F12), clipboard paste
-- **Color scheme** — Match desktop terminal theme, optionally customisable
-- **Session timeout** — Auto-disconnect after 15 min inactivity, reconnect prompt
-- **Buffer limit** — 10,000 line scrollback, overflow truncation with "buffer full" indicator
+| concern | mitigation |
+|---|---|
+| token theft | device-bound biometric token + short-lived access tokens |
+| man-in-the-middle | certificate pinning (dio ssl pinning), wss required |
+| local data exposure | all cached data encrypted with flutter_secure_storage |
+| push notification spoofing | verify fcm/apns signature server-side |
+| terminal session hijack | one-time terminal token, scoped to server, expires on disconnect |
 
----
+## effort estimate: extra large (11+ pt)
 
-## Security Considerations
+| phase | pt | dependencies |
+|---|---|---|
+| phase 1: foundation | 3 | — |
+| phase 2: auth & server management | 3 | phase 1, stable rest api |
+| phase 3: push notifications | 2 | phase 2, webhook event bus (#13) |
+| phase 4: mobile terminal | 2 | phase 2, terminal proxy service |
+| phase 5: offline & polish | 1 | phase 2-4 |
+| app store submission & ci/cd | 1 | all phases |
+| total | **12** | |
 
-| Concern | Mitigation |
-|---------|-----------|
-| Token theft | Device-bound biometric token + short-lived access tokens |
-| Man-in-the-middle | Certificate pinning (Dio SSL pinning), WSS required |
-| Local data exposure | All cached data encrypted with flutter_secure_storage |
-| Push notification spoofing | Verify FCM/APNs signature server-side |
-| Terminal session hijack | One-time terminal token, scoped to server, expires on disconnect |
+### staffing recommendation
 
----
-
-## Effort Estimate: Extra Large (11+ PT)
-
-| Phase | PT | Dependencies |
-|-------|----|-------------|
-| Phase 1: Foundation | 3 | — |
-| Phase 2: Auth & Server Management | 3 | Phase 1, Stable REST API |
-| Phase 3: Push Notifications | 2 | Phase 2, Webhook Event Bus (#13) |
-| Phase 4: Mobile Terminal | 2 | Phase 2, Terminal Proxy Service |
-| Phase 5: Offline & Polish | 1 | Phase 2-4 |
-| App Store submission & CI/CD | 1 | All phases |
-| **Total** | **12** | |
-
-### Staffing Recommendation
-
-- **2 Senior Flutter Developers** — Full-time, Phases 1-5
-- **1 Backend Developer** — 50% time, push notification & terminal proxy endpoints
-- **1 QA Engineer** — 50% time, device matrix testing, E2E test automation
+- 2 senior flutter developers — full-time, phases 1-5
+- 1 backend developer — 50% time, push notification & terminal proxy endpoints
+- 1 qa engineer — 50% time, device matrix testing, e2e test automation

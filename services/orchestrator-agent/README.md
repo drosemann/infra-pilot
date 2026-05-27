@@ -1,72 +1,72 @@
-# Infra Pilot - Orchestrator Agent
+# infra pilot - orchestrator agent
 
-## Features
+## features
 
-### Core VPS Management
-- Create, start, stop, restart, delete VPS instances via Docker SDK
-- Resource monitoring with MySQL persistence
-- Pricing and billing system with player_economy integration
-- Monthly billing cycle with grace periods
+### core vps management
+- create, start, stop, restart, delete vps instances via docker sdk
+- resource monitoring with mysql persistence
+- pricing and billing system with player_economy integration
+- monthly billing cycle with grace periods
 
-### VPS Bot Features
+### vps bot features
 
-#### Resource Management
-- **Resource usage graphs** - `/vpsgraph` - Time-series graphs (CPU, RAM, disk, network) using matplotlib
-- **Server health checks** - `/health`, `/healthcreate` - Ping, port, process, API health monitoring with alerts
-- **Auto scaling** - `/scalerule`, `/scaleset` - Automatic resource scaling based on usage thresholds
-- **Backup rotation** - `/backup`, `/backuplist`, `/restore` - Configurable retention (daily/weekly/monthly)
-- **Snapshots** - `/snapshotcreate`, `/snapshotlist`, `/snapshotrestore` - Point-in-time snapshots
-- **Clone system** - `/clone` - Clone VPS with OS + data via Docker commit
-- **Server migration** - `/migrate` - Migrate VPS between hosts (live/cold)
+#### resource management
+- resource usage graphs - `/vpsgraph` - time-series graphs (cpu, ram, disk, network) using matplotlib
+- server health checks - `/health`, `/healthcreate` - ping, port, process, api health monitoring with alerts
+- auto scaling - `/scalerule`, `/scaleset` - automatic resource scaling based on usage thresholds
+- backup rotation - `/backup`, `/backuplist`, `/restore` - configurable retention (daily/weekly/monthly)
+- snapshots - `/snapshotcreate`, `/snapshotlist`, `/snapshotrestore` - point-in-time snapshots
+- clone system - `/clone` - clone vps with os + data via docker commit
+- server migration - `/migrate` - migrate vps between hosts (live/cold)
 
-#### Advanced Features
-- **Cost prediction** - `/costpredict` - Analyze usage trends, predict next month costs
-- **Performance optimizer** - `/optimize`, `/optimizeapply` - Suggest CPU/RAM/disk tuning
-- **Resource pools** - `/resourcepoolcreate/delete/list/add` - Track oversubscription ratios
-- **Network monitoring** - `/networkstats`, `/networklatency` - Bandwidth tracking, latency monitoring
-- **Server templates** - `/templatecreate/apply/list` - Define VPS templates with versioning
+#### advanced features
+- cost prediction - `/costpredict` - analyze usage trends, predict next month costs
+- performance optimizer - `/optimize`, `/optimizeapply` - suggest cpu/ram/disk tuning
+- resource pools - `/resourcepoolcreate/delete/list/add` - track oversubscription ratios
+- network monitoring - `/networkstats`, `/networklatency` - bandwidth tracking, latency monitoring
+- server templates - `/templatecreate/apply/list` - define vps templates with versioning
 
-#### Monitoring & Alerts
-- **Resource alerts** - `/alertcreate`, `/alertlist` - Configurable alert channels (DM/webhook)
-- **Performance benchmarking** - `/benchmark` - CPU, disk, network benchmarks
-- **Recovery system** - `/recoveryplaybookcreate/list`, `/recoveryrun`, `/recoverystatus` - Automated recovery playbooks
-- **Troubleshooting** - `/troubleshoot` - Common issue diagnosis
+#### monitoring & alerts
+- resource alerts - `/alertcreate`, `/alertlist` - configurable alert channels (dm/webhook)
+- performance benchmarking - `/benchmark` - cpu, disk, network benchmarks
+- recovery system - `/recoveryplaybookcreate/list`, `/recoveryrun`, `/recoverystatus` - automated recovery playbooks
+- troubleshooting - `/troubleshoot` - common issue diagnosis
 
-#### Admin & Cleanup
-- **Security audit** - `/securityaudit` - SSH config, open ports, capabilities, privileges
-- **Update management** - `/updatecheck`, `/updateapply` - OS package update check/apply
-- **Resource cleanup** - `/cleanupdryrun`, `/cleanuprun` - Clean Docker images, volumes, logs
-- **Quota enforcement** - `/quotaset`, `/quotaget` - Per-user CPU/RAM/disk/bandwidth limits
+#### admin & cleanup
+- security audit - `/securityaudit` - ssh config, open ports, capabilities, privileges
+- update management - `/updatecheck`, `/updateapply` - os package update check/apply
+- resource cleanup - `/cleanupdryrun`, `/cleanuprun` - clean docker images, volumes, logs
+- quota enforcement - `/quotaset`, `/quotaget` - per-user cpu/ram/disk/bandwidth limits
 
-#### Networking & DNS
-- **Load balancing** - `/lbcreate/add/remove/list` - LB pools with health check integration
-- **DNS management** - `/dnsadd/remove/list` - DNS record CRUD with Docker IP resolution
-- **SSL certificates** - `/sslrequest/status/renew` - Let's Encrypt auto-renewal tracking
-- **Cost optimization** - `/costoptimize` - Analyze usage vs allocation, suggest savings
-- **Traffic analysis** - `/traffic` - Bandwidth breakdown, peak analysis
+#### networking & dns
+- load balancing - `/lbcreate/add/remove/list` - lb pools with health check integration
+- dns management - `/dnsadd/remove/list` - dns record crud with docker ip resolution
+- ssl certificates - `/sslrequest/status/renew` - let's encrypt auto-renewal tracking
+- cost optimization - `/costoptimize` - analyze usage vs allocation, suggest savings
+- traffic analysis - `/traffic` - bandwidth breakdown, peak analysis
 
-#### Database Management
-- **MySQL provisioning** - `/database create/list/delete/info` - On-demand MySQL container provisioning with automatic configuration
+#### database management
+- mysql provisioning - `/database create/list/delete/info` - on-demand mysql container provisioning with automatic configuration
 
-#### Git Deployment
-- **Git deployment** - `/deploy create/list/delete/toggle/logs` - Automated deployments from GitHub webhooks
-- **Webhook server** - Listens on port 8500 for GitHub push events, triggers auto-deploy
+#### git deployment
+- git deployment - `/deploy create/list/delete/toggle/logs` - automated deployments from github webhooks
+- webhook server - listens on port 8500 for github push events, triggers auto-deploy
 
-#### Task Scheduler
-- **Cron scheduler** - `/cron` - Cron-based scheduled task execution (restart/command/backup) with 30s check interval
+#### task scheduler
+- cron scheduler - `/cron` - cron-based scheduled task execution (restart/command/backup) with 30s check interval
 
-#### Modpack Installer
-- **Modpack search** - `/modpack search` - Search modpacks from CurseForge and Modrinth
-- **Modpack install** - `/modpack install` - One-click modpack installation with dependency resolution
+#### modpack installer
+- modpack search - `/modpack search` - search modpacks from curseforge and modrinth
+- modpack install - `/modpack install` - one-click modpack installation with dependency resolution
 
-#### Prepaid Billing
-- **Balance check** - `/balance` - View current credit balance
-- **Balance top-up** - `/balance add` - Add credits to user balance
-- **Transaction history** - `/balance history` - View transaction history
-- **Cost estimation** - `/balance cost` - Calculate estimated costs for a server configuration
-- **Hourly billing loop** - Background task that deducts usage costs every hour
+#### prepaid billing
+- balance check - `/balance` - view current credit balance
+- balance top-up - `/balance add` - add credits to user balance
+- transaction history - `/balance history` - view transaction history
+- cost estimation - `/balance cost` - calculate estimated costs for a server configuration
+- hourly billing loop - background task that deducts usage costs every hour
 
-## Quick Start
+## quick start
 
 ```bash
 pip install -r requirements.txt
@@ -74,26 +74,26 @@ docker build -t ubuntu-22.04-with-tmate .
 python main.py
 ```
 
-## Configuration
+## configuration
 
-All configurable values are in `config.py` (loaded via environment variables):
-- `DISCORD_BOT_TOKEN` - Discord bot token
-- `DB_HOST/USER/PASSWORD/NAME` - MySQL connection
-- `WHITELIST_IDS` - Admin user IDs (comma-separated)
-- `CUTTLY_API_KEY` - URL shortening API key
-- `PUBLIC_IP` - Server public IP
-- `SSL_EMAIL` - Email for Let's Encrypt
-- `DISCORD_TOKEN_VALIDATION` - Enable/disable Discord token validation on startup
+all configurable values are in `config.py` (loaded via environment variables):
+- `discord_bot_token` - discord bot token
+- `db_host/user/password/name` - mysql connection
+- `whitelist_ids` - admin user ids (comma-separated)
+- `cuttly_api_key` - url shortening api key
+- `public_ip` - server public ip
+- `ssl_email` - email for let's encrypt
+- `discord_token_validation` - enable/disable discord token validation on startup
 
-## Architecture
+## architecture
 
-- `main.py` - Unified entry point loading all cogs
-- `config.py` - Central configuration
-- `vps_manager.py` - Docker SDK-based VPS management
-- `integration.py` - MySQL and REST integration helpers
-- `resource_monitor.py` - System/container stats collection
-- `cogs/*.py` - Discord command cogs (35 total)
+- `main.py` - unified entry point loading all cogs
+- `config.py` - central configuration
+- `vps_manager.py` - docker sdk-based vps management
+- `integration.py` - mysql and rest integration helpers
+- `resource_monitor.py` - system/container stats collection
+- `cogs/*.py` - discord command cogs (35 total)
 
-## Database Tables
+## database tables
 
-The system uses MySQL with tables for: player_economy, economy_transactions, vps_statistics, vps_peak_statistics, vps_containers, health_checks, health_check_results, backup_rotation, snapshots, dns_records, ssl_certificates, scaling_rules, resource_quotas, load_balancer_pools, lb_pool_members, recovery_playbooks, recovery_executions, templates, alerts.
+the system uses mysql with tables for: player_economy, economy_transactions, vps_statistics, vps_peak_statistics, vps_containers, health_checks, health_check_results, backup_rotation, snapshots, dns_records, ssl_certificates, scaling_rules, resource_quotas, load_balancer_pools, lb_pool_members, recovery_playbooks, recovery_executions, templates, alerts.

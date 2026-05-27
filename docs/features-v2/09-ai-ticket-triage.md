@@ -1,38 +1,34 @@
-# Feature 9: AI Ticket Triage
+# ai ticket triage
 
-| Field | Value |
+| field | value |
 |-------|-------|
-| **ID** | F-009 |
-| **Name** | AI Ticket Triage |
-| **Category** | AI & Intelligence |
-| **Primary Service** | Integration Service |
-| **Effort** | Medium (4-6 PT) |
-| **Dependencies** | Feature 13 (Webhook Event Bus), Knowledge Base (Feature 32) |
-| **Phase** | Phase 1 |
+| id | f-009 |
+| name | ai ticket triage |
+| category | ai & intelligence |
+| primary service | integration service |
+| effort | medium (4-6 pt) |
+| dependencies | feature 13 (webhook event bus), knowledge base (feature 32) |
+| phase | phase 1 |
 
----
+## overview
 
-## Overview
+the ai ticket triage system automatically classifies incoming support tickets by urgency, category, and affected service. it searches the knowledge base for matching solutions, scores confidence levels, and routes the ticket to the appropriate team -- all before a human ever reads it. over time, the system learns from human feedback to improve classification accuracy.
 
-The AI Ticket Triage system automatically classifies incoming support tickets by urgency, category, and affected service. It searches the knowledge base for matching solutions, scores confidence levels, and routes the ticket to the appropriate team — all before a human ever reads it. Over time, the system learns from human feedback to improve classification accuracy.
+### goals
 
-### Goals
+- classify 90%+ of incoming tickets within 5 seconds
+- auto-suggest solutions from knowledge base with >=80% match rate
+- route tickets to correct team with 95%+ accuracy
+- reduce first-response time from hours to seconds
 
-- Classify 90%+ of incoming tickets within 5 seconds
-- Auto-suggest solutions from knowledge base with ≥80% match rate
-- Route tickets to correct team with 95%+ accuracy
-- Reduce first-response time from hours to seconds
+### non-goals
 
-### Non-Goals
+- not a full ticketing system (integrates with existing platforms)
+- does not auto-close or auto-resolve tickets (human-in-the-loop)
+- not a chatbot -- does not engage in conversational support
+- does not replace tier-1 support for complex issues
 
-- Not a full ticketing system (integrates with existing platforms)
-- Does not auto-close or auto-resolve tickets (human-in-the-loop)
-- Not a chatbot — does not engage in conversational support
-- Does not replace tier-1 support for complex issues
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -64,11 +60,11 @@ The AI Ticket Triage system automatically classifies incoming support tickets by
 │  │  │ Category         │  │ Urgency Score    │  │ Affected   │ │      │
 │  │  │ Classifier       │  │ Calculator       │  │ Service    │ │      │
 │  │  │                  │  │                  │  │ Detector   │ │      │
-│  │  │ • Text model     │  │ • Keywords       │  │ • Entity   │ │      │
-│  │  │ • Embedding      │  │ • Sentiment      │  │   extract  │ │      │
-│  │  │   similarity     │  │ • Customer tier  │  │ • Config   │ │      │
-│  │  │ • LLM few-shot   │  │ • Repetition     │  │   refs     │ │      │
-│  │  └────────┬─────────┘  │ • Escalation     │  │ • Log refs │ │      │
+│  │  │ - Text model     │  │ - Keywords       │  │ - Entity   │ │      │
+│  │  │ - Embedding      │  │ - Sentiment      │  │   extract  │ │      │
+│  │  │   similarity     │  │ - Customer tier  │  │ - Config   │ │      │
+│  │  │ - LLM few-shot   │  │ - Repetition     │  │   refs     │ │      │
+│  │  └────────┬─────────┘  │ - Escalation     │  │ - Log refs │ │      │
 │  │           │            │   history        │  └────────────┘ │      │
 │  │           │            └────────┬─────────┘                  │      │
 │  │           ▼                    ▼                             │      │
@@ -89,9 +85,9 @@ The AI Ticket Triage system automatically classifies incoming support tickets by
 │  │  ┌──────────────────┐  ┌──────────────────┐  ┌────────────┐ │      │
 │  │  │ Team Router      │  │ Escalation       │  │ Auto-Reply │ │      │
 │  │  │                  │  │ Engine           │  │ Generator  │ │      │
-│  │  │ • Skill-based    │  │ • SLA timeline   │  │ • Solution  │ │      │
-│  │  │ • Round-robin    │  │ • Severity map   │  │   snippet  │ │      │
-│  │  │ • Capacity-aware │  │ • Paging rules   │  │ • KB link  │ │      │
+│  │  │ - Skill-based    │  │ - SLA timeline   │  │ - Solution  │ │      │
+│  │  │ - Round-robin    │  │ - Severity map   │  │   snippet  │ │      │
+│  │  │ - Capacity-aware │  │ - Paging rules   │  │ - KB link  │ │      │
 │  │  └────────┬─────────┘  └────────┬─────────┘  └──────┬─────┘ │      │
 │  └───────────┼─────────────────────┼────────────────────┼────────┘      │
 │              │                     │                    │               │
@@ -101,11 +97,11 @@ The AI Ticket Triage system automatically classifies incoming support tickets by
 ┌──────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
 │ Ticket Platform  │  │ Discord / Slack      │  │ Management Panel     │
 │ (updated with    │  │ (team notification)  │  │ (Ticket dashboard)   │
-│  classification) │  │                      │  │                      │
+│  classification)  │  │                      │  │                      │
 └──────────────────┘  └──────────────────────┘  └──────────────────────┘
 ```
 
-### Processing Flow
+### processing flow
 
 ```
 New Ticket ──► Normalize to unified schema
@@ -113,7 +109,7 @@ New Ticket ──► Normalize to unified schema
                   ▼
              Deduplication check
                   │
-                  ├──► Exact/close match found → Link to existing ticket
+                  ├──► Exact/close match found -> Link to existing ticket
                   │
                   ▼
              Enrich (fetch user tier, server info, recent activity)
@@ -121,9 +117,9 @@ New Ticket ──► Normalize to unified schema
                   ▼
              Classification Pipeline (parallel)
                   │
-                  ├──► Category → "performance", "security", "billing", etc.
-                  ├──► Urgency → 1-10 score
-                  ├──► Affected service → "minecraft", "proxy", "backup", etc.
+                  ├──► Category -> "performance", "security", "billing", etc.
+                  ├──► Urgency -> 1-10 score
+                  ├──► Affected service -> "minecraft", "proxy", "backup", etc.
                   │
                   ▼
              Knowledge Base Search
@@ -141,88 +137,86 @@ New Ticket ──► Normalize to unified schema
              Update external ticket system + notify team
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: ingestion & normalization (week 1, 1.0 pt)
 
-### Phase 1: Ingestion & Normalization (Week 1, 1.0 PT)
+1. **unified ticket schema**
+   - normalize fields from zendesk, freshdesk, discord, email, panel form
+   - store: subject, body, attachments, user info, metadata, custom fields
 
-1. **Unified Ticket Schema**
-   - Normalize fields from Zendesk, Freshdesk, Discord, email, Panel form
-   - Store: subject, body, attachments, user info, metadata, custom fields
+2. **ingestion adapters**
+   - webhook receiver for each platform
+   - email ingestion via imap/pop3
+   - discord bot command (`/ticket` -> creates ticket via webhook)
 
-2. **Ingestion Adapters**
-   - Webhook receiver for each platform
-   - Email ingestion via IMAP/POP3
-   - Discord bot command (`/ticket` → creates ticket via webhook)
+3. **deduplication engine**
+   - exact body hash matching
+   - near-duplicate detection via text similarity (cosine >0.9)
+   - customer + subject + timeframe grouping
 
-3. **Deduplication Engine**
-   - Exact body hash matching
-   - Near-duplicate detection via text similarity (cosine >0.9)
-   - Customer + subject + timeframe grouping
+4. **enrichment layer**
+   - fetch customer tier, server assignments, recent changes
+   - pull recent alerts/incidents for affected servers
+   - check open tickets from same customer
 
-4. **Enrichment Layer**
-   - Fetch customer tier, server assignments, recent changes
-   - Pull recent alerts/incidents for affected servers
-   - Check open tickets from same customer
+### phase 2: classification pipeline (week 1-2, 2.0 pt)
 
-### Phase 2: Classification Pipeline (Week 1-2, 2.0 PT)
-
-1. **Category Classifier**
-   - ML model (fine-tuned BERT or DistilBERT)
+1. **category classifier**
+   - ml model (fine-tuned bert or distilbert)
    - 12 default categories (expandable):
-     - Performance / Lag
-     - Server Crash
-     - Connection Issue
-     - Plugin / Mod Problem
-     - Billing / Invoice
-     - Account / Authentication
-     - Backup / Restore
-     - Security / Compromise
-     - Configuration Help
-     - World / Data Issue
-     - Feature Request
-     - Other
-   - Confidence threshold: 0.70 for auto-classify, else queue for manual
+     - performance / lag
+     - server crash
+     - connection issue
+     - plugin / mod problem
+     - billing / invoice
+     - account / authentication
+     - backup / restore
+     - security / compromise
+     - configuration help
+     - world / data issue
+     - feature request
+     - other
+   - confidence threshold: 0.70 for auto-classify, else queue for manual
 
-2. **Urgency Score Calculator**
-   - Weighted scoring algorithm:
+2. **urgency score calculator**
+   - weighted scoring algorithm:
 
    | Factor | Weight | Description |
    |--------|--------|-------------|
-   | Keywords | 0.30 | "crash", "down", "emergency", "lost data" → +3 |
-   | Sentiment | 0.15 | Negative sentiment → +1 to +3 |
-   | Customer tier | 0.15 | Enterprise tier → +1, VIP → +2 |
-   | Repetition | 0.10 | Same issue 3+ times → +2 |
-   | Escalation history | 0.10 | Previously escalated → +1 |
-   | Affected scope | 0.10 | "all players" vs "my" → +0 to +2 |
-   | Server status | 0.10 | Server currently down → +3 |
+   | Keywords | 0.30 | "crash", "down", "emergency", "lost data" -> +3 |
+   | Sentiment | 0.15 | Negative sentiment -> +1 to +3 |
+   | Customer tier | 0.15 | Enterprise tier -> +1, VIP -> +2 |
+   | Repetition | 0.10 | Same issue 3+ times -> +2 |
+   | Escalation history | 0.10 | Previously escalated -> +1 |
+   | Affected scope | 0.10 | "all players" vs "my" -> +0 to +2 |
+   | Server status | 0.10 | Server currently down -> +3 |
 
-   - Score 1-10: 1-3 (low), 4-6 (medium), 7-8 (high), 9-10 (critical)
+   - score 1-10: 1-3 (low), 4-6 (medium), 7-8 (high), 9-10 (critical)
 
-3. **Affected Service Detector**
-   - Entity extraction from ticket text
-   - Server name patterns, service keywords
-   - Model fine-tuned on Minecraft server terminology
+3. **affected service detector**
+   - entity extraction from ticket text
+   - server name patterns, service keywords
+   - model fine-tuned on minecraft server terminology
 
-### Phase 3: Knowledge Base Matching & Routing (Week 2-3, 1.5 PT)
+### phase 3: knowledge base matching & routing (week 2-3, 1.5 pt)
 
-1. **Knowledge Base Matcher**
-   - Dual retrieval: BM25 (keyword) + Vector (semantic)
-   - Re-ranking with cross-encoder model
+1. **knowledge base matcher**
+   - dual retrieval: bm25 (keyword) + vector (semantic)
+   - re-ranking with cross-encoder model
    - 3 result tiers:
-     - Tier 1: Score ≥0.90 → Direct match, auto-suggest
-     - Tier 2: Score ≥0.70 → Suggest with confidence note
-     - Tier 3: Score <0.70 → No auto-suggestion
+     - tier 1: score >=0.90 -> direct match, auto-suggest
+     - tier 2: score >=0.70 -> suggest with confidence note
+     - tier 3: score <0.70 -> no auto-suggestion
 
-2. **Auto-Reply Generator**
-   - If KB match confidence ≥0.85:
-     - Generate reply with KB article title, link, and relevant excerpt
-     - Add "Did this solve your problem?" buttons
-   - If urgency ≥8: Skip auto-reply, immediately escalate
+2. **auto-reply generator**
+   - if kb match confidence >=0.85:
+     - generate reply with kb article title, link, and relevant excerpt
+     - add "did this solve your problem?" buttons
+   - if urgency >=8: skip auto-reply, immediately escalate
 
-3. **Routing Engine**
-   - Skills-based routing matrix:
+3. **routing engine**
+   - skills-based routing matrix:
 
    | Category | Primary Team | Secondary Team |
    |----------|-------------|----------------|
@@ -237,35 +231,33 @@ New Ticket ──► Normalize to unified schema
    | Configuration | Game Ops | Customer Success |
    | World/Data | Game Ops | Infrastructure |
 
-   - Round-robin within team
-   - Capacity-aware routing (avoid overloaded agents)
+   - round-robin within team
+   - capacity-aware routing (avoid overloaded agents)
 
-### Phase 4: Feedback Loop & Analytics (Week 3-4, 1.0 PT)
+### phase 4: feedback loop & analytics (week 3-4, 1.0 pt)
 
-1. **Human Feedback Collection**
-   - "Was this classification correct?" buttons in Panel
-   - Agent re-classification audit trail
-   - Weekly accuracy reports
+1. **human feedback collection**
+   - "was this classification correct?" buttons in panel
+   - agent re-classification audit trail
+   - weekly accuracy reports
 
-2. **Model Retraining Pipeline**
-   - Weekly fine-tuning on corrected classifications
-   - A/B testing for model versions
-   - Drift detection (accuracy drop >5% triggers retrain)
+2. **model retraining pipeline**
+   - weekly fine-tuning on corrected classifications
+   - a/b testing for model versions
+   - drift detection (accuracy drop >5% triggers retrain)
 
-3. **Analytics Dashboard**
-   - Classification accuracy over time
-   - Auto-suggestion acceptance rate
-   - Average time-to-classify
-   - Backlog by category/urgency
-   - Team workload distribution
+3. **analytics dashboard**
+   - classification accuracy over time
+   - auto-suggestion acceptance rate
+   - average time-to-classify
+   - backlog by category/urgency
+   - team workload distribution
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
-
-All endpoints are prefixed with `/api/v2/ticket-triage`.
+all endpoints are prefixed with `/api/v2/ticket-triage`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -280,7 +272,7 @@ All endpoints are prefixed with `/api/v2/ticket-triage`.
 | `GET`  | `/stats` | Classification accuracy & performance stats |
 | `GET`  | `/routing/matrix` | Get current routing matrix |
 
-### Request/Response Examples
+### request/response examples
 
 **POST /api/v2/ticket-triage/tickets**
 
@@ -306,7 +298,7 @@ All endpoints are prefixed with `/api/v2/ticket-triage`.
 }
 ```
 
-**Response**
+**response**
 
 ```json
 {
@@ -371,21 +363,19 @@ All endpoints are prefixed with `/api/v2/ticket-triage`.
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```yaml
 Ticket:
   id: string (UUID)
-  source: string               # "zendesk" | "freshdesk" | "discord" | "email" | "panel"
+  source: string
   external_id: string
   subject: string
   body: string
-  body_clean: string           # stripped of HTML/markdown for processing
+  body_clean: string
   attachments: Attachment[]
   customer: Customer
-  metadata: dict               # source-specific fields
+  metadata: dict
   status: "new" | "processing" | "classified" | "routed" | "resolved" | "closed"
   classification: Classification | null
   routing: Routing | null
@@ -404,17 +394,17 @@ Classification:
   processing_time_ms: integer
 
 CategoryAssignment:
-  primary: string              # e.g. "server_crash"
-  secondary: string | null     # e.g. "performance"
-  confidence: float            # 0-1
+  primary: string
+  secondary: string | null
+  confidence: float
 
 UrgencyScore:
-  score: float                 # 1-10
+  score: float
   level: "low" | "medium" | "high" | "critical"
-  factors: dict                # breakdown of scoring factors
+  factors: dict
 
 ServiceAssignment:
-  primary: string              # "minecraft" | "proxy" | "backup" | "network" | "panel" | "billing"
+  primary: string
   confidence: float
 
 Routing:
@@ -427,10 +417,10 @@ AutoReply:
   sent: boolean
   content: string
   confidence: float
-  kb_articles: string[]        # IDs of referenced articles
+  kb_articles: string[]
 
 Feedback:
-  correct: boolean | null      # null = not yet rated
+  correct: boolean | null
   corrected_category: string | null
   corrected_urgency: integer | null
   rated_by: string
@@ -444,8 +434,8 @@ KBArticle:
   url: string
   category: string
   tags: string[]
-  embedding: float[]           # vector embedding for semantic search
-  keywords: string[]           # extracted keywords for BM25
+  embedding: float[]
+  keywords: string[]
   embedding_model: string
   last_updated: datetime
 
@@ -460,20 +450,16 @@ CategoryModel:
   is_active: boolean
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Service | Responsibility |
 |---------|---------------|
-| **Integration Service** | Primary: Ingestion, classification pipeline, KB matching, routing, auto-reply |
-| **Management Panel** | Secondary: Ticket dashboard, feedback UI, analytics, routing configuration |
-| **Discord Service** | Secondary: Discord ticket intake, team notifications |
-| **Service Core** | None directly; authentication, customer lookup, server info enrichment |
+| integration service | primary: ingestion, classification pipeline, kb matching, routing, auto-reply |
+| management panel | secondary: ticket dashboard, feedback ui, analytics, routing configuration |
+| discord service | secondary: discord ticket intake, team notifications |
+| service core | none directly; authentication, customer lookup, server info enrichment |
 
----
-
-## Effort Estimate
+## effort estimate
 
 | Phase | Task | PT | Owner |
 |-------|------|----|-------|
@@ -488,24 +474,20 @@ CategoryModel:
 | P3 | Auto-reply generator | 0.25 | Backend |
 | P4 | Feedback collection + analytics dashboard | 0.5 | Frontend+Backend |
 | P4 | Model retraining pipeline | 0.25 | ML |
-| **Total** | | **5.25 PT** | |
+| total | | 5.25 pt | |
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Low accuracy on novel/unseen issues | Medium | Fallback to manual classification; confidence threshold with human-in-the-loop |
-| PII/ sensitive data in tickets | High | Strip emails, IPs, passwords before ML processing; data retention controls |
-| Integration platform API changes | Medium | Adapter pattern with versioned schemas; webhook health monitoring |
-| Bias in urgency scoring (VIP vs standard) | Medium | Transparent scoring factors; audit trail; regular bias testing |
-| KB depends on Feature 32 (Knowledge Base) | Medium | v1 ships with bundled KB articles; integration with external KB in v2 |
-| Multi-language support | Medium | v1 English-only; language detection for routing to bilingual agents |
+| Low accuracy on novel/unseen issues | medium | fallback to manual classification; confidence threshold with human-in-the-loop |
+| pii/sensitive data in tickets | high | strip emails, ips, passwords before ml processing; data retention controls |
+| integration platform api changes | medium | adapter pattern with versioned schemas; webhook health monitoring |
+| bias in urgency scoring (vip vs standard) | medium | transparent scoring factors; audit trail; regular bias testing |
+| kb depends on feature 32 (knowledge base) | medium | v1 ships with bundled kb articles; integration with external kb in v2 |
+| multi-language support | medium | v1 english-only; language detection for routing to bilingual agents |
 
----
-
-## Category Taxonomy (v1)
+## category taxonomy (v1)
 
 ```
 ticket_category:
@@ -532,16 +514,14 @@ ticket_category:
   - feature_request:
       keywords: [suggestion, feature, request, roadmap, idea, would like]
   - other:
-      keywords: []   # catch-all
+      keywords: []
 ```
 
----
+## future enhancements
 
-## Future Enhancements
-
-- **v2.0**: Multi-language ticket classification
-- **v2.1**: Agent assist — real-time suggestions while typing reply
-- **v2.2**: Sentiment trend analysis across customer lifecycle
-- **v2.3**: Integration with Jira, Linear, GitHub Issues
-- **v2.4**: Automated solution execution (KB article → runbook → fix)
-- **v2.5**: Customer satisfaction prediction and proactive outreach
+- v2.0: multi-language ticket classification
+- v2.1: agent assist -- real-time suggestions while typing reply
+- v2.2: sentiment trend analysis across customer lifecycle
+- v2.3: integration with jira, linear, github issues
+- v2.4: automated solution execution (kb article -> runbook -> fix)
+- v2.5: customer satisfaction prediction and proactive outreach

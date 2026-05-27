@@ -1,38 +1,34 @@
-# Feature 16: GitOps Sync
+# gitops sync
 
-- **Feature #:** 16
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Orchestrator Agent
-- **Supporting Services:** Integration Service, Management Panel
-- **Effort:** Large (7-10 PT)
-- **Dependencies:** Feature #13 (Webhook Event Bus), Feature #14 (API Gateway & Rate Limiting)
+- feature #: 16
+- category: developer ecosystem & api
+- primary service: orchestrator agent
+- supporting services: integration service, management panel
+- effort: large (7-10 pt)
+- dependencies: feature #13 (webhook event bus), feature #14 (api gateway & rate limiting)
 
----
+## 1. overview
 
-## 1. Overview
+gitops sync establishes a two-way reconciliation loop between git repositories and infra pilot infrastructure state. configuration changes committed to a git repository are automatically applied to servers; manual edits made in the management panel create pull requests back to the repository. this enables git-as-source-of-truth workflows compatible with argocd and flux patterns.
 
-GitOps Sync establishes a two-way reconciliation loop between Git repositories and Infra Pilot infrastructure state. Configuration changes committed to a Git repository are automatically applied to servers; manual edits made in the Management Panel create pull requests back to the repository. This enables Git-as-source-of-truth workflows compatible with ArgoCD and Flux patterns.
+### goals
 
-### Goals
+- bi-directional sync: git -> infra (auto-apply) and infra -> git (pr creation)
+- drift detection: periodic reconciliation with alerting on divergence
+- commit signing and verification for supply-chain security
+- branch/tag filters to scope sync to specific environments
+- dry-run mode to preview changes before application
+- compatible with github, gitlab, bitbucket, and self-hosted gitea
 
-- Bi-directional sync: Git → Infra (auto-apply) and Infra → Git (PR creation)
-- Drift detection: periodic reconciliation with alerting on divergence
-- Commit signing and verification for supply-chain security
-- Branch/tag filters to scope sync to specific environments
-- Dry-run mode to preview changes before application
-- Compatible with GitHub, GitLab, Bitbucket, and self-hosted Gitea
+### non-goals
 
-### Non-Goals
+- full git ui (file browser, commit history viewer) -- delegate to git hosting platform
+- multi-repo orchestration (dag of dependent repos) -- future feature
+- terraform/crossplane state management -- separate iac tooling (feature #12)
 
-- Full Git UI (file browser, commit history viewer) — delegate to Git hosting platform
-- Multi-repo orchestration (DAG of dependent repos) — future feature
-- Terraform/Crossplane state management — separate IaC tooling (Feature #12)
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### High-Level Component Diagram
+### high-level component diagram
 
 ```
 ┌──────────────────┐       ┌───────────────────────────────────────┐
@@ -49,14 +45,14 @@ GitOps Sync establishes a two-way reconciliation loop between Git repositories a
 │        ▼         │       │  │       ▼               ▼         │  │
 │   ┌──────────┐   │       │  │  ┌──────────────────────────┐   │  │
 │   │ Webhooks │   │───────┼──┼──►  Reconciliation Loop     │   │  │
-│   └──────────┘   │       │  │  │  (diff → apply → report) │   │  │
+│   └──────────┘   │       │  │  │  (diff -> apply -> report) │   │  │
 └──────────────────┘       │  │  └────────────┬─────────────┘   │  │
                            │  └───────────────┼─────────────────┘  │
                            │                  │                    │
                            │                  ▼                    │
                            │  ┌─────────────────────────────────┐  │
                            │  │   Config Translator             │  │
-                           │  │   (YAML/JSON → API calls)       │  │
+                           │  │   (YAML/JSON -> API calls)       │  │
                            │  └────────────┬────────────────────┘  │
                            └───────────────┼───────────────────────┘
                                            │
@@ -72,12 +68,12 @@ GitOps Sync establishes a two-way reconciliation loop between Git repositories a
 │                  │       │                                       │
 │  User edits      │──────►│  ┌─────────────────────────────────┐  │
 │  server config   │       │  │  PR Creator                     │  │
-│                  │       │  │  (branch → commit → push → PR)  │  │
+│                  │       │  │  (branch -> commit -> push -> PR)│  │
 └──────────────────┘       │  └─────────────────────────────────┘  │
                            └───────────────────────────────────────┘
 ```
 
-### Sync Flow
+### sync flow
 
 ```
 Git Push (or poll interval)
@@ -94,9 +90,9 @@ Config Translator parses YAML/JSON
        ▼
 Diff against current infrastructure state
        │
-       ├── No diff → Report "in sync"
+       ├── No diff -> Report "in sync"
        │
-       └── Diff found → Generate plan
+       └── Diff found -> Generate plan
               │
               ▼
          Auto-apply enabled?
@@ -113,7 +109,7 @@ Diff against current infrastructure state
   Report result   Update status
 ```
 
-### Panel Edit → PR Flow
+### panel edit -> pr flow
 
 ```
 User edits server config in Panel UI
@@ -134,14 +130,12 @@ Create pull request with description
 Update Panel UI with PR link
        │
        ▼
-User merges PR → Git watcher picks up → auto-applies
+User merges PR -> Git watcher picks up -> auto-applies
 ```
 
----
+## 3. data model
 
-## 3. Data Model
-
-### GitOps Sync Configuration (per-tenant)
+### gitops sync configuration (per-tenant)
 
 ```json
 {
@@ -189,7 +183,7 @@ User merges PR → Git watcher picks up → auto-applies
 }
 ```
 
-### Drift Record
+### drift record
 
 ```json
 {
@@ -216,7 +210,7 @@ User merges PR → Git watcher picks up → auto-applies
 }
 ```
 
-### Git Snapshot (cached state for diffing)
+### git snapshot (cached state for diffing)
 
 ```json
 {
@@ -244,7 +238,7 @@ User merges PR → Git watcher picks up → auto-applies
 }
 ```
 
-### SQL Schema
+### sql schema
 
 ```sql
 CREATE TABLE gitops_configs (
@@ -297,13 +291,11 @@ CREATE TABLE git_snapshots (
 );
 ```
 
----
+## 4. api design
 
-## 4. API Design
+### gitops configuration api (orchestrator agent)
 
-### GitOps Configuration API (Orchestrator Agent)
-
-All endpoints prefixed with `/api/v2/gitops`.
+all endpoints prefixed with `/api/v2/gitops`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -317,22 +309,22 @@ All endpoints prefixed with `/api/v2/gitops`.
 | `GET` | `/configs/{id}/drifts` | List drift records |
 | `POST` | `/configs/{id}/drifts/{drift_id}/acknowledge` | Acknowledge drift |
 
-### Panel Edit → PR API (Integration Service)
+### panel edit -> pr api (integration service)
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/v2/gitops/pr` | Create PR from Panel edit |
 | `GET` | `/api/v2/gitops/pr/{pr_id}` | Get PR status / link |
 
-### Webhook Receiver (Orchestrator Agent)
+### webhook receiver (orchestrator agent)
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/v2/gitops/webhook` | Receive push event from Git provider |
 
-### Config Translation Format
+### config translation format
 
-Example Git repository structure:
+example git repository structure:
 
 ```
 clusters/
@@ -346,7 +338,7 @@ clusters/
     └── databases.yaml
 ```
 
-Example `servers.yaml`:
+example `servers.yaml`:
 
 ```yaml
 apiVersion: infrapilot.io/v1
@@ -391,7 +383,7 @@ spec:
     - database
 ```
 
-### Webhook Payload (GitHub Example)
+### webhook payload (github example)
 
 ```json
 {
@@ -413,49 +405,47 @@ spec:
 }
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
-
-### Phase 1: Git Watcher & Sync Engine (Weeks 1-3, 4 PT)
+### phase 1: git watcher & sync engine (weeks 1-3, 4 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
 | 1.1 | Orchestrator Agent | Git client abstraction layer (go-git / libgit2 bindings) |
 | 1.2 | Orchestrator Agent | Poll-based watcher with configurable interval |
 | 1.3 | Orchestrator Agent | Webhook receiver (GitHub/GitLab/Bitbucket) |
-| 1.4 | Orchestrator Agent | Config translator — parse YAML → internal resource model |
-| 1.5 | Orchestrator Agent | Diff engine — compare desired vs actual state |
-| 1.6 | Orchestrator Agent | Reconciliation loop — apply diff in correct order |
-| 1.7 | Orchestrator Agent | Dry-run mode — plan output without mutation |
+| 1.4 | Orchestrator Agent | Config translator -- parse YAML -> internal resource model |
+| 1.5 | Orchestrator Agent | Diff engine -- compare desired vs actual state |
+| 1.6 | Orchestrator Agent | Reconciliation loop -- apply diff in correct order |
+| 1.7 | Orchestrator Agent | Dry-run mode -- plan output without mutation |
 
-**Deliverables:** Single-direction Git-to-Infra sync operational with webhook and poll modes.
+**deliverables:** single-direction git-to-infra sync operational with webhook and poll modes.
 
-### Phase 2: Drift Detection & Alerting (Weeks 3-4, 2 PT)
+### phase 2: drift detection & alerting (weeks 3-4, 2 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
 | 2.1 | Orchestrator Agent | Periodic state snapshots and comparison |
 | 2.2 | Orchestrator Agent | Drift severity classification (low/medium/high/critical) |
 | 2.3 | Orchestrator Agent | Alert integration via Webhook Event Bus (Feature #13) |
-| 2.4 | Management Panel | Drift dashboard — list, filter, acknowledge drifts |
+| 2.4 | Management Panel | Drift dashboard -- list, filter, acknowledge drifts |
 | 2.5 | Orchestrator Agent | Auto-remediation for low-severity drifts |
 
-**Deliverables:** Drift detection operational with alerting and dashboard.
+**deliverables:** drift detection operational with alerting and dashboard.
 
-### Phase 3: Panel-to-Git PR Flow (Weeks 4-6, 2 PT)
+### phase 3: panel-to-git pr flow (weeks 4-6, 2 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
 | 3.1 | Integration Service | Git provider API client (create branch, commit, push, PR) |
-| 3.2 | Management Panel | Config editor integration — auto-generate PR on save |
+| 3.2 | Management Panel | Config editor integration -- auto-generate PR on save |
 | 3.3 | Integration Service | Commit signing via GPG/key management |
 | 3.4 | Integration Service | PR status tracking (open, merged, closed) |
 | 3.5 | Management Panel | PR link display in notification toast |
 
-**Deliverables:** Panel edits create signed commits and pull requests.
+**deliverables:** panel edits create signed commits and pull requests.
 
-### Phase 4: Config Management & Filters (Weeks 6-7, 1 PT)
+### phase 4: config management & filters (weeks 6-7, 1 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -464,9 +454,9 @@ spec:
 | 4.3 | Management Panel | GitOps config CRUD UI |
 | 4.4 | Management Panel | Sync status dashboard (commit SHA, last sync time, drift count) |
 
-**Deliverables:** Full configuration UI and filtering capabilities.
+**deliverables:** full configuration ui and filtering capabilities.
 
-### Phase 5: Security & Hardening (Week 7, 1 PT)
+### phase 5: security & hardening (week 7, 1 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -476,11 +466,9 @@ spec:
 | 5.4 | Shared | Audit logging for all sync operations |
 | 5.5 | Shared | Rate limiting for webhook and sync triggers |
 
-**Deliverables:** Production-ready security controls.
+**deliverables:** production-ready security controls.
 
----
-
-## 6. Service Assignments
+## 6. service assignments
 
 | Service | Responsibilities |
 |---------|-----------------|
@@ -488,11 +476,9 @@ spec:
 | **Integration Service** | Git provider API client (branch/commit/push/PR), commit signing, PR status tracking, token encryption |
 | **Management Panel** | GitOps config CRUD UI, drift dashboard, sync status display, config editor PR integration |
 
----
+## 7. configuration example
 
-## 7. Configuration Example
-
-**infrapilot.yaml** (Global GitOps configuration):
+**infrapilot.yaml** (global gitops configuration):
 
 ```yaml
 gitops:
@@ -517,7 +503,7 @@ gitops:
       token_env_var: GITLAB_TOKEN
 ```
 
-**Per-sync config example** (via API or Panel UI):
+**per-sync config example** (via api or panel ui):
 
 ```yaml
 name: production-cluster
@@ -541,9 +527,7 @@ filters:
     - clusters/prod/**/*.yaml
 ```
 
----
-
-## 8. Effort Estimate
+## 8. effort estimate
 
 | Phase | PT | Dependencies |
 |-------|----|-------------|
@@ -552,23 +536,21 @@ filters:
 | Phase 3: Panel-to-Git PR Flow | 2.0 | Phase 1 |
 | Phase 4: Config Management & Filters | 1.0 | Phase 1 |
 | Phase 5: Security & Hardening | 1.0 | Phase 1 |
-| **Buffer (15%)** | **1.5** | — |
-| **Total** | **~11.5 PT** | — |
+| buffer (15%) | 1.5 | - |
+| total | ~11.5 pt | - |
 
-### Risk Factors
+### risk factors
 
-- **Git client performance:** Large monorepos with deep history require shallow clone optimizations
-- **Conflict resolution:** Concurrent Panel edits and Git pushes can cause merge conflicts — need rebase strategy
-- **Provider API differences:** GitHub vs GitLab vs Bitbucket webhook payloads and PR APIs vary significantly
-- **Commit signing key management:** GPG key rotation and HSM integration adds operational complexity
+- **git client performance:** large monorepos with deep history require shallow clone optimizations
+- **conflict resolution:** concurrent panel edits and git pushes can cause merge conflicts -- need rebase strategy
+- **provider api differences:** github vs gitlab vs bitbucket webhook payloads and pr apis vary significantly
+- **commit signing key management:** gpg key rotation and hsm integration adds operational complexity
 
----
+## 9. security & compliance
 
-## 9. Security & Compliance
-
-- All stored tokens encrypted at rest (AES-256-GCM)
-- Deploy keys scoped to single repository (principle of least privilege)
-- Webhook payloads validated via HMAC signatures
-- Commit signing enforced for all bot-generated commits
-- Audit log records: sync triggered, plan generated, changes applied, drift detected
-- RBAC: separate permissions for viewing GitOps configs vs triggering syncs vs creating PRs
+- all stored tokens encrypted at rest (aes-256-gcm)
+- deploy keys scoped to single repository (principle of least privilege)
+- webhook payloads validated via hmac signatures
+- commit signing enforced for all bot-generated commits
+- audit log records: sync triggered, plan generated, changes applied, drift detected
+- rbac: separate permissions for viewing gitops configs vs triggering syncs vs creating prs

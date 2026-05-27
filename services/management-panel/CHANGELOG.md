@@ -1,149 +1,141 @@
-# Docker Panel - Complete Changelog & Implementation
+# docker panel - complete changelog & implementation
 
-## 📦 Release 2026-05-26 — UX & Platform Expansion
+## release 2026-05-26 — ux & platform expansion
 
-### ✅ New Backend Features
-- **Real Docker Calls** — Container start/stop/restart now use `docker exec` directly instead of status-only stubs
-- **Rate-Limited Login** — `POST /api/setup/init` protected by 10 requests per 15-minute window
-- **OpenAPI / Swagger Docs** — Full OpenAPI 3.1 spec at `/api/openapi.json` with interactive Swagger UI at `/api/docs`
-- **Audit Trail** — New `audit_log` table logs all mutations (app CRUD, backups, alerts, config) with `GET /api/audit-log` endpoint supporting pagination and filtering
-- **WebSocket Real-Time** — Dedicated WebSocket server for live `docker logs -f` streaming and `docker stats` metrics at 2s intervals
-- **Global Search API** — `GET /api/search?q=` searches apps, backups, and audit logs via PostgreSQL ILIKE
-- **Notification Channels** — Full CRUD for email/webhook/telegram channels plus test endpoint; new `notification_channels` table
+### new backend features
+- **real docker calls** — container start/stop/restart now use `docker exec` directly instead of status-only stubs
+- **rate-limited login** — `post /api/setup/init` protected by 10 requests per 15-minute window
+- **openapi / swagger docs** — full openapi 3.1 spec at `/api/openapi.json` with interactive swagger ui at `/api/docs`
+- **audit trail** — new `audit_log` table logs all mutations (app crud, backups, alerts, config) with `get /api/audit-log` endpoint supporting pagination and filtering
+- **websocket real-time** — dedicated websocket server for live `docker logs -f` streaming and `docker stats` metrics at 2s intervals
+- **global search api** — `get /api/search?q=` searches apps, backups, and audit logs via postgresql ilike
+- **notification channels** — full crud for email/webhook/telegram channels plus test endpoint; new `notification_channels` table
 
-### ✅ New Frontend Features
-- **Theme Persistence** — Dark/light mode preference saved to `localStorage`
-- **Onboarding Wizard** — 5-step guided tour shown on first visit, dismissable with `localStorage` flag
-- **PWA Support** — `manifest.json` + service worker with cache-first strategy, registered in `main.tsx`
-- **Mobile-Responsive Layout** — Hamburger menu toggle, slide-in sidebar on small screens
-- **Global Search (Cmd+K)** — Command palette with debounced search, grouped results, keyboard shortcut
-- **Audit Trail Viewer** — New `/audit` page with filterable table and pagination
-- **Web Terminal** — In-browser container shell with WebSocket, command input, 500-line buffer, fullscreen toggle
+### new frontend features
+- **theme persistence** — dark/light mode preference saved to `localstorage`
+- **onboarding wizard** — 5-step guided tour shown on first visit, dismissable with `localstorage` flag
+- **pwa support** — `manifest.json` + service worker with cache-first strategy, registered in `main.tsx`
+- **mobile-responsive layout** — hamburger menu toggle, slide-in sidebar on small screens
+- **global search (cmd+k)** — command palette with debounced search, grouped results, keyboard shortcut
+- **audit trail viewer** — new `/audit` page with filterable table and pagination
+- **web terminal** — in-browser container shell with websocket, command input, 500-line buffer, fullscreen toggle
 
-### ✅ New Integration Service Features
-- **Notification Providers** — Email (SMTP/TLS), Webhook (HTTP POST), Telegram (Bot API) with `NotificationManager` registry
-- **Alert Notification Integration** — Alerts can now trigger delivery through configured notification channels
+### new integration service features
+- **notification providers** — email (smtp/tls), webhook (http post), telegram (bot api) with `notificationmanager` registry
+- **alert notification integration** — alerts can now trigger delivery through configured notification channels
 
----
+## overview
 
-## 📋 Overview
+the management panel has been completely redesigned and reimplemented from scratch to create a **self-hosted docker container management panel** with:
 
-The management panel has been completely redesigned and reimplemented from scratch to create a **self-hosted Docker container management panel** with:
+- personal mode (default) - simple, focused docker app management for self-hosters
+- business mode (optional) - full-featured hosting control panel (roadmap)
+- feature gates - clean separation of concerns based on mode
+- supabase backend - modern database with rls and authentication
+- express.js api - restful backend with 30+ endpoints
+- react router - type-safe frontend routing
+- comprehensive documentation - architecture guides and quick-start
 
-- ✅ **Personal Mode (default)** - Simple, focused Docker app management for self-hosters
-- ✅ **Business Mode (optional)** - Full-featured hosting control panel (roadmap)
-- ✅ **Feature Gates** - Clean separation of concerns based on mode
-- ✅ **Supabase Backend** - Modern database with RLS and authentication
-- ✅ **Express.js API** - RESTful backend with 30+ endpoints
-- ✅ **React Router** - Type-safe frontend routing
-- ✅ **Comprehensive Documentation** - Architecture guides and quick-start
+## deleted files & directories
 
----
+### removed convex-based code
+- `convex/` (entire directory) - replaced with express.js backend
+- `setup.mjs` - old convex setup script
+- `src/signinform.tsx` - replaced by setup.tsx
+- `src/signoutbutton.tsx` - replaced by mainlayout.tsx
 
-## 🗑️ Deleted Files & Directories
+### removed documentation
+- `redesign_plan.md` (root) - outdated redesign plan
 
-### Removed Convex-Based Code
-- ❌ `convex/` (entire directory) - Replaced with Express.js backend
-- ❌ `setup.mjs` - Old Convex setup script
-- ❌ `src/SignInForm.tsx` - Replaced by Setup.tsx
-- ❌ `src/SignOutButton.tsx` - Replaced by MainLayout.tsx
+## new files created
 
-### Removed Documentation
-- ❌ `REDESIGN_PLAN.md` (root) - Outdated redesign plan
+### backend server (445 lines)
+- **`server/index.ts`** - express.js api with:
+  - setup initialization routes
+  - docker app crud operations
+  - container control endpoints (start/stop/restart)
+  - log streaming (paginated)
+  - user management endpoints
+  - configuration endpoints
+  - jwt authentication middleware
+  - supabase integration
 
----
-
-## ✨ New Files Created
-
-### Backend Server (445 lines)
-- **`server/index.ts`** - Express.js API with:
-  - Setup initialization routes
-  - Docker app CRUD operations
-  - Container control endpoints (start/stop/restart)
-  - Log streaming (paginated)
-  - User management endpoints
-  - Configuration endpoints
-  - JWT authentication middleware
-  - Supabase integration
-
-### Database Schema (119 lines)
-- **`db/schema.sql`** - PostgreSQL schema with:
+### database schema (119 lines)
+- **`db/schema.sql`** - postgresql schema with:
   - 7 core tables (setup_config, docker_apps, user_profiles, app_logs, pterodactyl_config, shared_config)
-  - Row-level security (RLS) policies on all user-scoped tables
-  - Indexes for query optimization
-  - Prepared for Business Mode expansion
+  - row-level security (rls) policies on all user-scoped tables
+  - indexes for query optimization
+  - prepared for business mode expansion
 
-### Frontend Pages (920 lines total)
+### frontend pages (920 lines total)
 
-| File | Lines | Purpose |
+| file | lines | purpose |
 |------|-------|---------|
-| `src/pages/Setup.tsx` | 150 | Onboarding wizard with mode selection |
-| `src/pages/Dashboard.tsx` | 160 | Main dashboard with app grid |
-| `src/pages/AppForm.tsx` | 280 | Create/edit Docker apps with full config |
-| `src/pages/AppDetail.tsx` | 330 | App management with 5 tabs |
+| `src/pages/Setup.tsx` | 150 | onboarding wizard with mode selection |
+| `src/pages/Dashboard.tsx` | 160 | main dashboard with app grid |
+| `src/pages/AppForm.tsx` | 280 | create/edit docker apps with full config |
+| `src/pages/AppDetail.tsx` | 330 | app management with 5 tabs |
 
-### Utilities & Libraries (190 lines total)
+### utilities & libraries (190 lines total)
 
-| File | Lines | Purpose |
+| file | lines | purpose |
 |------|-------|---------|
-| `src/lib/api.ts` | 90 | Axios API client with all endpoints |
-| `src/lib/auth.ts` | 35 | Supabase Auth helpers |
-| `src/lib/types.ts` | 65 | TypeScript types, interfaces, feature gates |
+| `src/lib/api.ts` | 90 | axios api client with all endpoints |
+| `src/lib/auth.ts` | 35 | supabase auth helpers |
+| `src/lib/types.ts` | 65 | typescript types, interfaces, feature gates |
 
-### Components
-- **`src/components/MainLayout.tsx`** (75 lines) - Main layout with header, nav, logout
+### components
+- **`src/components/MainLayout.tsx`** (75 lines) - main layout with header, nav, logout
 
-### Configuration Files
-- **`.env.local.example`** - Environment variable template
-- **`setup.sh`** - Quick-start automation script
+### configuration files
+- **`.env.local.example`** - environment variable template
+- **`setup.sh`** - quick-start automation script
 
-### Documentation (1,200+ lines total)
+### documentation (1,200+ lines total)
 
-| File | Lines | Topic |
+| file | lines | topic |
 |------|-------|-------|
-| `README-DOCKER-PANEL.md` | 350 | Getting started guide |
-| `IMPLEMENTATION_SUMMARY.md` | 350 | Complete implementation overview |
-| `docs/PERSONAL_MODE.md` | 420 | Mode architecture & design decisions |
-| `docs/DATABASE_SETUP.md` | 140 | Supabase setup instructions |
-| `docs/ARCHITECTURE.md` | 300 | Technical diagrams & data flows |
+| `readme-docker-panel.md` | 350 | getting started guide |
+| `implementation_summary.md` | 350 | complete implementation overview |
+| `docs/personal_mode.md` | 420 | mode architecture & design decisions |
+| `docs/database_setup.md` | 140 | supabase setup instructions |
+| `docs/architecture.md` | 300 | technical diagrams & data flows |
 
-### Modified Files
+### modified files
 
-1. **`package.json`** - Updated dependencies:
-   - ❌ Removed: `convex`, `@convex-dev/auth`
-   - ✅ Added: `@supabase/supabase-js`, `@supabase/auth-helpers-react`, `express`, `express-cors`, `axios`, `react-router-dom`, `ts-node`, `@types/express`
+• **`package.json`** - updated dependencies:
+   - removed: `convex`, `@convex-dev/auth`
+   - added: `@supabase/supabase-js`, `@supabase/auth-helpers-react`, `express`, `express-cors`, `axios`, `react-router-dom`, `ts-node`, `@types/express`
 
-2. **`src/App.tsx`** - Complete rewrite:
-   - Removed Convex providers and components
-   - Added React Router setup
-   - Added ConfigContext for mode management
-   - Implemented conditional routing based on setup status
-   - Integrated setup wizard flow
+• **`src/App.tsx`** - complete rewrite:
+   - removed convex providers and components
+   - added react router setup
+   - added configcontext for mode management
+   - implemented conditional routing based on setup status
+   - integrated setup wizard flow
 
-3. **`src/main.tsx`** - Simplified:
-   - Removed ConvexAuthProvider
-   - Removed ConvexReactClient
-   - Kept simple React entry point
+• **`src/main.tsx`** - simplified:
+   - removed convexauthprovider
+   - removed convexreactclient
+   - kept simple react entry point
 
-4. **`README.md`** (root) - Updated:
-   - Removed old setup instructions
-   - Added Docker Panel quick start
-   - Added links to new documentation
-   - Highlighted Personal Mode
+• **`readme.md`** (root) - updated:
+   - removed old setup instructions
+   - added docker panel quick start
+   - added links to new documentation
+   - highlighted personal mode
 
-5. **`README.md`** (management-panel) - Complete rewrite:
-   - Replaced single paragraph with comprehensive guide
-   - Added features matrix
-   - Added architecture overview
-   - Added API reference
-   - Added troubleshooting section
-   - Added roadmap
+• **`readme.md`** (management-panel) - complete rewrite:
+   - replaced single paragraph with comprehensive guide
+   - added features matrix
+   - added architecture overview
+   - added api reference
+   - added troubleshooting section
+   - added roadmap
 
----
+## architecture changes
 
-## 🎯 Architecture Changes
-
-### Before: Convex-Based
+### before: convex-based
 ```
 Frontend (Vite + React)
     ↓
@@ -154,13 +146,13 @@ Convex Backend (Functions)
 Convex Database
 ```
 
-**Issues:**
-- Tightly coupled to Convex
-- Limited customization
-- No clear separation for feature modes
-- Limited authentication options
+**issues:**
+- tightly coupled to convex
+- limited customization
+- no clear separation for feature modes
+- limited authentication options
 
-### After: Supabase + Express.js
+### after: supabase + express.js
 ```
 Frontend (Vite + React + React Router)
     ↓ (JWT Token in Authorization header)
@@ -171,25 +163,23 @@ Supabase (Auth + PostgreSQL)
 PostgreSQL with RLS Policies
 ```
 
-**Improvements:**
-- ✅ Independent, deployable backend
-- ✅ Full customization control
-- ✅ Clean feature gate separation
-- ✅ Industry-standard stack
-- ✅ RLS-based security
-- ✅ Easy to extend
+**improvements:**
+- independent, deployable backend
+- full customization control
+- clean feature gate separation
+- industry-standard stack
+- rls-based security
+- easy to extend
 
----
+## core feature implementation
 
-## 📊 Core Feature Implementation
-
-### Setup Wizard
-**New File:** `src/pages/Setup.tsx`
+### setup wizard
+**new file:** `src/pages/Setup.tsx`
 
 ```
 Step 1: Mode Selection
-├─ 🏠 Personal Mode (default, recommended)
-└─ 🚀 Hosting Business Mode
+├─ Personal Mode (default, recommended)
+└─ Hosting Business Mode
 
 Step 2: Create Admin Account
 ├─ Display Name
@@ -204,24 +194,24 @@ Result:
 └─ Issue JWT token → redirect to Dashboard
 ```
 
-### Docker App Management
-**New Files:** `src/pages/AppForm.tsx`, `src/pages/AppDetail.tsx`
+### docker app management
+**new files:** `src/pages/AppForm.tsx`, `src/pages/AppDetail.tsx`
 
-**CRUD Operations:**
-- ✅ **Create**: Form with ports, environment, volumes, resource limits
-- ✅ **Read**: Dashboard grid + detail page with tabs
-- ✅ **Update**: Edit form with pre-filled values
-- ✅ **Delete**: Confirmation dialog before deletion
+**crud operations:**
+- **create**: form with ports, environment, volumes, resource limits
+- **read**: dashboard grid + detail page with tabs
+- **update**: edit form with pre-filled values
+- **delete**: confirmation dialog before deletion
 
-**Tabs on App Detail:**
-1. Overview - Container info and metadata
-2. Logs - Real-time paginated log viewer
-3. Environment - View env variables
-4. Volumes - View mount paths
-5. Settings - Edit and delete controls
+**tabs on app detail:**
+• overview - container info and metadata
+• logs - real-time paginated log viewer
+• environment - view env variables
+• volumes - view mount paths
+• settings - edit and delete controls
 
-### Container Controls
-**Backend:** `server/index.ts` routes
+### container controls
+**backend:** `server/index.ts` routes
 
 ```
 POST /api/apps/:appId/start
@@ -229,10 +219,10 @@ POST /api/apps/:appId/stop
 POST /api/apps/:appId/restart
 ```
 
-Currently updates status in DB (stub for Docker API integration).
+currently updates status in db (stub for docker api integration).
 
-### Feature Gates System
-**New File:** `src/lib/types.ts`
+### feature gates system
+**new file:** `src/lib/types.ts`
 
 ```typescript
 export const featureGates = {
@@ -252,165 +242,147 @@ export const featureGates = {
 }
 ```
 
-**Usage in Components:**
+**usage in components:**
 ```tsx
 if (!featureGates.canViewAuditLogs(mode)) {
   return <Disabled />;
 }
 ```
 
----
+## security implementation
 
-## 🔐 Security Implementation
+### authentication flow
+• user creates account during setup
+• supabase auth creates `auth.users` row
+• jwt token issued and stored in localstorage
+• token sent in `authorization: bearer <token>` header
+• backend validates token on each request
 
-### Authentication Flow
-1. User creates account during setup
-2. Supabase Auth creates `auth.users` row
-3. JWT token issued and stored in localStorage
-4. Token sent in `Authorization: Bearer <token>` header
-5. Backend validates token on each request
+### database security
+• **rls policies** - enforced at database level
+   - users see only their own docker_apps
+   - users see only their own user_profile
+• **auth middleware** - express.js validates jwt
+• **feature gates** - ui and api level checks
 
-### Database Security
-1. **RLS Policies** - Enforced at database level
-   - Users see only their own docker_apps
-   - Users see only their own user_profile
-2. **Auth Middleware** - Express.js validates JWT
-3. **Feature Gates** - UI and API level checks
-
-### Example RLS Policy
+### example rls policy
 ```sql
 CREATE POLICY "Users can view their own apps" ON docker_apps
 FOR SELECT USING (auth.uid() = user_id);
 ```
 
----
+## documentation created
 
-## 📚 Documentation Created
+### quick start documentation
+- **readme-docker-panel.md** - 3-command quick start
+- **readme.md (panel)** - complete feature overview
 
-### Quick Start Documentation
-- **README-DOCKER-PANEL.md** - 3-command quick start
-- **README.md (panel)** - Complete feature overview
+### architecture documentation
+- **personal_mode.md** - mode design, feature gates, migration path
+- **architecture.md** - system diagrams, data flows, deployment
+- **database_setup.md** - supabase and postgresql setup
 
-### Architecture Documentation
-- **PERSONAL_MODE.md** - Mode design, feature gates, migration path
-- **ARCHITECTURE.md** - System diagrams, data flows, deployment
-- **DATABASE_SETUP.md** - Supabase and PostgreSQL setup
+### implementation documentation
+- **implementation_summary.md** - features, roadmap, tech stack
 
-### Implementation Documentation
-- **IMPLEMENTATION_SUMMARY.md** - Features, roadmap, tech stack
+## getting started
 
----
-
-## 🚀 Getting Started
-
-### Development (3 Commands)
+### development (3 commands)
 ```bash
 cd services/management-panel
 cp .env.local.example .env.local
 npm install && npm run dev
 ```
 
-Visit: `http://localhost:5173`
-API: `http://localhost:3001`
+visit: `http://localhost:5173`
+api: `http://localhost:3001`
 
-### First Run
-1. Select Personal Mode or Business Mode
-2. Create admin account
-3. Dashboard appears automatically
-4. Create your first Docker app!
+### first run
+• select personal mode or business mode
+• create admin account
+• dashboard appears automatically
+• create your first docker app!
 
----
+## roadmap
 
-## 🛣️ Roadmap
+### phase 1 (complete)
+- [x] switch from convex to supabase
+- [x] setup wizard with mode selection
+- [x] docker app crud
+- [x] dashboard and detail pages
+- [x] feature gates throughout
+- [x] documentation
 
-### ✅ Phase 1 (Complete)
-- [x] Switch from Convex to Supabase
-- [x] Setup wizard with mode selection
-- [x] Docker app CRUD
-- [x] Dashboard and detail pages
-- [x] Feature gates throughout
-- [x] Documentation
+### phase 2 (business mode mvp)
+- [ ] customer management ui
+- [ ] plans and pricing
+- [ ] billing integration
+- [ ] audit logging
+- [ ] team management
 
-### ⏳ Phase 2 (Business Mode MVP)
-- [ ] Customer management UI
-- [ ] Plans and pricing
-- [ ] Billing integration
-- [ ] Audit logging
-- [ ] Team management
+### phase 3 (docker integration)
+- [ ] live container creation (dockerode)
+- [ ] real-time status updates (websocket)
+- [ ] image pull/push workflows
+- [ ] container health monitoring
+- [ ] resource usage metrics
 
-### ⏳ Phase 3 (Docker Integration)
-- [ ] Live container creation (dockerode)
-- [ ] Real-time status updates (WebSocket)
-- [ ] Image pull/push workflows
-- [ ] Container health monitoring
-- [ ] Resource usage metrics
+### phase 4 (advanced)
+- [ ] white-label branding
+- [ ] advanced multi-tenant rbac
+- [ ] multi-region deployment
+- [ ] advanced analytics dashboard
 
-### ⏳ Phase 4 (Advanced)
-- [ ] White-label branding
-- [ ] Advanced multi-tenant RBAC
-- [ ] Multi-region deployment
-- [ ] Advanced analytics dashboard
+## statistics
 
----
-
-## 📊 Statistics
-
-| Metric | Value |
+| metric | value |
 |--------|-------|
-| Backend lines | 445 |
-| Frontend pages | 4 (920 lines) |
-| Database schema | 119 lines |
-| API endpoints | 30+ |
-| Documentation | 1,200+ lines |
-| Total new code | 2,500+ lines |
-| Test coverage | Framework ready |
+| backend lines | 445 |
+| frontend pages | 4 (920 lines) |
+| database schema | 119 lines |
+| api endpoints | 30+ |
+| documentation | 1,200+ lines |
+| total new code | 2,500+ lines |
+| test coverage | framework ready |
 
----
+## migration path: convex → supabase
 
-## 🔄 Migration Path: Convex → Supabase
-
-### What Changed
-| Aspect | Before (Convex) | After (Supabase) |
+### what changed
+| aspect | before (convex) | after (supabase) |
 |--------|-----------------|-----------------|
-| Auth | `@convex-dev/auth` | Supabase Auth |
-| Database | Convex DB | PostgreSQL |
-| Mutations | Convex functions | Express routes |
-| Queries | Convex hooks | Axios calls |
-| Backend | Serverless | Node.js server |
-| Deployment | Convex platform | Docker/any host |
+| auth | `@convex-dev/auth` | supabase auth |
+| database | convex db | postgresql |
+| mutations | convex functions | express routes |
+| queries | convex hooks | axios calls |
+| backend | serverless | node.js server |
+| deployment | convex platform | docker/any host |
 
-### Data Preservation
-- New schema supports existing features
-- Empty fresh start (no data migration needed)
-- Designed for clean setup from scratch
+### data preservation
+- new schema supports existing features
+- empty fresh start (no data migration needed)
+- designed for clean setup from scratch
 
----
+## key improvements
 
-## 🎯 Key Improvements
+• independent backend - not locked into convex
+• better customization - full control over api and auth
+• cleaner architecture - separation of concerns
+• feature gates - easy to toggle features per mode
+• enterprise ready - standard stack, documented, secure
+• type safe - typescript throughout
+• well documented - comprehensive guides
+• personal mode first - simplicity by default
 
-✅ **Independent Backend** - Not locked into Convex  
-✅ **Better Customization** - Full control over API and auth  
-✅ **Cleaner Architecture** - Separation of concerns  
-✅ **Feature Gates** - Easy to toggle features per mode  
-✅ **Enterprise Ready** - Standard stack, documented, secure  
-✅ **Type Safe** - TypeScript throughout  
-✅ **Well Documented** - Comprehensive guides  
-✅ **Personal Mode First** - Simplicity by default  
+## documentation links
 
----
+• [quick start](readme-docker-panel.md)
+• [mode architecture](docs/PERSONAL_MODE.md)
+• [database setup](docs/DATABASE_SETUP.md)
+• [system architecture](docs/ARCHITECTURE.md)
+• [full overview](implementation_summary.md)
 
-## 📖 Documentation Links
+## summary
 
-1. **Quick Start**: [README-DOCKER-PANEL.md](README-DOCKER-PANEL.md)
-2. **Mode Architecture**: [docs/PERSONAL_MODE.md](docs/PERSONAL_MODE.md)
-3. **Database Setup**: [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md)
-4. **System Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-5. **Full Overview**: [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
+the docker panel has been modernized, simplified, and made self-hostable with a focus on personal mode for individual users. the architecture is clean, well-documented, and ready for extension with business mode features.
 
----
-
-## ✨ Summary
-
-The Docker Panel has been **modernized, simplified, and made self-hostable** with a focus on Personal Mode for individual users. The architecture is clean, well-documented, and ready for extension with Business Mode features.
-
-**Ready to deploy and use immediately.** 🚀
+ready to deploy and use immediately.

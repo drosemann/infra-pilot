@@ -1,36 +1,32 @@
-# AI Assistant (Chatbot)
+# ai assistant (chatbot)
 
-> **Feature ID:** 3  
-> **Category:** AI & Intelligence  
-> **Primary Service:** Integration Service  
-> **Effort Estimate:** Extra Large (11+ PT)  
-> **Status:** Planned
+feature id: 3
+category: ai & intelligence
+primary service: integration service
+effort estimate: extra large (11+ pt)
+status: planned
 
----
+## overview
 
-## Overview
+provide a natural-language conversational interface for server management, monitoring, and troubleshooting. users can ask questions, issue commands, and receive contextual responses in plain english. the assistant understands infrastructure concepts, remembers conversation context, and can execute multi-step actions across services.
 
-Provide a natural-language conversational interface for server management, monitoring, and troubleshooting. Users can ask questions, issue commands, and receive contextual responses in plain English. The assistant understands infrastructure concepts, remembers conversation context, and can execute multi-step actions across services.
+### example queries
 
-### Example Queries
+- "show me servers using >80% ram"
+- "restart web-01 and notify slack"
+- "why did my backup fail last night?"
+- "deploy the latest build to staging and run health checks"
+- "what's the cpu trend on db-primary over the last 7 days?"
+- "create a firewall rule blocking 10.0.0.0/8 on all game servers"
 
-- *"Show me servers using >80% RAM"*
-- *"Restart web-01 and notify Slack"*
-- *"Why did my backup fail last night?"*
-- *"Deploy the latest build to staging and run health checks"*
-- *"What's the CPU trend on db-primary over the last 7 days?"*
-- *"Create a firewall rule blocking 10.0.0.0/8 on all game servers"*
+### goals
 
-### Goals
+- reduce the learning curve for server management via natural language
+- enable rapid troubleshooting through conversational context
+- support multi-turn interactions with memory of previous queries
+- execute actions with safety confirmation for destructive operations
 
-- Reduce the learning curve for server management via natural language
-- Enable rapid troubleshooting through conversational context
-- Support multi-turn interactions with memory of previous queries
-- Execute actions with safety confirmation for destructive operations
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -90,21 +86,19 @@ Provide a natural-language conversational interface for server management, monit
 └──────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: nlu pipeline (3-4 pt)
 
-### Phase 1: NLU Pipeline (3-4 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Intent taxonomy definition | 15-20 intent classes with example utterances |
-| 1.2 | Intent classifier training | Fine-tuned BERT or DistilBERT model |
-| 1.3 | Entity extraction (NER) | Custom spaCy NER pipeline for infra entities |
-| 1.4 | Input normalization & spelling correction | SymSpell + domain dictionary |
-| 1.5 | Multi-language support framework | i18n intent mapping (English, German) |
+| 1.1 | intent taxonomy definition | 15-20 intent classes with example utterances |
+| 1.2 | intent classifier training | fine-tuned bert or distilbert model |
+| 1.3 | entity extraction (ner) | custom spacy ner pipeline for infra entities |
+| 1.4 | input normalization & spelling correction | symspell + domain dictionary |
+| 1.5 | multi-language support framework | i18n intent mapping (english, german) |
 
-**Intent Taxonomy:**
+**intent taxonomy:**
 
 ```yaml
 # config/intent_taxonomy.yaml
@@ -168,16 +162,16 @@ intents:
     requires_confirmation: true
 ```
 
-### Phase 2: Context & Session Management (2 PT)
+### phase 2: context & session management (2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Session store (Redis) | TTL-based session expiry (30min idle, 24h max) |
-| 2.2 | Entity resolution across turns | Track mentioned servers, resolve "it" / "that server" |
-| 2.3 | Conversation history compression | Sliding window of last N exchanges |
-| 2.4 | User authorization state | Permissions cached per session |
+| 2.1 | session store (redis) | ttl-based session expiry (30min idle, 24h max) |
+| 2.2 | entity resolution across turns | track mentioned servers, resolve "it" / "that server" |
+| 2.3 | conversation history compression | sliding window of last n exchanges |
+| 2.4 | user authorization state | permissions cached per session |
 
-**Session data structure:**
+**session data structure:**
 
 ```json
 {
@@ -203,17 +197,17 @@ intents:
 }
 ```
 
-### Phase 3: Action Orchestrator (3 PT)
+### phase 3: action orchestrator (3 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Query resolver | Maps intent+entities to API calls or DB queries |
-| 3.2 | Command executor | Action validation, dry-run, execution |
-| 3.3 | Confirmation workflow | Destructive action guard: "Are you sure?" |
-| 3.4 | Multi-step action planner | Decompose complex requests into sequential steps |
-| 3.5 | Error handling & fallback | Graceful degradation when parts fail |
+| 3.1 | query resolver | maps intent+entities to api calls or db queries |
+| 3.2 | command executor | action validation, dry-run, execution |
+| 3.3 | confirmation workflow | destructive action guard: "are you sure?" |
+| 3.4 | multi-step action planner | decompose complex requests into sequential steps |
+| 3.5 | error handling & fallback | graceful degradation when parts fail |
 
-**Action resolution flow:**
+**action resolution flow:**
 
 ```python
 # pseudocode: action_orchestrator.py
@@ -253,17 +247,17 @@ async def resolve_action(intent: str, entities: dict, context: SessionContext) -
         return QueryResult(data=analysis, format="narrative")
 ```
 
-### Phase 4: Response Generation & LLM Integration (2 PT)
+### phase 4: response generation & llm integration (2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 4.1 | Structured data → narrative transformer | LLM prompt for converting JSON to natural language |
-| 4.2 | Response templating engine | Templates per intent type (table, summary, alert) |
-| 4.3 | Streaming responses (WebSocket) | Real-time partial response delivery |
-| 4.4 | LLM provider abstraction | OpenAI / Anthropic / local model support |
-| 4.5 | Prompt security & injection prevention | Input sanitization, output validation |
+| 4.1 | structured data → narrative transformer | llm prompt for converting json to natural language |
+| 4.2 | response templating engine | templates per intent type (table, summary, alert) |
+| 4.3 | streaming responses (websocket) | real-time partial response delivery |
+| 4.4 | llm provider abstraction | openai / anthropic / local model support |
+| 4.5 | prompt security & injection prevention | input sanitization, output validation |
 
-**LLM prompt template:**
+**llm prompt template:**
 
 ```
 You are an infrastructure assistant for Infra Pilot.
@@ -291,28 +285,26 @@ Instructions:
 - Respond in the user's language (detected: {language}).
 ```
 
-### Phase 5: Interface Integrations (1-2 PT)
+### phase 5: interface integrations (1-2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 5.1 | Panel chat widget (iframe/component) | React chat component with markdown rendering |
-| 5.2 | Discord bot slash command | `/ask` command with ephemeral response |
-| 5.3 | Slack app integration | Slash command + interactive messages |
-| 5.4 | CLI chat mode | `ipilot ask "..."` |
+| 5.1 | panel chat widget (iframe/component) | react chat component with markdown rendering |
+| 5.2 | discord bot slash command | `/ask` command with ephemeral response |
+| 5.3 | slack app integration | slash command + interactive messages |
+| 5.4 | cli chat mode | `ipilot ask "..."` |
 
----
+## api design
 
-## API Design
+### rest api
 
-### REST API
-
-#### Send Query
+#### send query
 
 ```
 POST /api/v1/assistant/query
 ```
 
-Request:
+request:
 ```json
 {
   "query": "Show me servers with more than 80% RAM usage",
@@ -325,7 +317,7 @@ Request:
 }
 ```
 
-Response:
+response:
 ```json
 {
   "response": "I found **3 servers** exceeding 80% RAM usage:\n\n| Server | RAM Usage | Total RAM | Status |\n|--------|-----------|-----------|--------|\n| web-01 | 89% | 32 GB | Running |\n| db-primary | 94% | 64 GB | Running |\n| game-02 | 87% | 16 GB | Running |\n\nWould you like me to investigate any of these further?",
@@ -344,13 +336,13 @@ Response:
 }
 ```
 
-#### Stream Response (WebSocket)
+#### stream response (websocket)
 
 ```
 ws://<host>/ws/v1/assistant
 ```
 
-Request message:
+request message:
 ```json
 {
   "type": "query",
@@ -359,7 +351,7 @@ Request message:
 }
 ```
 
-Streamed response:
+streamed response:
 ```json
 {
   "type": "stream_chunk",
@@ -382,13 +374,13 @@ Streamed response:
 }
 ```
 
-#### Confirm Action
+#### confirm action
 
 ```
 POST /api/v1/assistant/confirm
 ```
 
-Request:
+request:
 ```json
 {
   "session_id": "sess-abc123",
@@ -401,15 +393,13 @@ Request:
 }
 ```
 
-#### Get Conversation History
+#### get conversation history
 
 ```
 GET /api/v1/assistant/sessions/{session_id}/history
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/assistant.py
@@ -466,7 +456,7 @@ class ConfirmationRequest:
     confirmed: bool | None
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- Chat sessions
@@ -514,21 +504,17 @@ CREATE TABLE assistant_actions (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | NLU pipeline (intent classifier, NER), context manager, action orchestrator, response generator, LLM integration, session store |
-| **Orchestrator Agent** | Action execution (restart, deploy, config changes), metric query resolution |
-| **Management Panel** | Chat widget UI, conversation history view, suggestion chips |
-| **Discord Service** | Slash command handler, message formatting |
-| **Slack Integration** | Slash command handler, interactive message components |
+| integration service | nlu pipeline (intent classifier, ner), context manager, action orchestrator, response generator, llm integration, session store |
+| orchestrator agent | action execution (restart, deploy, config changes), metric query resolution |
+| management panel | chat widget ui, conversation history view, suggestion chips |
+| discord service | slash command handler, message formatting |
+| slack integration | slash command handler, interactive message components |
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/ai_assistant.yaml
@@ -584,58 +570,52 @@ security:
   audit_all_actions: true
 ```
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Intent taxonomy design | 0.5 | Product spec |
-| 1.2 | Intent classifier training | 1.5 | Labeled dataset |
-| 1.3 | Entity extraction (NER) | 1 | Training data |
-| 1.4 | Input normalization | 0.5 | NLU pipeline |
-| 1.5 | Multi-language framework | 0.5 | Core NLU |
-| 2.1 | Session store (Redis) | 0.5 | Redis instance |
-| 2.2 | Cross-turn entity resolution | 0.5 | Session store |
-| 2.3 | History compression | 0.5 | Session store |
-| 2.4 | Authorization integration | 0.5 | Auth service |
-| 3.1 | Query resolver | 1 | API gateway |
-| 3.2 | Command executor | 1.5 | Orchestrator API |
-| 3.3 | Confirmation workflow | 0.5 | Action executor |
-| 3.4 | Multi-step action planner | 0.5 | Command executor |
-| 3.5 | Error handling | 0.5 | All phases |
-| 4.1 | Narrative transformer | 0.5 | LLM integration |
-| 4.2 | Response templates | 0.5 | Intent definitions |
-| 4.3 | Streaming responses | 0.5 | WebSocket infra |
-| 4.4 | LLM provider abstraction | 0.5 | Any LLM API key |
-| 4.5 | Prompt security | 0.5 | Security review |
-| 5.1 | Panel chat widget | 1 | React component library |
-| 5.2 | Discord bot integration | 0.5 | Discord bot SDK |
-| 5.3 | Slack app integration | 0.5 | Slack API |
-| 5.4 | CLI chat mode | 0.5 | CLI framework |
-| | **Total** | **14.5** | |
+| 1.1 | intent taxonomy design | 0.5 | product spec |
+| 1.2 | intent classifier training | 1.5 | labeled dataset |
+| 1.3 | entity extraction (ner) | 1 | training data |
+| 1.4 | input normalization | 0.5 | nlu pipeline |
+| 1.5 | multi-language framework | 0.5 | core nlu |
+| 2.1 | session store (redis) | 0.5 | redis instance |
+| 2.2 | cross-turn entity resolution | 0.5 | session store |
+| 2.3 | history compression | 0.5 | session store |
+| 2.4 | authorization integration | 0.5 | auth service |
+| 3.1 | query resolver | 1 | api gateway |
+| 3.2 | command executor | 1.5 | orchestrator api |
+| 3.3 | confirmation workflow | 0.5 | action executor |
+| 3.4 | multi-step action planner | 0.5 | command executor |
+| 3.5 | error handling | 0.5 | all phases |
+| 4.1 | narrative transformer | 0.5 | llm integration |
+| 4.2 | response templates | 0.5 | intent definitions |
+| 4.3 | streaming responses | 0.5 | websocket infra |
+| 4.4 | llm provider abstraction | 0.5 | any llm api key |
+| 4.5 | prompt security | 0.5 | security review |
+| 5.1 | panel chat widget | 1 | react component library |
+| 5.2 | discord bot integration | 0.5 | discord bot sdk |
+| 5.3 | slack app integration | 0.5 | slack api |
+| 5.4 | cli chat mode | 0.5 | cli framework |
+| | total | 14.5 | |
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| NLU misclassification | Wrong action executed | High confidence threshold (0.6+), confirmation for destructive actions, "did you mean?" disambiguation |
-| LLM hallucination | Fabricated data or actions | Strict prompt constraints, data grounding (only use provided data), output validation layer |
-| Prompt injection attack | Unauthorized actions | Input sanitization, role-based separation, rate limiting, audit all actions |
-| Multi-language accuracy gaps | Poor experience for non-English | NLU model fine-tuned per language, fallback to English, clear error messages |
-| Context window overflow | Lost conversation memory | Sliding window, summary compression for long sessions |
+| nlu misclassification | wrong action executed | high confidence threshold (0.6+), confirmation for destructive actions, "did you mean?" disambiguation |
+| llm hallucination | fabricated data or actions | strict prompt constraints, data grounding (only use provided data), output validation layer |
+| prompt injection attack | unauthorized actions | input sanitization, role-based separation, rate limiting, audit all actions |
+| multi-language accuracy gaps | poor experience for non-english | nlu model fine-tuned per language, fallback to english, clear error messages |
+| context window overflow | lost conversation memory | sliding window, summary compression for long sessions |
 
----
+## metrics & kpis
 
-## Metrics & KPIs
-
-| Metric | Target | Measurement |
+| metric | target | measurement |
 |--------|--------|-------------|
-| Intent classification accuracy | > 95% | Correct intent / total queries (eval set) |
-| Entity extraction F1 score | > 0.90 | Precision & recall on entity labels |
-| Successful action execution | > 99% | Successful actions / total attempted |
-| User satisfaction (thumbs up/down) | > 85% positive | Feedback responses |
-| Queries resolved without handoff | > 80% | No escalation to manual support |
-| Average response time | < 3s | Time from query to complete response |
+| intent classification accuracy | > 95% | correct intent / total queries (eval set) |
+| entity extraction f1 score | > 0.90 | precision & recall on entity labels |
+| successful action execution | > 99% | successful actions / total attempted |
+| user satisfaction (thumbs up/down) | > 85% positive | feedback responses |
+| queries resolved without handoff | > 80% | no escalation to manual support |
+| average response time | < 3s | time from query to complete response |

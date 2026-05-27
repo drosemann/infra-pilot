@@ -1,38 +1,34 @@
-# Feature 10: AI Capacity Forecaster
+# ai capacity forecaster
 
-| Field | Value |
+| field | value |
 |-------|-------|
-| **ID** | F-010 |
-| **Name** | AI Capacity Forecaster |
-| **Category** | AI & Intelligence |
-| **Primary Service** | Orchestrator Agent |
-| **Effort** | Medium (4-6 PT) |
-| **Dependencies** | Feature 2 (AI Resource Optimizer), Feature 1 (AI Log Anomaly Detector) |
-| **Phase** | Phase 1 |
+| id | f-010 |
+| name | ai capacity forecaster |
+| category | ai & intelligence |
+| primary service | orchestrator agent |
+| effort | medium (4-6 pt) |
+| dependencies | feature 2 (ai resource optimizer), feature 1 (ai log anomaly detector) |
+| phase | phase 1 |
 
----
+## overview
 
-## Overview
+the ai capacity forecaster analyzes historical resource usage data (cpu, ram, disk, network, player counts) across all managed servers to predict future capacity needs at 30, 60, and 90 day horizons. it identifies growth trends, seasonal patterns, and imminent resource exhaustion, then proactively recommends provisioning additional resources or rightsizing existing allocations before performance is impacted.
 
-The AI Capacity Forecaster analyzes historical resource usage data (CPU, RAM, disk, network, player counts) across all managed servers to predict future capacity needs at 30, 60, and 90 day horizons. It identifies growth trends, seasonal patterns, and imminent resource exhaustion, then proactively recommends provisioning additional resources or rightsizing existing allocations before performance is impacted.
+### goals
 
-### Goals
+- predict resource exhaustion events >=7 days in advance with 90%+ precision
+- forecast capacity needs at 30/60/90 day horizons per server and per account
+- recommend provisioning actions with cost-benefit analysis
+- reduce out-of-capacity incidents by 70%
 
-- Predict resource exhaustion events ≥7 days in advance with 90%+ precision
-- Forecast capacity needs at 30/60/90 day horizons per server and per account
-- Recommend provisioning actions with cost-benefit analysis
-- Reduce out-of-capacity incidents by 70%
+### non-goals
 
-### Non-Goals
+- not a real-time autoscaler (recommendations require approval)
+- does not automatically provision cloud resources
+- not a billing or cost management tool (though informs cost planning)
+- does not replace existing monitoring alerts
 
-- Not a real-time autoscaler (recommendations require approval)
-- Does not automatically provision cloud resources
-- Not a billing or cost management tool (though informs cost planning)
-- Does not replace existing monitoring alerts
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -66,10 +62,10 @@ The AI Capacity Forecaster analyzes historical resource usage data (CPU, RAM, di
 │  │  │ Statistical      │  │ ML Model         │  │ Ensemble   │  │        │
 │  │  │ Models           │  │ (Prophet /        │  │ Combiner   │  │        │
 │  │  │                  │  │  NeuralProphet)   │  │            │  │        │
-│  │  │ • ARIMA          │  │                  │  │ • Weighted │  │        │
-│  │  │ • Exponential    │  │ • Multi-variate  │  │   average  │  │        │
-│  │  │   Smoothing      │  │ • Holiday effects│  │ • Variance │  │        │
-│  │  │ • Linear Trend   │  │ • Growth curve   │  │   analysis │  │        │
+│  │  │ - ARIMA          │  │                  │  │ - Weighted │  │        │
+│  │  │ - Exponential    │  │ - Multi-variate  │  │   average  │  │        │
+│  │  │   Smoothing      │  │ - Holiday effects│  │ - Variance │  │        │
+│  │  │ - Linear Trend   │  │ - Growth curve   │  │   analysis │  │        │
 │  │  └──────────────────┘  └──────────────────┘  └────────────┘  │        │
 │  └──────────────────────────────────────────────────────────────┘        │
 │                              │                                            │
@@ -81,11 +77,11 @@ The AI Capacity Forecaster analyzes historical resource usage data (CPU, RAM, di
 │  │  │ Resource         │  │ Exhaustion       │  │ Cost       │  │        │
 │  │  │ Threshold        │  │ Detector         │  │ Analyzer   │  │        │
 │  │  │ Analyzer         │  │                  │  │            │  │        │
-│  │  │ • Current vs     │  │ • Days until     │  │ • Current  │  │        │
+│  │  │ - Current vs     │  │ - Days until     │  │ - Current  │  │        │
 │  │  │   forecast       │  │   OOM             │  │   cost    │  │        │
-│  │  │ • Per-resource   │  │ • Disk full date │  │ • Upgrade │  │        │
-│  │  │   breakdown      │  │ • Network sat    │  │   cost    │  │        │
-│  │  │ • Growth rate    │  │ • Player cap hit │  │ • Savings │  │        │
+│  │  │ - Per-resource   │  │ - Disk full date │  │ - Upgrade │  │        │
+│  │  │   breakdown      │  │ - Network sat    │  │   cost    │  │        │
+│  │  │ - Growth rate    │  │ - Player cap hit │  │ - Savings │  │        │
 │  │  └──────────────────┘  └──────────────────┘  └────────────┘  │        │
 │  └──────────────────────────────────────────────────────────────┘        │
 │                              │                                            │
@@ -95,9 +91,9 @@ The AI Capacity Forecaster analyzes historical resource usage data (CPU, RAM, di
 │  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐    │        │
 │  │  │ Recommendation │  │ Action Plan    │  │ Schedule       │    │        │
 │  │  │ Generator      │  │ Builder        │  │ Optimizer      │    │        │
-│  │  │ • Upgrade plan  │  │ • Step-by-step │  │ • Best time    │    │        │
-│  │  │ • Downgrade    │  │ • Approvals    │  │ • Maintenance  │    │        │
-│  │  │ • Add node     │  │ • Rollback     │  │   window aware │    │        │
+│  │  │ - Upgrade plan  │  │ - Step-by-step │  │ - Best time    │    │        │
+│  │  │ - Downgrade    │  │ - Approvals    │  │ - Maintenance  │    │        │
+│  │  │ - Add node     │  │ - Rollback     │  │   window aware │    │        │
 │  │  └────────────────┘  └────────────────┘  └────────────────┘    │        │
 │  └──────────────────────────────────────────────────────────────┘        │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -108,112 +104,108 @@ The AI Capacity Forecaster analyzes historical resource usage data (CPU, RAM, di
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
 │  │ Forecast     │  │ Capacity     │  │ Timeline     │  │ Recommend-   │ │
 │  │ Dashboard    │  │ Heatmap      │  │ View         │  │ ations Panel │ │
-│  │ • 30/60/90   │  │ • Per-server │  │ • Historical │  │ • Ranked     │ │
-│  │ • Per-server │  │ • Per-account │  │ • Predicted  │  │ • Cost-benefit│ │
-│  │ • Account    │  │ • Per-region │  │ • Overlay    │  │ • One-click  │ │
+│  │ - 30/60/90   │  │ - Per-server │  │ - Historical │  │ - Ranked     │ │
+│  │ - Per-server │  │ - Per-account │  │ - Predicted  │  │ - Cost-benefit│ │
+│  │ - Account    │  │ - Per-region │  │ - Overlay    │  │ - One-click  │ │
 │  │   summary    │  │              │  │              │  │   apply      │ │
 │  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘ │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
+### data flow
 
 ```
 ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
 │ Metrics │───▶│ Clean & │───▶│ Forecast│───▶│ Analyze │───▶│ Recommend│
-│ (90d+)  │    │ Resample│    │ (3 models) │    │ (thresholds)  │ (actions)│
+│ (90d+)  │    │ Resample│    │ (3 models)    │ (thresholds)    │ (actions)│
 └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
      │              │              │              │              │
      ▼              ▼              ▼              ▼              ▼
-  TimescaleDB    Preprocess     Prophet +     Rule Engine     Notifications
-                  Pipeline       ARIMA +       Checks         + UI Update
+  TimescaleDB    Preprocess     Prophet +       Rule Engine     Notifications
+                  Pipeline       ARIMA +       Checks          + UI Update
                                 ES Model
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: data collection & aggregation (week 1, 1.5 pt)
 
-### Phase 1: Data Collection & Aggregation (Week 1, 1.5 PT)
+1. **metrics collector**
+   - pull cpu, ram, disk, network i/o metrics from timescaledb (90+ day window)
+   - player count history from minecraft query logs
+   - swap usage, disk i/o wait, oom killer events
+   - configurable resolution: 1-hour -> 1-day aggregation rollups
 
-1. **Metrics Collector**
-   - Pull CPU, RAM, disk, network I/O metrics from TimescaleDB (90+ day window)
-   - Player count history from Minecraft query logs
-   - Swap usage, disk I/O wait, OOM killer events
-   - Configurable resolution: 1-hour → 1-day aggregation rollups
+2. **data quality pipeline**
+   - gap filling (linear interpolation for <6h gaps)
+   - anomaly removal (1-time spikes, maintenance windows, backup spikes)
+   - stationarity tests (augmented dickey-fuller)
+   - seasonal decomposition (stl: seasonal, trend, residual)
 
-2. **Data Quality Pipeline**
-   - Gap filling (linear interpolation for <6h gaps)
-   - Anomaly removal (1-time spikes, maintenance windows, backup spikes)
-   - Stationarity tests (Augmented Dickey-Fuller)
-   - Seasonal decomposition (STL: Seasonal, Trend, Residual)
+3. **aggregation views**
+   - pre-computed daily/hourly rollups per server
+   - account-level rollups (sum of all servers)
+   - group/label rollups (e.g., "production", "staging")
 
-3. **Aggregation Views**
-   - Pre-computed daily/hourly rollups per server
-   - Account-level rollups (sum of all servers)
-   - Group/label rollups (e.g., "production", "staging")
+### phase 2: forecasting engine (week 1-3, 2.5 pt)
 
-### Phase 2: Forecasting Engine (Week 1-3, 2.5 PT)
+1. **statistical models**
+   - **arima**: autoregressive integrated moving average
+     - auto-search (p,d,q) parameters via aic minimization
+     - best for: linear trends, stable seasonality
+   - **exponential smoothing**: holt-winters
+     - best for: clear seasonal patterns
+   - **linear regression**: simple trend + seasonal dummies
+     - best for: continuous growth with additive seasonality
 
-1. **Statistical Models**
-   - **ARIMA**: AutoRegressive Integrated Moving Average
-     - Auto-search (p,d,q) parameters via AIC minimization
-     - Best for: linear trends, stable seasonality
-   - **Exponential Smoothing**: Holt-Winters
-     - Best for: clear seasonal patterns
-   - **Linear Regression**: Simple trend + seasonal dummies
-     - Best for: continuous growth with additive seasonality
+2. **ml models**
+   - **prophet** (meta): handles holidays, changepoints, outliers
+   - **neuralprophet**: deep learning extension with auto-regression
+   - **lightgbm** (future): multi-variate with external regressors
 
-2. **ML Models**
-   - **Prophet** (Meta): Handles holidays, changepoints, outliers
-   - **NeuralProphet**: Deep learning extension with auto-regression
-   - **LightGBM** (future): Multi-variate with external regressors
+3. **ensemble strategy**
+   - weighted average of top-3 models (weights based on recent accuracy)
+   - confidence intervals: 80% and 95% prediction intervals
+   - model selection per server per resource (different servers -> different best models)
+   - weekly re-evaluation: test all models on last 14 days, pick best
 
-3. **Ensemble Strategy**
-   - Weighted average of top-3 models (weights based on recent accuracy)
-   - Confidence intervals: 80% and 95% prediction intervals
-   - Model selection per server per resource (different servers → different best models)
-   - Weekly re-evaluation: test all models on last 14 days, pick best
+### phase 3: analysis & recommendations (week 3-4, 1.5 pt)
 
-### Phase 3: Analysis & Recommendations (Week 3-4, 1.5 PT)
+1. **resource threshold analyzer**
+   - compare forecast p95 against configured thresholds:
+     - cpu: 80% sustained -> warning, 90% -> critical
+     - ram: 85% used -> warning, 95% -> critical
+     - disk: 75% -> warning, 90% -> critical
+     - network: 70% bandwidth -> warning, 85% -> critical
+   - earliest exhaustion date calculation
 
-1. **Resource Threshold Analyzer**
-   - Compare forecast p95 against configured thresholds:
-     - CPU: 80% sustained → warning, 90% → critical
-     - RAM: 85% used → warning, 95% → critical
-     - Disk: 75% → warning, 90% → critical
-     - Network: 70% bandwidth → warning, 85% → critical
-   - Earliest exhaustion date calculation
+2. **exhaustion detector**
+   - days until resource exhaustion (with confidence)
+   - multiple scenario analysis:
+     - current trend continues
+     - growth accelerates (+20%)
+     - growth decelerates (-20%)
+   - slack time: days from detection to actual exhaustion
 
-2. **Exhaustion Detector**
-   - Days until resource exhaustion (with confidence)
-   - Multiple scenario analysis:
-     - Current trend continues
-     - Growth accelerates (+20%)
-     - Growth decelerates (-20%)
-   - Slack time: days from detection to actual exhaustion
+3. **provisioning recommendation engine**
+   - for each predicted exhaustion:
+     - recommended action (upgrade plan, add node, migrate)
+     - cost: current vs. recommended
+     - impact: performance improvement, headroom gained
+     - timeline: recommended apply-by date
+     - alternative options with trade-offs
 
-3. **Provisioning Recommendation Engine**
-   - For each predicted exhaustion:
-     - Recommended action (upgrade plan, add node, migrate)
-     - Cost: current vs. recommended
-     - Impact: performance improvement, headroom gained
-     - Timeline: recommended apply-by date
-     - Alternative options with trade-offs
+4. **cost-benefit analyzer**
+   - current monthly cost for server(s)
+   - projected cost after recommendation
+   - cost per unit of resource (e.g., $/gb ram)
+   - payback period for upgrade
 
-4. **Cost-Benefit Analyzer**
-   - Current monthly cost for server(s)
-   - Projected cost after recommendation
-   - Cost per unit of resource (e.g., $/GB RAM)
-   - Payback period for upgrade
+## api design
 
----
+### endpoints
 
-## API Design
-
-### Endpoints
-
-All endpoints are prefixed with `/api/v2/capacity-forecast`.
+all endpoints are prefixed with `/api/v2/capacity-forecast`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -229,7 +221,7 @@ All endpoints are prefixed with `/api/v2/capacity-forecast`.
 | `POST` | `/models/{serverId}/retrain` | Force model retraining |
 | `GET`  | `/accuracy` | Model accuracy dashboard data |
 
-### Request/Response Examples
+### request/response examples
 
 **GET /api/v2/capacity-forecast/forecast/srv-mc-42**
 
@@ -400,9 +392,7 @@ All endpoints are prefixed with `/api/v2/capacity-forecast`.
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```yaml
 Forecast:
@@ -411,7 +401,7 @@ Forecast:
   generated_at: datetime
   data_window_start: datetime
   data_window_end: datetime
-  data_quality: float         # 0-1
+  data_quality: float
   resources: ResourceForecast[]
   overall_status: "healthy" | "watch" | "warning" | "critical"
 
@@ -421,16 +411,16 @@ ResourceForecast:
   current_value: float
   current_timestamp: datetime
   trend: "increasing" | "decreasing" | "stable"
-  growth_rate: string         # e.g. "2.5%/month"
+  growth_rate: string
   model_metadata: ModelMetadata
   predictions: TimeHorizonPredictions
   exhaustion: ExhaustionPrediction | null
 
 ModelMetadata:
-  primary: string             # "prophet" | "arima" | "exp_smoothing" | "linear"
+  primary: string
   secondary: string
   ensemble_weights: dict
-  accuracy_last_14d: float    # MAPE
+  accuracy_last_14d: float
   last_retrained: datetime
   training_duration_ms: integer
 
@@ -443,10 +433,10 @@ HorizonPrediction:
   p50: float
   p95: float
   p05: float
-  confidence: float           # 0-1
+  confidence: float
 
 ExhaustionPrediction:
-  threshold: float            # e.g. 90 (percent) or 80 (player count)
+  threshold: float
   days_until_exhaustion_p50: integer
   days_until_exhaustion_p95: integer
   exhaustion_date_p50: date
@@ -497,28 +487,24 @@ TrainingMetrics:
   model_name: string
   trained_at: datetime
   training_duration_ms: integer
-  mape: float          # Mean Absolute Percentage Error
-  mae: float           # Mean Absolute Error
-  rmse: float          # Root Mean Square Error
-  mase: float          # Mean Absolute Scaled Error
+  mape: float
+  mae: float
+  rmse: float
+  mase: float
   training_data_points: integer
   features_used: string[]
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Service | Responsibility |
 |---------|---------------|
-| **Orchestrator Agent** | Primary: Data collection, forecasting engine, analysis, recommendation generation, model training |
-| **Management Panel** | Secondary: UI for forecast dashboard, heatmap, timeline, recommendations panel, cost analysis |
-| **Integration Service** | Secondary: Alert/notification dispatch when critical recommendations generated, scheduled report delivery |
-| **Service Core** | None directly; authentication, server metadata, account hierarchy |
+| orchestrator agent | primary: data collection, forecasting engine, analysis, recommendation generation, model training |
+| management panel | secondary: ui for forecast dashboard, heatmap, timeline, recommendations panel, cost analysis |
+| integration service | secondary: alert/notification dispatch when critical recommendations generated, scheduled report delivery |
+| service core | none directly; authentication, server metadata, account hierarchy |
 
----
-
-## Effort Estimate
+## effort estimate
 
 | Phase | Task | PT | Owner |
 |-------|------|----|-------|
@@ -533,25 +519,21 @@ TrainingMetrics:
 | P3 | Cost-benefit analysis | 0.25 | Backend |
 | P3 | Forecast dashboard + recommendations UI | 0.75 | Frontend |
 | P3 | Scheduled report generation | 0.25 | Backend |
-| **Total** | | **5.75 PT** | |
+| total | | 5.75 pt | |
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Insufficient historical data (<30 days) | High | Fallback to linear trend; output with reduced confidence; flag for data collection |
-| Sudden traffic spikes (e.g., Minecraft YouTuber effect) | Medium | Anomaly detection excludes spikes; confidence intervals widen with uncertainty |
-| Model drift over time (forecast accuracy degrades) | Medium | Weekly accuracy evaluation; auto-retrain on threshold breach; model versioning |
-| Seasonality changes (e.g., summer vs. school year) | Low | Multi-year seasonality support in Prophet; manual holiday/event calendar input |
-| Resource limits not well-understood (e.g., disk I/O) | Medium | Focus on clear resources first (RAM, disk); add complex resources in v2 |
-| Over-provisioning leads to unnecessary spend | Medium | Conservative recommendations; explicit cost-benefit displayed; approval required |
-| Cold start for new servers | High | Use account-level aggregates as baseline; populate with similar-server profiles |
+| insufficient historical data (<30 days) | high | fallback to linear trend; output with reduced confidence; flag for data collection |
+| sudden traffic spikes (e.g., minecraft youtuber effect) | medium | anomaly detection excludes spikes; confidence intervals widen with uncertainty |
+| model drift over time (forecast accuracy degrades) | medium | weekly accuracy evaluation; auto-retrain on threshold breach; model versioning |
+| seasonality changes (e.g., summer vs. school year) | low | multi-year seasonality support in prophet; manual holiday/event calendar input |
+| resource limits not well-understood (e.g., disk i/o) | medium | focus on clear resources first (ram, disk); add complex resources in v2 |
+| over-provisioning leads to unnecessary spend | medium | conservative recommendations; explicit cost-benefit displayed; approval required |
+| cold start for new servers | high | use account-level aggregates as baseline; populate with similar-server profiles |
 
----
-
-## Forecast Accuracy Tracking
+## forecast accuracy tracking
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -572,25 +554,23 @@ Accuracy metric: MAPE (Mean Absolute Percentage Error)
 Retrain trigger: MAPE > 10% over 14 days
 ```
 
----
+## configuration
 
-## Configuration
-
-### YAML Configuration Example
+### yaml configuration example
 
 ```yaml
 # orchestrator-agent/config/capacity-forecaster.yml
 capacity_forecast:
   enabled: true
-  schedule: "0 6 * * *"  # daily at 06:00 UTC
-  
+  schedule: "0 6 * * *"
+
   data:
     min_history_days: 30
     max_history_days: 365
     aggregation: "1h"
     gap_fill_max_hours: 6
     anomaly_std_dev_threshold: 3.0
-    
+
   models:
     ensemble:
       enabled: true
@@ -611,7 +591,7 @@ capacity_forecast:
     exponential_smoothing:
       enabled: true
       seasonal_periods: [7, 30]
-      
+
   thresholds:
     cpu:
       warning: 80
@@ -628,13 +608,13 @@ capacity_forecast:
     players:
       warning: 75
       critical: 90
-      
+
   recommendations:
     max_per_server: 3
     auto_dismiss_days: 30
-    min_slack_days: 7  # don't recommend if <7 days to exhaustion
-    cost_savings_threshold: 5.0  # minimum $/month savings for downgrade rec
-    
+    min_slack_days: 7
+    cost_savings_threshold: 5.0
+
   notifications:
     critical:
       - type: "discord"
@@ -647,13 +627,11 @@ capacity_forecast:
       format: "pdf"
 ```
 
----
+## future enhancements
 
-## Future Enhancements
-
-- **v2.0**: Multi-variate forecasting (CPU depends on players, RAM depends on plugins)
-- **v2.1**: Cross-server migration recommendations (consolidate under-utilized servers)
-- **v2.2**: Auto-scaling integration with cloud provider APIs
-- **v2.3**: Budget-aware capacity planning (recommend within cost constraints)
-- **v2.4**: Hardware lifecycle prediction (SSD wear, ECC error rates)
-- **v2.5**: Predictive auto-scaling with approval workflow + automated execution
+- v2.0: multi-variate forecasting (cpu depends on players, ram depends on plugins)
+- v2.1: cross-server migration recommendations (consolidate under-utilized servers)
+- v2.2: auto-scaling integration with cloud provider apis
+- v2.3: budget-aware capacity planning (recommend within cost constraints)
+- v2.4: hardware lifecycle prediction (ssd wear, ecc error rates)
+- v2.5: predictive auto-scaling with approval workflow + automated execution

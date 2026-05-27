@@ -1,28 +1,28 @@
-# Test Plan
+# test plan
 
-This document outlines the pytest-based test plan for Infra-pilot using a mock provider.
+this document outlines the pytest-based test plan for infra-pilot using a mock provider.
 
-Test categories
-- Unit: core utilities and resolver
-- Integration: adapters and config parsers against mock endpoints
-- End-to-end (mock): provisioning/deprovisioning cycles using neutral tokens
-- Smoke: quick connectivity and basic state validation
+test categories
+• unit: core utilities and resolver
+• integration: adapters and config parsers against mock endpoints
+• end-to-end (mock): provisioning/deprovisioning cycles using neutral tokens
+• smoke: quick connectivity and basic state validation
 
-Neutral tokens and resolver
-- Tokens: PROVIDER_MOCK, REGION_MOCK_US_EAST, SKU_MOCK_SMALL, etc.
-- The resolver translates tokens to mock identities for tests
+neutral tokens and resolver
+• tokens: `provider_mock`, `region_mock_us_east`, `sku_mock_small`, etc.
+• the resolver translates tokens to mock identities for tests
 
-Environment and data
-- LOCAL (Windows and Linux) and CI (Linux)
-- Dummy data via environment variables; no secrets in code
+environment and data
+• local (windows and linux) and ci (linux)
+• dummy data via environment variables; no secrets in code
 
-Test data and fixtures
-- Central fixtures in tests/conftest.py; neutral tokens in all tests
-- Infra naming utilities under infra/naming
+test data and fixtures
+• central fixtures in `tests/conftest.py`; neutral tokens in all tests
+• infra naming utilities under `infra/naming`
 
-Running tests
-- Local: pytest -m unit/integration/e2e/smoke
-- CI: See .github/workflows/ci.yml (produces JUnit XML reports)
+running tests
+• local: `pytest -m unit/integration/e2e/smoke`
+• ci: see `.github/workflows/ci.yml` (produces junit xml reports)
 
-Extensibility
-- To add a new provider, extend provider_map.yaml and overrides.yaml; tests reference neutral tokens only
+extensibility
+• to add a new provider, extend `provider_map.yaml` and `overrides.yaml`; tests reference neutral tokens only

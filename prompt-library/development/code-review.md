@@ -1,14 +1,14 @@
-# Code Review Assistant
+# code review assistant
 
-## Description
+## description
 
-A comprehensive code review prompt that analyzes code quality, identifies potential issues, suggests improvements, and provides detailed feedback on best practices, security, performance, and maintainability.
+a comprehensive code review prompt that analyzes code quality, identifies potential issues, suggests improvements, and provides detailed feedback on best practices, security, performance, and maintainability.
 
-## Usage
+## usage
 
-Paste your code along with any specific concerns or focus areas. Works with any programming language. Best used for reviewing pull requests, refactoring decisions, or general code quality assessment.
+paste your code along with any specific concerns or focus areas. works with any programming language. best used for reviewing pull requests, refactoring decisions, or general code quality assessment.
 
-## Prompt
+## prompt
 
 ```markdown
 Please perform a comprehensive code review of the following code. Analyze it for:
@@ -59,7 +59,7 @@ Additional context or specific concerns:
 [SPECIFY ANY PARTICULAR AREAS TO FOCUS ON]
 ```
 
-## Example Input
+## example input
 
 ```markdown
 ```javascript
@@ -80,7 +80,7 @@ function processOrder(items) {
 
 ```
 
-## Example Output
+## example output
 
 ```markdown
 ## Code Review Feedback
@@ -141,22 +141,26 @@ function processOrder(items) {
 
 ```
 
-## Variations
-- **Security-Focused**: Emphasize security vulnerabilities and data protection
-- **Performance-Focused**: Concentrate on optimization and efficiency
-- **Junior Developer**: Provide more educational explanations and learning resources
-- **Legacy Code**: Focus on modernization and technical debt reduction
+## variations
 
-## Tips
-- Provide the programming language for more targeted feedback
-- Include context about the application domain for better security analysis
-- Mention any specific coding standards or frameworks being used
-- Be specific about performance requirements or constraints
+• security-focused: emphasize security vulnerabilities and data protection
+• performance-focused: concentrate on optimization and efficiency
+• junior developer: provide more educational explanations and learning resources
+• legacy code: focus on modernization and technical debt reduction
 
-## Related Prompts
-- `refactoring-assistant.md` - For code improvement suggestions
-- `documentation-generator.md` - For adding comprehensive documentation
-- `test-case-generator.md` - For creating tests for reviewed code
+## tips
 
-## Tags
+• provide the programming language for more targeted feedback
+• include context about the application domain for better security analysis
+• mention any specific coding standards or frameworks being used
+• be specific about performance requirements or constraints
+
+## related prompts
+
+• `refactoring-assistant.md` - for code improvement suggestions
+• `documentation-generator.md` - for adding comprehensive documentation
+• `test-case-generator.md` - for creating tests for reviewed code
+
+## tags
+
 `code-review` `quality-assurance` `best-practices` `development` `debugging`

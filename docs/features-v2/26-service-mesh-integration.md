@@ -1,30 +1,26 @@
-# Feature 26: Service Mesh Integration
+# feature 26: service mesh integration
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 26 |
-| Feature Name | Service Mesh Integration |
-| Primary Service | Integration Service |
-| Effort Estimate | Large (7–10 PT) |
-| Status | Planned |
+| feature id | 26 |
+| feature name | service mesh integration |
+| primary service | integration service |
+| effort estimate | large (7-10 pt) |
+| status | planned |
 
----
+## 1. overview
 
-## 1. Overview
+deep integration with **istio** and **linkerd** service meshes, providing zero-trust mtls between all services, fine-grained traffic splitting for canary deployments, and comprehensive observability dashboards -- all managed from the panel with a simplified ux that abstracts mesh complexity.
 
-Deep integration with **Istio** and **Linkerd** service meshes, providing zero-trust mTLS between all services, fine-grained traffic splitting for canary deployments, and comprehensive observability dashboards — all managed from the Panel with a simplified UX that abstracts mesh complexity.
+### goals
 
-### Goals
+- enable mtls with one click -- no manual certificate management
+- simplify canary deployments via traffic weight / header / mirror rules
+- provide unified telemetry (golden signals: latency, traffic, errors, saturation)
+- support multi-cluster mesh federation (future)
+- reduce operational overhead with pre-built mesh profiles (dev, staging, prod)
 
-- Enable mTLS with one click — no manual certificate management
-- Simplify canary deployments via traffic weight / header / mirror rules
-- Provide unified telemetry (golden signals: latency, traffic, errors, saturation)
-- Support multi-cluster mesh federation (future)
-- Reduce operational overhead with pre-built mesh profiles (dev, staging, prod)
-
----
-
-## 2. Architecture
+## 2. architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -45,7 +41,7 @@ Deep integration with **Istio** and **Linkerd** service meshes, providing zero-t
 │  │  ┌──────────────────┐  ┌──────────────────┐  ┌───────────────┐  │   │
 │  │  │   Istio Adapter   │  │   Linkerd Adapter│  │  (Future:    │  │   │
 │  │  │   (istio.io/v1)   │  │   (linkerd.io)   │  │  Consul,     │  │   │
-│  │  │                   │  │                  │  │  Kuma…)      │  │   │
+│  │  │                   │  │                  │  │  Kuma...)    │  │   │
 │  │  └────────┬─────────┘  └────────┬─────────┘  └───────┬───────┘  │   │
 │  └───────────┼─────────────────────┼────────────────────┼───────────┘   │
 │              │                     │                    │               │
@@ -71,103 +67,99 @@ Deep integration with **Istio** and **Linkerd** service meshes, providing zero-t
 └──────────────┘    └──────────────────┘    └───────────────────────┘
 ```
 
-### Component Responsibilities
+### component responsibilities
 
-| Component | Role |
+| component | role |
 |-----------|------|
-| Panel | Mesh dashboard, traffic manager UI, canary wizard, observability explorer |
-| Integration Service | Provider abstraction, CRD generation, telemetry aggregation |
-| Istio / Linkerd Adapter | Translates Panel config into provider-specific CRDs (VirtualService, DestinationRule, ServiceEntry, etc.) |
-| Sidecar Injector | Manages automatic sidecar injection via namespace labels and annotations |
-| mTLS Manager | Configures peer authentication, destination rules, and certificate rotation |
-| Traffic Manager | Creates and updates VirtualService / DestinationRule / ServiceEntry resources |
-| Canary Controller | Manages progressive traffic shifting with automated rollback gates |
-| Telemetry Collector | Aggregates Prometheus metrics and Jaeger traces for the dashboard |
+| panel | mesh dashboard, traffic manager ui, canary wizard, observability explorer |
+| integration service | provider abstraction, crd generation, telemetry aggregation |
+| istio / linkerd adapter | translates panel config into provider-specific crds (virtualservice, destinationrule, serviceentry, etc.) |
+| sidecar injector | manages automatic sidecar injection via namespace labels and annotations |
+| mtls manager | configures peer authentication, destination rules, and certificate rotation |
+| traffic manager | creates and updates virtualservice / destinationrule / serviceentry resources |
+| canary controller | manages progressive traffic shifting with automated rollback gates |
+| telemetry collector | aggregates prometheus metrics and jaeger traces for the dashboard |
 
----
-
-## 3. Data Model
+## 3. data model
 
 ### `mesh_profiles`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| environment_id | UUID | FK → environments.id |
-| name | VARCHAR | e.g. "production-mesh" |
-| provider | ENUM | "istio", "linkerd" |
-| version | VARCHAR | e.g. "1.20.2" |
-| status | ENUM | installing, active, degraded, removed |
-| mTLS | ENUM | "disabled", "permissive", "strict" |
-| config | JSONB | Provider-specific mesh config |
-| telemetry_enabled | BOOLEAN | |
-| tracing_enabled | BOOLEAN | |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| environment_id | uuid | fk to environments.id |
+| name | varchar | e.g. "production-mesh" |
+| provider | enum | "istio", "linkerd" |
+| version | varchar | e.g. "1.20.2" |
+| status | enum | installing, active, degraded, removed |
+| mtls | enum | "disabled", "permissive", "strict" |
+| config | jsonb | provider-specific mesh config |
+| telemetry_enabled | boolean | |
+| tracing_enabled | boolean | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `mesh_namespaces`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| profile_id | UUID | FK → mesh_profiles.id |
-| namespace | VARCHAR | Kubernetes namespace |
-| sidecar_injection | ENUM | "enabled", "disabled", "inherit" |
-| mTLS_mode | ENUM | "inherit", "strict", "permissive" |
-| created_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| profile_id | uuid | fk to mesh_profiles.id |
+| namespace | varchar | kubernetes namespace |
+| sidecar_injection | enum | "enabled", "disabled", "inherit" |
+| mtls_mode | enum | "inherit", "strict", "permissive" |
+| created_at | timestamptz | |
 
 ### `mesh_traffic_rules`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| profile_id | UUID | FK → mesh_profiles.id |
-| name | VARCHAR | Rule name |
-| rule_type | ENUM | "routing", "canary", "mirroring", "timeout", "retry", "fault_injection" |
-| source_service | VARCHAR | |
-| destination_service | VARCHAR | |
-| config | JSONB | Type-specific configuration |
-| enabled | BOOLEAN | |
-| priority | INT | |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| profile_id | uuid | fk to mesh_profiles.id |
+| name | varchar | rule name |
+| rule_type | enum | "routing", "canary", "mirroring", "timeout", "retry", "fault_injection" |
+| source_service | varchar | |
+| destination_service | varchar | |
+| config | jsonb | type-specific configuration |
+| enabled | boolean | |
+| priority | int | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `mesh_canary_releases`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| profile_id | UUID | FK → mesh_profiles.id |
-| name | VARCHAR | e.g. "api-v2-canary" |
-| target_service | VARCHAR | |
-| target_namespace | VARCHAR | |
-| baseline_version | VARCHAR | |
-| canary_version | VARCHAR | |
-| strategy | ENUM | "weighted", "header_based", "mirror_based" |
-| steps | JSONB | Traffic weight progression e.g. `[{"weight":5, "duration":"10m"}, {"weight":25, ...}]` |
-| metrics_gates | JSONB | Success rate, latency, error budget thresholds |
-| current_step | INT | |
-| status | ENUM | running, promoted, rolled_back, failed, completed |
-| started_at | TIMESTAMPTZ | |
-| promoted_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| profile_id | uuid | fk to mesh_profiles.id |
+| name | varchar | e.g. "api-v2-canary" |
+| target_service | varchar | |
+| target_namespace | varchar | |
+| baseline_version | varchar | |
+| canary_version | varchar | |
+| strategy | enum | "weighted", "header_based", "mirror_based" |
+| steps | jsonb | traffic weight progression e.g. `[{"weight":5, "duration":"10m"}, {"weight":25, ...}]` |
+| metrics_gates | jsonb | success rate, latency, error budget thresholds |
+| current_step | int | |
+| status | enum | running, promoted, rolled_back, failed, completed |
+| started_at | timestamptz | |
+| promoted_at | timestamptz | |
 
 ### `mesh_telemetry`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| profile_id | UUID | FK → mesh_profiles.id |
-| source_service | VARCHAR | |
-| destination_service | VARCHAR | |
-| metric | VARCHAR | "request_count", "error_rate", "p50_latency", "p99_latency" |
-| value | FLOAT | |
-| timestamp | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| profile_id | uuid | fk to mesh_profiles.id |
+| source_service | varchar | |
+| destination_service | varchar | |
+| metric | varchar | "request_count", "error_rate", "p50_latency", "p99_latency" |
+| value | float | |
+| timestamp | timestamptz | |
 
----
+## 4. api design
 
-## 4. API Design
-
-### Mesh Profiles
+### mesh profiles
 
 ```
 POST   /api/v2/mesh/profiles                   — Install / create mesh profile
@@ -178,7 +170,7 @@ DELETE /api/v2/mesh/profiles/:id                — Uninstall mesh
 GET    /api/v2/mesh/profiles/:id/status         — Detailed health status
 ```
 
-### Namespace Management
+### namespace management
 
 ```
 GET    /api/v2/mesh/profiles/:id/namespaces     — List mesh-enabled namespaces
@@ -187,7 +179,7 @@ PUT    /api/v2/mesh/profiles/:id/namespaces/:nid — Update namespace config
 DELETE /api/v2/mesh/profiles/:id/namespaces/:nid — Disable mesh for namespace
 ```
 
-### Traffic Rules
+### traffic rules
 
 ```
 GET    /api/v2/mesh/profiles/:id/rules          — List traffic rules
@@ -197,7 +189,7 @@ DELETE /api/v2/mesh/profiles/:id/rules/:rid     — Delete traffic rule
 POST   /api/v2/mesh/profiles/:id/rules/simulate — Simulate rule before applying
 ```
 
-### Canary Releases
+### canary releases
 
 ```
 GET    /api/v2/mesh/profiles/:id/canaries       — List canary releases
@@ -207,7 +199,7 @@ POST   /api/v2/mesh/profiles/:id/canaries/:cid/promote  — Promote canary to 10
 POST   /api/v2/mesh/profiles/:id/canaries/:cid/rollback — Rollback canary
 ```
 
-### mTLS & Security
+### mtls & security
 
 ```
 GET    /api/v2/mesh/profiles/:id/mtls           — Get mTLS status
@@ -215,7 +207,7 @@ PUT    /api/v2/mesh/profiles/:id/mtls           — Update mTLS mode (strict/per
 POST   /api/v2/mesh/profiles/:id/mtls/rotate    — Rotate mTLS certificates
 ```
 
-### Telemetry
+### telemetry
 
 ```
 GET    /api/v2/mesh/profiles/:id/telemetry      — Service graph + golden signals
@@ -224,65 +216,60 @@ GET    /api/v2/mesh/profiles/:id/telemetry/topology     — Service dependency g
 GET    /api/v2/mesh/profiles/:id/telemetry/traces      — Recent traces (Jaeger-backed)
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
+### phase 1 -- mesh provider abstraction & profile management (2 pt)
 
-### Phase 1 — Mesh Provider Abstraction & Profile Management (2 PT)
+• define `meshadapter` interface:
+   - `installmesh(config)` to provisions mesh control plane via helm
+   - `uninstallmesh(profileid)` to removes mesh
+   - `enablesidecarinjection(namespace)`, `disablesidecarinjection(namespace)`
+   - `createvirtualservice(rule)`, `createdestinationrule(rule)`
+   - `getmeshstatus()` to health + version
+• implement istio adapter (generates `virtualservice`, `destinationrule`, `peerauthentication`, `serviceentry` crds)
+• implement linkerd adapter (generates `httproute`, `serviceprofile`, `trafficsplit` crds)
+• build `mesh_profiles` crud + helm-based install/uninstall workflow
 
-1. Define `MeshAdapter` interface:
-   - `installMesh(config)` → provisions mesh control plane via Helm
-   - `uninstallMesh(profileId)` → removes mesh
-   - `enableSidecarInjection(namespace)`, `disableSidecarInjection(namespace)`
-   - `createVirtualService(rule)`, `createDestinationRule(rule)`
-   - `getMeshStatus()` → health + version
+### phase 2 -- sidecar injection & mtls (1.5 pt)
 
-2. Implement Istio adapter (generates `VirtualService`, `DestinationRule`, `PeerAuthentication`, `ServiceEntry` CRDs)
-3. Implement Linkerd adapter (generates `HTTPRoute`, `ServiceProfile`, `TrafficSplit` CRDs)
-4. Build `mesh_profiles` CRUD + Helm-based install/uninstall workflow
+• namespace-level sidecar injection management (enable/disable via labels)
+• mtls mode configuration (`strict` / `permissive` / `disable`)
+• certificate rotation endpoint
+• mtls status dashboard (percentage of traffic encrypted)
 
-### Phase 2 — Sidecar Injection & mTLS (1.5 PT)
+### phase 3 -- traffic management (2 pt)
 
-1. Namespace-level sidecar injection management (enable/disable via labels)
-2. mTLS mode configuration (`STRICT` / `PERMISSIVE` / `DISABLE`)
-3. Certificate rotation endpoint
-4. mTLS status dashboard (percentage of traffic encrypted)
+• routing rules crud (virtualservice / serviceprofile generation)
+• fault injection rules (delay, abort)
+• timeout and retry rule configuration
+• mirroring (shadow traffic to a new version)
+• rule validation + dry-run simulation
 
-### Phase 3 — Traffic Management (2 PT)
+### phase 4 -- canary releases (2 pt)
 
-1. Routing rules CRUD (VirtualService / ServiceProfile generation)
-2. Fault injection rules (delay, abort)
-3. Timeout and retry rule configuration
-4. Mirroring (shadow traffic to a new version)
-5. Rule validation + dry-run simulation
+• canary release controller -- step-based traffic shifting
+• metrics gates: success rate, latency, error budget
+• auto-promote / auto-rollback based on gate thresholds
+• canary overview dashboard (current step, metrics, decision)
 
-### Phase 4 — Canary Releases (2 PT)
+### phase 5 -- observability (1 pt)
 
-1. Canary release controller — step-based traffic shifting
-2. Metrics gates: success rate, latency, error budget
-3. Auto-promote / auto-rollback based on gate thresholds
-4. Canary overview dashboard (current step, metrics, decision)
+• prometheus metric scraping configuration for mesh telemetry
+• jaeger tracing integration
+• kiali-like service graph embedded in panel
+• golden signals dashboard (red method: rate, errors, duration)
 
-### Phase 5 — Observability (1 PT)
+### phase 6 -- ui & polish (0.5-1 pt)
 
-1. Prometheus metric scraping configuration for mesh telemetry
-2. Jaeger tracing integration
-3. Kiali-like service graph embedded in Panel
-4. Golden signals dashboard (RED method: Rate, Errors, Duration)
+• mesh overview dashboard (status, version, service count, mtls %, traffic rates)
+• traffic rule editor with yaml preview
+• canary wizard with visual step configuration
+• service topology graph (interactive d3/vis.js)
+• export metrics to grafana datasource
 
-### Phase 6 — UI & Polish (0.5–1 PT)
+## 6. configuration examples
 
-1. Mesh overview dashboard (status, version, service count, mTLS %, traffic rates)
-2. Traffic rule editor with YAML preview
-3. Canary wizard with visual step configuration
-4. Service topology graph (interactive D3/vis.js)
-5. Export metrics to Grafana datasource
-
----
-
-## 6. Configuration Examples
-
-### Mesh Profile Creation (POST /api/v2/mesh/profiles)
+### mesh profile creation (post /api/v2/mesh/profiles)
 
 ```json
 {
@@ -314,7 +301,7 @@ GET    /api/v2/mesh/profiles/:id/telemetry/traces      — Recent traces (Jaeger
 }
 ```
 
-### Canary Release (POST /api/v2/mesh/profiles/:id/canaries)
+### canary release (post /api/v2/mesh/profiles/:id/canaries)
 
 ```json
 {
@@ -339,7 +326,7 @@ GET    /api/v2/mesh/profiles/:id/telemetry/traces      — Recent traces (Jaeger
 }
 ```
 
-### Traffic Splitting Rule (POST /api/v2/mesh/profiles/:id/rules)
+### traffic splitting rule (post /api/v2/mesh/profiles/:id/rules)
 
 ```json
 {
@@ -385,7 +372,7 @@ GET    /api/v2/mesh/profiles/:id/telemetry/traces      — Recent traces (Jaeger
 }
 ```
 
-### Istio CRDs Generated by Adapter
+### istio crds generated by adapter
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -456,64 +443,56 @@ spec:
       baseEjectionTime: 30s
 ```
 
----
+## 7. service assignments
 
-## 7. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|------------------|
-| **Integration Service** | Mesh adapter layer, CRD generation, Helm lifecycle, telemetry aggregation |
-| **Orchestrator Agent** | Canary release controller, progressive traffic shifting, gate evaluation |
-| **Panel** | Mesh dashboard, traffic rule editor, canary wizard, service graph, observability explorer |
-| **Database** | `mesh_profiles`, `mesh_namespaces`, `mesh_traffic_rules`, `mesh_canary_releases`, `mesh_telemetry` |
-| **Scheduler** | Canary step progression cron, telemetry aggregation intervals |
-| **Notification Service** | Canary promote/rollback alerts, mTLS cert expiry warnings |
+| **integration service** | mesh adapter layer, crd generation, helm lifecycle, telemetry aggregation |
+| **orchestrator agent** | canary release controller, progressive traffic shifting, gate evaluation |
+| **panel** | mesh dashboard, traffic rule editor, canary wizard, service graph, observability explorer |
+| **database** | `mesh_profiles`, `mesh_namespaces`, `mesh_traffic_rules`, `mesh_canary_releases`, `mesh_telemetry` |
+| **scheduler** | canary step progression cron, telemetry aggregation intervals |
+| **notification service** | canary promote/rollback alerts, mtls cert expiry warnings |
 
----
+## 8. effort breakdown
 
-## 8. Effort Breakdown
-
-| Task | PT | Dependencies |
+| task | pt | dependencies |
 |------|----|-------------|
-| MeshAdapter interface + Helm lifecycle | 1.0 | — |
-| Istio adapter (VirtualService, DestinationRule, PeerAuthentication) | 1.0 | MeshAdapter |
-| Linkerd adapter (HTTPRoute, TrafficSplit, ServiceProfile) | 1.0 | MeshAdapter |
-| Sidecar injection management | 0.5 | Adapters |
-| mTLS configuration + certificate rotation | 1.0 | Adapters |
-| Traffic rules CRUD + validation | 1.0 | Adapters |
-| Fault injection / timeout / retry rules | 0.5 | Traffic rules |
-| Canary controller + step progression | 1.5 | Traffic rules |
-| Metrics gates (auto-promote / rollback) | 0.5 | Canary controller |
-| Prometheus / Jaeger telemetry collector | 1.0 | — |
-| Service graph + golden signals dashboard | 1.0 | Telemetry |
-| UI screens (mesh overview, rules, canary wizard, topology) | 1.5 | All APIs |
-| Documentation & tests | 0.5 | — |
+| meshadapter interface + helm lifecycle | 1.0 | -- |
+| istio adapter (virtualservice, destinationrule, peerauthentication) | 1.0 | meshadapter |
+| linkerd adapter (httproute, trafficsplit, serviceprofile) | 1.0 | meshadapter |
+| sidecar injection management | 0.5 | adapters |
+| mtls configuration + certificate rotation | 1.0 | adapters |
+| traffic rules crud + validation | 1.0 | adapters |
+| fault injection / timeout / retry rules | 0.5 | traffic rules |
+| canary controller + step progression | 1.5 | traffic rules |
+| metrics gates (auto-promote / rollback) | 0.5 | canary controller |
+| prometheus / jaeger telemetry collector | 1.0 | -- |
+| service graph + golden signals dashboard | 1.0 | telemetry |
+| ui screens (mesh overview, rules, canary wizard, topology) | 1.5 | all apis |
+| documentation & tests | 0.5 | -- |
 
----
+## 9. mesh provider comparison
 
-## 9. Mesh Provider Comparison
-
-| Aspect | Istio | Linkerd |
+| aspect | istio | linkerd |
 |--------|-------|---------|
-| **Control plane** | istiod (single binary) | linkerd-controller, identity, tap, destination |
-| **Proxy** | Envoy | linkerd2-proxy (Rust) |
-| **mTLS** | Built-in, SPIFFE certs | Built-in, identity controller |
-| **Traffic splitting** | VirtualService + DestinationRule | TrafficSplit + ServiceProfile |
-| **Canary support** | Manual (VS weights) + Flagger | Manual (TS weights) + Flagger |
-| **Telemetry** | Prometheus + Grafana + Kiali | Linkerd-Viz + Grafana |
-| **Tracing** | Jaeger / Zipkin | OpenCensus collector |
-| **Performance overhead** | ~5–15 ms per hop | ~1–5 ms per hop |
-| **Resource usage** | Higher (Envoy) | Lower (Rust proxy) |
-| **K8s CRDs** | 50+ | 10+ |
+| **control plane** | istiod (single binary) | linkerd-controller, identity, tap, destination |
+| **proxy** | envoy | linkerd2-proxy (rust) |
+| **mtls** | built-in, spiffe certs | built-in, identity controller |
+| **traffic splitting** | virtualservice + destinationrule | trafficsplit + serviceprofile |
+| **canary support** | manual (vs weights) + flagger | manual (ts weights) + flagger |
+| **telemetry** | prometheus + grafana + kiali | linkerd-viz + grafana |
+| **tracing** | jaeger / zipkin | opencensus collector |
+| **performance overhead** | ~5-15 ms per hop | ~1-5 ms per hop |
+| **resource usage** | higher (envoy) | lower (rust proxy) |
+| **k8s crds** | 50+ | 10+ |
 
----
+## 10. risks & mitigations
 
-## 10. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Envoy proxy memory leak in long-running canaries | Pod OOM, traffic disruption | Set proxy resource limits; implement canary step timeout |
-| mTLS certificate rotation failure | Mesh communication broken | Monitor cert expiry; pre-rotate before expiry; fallback to permissive mode |
-| Traffic split misconfiguration | Incorrect routing for real users | Simulation endpoint that dry-runs VirtualService generation; integration tests for each rule type |
-| Istio CRD version drift across upgrades | Rule application failure | Version-pin CRDs; automated upgrade tests in staging |
-| High cardinality telemetry explodes Prometheus | Expensive queries, slow dashboard | Aggregation rules (5m, 30m, 1h rollups); cardinality limits on request labels |
+| envoy proxy memory leak in long-running canaries | pod oom, traffic disruption | set proxy resource limits; implement canary step timeout |
+| mtls certificate rotation failure | mesh communication broken | monitor cert expiry; pre-rotate before expiry; fallback to permissive mode |
+| traffic split misconfiguration | incorrect routing for real users | simulation endpoint that dry-runs virtualservice generation; integration tests for each rule type |
+| istio crd version drift across upgrades | rule application failure | version-pin crds; automated upgrade tests in staging |
+| high cardinality telemetry explodes prometheus | expensive queries, slow dashboard | aggregation rules (5m, 30m, 1h rollups); cardinality limits on request labels |

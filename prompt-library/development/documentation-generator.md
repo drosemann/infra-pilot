@@ -1,14 +1,14 @@
-# Documentation Generator
+# documentation generator
 
-## Description
+## description
 
-Automatically generates comprehensive documentation from code, including API documentation, README files, inline comments, and user guides. Supports multiple programming languages and documentation formats.
+automatically generates comprehensive documentation from code, including api documentation, readme files, inline comments, and user guides. supports multiple programming languages and documentation formats.
 
-## Usage
+## usage
 
-Provide your code and specify the type of documentation needed. Works best with well-structured code that has clear function/class definitions. Specify the target audience and format requirements.
+provide your code and specify the type of documentation needed. works best with well-structured code that has clear function/class definitions. specify the target audience and format requirements.
 
-## Prompt
+## prompt
 
 ```markdown
 Generate comprehensive documentation for the following code. Please create:
@@ -54,7 +54,7 @@ Additional context:
 [PROJECT PURPOSE, DEPENDENCIES, SPECIAL REQUIREMENTS]
 ```
 
-## Example Input
+## example input
 
 ```markdown
 ```python
@@ -91,7 +91,8 @@ class WeatherAPI:
 ```
 
 ```
-## Example Output
+
+## example output
 
 ```markdown
 # WeatherAPI Documentation
@@ -223,22 +224,26 @@ except requests.ConnectionError:
 
 ```
 
-## Variations
-- **API-Only**: Focus only on API documentation with technical details
-- **User Manual**: Create end-user focused documentation with tutorials
-- **Inline Comments**: Generate only code comments and docstrings
-- **Architecture Docs**: Create high-level system architecture documentation
+## variations
 
-## Tips
-- Include the programming language for language-specific documentation standards
-- Specify if you need examples for specific use cases
-- Mention any existing documentation standards or tools used in your project
-- Provide context about the intended users of the documentation
+• api-only: focus only on api documentation with technical details
+• user manual: create end-user focused documentation with tutorials
+• inline comments: generate only code comments and docstrings
+• architecture docs: create high-level system architecture documentation
 
-## Related Prompts
-- `code-review.md` - For improving code before documenting
-- `architecture-planner.md` - For system-level documentation
-- `test-case-generator.md` - For creating documented test examples
+## tips
 
-## Tags
+• include the programming language for language-specific documentation standards
+• specify if you need examples for specific use cases
+• mention any existing documentation standards or tools used in your project
+• provide context about the intended users of the documentation
+
+## related prompts
+
+• `code-review.md` - for improving code before documenting
+• `architecture-planner.md` - for system-level documentation
+• `test-case-generator.md` - for creating documented test examples
+
+## tags
+
 `documentation` `api-docs` `comments` `readme` `development` `technical-writing`

@@ -1,8 +1,8 @@
 # infrapilot_server
 
-Manages a server instance through the Infra Pilot platform.
+manages a server instance through the infra pilot platform.
 
-## Example Usage
+## example usage
 
 ```hcl
 resource "infrapilot_server" "minecraft" {
@@ -20,24 +20,24 @@ resource "infrapilot_server" "node_app" {
 }
 ```
 
-## Argument Reference
+## argument reference
 
-- `name` - (Required) The display name of the server.
-- `type` - (Required) The server type. Must be one of: `minecraft`, `nodejs`,
+• `name` - (required) the display name of the server.
+• `type` - (required) the server type. must be one of: `minecraft`, `nodejs`,
   `python`, `database`, `teamspeak`.
-- `memory` - (Optional) Memory allocation in MB. Defaults to `1024`.
-- `disk` - (Optional) Disk space allocation in MB. Defaults to `1024`.
-- `cpu` - (Optional) CPU limit percentage. Defaults to `100`.
+• `memory` - (optional) memory allocation in mb. defaults to `1024`.
+• `disk` - (optional) disk space allocation in mb. defaults to `1024`.
+• `cpu` - (optional) cpu limit percentage. defaults to `100`.
 
-## Attributes Reference
+## attributes reference
 
-- `identifier` - The unique server identifier assigned by the API.
-- `status` - The current status of the server (creating, active, stopping, etc.).
-- `node_id` - The node ID where the server is deployed.
+• `identifier` - the unique server identifier assigned by the api.
+• `status` - the current status of the server (creating, active, stopping, etc.).
+• `node_id` - the node id where the server is deployed.
 
-## Import
+## import
 
-Servers can be imported using the server identifier:
+servers can be imported using the server identifier:
 
 ```shell
 terraform import infrapilot_server.minecraft mc-abc123

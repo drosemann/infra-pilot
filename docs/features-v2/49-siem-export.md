@@ -1,31 +1,27 @@
-# SIEM Export
+﻿# siem export
 
-> **Feature ID:** 49  
-> **Category:** Security & Compliance  
-> **Primary Service:** Integration Service  
-> **Effort Estimate:** Small (1-3 PT)  
-> **Status:** Planned
+- feature id: 49
+- category: security & compliance
+- primary service: integration service
+- effort estimate: small (1-3 pt)
+- status: planned
 
----
+## overview
 
-## Overview
+stream audit logs from the infra pilot platform to external siem (security information and event management) systems including splunk, elk stack (elasticsearch/logstash/kibana), datadog, and any rfc 5424 syslog-compatible endpoint. all exports use structured json formatting with mandatory tls transport.
 
-Stream audit logs from the Infra Pilot platform to external SIEM (Security Information and Event Management) systems including Splunk, ELK Stack (Elasticsearch/Logstash/Kibana), Datadog, and any RFC 5424 syslog-compatible endpoint. All exports use structured JSON formatting with mandatory TLS transport.
+this feature enables security teams to centralise log monitoring, run correlation rules, and maintain a single pane of glass across their infrastructure estate.
 
-This feature enables security teams to centralise log monitoring, run correlation rules, and maintain a single pane of glass across their infrastructure estate.
+### goals
 
-### Goals
+• deliver real-time and batch audit log export to major siem platforms
+• enforce tls/mtls for all outbound log transmissions
+• provide filterable export rules (by severity, source, service, label)
+• implement exponential-backoff retry for transient delivery failures
+• support both push (http/syslog) and pull (siem-initiated scrape) models
+• maintain delivery guarantees with at-least-once semantics
 
-- Deliver real-time and batch audit log export to major SIEM platforms
-- Enforce TLS/mTLS for all outbound log transmissions
-- Provide filterable export rules (by severity, source, service, label)
-- Implement exponential-backoff retry for transient delivery failures
-- Support both push (HTTP/Syslog) and pull (SIEM-initiated scrape) models
-- Maintain delivery guarantees with at-least-once semantics
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -74,28 +70,26 @@ This feature enables security teams to centralise log monitoring, run correlatio
 │  └──────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────┘
                            │
-          ┌────────────────┼────────────────┬────────────────┐
-          ▼                ▼                ▼                ▼
+           ┌────────────────┼────────────────┬────────────────┐
+           ▼                ▼                ▼                ▼
 ┌──────────────────┐ ┌──────────────┐ ┌────────────┐ ┌──────────┐
 │     Splunk       │ │   ELK Stack  │ │  Datadog   │ │ RFC 5424 │
 │  HEC / TCP Input │ │  Logstash    │ │  HTTP API  │ │  Syslog  │
 └──────────────────┘ └──────────────┘ └────────────┘ └──────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: core pipeline (1-2 pt)
 
-### Phase 1: Core Pipeline (1-2 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Log buffer & classification service | `internal/siem/buffer.go` — in-memory ring buffer with configurable capacity |
-| 1.2 | Structured JSON transformer | `internal/siem/transformer.go` — normalise to canonical SIEM schema |
-| 1.3 | Output router (syslog / HTTPS / pull) | `internal/siem/router.go` — route per destination config |
-| 1.4 | TLS termination layer | `internal/siem/tls.go` — cert loading, mTLS handshake, CA pinning |
+| 1.1 | log buffer & classification service | `internal/siem/buffer.go` — in-memory ring buffer with configurable capacity |
+| 1.2 | structured json transformer | `internal/siem/transformer.go` — normalise to canonical siem schema |
+| 1.3 | output router (syslog / https / pull) | `internal/siem/router.go` — route per destination config |
+| 1.4 | tls termination layer | `internal/siem/tls.go` — cert loading, mtls handshake, ca pinning |
 
-**Canonical JSON schema:**
+**canonical json schema:**
 
 ```json
 {
@@ -140,17 +134,17 @@ This feature enables security teams to centralise log monitoring, run correlatio
 }
 ```
 
-### Phase 2: Destinations & Retry (0.5-1 PT)
+### phase 2: destinations & retry (0.5-1 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Splunk HEC integration | `internal/siem/dest/splunk.go` — HTTP Event Collector client |
-| 2.2 | ELK Logstash integration | `internal/siem/dest/elastic.go` — Logstash TCP/HTTP input client |
-| 2.3 | Datadog integration | `internal/siem/dest/datadog.go` — Datadog HTTP Logs API client |
-| 2.4 | Generic syslog (RFC 5424) | `internal/siem/dest/syslog.go` — TCP/TLS syslog sender |
-| 2.5 | Retry engine with backoff | `internal/siem/retry.go` — exponential backoff, jitter, dead-letter queue |
+| 2.1 | splunk hec integration | `internal/siem/dest/splunk.go` — http event collector client |
+| 2.2 | elk logstash integration | `internal/siem/dest/elastic.go` — logstash tcp/http input client |
+| 2.3 | datadog integration | `internal/siem/dest/datadog.go` — datadog http logs api client |
+| 2.4 | generic syslog (rfc 5424) | `internal/siem/dest/syslog.go` — tcp/tls syslog sender |
+| 2.5 | retry engine with backoff | `internal/siem/retry.go` — exponential backoff, jitter, dead-letter queue |
 
-**Retry configuration:**
+**retry configuration:**
 
 ```yaml
 # config/siem_export.yaml
@@ -168,28 +162,26 @@ export:
     flush_interval_ms: 5000
 ```
 
-### Phase 3: Filtering & Monitoring (0.5 PT)
+### phase 3: filtering & monitoring (0.5 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Filter rules engine | `internal/siem/filter.go` — include/exclude rules based on severity, source, labels, event_type |
-| 3.2 | Rate limiter per destination | `internal/siem/ratelimit.go` — token-bucket per output sink |
-| 3.3 | Health check & metrics | Prometheus metrics: `siem_exported_total`, `siem_errors_total`, `siem_queue_depth` |
-| 3.4 | Status dashboard panel | Panel widget showing per-destination health, throughput, error rate |
+| 3.1 | filter rules engine | `internal/siem/filter.go` — include/exclude rules based on severity, source, labels, event_type |
+| 3.2 | rate limiter per destination | `internal/siem/ratelimit.go` — token-bucket per output sink |
+| 3.3 | health check & metrics | prometheus metrics: `siem_exported_total`, `siem_errors_total`, `siem_queue_depth` |
+| 3.4 | status dashboard panel | panel widget showing per-destination health, throughput, error rate |
 
----
+## api design
 
-## API Design
+### siem export configuration crud
 
-### SIEM Export Configuration CRUD
-
-#### List Export Targets
+#### list export targets
 
 ```
 GET /api/v1/integrations/siem
 ```
 
-Response:
+response:
 ```json
 {
   "targets": [
@@ -218,13 +210,13 @@ Response:
 }
 ```
 
-#### Create Export Target
+#### create export target
 
 ```
 POST /api/v1/integrations/siem
 ```
 
-Request:
+request:
 ```json
 {
   "name": "Splunk Production",
@@ -257,27 +249,27 @@ Request:
 }
 ```
 
-Response: `201 Created`
+response: `201 Created`
 
-#### Update Export Target
+#### update export target
 
 ```
 PATCH /api/v1/integrations/siem/{id}
 ```
 
-#### Delete Export Target
+#### delete export target
 
 ```
 DELETE /api/v1/integrations/siem/{id}
 ```
 
-#### Test Connection
+#### test connection
 
 ```
 POST /api/v1/integrations/siem/{id}/test
 ```
 
-Response:
+response:
 ```json
 {
   "success": true,
@@ -287,13 +279,13 @@ Response:
 }
 ```
 
-#### List Available Event Types
+#### list available event types
 
 ```
 GET /api/v1/integrations/siem/event-types
 ```
 
-Response:
+response:
 ```json
 {
   "event_types": [
@@ -310,9 +302,7 @@ Response:
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/siem_export.py
@@ -398,7 +388,7 @@ class SIEMEvent:
     labels: dict       # key-value metadata tags
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- SIEM export targets
@@ -444,9 +434,7 @@ CREATE TABLE siem_export_log (
 );
 ```
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/siem_export.yaml
@@ -518,47 +506,41 @@ export:
       enabled: false
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | SIEM export pipeline — buffer, transform, route, retry, dead-letter queue; REST API for target CRUD; TLS/mTLS termination |
-| **Management Panel** | Configuration UI for SIEM targets; per-destination health dashboard; dead-letter queue viewer and replay |
-| **Orchestrator Agent** | Deploy SIEM exporter sidecar configuration; manage secrets injection for auth tokens and TLS material |
+| **integration service** | siem export pipeline — buffer, transform, route, retry, dead-letter queue; rest api for target crud; tls/mtls termination |
+| **management panel** | configuration ui for siem targets; per-destination health dashboard; dead-letter queue viewer and replay |
+| **orchestrator agent** | deploy siem exporter sidecar configuration; manage secrets injection for auth tokens and tls material |
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Log buffer & classification service | 0.5 | Audit log schema |
-| 1.2 | JSON transformer (canonical schema) | 0.5 | Schema definition |
-| 1.3 | Output router (syslog / HTTPS / pull) | 0.5 | Transformer |
-| 1.4 | TLS termination layer | 0.5 | Router |
-| 2.1 | Splunk HEC integration | 0.25 | Output router |
-| 2.2 | ELK Logstash integration | 0.25 | Output router |
-| 2.3 | Datadog HTTP integration | 0.25 | Output router |
-| 2.4 | Generic syslog RFC 5424 | 0.25 | Output router |
-| 2.5 | Retry engine with backoff | 0.5 | Phase 1 |
-| 3.1 | Filter rules engine | 0.25 | Transformer |
-| 3.2 | Rate limiter per destination | 0.25 | Router |
-| 3.3 | Prometheus metrics & health | 0.25 | Phase 2 |
-| 3.4 | Management Panel UI | 0.5 | REST API |
-| | **Total** | **4.5** | |
+| 1.1 | log buffer & classification service | 0.5 | audit log schema |
+| 1.2 | json transformer (canonical schema) | 0.5 | schema definition |
+| 1.3 | output router (syslog / https / pull) | 0.5 | transformer |
+| 1.4 | tls termination layer | 0.5 | router |
+| 2.1 | splunk hec integration | 0.25 | output router |
+| 2.2 | elk logstash integration | 0.25 | output router |
+| 2.3 | datadog http integration | 0.25 | output router |
+| 2.4 | generic syslog rfc 5424 | 0.25 | output router |
+| 2.5 | retry engine with backoff | 0.5 | phase 1 |
+| 3.1 | filter rules engine | 0.25 | transformer |
+| 3.2 | rate limiter per destination | 0.25 | router |
+| 3.3 | prometheus metrics & health | 0.25 | phase 2 |
+| 3.4 | management panel ui | 0.5 | rest api |
+| | **total** | **4.5** | |
 
-> **Note:** Parallelisation of destination integrations (2.1–2.4) reduces wall-clock time. Actual effort is **1-3 PT** as stated in the plan.
+**note:** parallelisation of destination integrations (2.1-2.4) reduces wall-clock time. actual effort is **1-3 pt** as stated in the plan.
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Certificate expiry for mTLS | Export outage | Automated cert expiry monitoring, pre-expiry alerts (30/14/7 days), cert rotation API |
-| SIEM endpoint rate limiting | Event loss | Token-bucket rate limiter per target, backpressure signalling, dead-letter queue |
-| Sensitive data in audit logs | Compliance violation | Configurable field redaction, `exclude_fields` filter, regex-based PII scrubber |
-| High log volume overwhelms network | Latency spikes, dropped events | Configurable batch sizing, compression (gzip), circuit breaker pattern |
-| SIEM destination unreachable | Log backlog | Ring buffer with configurable capacity, backpressure to source, dead-letter after max retries |
+| certificate expiry for mtls | export outage | automated cert expiry monitoring, pre-expiry alerts (30/14/7 days), cert rotation api |
+| siem endpoint rate limiting | event loss | token-bucket rate limiter per target, backpressure signalling, dead-letter queue |
+| sensitive data in audit logs | compliance violation | configurable field redaction, `exclude_fields` filter, regex-based pii scrubber |
+| high log volume overwhelms network | latency spikes, dropped events | configurable batch sizing, compression (gzip), circuit breaker pattern |
+| siem destination unreachable | log backlog | ring buffer with configurable capacity, backpressure to source, dead-letter after max retries |

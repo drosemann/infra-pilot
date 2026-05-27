@@ -1,37 +1,33 @@
-# Feature 8: AI Performance Profiler
+# ai performance profiler
 
-| Field | Value |
+| field | value |
 |-------|-------|
-| **ID** | F-008 |
-| **Name** | AI Performance Profiler |
-| **Category** | AI & Intelligence |
-| **Primary Service** | Service Core |
-| **Effort** | Medium (4-6 PT) |
-| **Dependencies** | Feature 1 (AI Log Anomaly Detector), Minecraft server agent |
-| **Phase** | Phase 1 |
+| id | f-008 |
+| name | ai performance profiler |
+| category | ai & intelligence |
+| primary service | service core |
+| effort | medium (4-6 pt) |
+| dependencies | feature 1 (ai log anomaly detector), minecraft server agent |
+| phase | phase 1 |
 
----
+## overview
 
-## Overview
+the ai performance profiler deeply profiles minecraft server tick performance to identify sources of lag and performance degradation. it tracks entity counts, redstone activity, plugin execution times, chunk loading patterns, and hardware utilization, then correlates these signals to produce actionable, prioritized recommendations for server administrators.
 
-The AI Performance Profiler deeply profiles Minecraft server tick performance to identify sources of lag and performance degradation. It tracks entity counts, redstone activity, plugin execution times, chunk loading patterns, and hardware utilization, then correlates these signals to produce actionable, prioritized recommendations for server administrators.
+### goals
 
-### Goals
+- identify tick lag sources within 60 seconds of profiling start
+- pinpoint lag to specific entities, chunks, plugins, or redstone contraptions
+- provide ranked, actionable fix suggestions with estimated impact
+- track performance trends over time for proactive maintenance
 
-- Identify tick lag sources within 60 seconds of profiling start
-- Pinpoint lag to specific entities, chunks, plugins, or redstone contraptions
-- Provide ranked, actionable fix suggestions with estimated impact
-- Track performance trends over time for proactive maintenance
+### non-goals
 
-### Non-Goals
+- not a real-time monitoring dashboard (sessions are on-demand or scheduled)
+- does not automatically modify server properties or plugins
+- not a benchmarking tool (comparative performance across different servers)
 
-- Not a real-time monitoring dashboard (sessions are on-demand or scheduled)
-- Does not automatically modify server properties or plugins
-- Not a benchmarking tool (comparative performance across different servers)
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -42,12 +38,12 @@ The AI Performance Profiler deeply profiles Minecraft server tick performance to
 │  │  │ Profiler   │  │ Entity     │  │ Redstone   │  │ Chunk      │ │ │
 │  │  │ Agent      │  │ Tracker    │  │ Analyzer   │  │ Profiler   │ │ │
 │  │  └────────────┘  └────────────┘  └────────────┘  └────────────┘ │ │
-│  └──────────────────────────────────────────────────────────────────┘ │
-│  ┌──────────────────────────────────────────────────────────────────┐ │
-│  │                     Tick Execution Loop                           │ │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │ │
-│  │  │Entities  │ │Tile Ent. │ │Chunks    │ │Plugins   │ │Physics │ │ │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────────┘ │ │
+│  │  ┌──────────────────────────────────────────────────────────────┐ │ │
+│  │  │                     Tick Execution Loop                       │ │ │
+│  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────┐ │ │ │
+│  │  │  │Entities  │ │Tile Ent. │ │Chunks    │ │Plugins   │ │Phys│ │ │ │
+│  │  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └────┘ │ │ │
+│  │  └──────────────────────────────────────────────────────────────┘ │ │
 │  └──────────────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────┘
          │                          │
@@ -71,20 +67,20 @@ The AI Performance Profiler deeply profiles Minecraft server tick performance to
 │  │  │ Tick Time        │  │ Entity Lag       │  │ Redstone Lag   │ │  │
 │  │  │ Analyzer         │  │ Analyzer         │  │ Analyzer       │ │  │
 │  │  │                  │  │                  │  │                │ │  │
-│  │  │ • MSPT tracking  │  │ • Entity counts  │  │ • Active       │ │  │
-│  │  │ • TPS calculation│  │ • Per-entity     │  │   contraptions │ │  │
-│  │  │ • Phase breakdown│  │   tick time      │  │ • Update       │ │  │
-│  │  │ • GC pressure    │  │ • AI mob farms   │  │   frequency    │ │  │
-│  │  └──────────────────┘  │ • Hopper lag     │  │ • Chunk        │ │  │
+│  │  │ - MSPT tracking  │  │ - Entity counts  │  │ - Active       │ │  │
+│  │  │ - TPS calculation│  │ - Per-entity     │  │   contraptions │ │  │
+│  │  │ - Phase breakdown│  │   tick time      │  │ - Update       │ │  │
+│  │  │ - GC pressure    │  │ - AI mob farms   │  │   frequency    │ │  │
+│  │  └──────────────────┘  │ - Hopper lag     │  │ - Chunk        │ │  │
 │  │                        └──────────────────┘  │   loading      │ │  │
 │  │  ┌──────────────────┐  ┌──────────────────┐  └────────────────┘ │  │
 │  │  │ Plugin Timing    │  │ Chunk & World    │  ┌────────────────┐ │  │
 │  │  │ Analyzer         │  │ Analyzer         │  │ Suggestion     │ │  │
 │  │  │                  │  │                  │  │ Engine         │ │  │
-│  │  │ • Per-plugin MSPT│  │ • Chunk loading  │  │                │ │  │
-│  │  │ • Event handler  │  │ • Mob spawning   │  │ • Prioritized  │ │  │
-│  │  │   profiling      │  │ • Village/AI     │  │   fixes        │ │  │
-│  │  │ • DB query times │  │ • Liquid physics │  │ • Impact       │ │  │
+│  │  │ - Per-plugin MSPT│  │ - Chunk loading  │  │                │ │  │
+│  │  │ - Event handler  │  │ - Mob spawning   │  │ - Prioritized  │ │  │
+│  │  │   profiling      │  │ - Village/AI     │  │   fixes        │ │  │
+│  │  │ - DB query times │  │ - Liquid physics │  │ - Impact       │ │  │
 │  │  └──────────────────┘  └──────────────────┘  │   estimation   │ │  │
 │  │                                                └────────────────┘ │  │
 │  └──────────────────────────────────────────────────────────────────┘  │
@@ -110,7 +106,7 @@ The AI Performance Profiler deeply profiles Minecraft server tick performance to
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Profiling Flow
+### profiling flow
 
 ```
 User starts profile ──► Profiler agent plugin injected
@@ -125,12 +121,12 @@ User starts profile ──► Profiler agent plugin injected
                            │
                            ▼
                     Data Collector gathers:
-                    • Per-tick MSPT (milliseconds per tick)
-                    • Per-entity tick time
-                    • Per-plugin hook execution times
-                    • Chunk load/unload events
-                    • GC pause events
-                    • Redstone update counts
+                    - Per-tick MSPT (milliseconds per tick)
+                    - Per-entity tick time
+                    - Per-plugin hook execution times
+                    - Chunk load/unload events
+                    - GC pause events
+                    - Redstone update counts
                            │
                            ▼
                     Analysis Pipeline (parallel)
@@ -142,88 +138,84 @@ User starts profile ──► Profiler agent plugin injected
                     Report generated with flame graphs
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: profiler agent plugin (week 1, 1.5 pt)
 
-### Phase 1: Profiler Agent Plugin (Week 1, 1.5 PT)
+1. **minecraft plugin (paper/bukkit/spigot)**
+   - custom plugin loaded on-demand via rcon or plugin manager api
+   - tick hook injection (using `servertickevents` / `scheduler`)
+   - entity tracking via entity tick event listeners
+   - plugin timing via `pluginmanager` call event hooks
 
-1. **Minecraft Plugin (Paper/Bukkit/Spigot)**
-   - Custom plugin loaded on-demand via RCON or plugin manager API
-   - Tick hook injection (using `ServerTickEvents` / `Scheduler`)
-   - Entity tracking via entity tick event listeners
-   - Plugin timing via `PluginManager` call event hooks
+2. **data collection modules**
+   - **mspt sampler**: record per-tick mspt, tps, phase timing
+   - **entity tracker**: per-entity-type count and tick time (mobs, items, minecarts, etc.)
+   - **redstone analyzer**: count redstone updates per tick per chunk
+   - **plugin timer**: wrap `onenable`, `ondisable`, event handlers with timing
+   - **chunk profiler**: track loading/unloading, active chunk count
+   - **gc monitor**: capture gc pause events via `garbagecollectormxbean`
 
-2. **Data Collection Modules**
-   - **MSPT Sampler**: Record per-tick MSPT, TPS, phase timing
-   - **Entity Tracker**: Per-entity-type count and tick time (mobs, items, minecarts, etc.)
-   - **Redstone Analyzer**: Count redstone updates per tick per chunk
-   - **Plugin Timer**: Wrap `onEnable`, `onDisable`, event handlers with timing
-   - **Chunk Profiler**: Track loading/unloading, active chunk count
-   - **GC Monitor**: Capture GC pause events via `GarbageCollectorMXBean`
+3. **data export**
+   - metrics pushed to service core via websocket or http post
+   - configurable sampling interval (100ms, 500ms, 1s)
+   - batch export every 1 second during profiling session
 
-3. **Data Export**
-   - Metrics pushed to Service Core via WebSocket or HTTP POST
-   - Configurable sampling interval (100ms, 500ms, 1s)
-   - Batch export every 1 second during profiling session
+### phase 2: analysis pipeline (week 2-3, 2.5 pt)
 
-### Phase 2: Analysis Pipeline (Week 2-3, 2.5 PT)
+1. **tick time analyzer**
+   - parse mspt -> compute average, p50, p95, p99
+   - break down tick phases: entities, tile entities, chunks, plugins, physics
+   - identify "lag spikes" (ticks > 100ms for <20 tps)
 
-1. **Tick Time Analyzer**
-   - Parse MSPT → compute average, p50, p95, p99
-   - Break down tick phases: entities, tile entities, chunks, plugins, physics
-   - Identify "lag spikes" (ticks > 100ms for <20 TPS)
+2. **entity lag analyzer**
+   - aggregate entity tick time by type, chunk, world
+   - detect "entity hoarding" (>100 entities per chunk)
+   - identify specific ai-heavy mobs (villagers, zombies, illagers)
+   - find hopper lag (hoppers checking above them)
+   - detect item frame clusters
 
-2. **Entity Lag Analyzer**
-   - Aggregate entity tick time by type, chunk, world
-   - Detect "entity hoarding" (>100 entities per chunk)
-   - Identify specific AI-heavy mobs (villagers, zombies, illagers)
-   - Find hopper lag (hoppers checking above them)
-   - Detect item frame clusters
+3. **redstone lag analyzer**
+   - identify chunks with excessive redstone updates (>1000/tick)
+   - detect clock circuits (rapid toggling)
+   - find piston animation spam
+   - locate unloaded redstone chunks causing cascade loads
 
-3. **Redstone Lag Analyzer**
-   - Identify chunks with excessive redstone updates (>1000/tick)
-   - Detect clock circuits (rapid toggling)
-   - Find piston animation spam
-   - Locate unloaded redstone chunks causing cascade loads
+4. **plugin timing analyzer**
+   - per-plugin average mspt contribution
+   - per-event-handler timing breakdown
+   - detect plugin event cascades (plugin a -> plugin b -> plugin c)
+   - database query timing (if plugin uses external db)
+   - identify plugins with >5ms/tick average overhead
 
-4. **Plugin Timing Analyzer**
-   - Per-plugin average MSPT contribution
-   - Per-event-handler timing breakdown
-   - Detect plugin event cascades (plugin A → plugin B → plugin C)
-   - Database query timing (if plugin uses external DB)
-   - Identify plugins with >5ms/tick average overhead
+5. **chunk & world analyzer**
+   - active vs. loaded chunk ratio
+   - mob cap utilization
+   - liquid physics hotspot detection
+   - village ai impact (golem spawning, gossip updates)
 
-5. **Chunk & World Analyzer**
-   - Active vs. loaded chunk ratio
-   - Mob cap utilization
-   - Liquid physics hotspot detection
-   - Village AI impact (golem spawning, gossip updates)
+### phase 3: suggestion engine & reporting (week 3-4, 1.5 pt)
 
-### Phase 3: Suggestion Engine & Reporting (Week 3-4, 1.5 PT)
+1. **suggestion engine**
+   - knowledge base of 40+ common lag sources with fixes
+   - pattern -> suggestion mapping with impact scoring
 
-1. **Suggestion Engine**
-   - Knowledge base of 40+ common lag sources with fixes
-   - Pattern → Suggestion mapping with impact scoring
+2. **report generator**
+   - flame graph visualization (using d3-flame-graph)
+   - timeline view (mspt over profile duration)
+   - ranked issue list with severity, impact, effort
+   - export to pdf, png, json
 
-2. **Report Generator**
-   - Flame graph visualization (using d3-flame-graph)
-   - Timeline view (MSPT over profile duration)
-   - Ranked issue list with severity, impact, effort
-   - Export to PDF, PNG, JSON
+3. **historical trends**
+   - store profile summaries in timeseries db
+   - show mspt trend over days/weeks
+   - alert on sustained high mspt
 
-3. **Historical Trends**
-   - Store profile summaries in timeseries DB
-   - Show MSPT trend over days/weeks
-   - Alert on sustained high MSPT
+## api design
 
----
+### endpoints
 
-## API Design
-
-### Endpoints
-
-All endpoints are prefixed with `/api/v2/performance-profiler`.
+all endpoints are prefixed with `/api/v2/performance-profiler`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -237,7 +229,7 @@ All endpoints are prefixed with `/api/v2/performance-profiler`.
 | `GET`  | `/trends/{serverId}` | Get MSPT trends over time |
 | `GET`  | `/trends/{serverId}/anomaly` | Check for performance anomalies |
 
-### Request/Response Examples
+### request/response examples
 
 **POST /api/v2/performance-profiler/profiles**
 
@@ -257,7 +249,7 @@ All endpoints are prefixed with `/api/v2/performance-profiler`.
 }
 ```
 
-**Response**
+**response**
 
 ```json
 {
@@ -295,12 +287,12 @@ All endpoints are prefixed with `/api/v2/performance-profiler`.
     {
       "rank": 1,
       "category": "redstone",
-      "title": "Redstone clock in overworld (chunk 12, -34)",
+      "title": "redstone clock in overworld (chunk 12, -34)",
       "impact": "high",
       "current_mspt": 28.4,
       "estimated_after_fix": 10.2,
-      "description": "Detected a rapid redstone clock circuit toggling ~1200 times/second in chunk [12, -34]. This accounts for 18.4mspt.",
-      "suggestion": "Replace the clock with an observer-based design or reduce clock speed. Consider using a hopper clock for slower timings.",
+      "description": "detected a rapid redstone clock circuit toggling ~1200 times/second in chunk [12, -34]. this accounts for 18.4mspt.",
+      "suggestion": "replace the clock with an observer-based design or reduce clock speed. consider using a hopper clock for slower timings.",
       "commands": [
         "/tp @s 192 64 -544",
         "/fill 192 64 -544 200 64 -536 air"
@@ -315,26 +307,26 @@ All endpoints are prefixed with `/api/v2/performance-profiler`.
       "id": "sug-001",
       "category": "entities",
       "severity": "warning",
-      "title": "Excessive villager population in spawn chunks",
+      "title": "excessive villager population in spawn chunks",
       "impact": "high",
       "effort": "medium",
       "current_value": "247 villagers in spawn chunks",
       "target_value": "<50 villagers per village",
-      "description": "The spawn chunk village has 247 villagers causing significant AI tick overhead (~6.2mspt).",
-      "fix": "Move excess villagers to a trading hall outside spawn chunks, or reduce via natural causes.",
+      "description": "the spawn chunk village has 247 villagers causing significant ai tick overhead (~6.2mspt).",
+      "fix": "move excess villagers to a trading hall outside spawn chunks, or reduce via natural causes.",
       "estimated_mspt_reduction": 5.1
     },
     {
       "id": "sug-002",
       "category": "plugins",
       "severity": "warning",
-      "title": "Plugin 'CustomEnchants' taking 4.2mspt average",
+      "title": "plugin 'customenchants' taking 4.2mspt average",
       "impact": "medium",
       "effort": "low",
       "current_value": "4.2 mspt",
       "target_value": "<1.0 mspt",
-      "description": "CustomEnchants v3.1 consumes 4.2mspt on every tick, primarily in projectile-hit detection.",
-      "fix": "Update to v3.2+ which has projectile-hit optimization, or reduce enchantment tick checks via config.",
+      "description": "customenchants v3.1 consumes 4.2mspt on every tick, primarily in projectile-hit detection.",
+      "fix": "update to v3.2+ which has projectile-hit optimization, or reduce enchantment tick checks via config.",
       "estimated_mspt_reduction": 3.5
     }
   ],
@@ -342,9 +334,7 @@ All endpoints are prefixed with `/api/v2/performance-profiler`.
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```yaml
 Profile:
@@ -397,8 +387,8 @@ TickSample:
 
 EntityProfilingData:
   total_entities: integer
-  by_type: dict          # {"ZOMBIE": 45, "VILLAGER": 247, ...}
-  by_chunk: dict         # {"0,0": 34, "12,-34": 89, ...}
+  by_type: dict
+  by_chunk: dict
   top_entities_by_tick_time: EntityMetric[]
   hopper_count: integer
   hopper_tick_time: float
@@ -434,7 +424,7 @@ RedstoneChunkData:
   world: string
   updates_per_tick: integer
   estimated_mspt: float
-  detected_circuit_type: string   # "clock" | "piston_spam" | "hopper_mess"
+  detected_circuit_type: string
 
 ChunkProfilingData:
   total_loaded: integer
@@ -454,8 +444,8 @@ Suggestion:
   current_value: string
   target_value: string
   fix: string
-  commands: string[]        # in-game commands to run
-  references: string[]      # URLs for more info
+  commands: string[]
+  references: string[]
   auto_fixable: boolean
 
 ServerTrend:
@@ -475,21 +465,17 @@ DailySummary:
   suggestion_count: integer
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Service | Responsibility |
 |---------|---------------|
-| **Service Core** | Primary: Profile orchestration, analysis pipeline, suggestion engine, report generation, trend tracking |
-| **Management Panel** | Secondary: UI for profile dashboard, flame graph, timeline, suggestions panel, trend charts |
-| **Orchestrator Agent** | Secondary: Deploy profiler plugin to target server, manage plugin lifecycle |
-| **Discord Service** | None directly; may receive summary notifications |
-| **Integration Service** | Secondary: Alert integration on performance anomaly detection |
+| service core | primary: profile orchestration, analysis pipeline, suggestion engine, report generation, trend tracking |
+| management panel | secondary: ui for profile dashboard, flame graph, timeline, suggestions panel, trend charts |
+| orchestrator agent | secondary: deploy profiler plugin to target server, manage plugin lifecycle |
+| discord service | none directly; may receive summary notifications |
+| integration service | secondary: alert integration on performance anomaly detection |
 
----
-
-## Effort Estimate
+## effort estimate
 
 | Phase | Task | PT | Owner |
 |-------|------|----|-------|
@@ -501,24 +487,20 @@ DailySummary:
 | P3 | Suggestion engine (40+ patterns) | 0.75 | Backend/GameDev |
 | P3 | Report generator (flame graph, timeline, export) | 0.75 | Frontend |
 | P3 | Trend tracking + dashboard | 0.5 | Frontend+Backend |
-| **Total** | | **5.75 PT** | |
+| total | | 5.75 pt | |
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Profiler plugin itself causes lag | High | Ultra-lightweight sampling; disable in production by default; never sample >1% of tick time |
-| Minecraft version incompatibilities | Medium | Target Paper 1.20+ API; version detection; graceful fallback to MSPT-only mode |
-| False positives in lag attribution | Medium | Cross-reference multiple indicators; confidence scoring; human validation loop |
-| Large servers with 100+ plugins | Medium | Plugin timing is best-effort; aggregate high-level data for overwhelmed servers |
-| Player privacy (player entities tracked) | Low | Anonymize player data; no UUID/username storage; aggregate by entity type only |
-| Redstone analysis on highly active servers | Medium | Enable redstone module only on-demand; set max update tracking threshold |
+| Profiler plugin itself causes lag | high | ultra-lightweight sampling; disable in production by default; never sample >1% of tick time |
+| minecraft version incompatibilities | medium | target paper 1.20+ api; version detection; graceful fallback to mspt-only mode |
+| false positives in lag attribution | medium | cross-reference multiple indicators; confidence scoring; human validation loop |
+| large servers with 100+ plugins | medium | plugin timing is best-effort; aggregate high-level data for overwhelmed servers |
+| player privacy (player entities tracked) | low | anonymize player data; no uuid/username storage; aggregate by entity type only |
+| redstone analysis on highly active servers | medium | enable redstone module only on-demand; set max update tracking threshold |
 
----
-
-## Suggestion Knowledge Base Categories
+## suggestion knowledge base categories
 
 | Category | Count | Examples |
 |----------|-------|----------|
@@ -530,13 +512,11 @@ DailySummary:
 | Hardware/JVM | 4 | GC tuning, RAM allocation, CPU core pinning, SSD vs HDD |
 | Network | 3 | Compression threshold, rate limits, proxy configuration |
 
----
+## future enhancements
 
-## Future Enhancements
-
-- **v2.0**: Auto-remediation (apply fix suggestions via RCON)
-- **v2.1**: Player-reported lag correlation (where players experience lag)
-- **v2.2**: Cross-server profiling comparison
-- **v2.3**: Predictive lag detection (ML model trained on historical profiles)
-- **v2.4**: Modded server support (Forge, Fabric, NeoForge)
-- **v2.5**: Profiling during specific activities (PvP, redstone tests, server startup)
+- v2.0: auto-remediation (apply fix suggestions via rcon)
+- v2.1: player-reported lag correlation (where players experience lag)
+- v2.2: cross-server profiling comparison
+- v2.3: predictive lag detection (ml model trained on historical profiles)
+- v2.4: modded server support (forge, fabric, neoforge)
+- v2.5: profiling during specific activities (pvp, redstone tests, server startup)

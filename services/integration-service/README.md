@@ -1,65 +1,65 @@
-# Integration Service
+# integration service
 
-Cross-platform integration features for Infra Pilot.
+cross-platform integration features for infra pilot.
 
-## Features
+## features
 
-### Phase 0: Security Foundation
-- **Authentication**: JWT token generation/verification, API key management
-- **OAuth2 Flows**: Discord, Minecraft, and Dashboard account linking
-- **Auth Middleware**: All endpoints protected with Bearer token or API key
+### phase 0: security foundation
+- authentication: jwt token generation/verification, api key management
+- oauth2 flows: discord, minecraft, and dashboard account linking
+- auth middleware: all endpoints protected with bearer token or api key
 
-### Authentication & Users
-- **Cross-platform authentication**: OAuth2 flow linking Discord, Minecraft, and Dashboard accounts. Token exchange. Account linking.
-- **Shared user management**: UnifiedUserManager with profile sync on login, role sync across platforms, user search API.
-- **Shared user profiles**: Unified profile with Discord name, Minecraft UUID, stats, balance, achievements, bio, social links.
+### authentication & users
+- cross-platform authentication: oauth2 flow linking discord, minecraft, and dashboard accounts. token exchange. account linking.
+- shared user management: unifiedusermanager with profile sync on login, role sync across platforms, user search api.
+- shared user profiles: unified profile with discord name, minecraft uuid, stats, balance, achievements, bio, social links.
 
-### Messaging & Notifications
-- **Cross-platform messaging**: Message bridge Discord↔Minecraft. Format conversion (markdown↔Minecraft color codes). Webhook-based.
-- **Cross-platform notifications**: Extended CrossPlatformNotifier with user preferences, priority levels, digest mode.
-- **Cross-platform commands**: Execute commands from any platform. Permission-checked. Audit logged.
-- **Cross-platform events**: Server events broadcast across all platforms. Player join/leave, achievements, votes.
-- **Cross-platform alerts**: Unified alert system with delivery channels (Discord, in-game, email, webhook).
-- **Server announcement scheduler**: Schedule announcements across platforms. Templates, recurrence.
-- **Notification Providers**:
-  - **Email** — SMTP delivery with TLS support, multipart plain+HTML, configurable from address
-  - **Webhook** — HTTP POST with configurable method, headers, and JSON payload template
-  - **Telegram** — Bot API message delivery with Markdown formatting and web preview control
-  - **NotificationManager** — Central registry dispatching to multiple providers with per-channel results
+### messaging & notifications
+- cross-platform messaging: message bridge discord↔minecraft. format conversion (markdown↔minecraft color codes). webhook-based.
+- cross-platform notifications: extended crossplatformnotifier with user preferences, priority levels, digest mode.
+- cross-platform commands: execute commands from any platform. permission-checked. audit logged.
+- cross-platform events: server events broadcast across all platforms. player join/leave, achievements, votes.
+- cross-platform alerts: unified alert system with delivery channels (discord, in-game, email, webhook).
+- server announcement scheduler: schedule announcements across platforms. templates, recurrence.
+- notification providers:
+  - email — smtp delivery with tls support, multipart plain+html, configurable from address
+  - webhook — http post with configurable method, headers, and json payload template
+  - telegram — bot api message delivery with markdown formatting and web preview control
+  - notificationmanager — central registry dispatching to multiple providers with per-channel results
 
-### Logging & Monitoring
-- **Unified logging system**: Extended UnifiedLogger with centralized log aggregation, level filtering, search API, retention.
-- **Cross-platform logging**: Log all cross-platform events. Query API with filters.
-- **Unified reporting system**: Reports spanning all services. Usage, billing, security, performance reports.
-- **Server logs integration**: Minecraft server logs → Discord channel. Filter by level. `/logs tail/search` support.
-- **Server backup logs**: Centralized backup status. Success/failure rate. Backup logs query.
+### logging & monitoring
+- unified logging system: extended unifiedlogger with centralized log aggregation, level filtering, search api, retention.
+- cross-platform logging: log all cross-platform events. query api with filters.
+- unified reporting system: reports spanning all services. usage, billing, security, performance reports.
+- server logs integration: minecraft server logs → discord channel. filter by level. `/logs tail/search` support.
+- server backup logs: centralized backup status. success/failure rate. backup logs query.
 
-### Resource & Configuration
-- **Unified permission system**: Central permission store. Role-based inheritance. Redis-backed cache (JSON file store).
-- **Shared configuration management**: Extended SharedConfigManager with versioning, diff, rollback, bulk update, validation, environment overlays.
-- **Shared resource pools**: Pool CPU/RAM/storage across VPS. Fair scheduling.
+### resource & configuration
+- unified permission system: central permission store. role-based inheritance. redis-backed cache (json file store).
+- shared configuration management: extended sharedconfigmanager with versioning, diff, rollback, bulk update, validation, environment overlays.
+- shared resource pools: pool cpu/ram/storage across vps. fair scheduling.
 
-### Backups & Resources
-- **Integrated backup system**: Cross-service coordination, atomic multi-service restore, verification.
-- **Unified backup management**: Single view all backups. Retention engine. Backup logs.
-- **Cross-platform backups**: Backups spanning multiple services. Coordinated restore.
-- **Resource synchronization**: Sync allocations across services. Propagate pool updates.
-- **Resource allocation management**: Unified view allocation vs usage. Rebalance suggestions.
+### backups & resources
+- integrated backup system: cross-service coordination, atomic multi-service restore, verification.
+- unified backup management: single view all backups. retention engine. backup logs.
+- cross-platform backups: backups spanning multiple services. coordinated restore.
+- resource synchronization: sync allocations across services. propagate pool updates.
+- resource allocation management: unified view allocation vs usage. rebalance suggestions.
 
-### Metrics & Coordination
-- **Resource usage tracking**: Cost allocation, trend analysis, forecasting.
-- **Unified metrics system**: Metrics aggregation from all services. Prometheus export support.
-- **Cross-platform statistics**: Aggregate stats across platforms. Single unified view.
-- **Resource scheduling coordination**: Coordinate maintenance, backups, scaling. Conflict detection.
-- **Resource optimization coordination**: Cross-service optimization. Idle resource identification.
+### metrics & coordination
+- resource usage tracking: cost allocation, trend analysis, forecasting.
+- unified metrics system: metrics aggregation from all services. prometheus export support.
+- cross-platform statistics: aggregate stats across platforms. single unified view.
+- resource scheduling coordination: coordinate maintenance, backups, scaling. conflict detection.
+- resource optimization coordination: cross-service optimization. idle resource identification.
 
-### Integration Features
-- **Integrated monitoring system**: Single monitoring view, all services, all metrics. Alert correlation.
-- **Integrated maintenance system**: Cross-service maintenance windows. Dependency-aware scheduling.
-- **Integrated security system**: Centralized security monitoring. Cross-platform suspicious activity alerts.
-- **Integrated resource management**: Unified resource allocation dashboard. Cost tracking.
+### integration features
+- integrated monitoring system: single monitoring view, all services, all metrics. alert correlation.
+- integrated maintenance system: cross-service maintenance windows. dependency-aware scheduling.
+- integrated security system: centralized security monitoring. cross-platform suspicious activity alerts.
+- integrated resource management: unified resource allocation dashboard. cost tracking.
 
-## Usage
+## usage
 
 ```bash
 # Install dependencies
@@ -74,9 +74,9 @@ python src/backup.py
 python src/resource_tracker.py
 ```
 
-## Project Structure
+## project structure
 
-The service has been modularized into focused Python modules under `src/`:
+the service has been modularized into focused python modules under `src/`:
 
 ```
 src/
@@ -97,167 +97,167 @@ src/
 └── users.py                  # User profiles & linking (UserProfileManager)
 ```
 
-## Environment Variables
+## environment variables
 
-- `DASHBOARD_URL` - Management dashboard URL
-- `DISCORD_API_URL` - Discord service URL
-- `SERVICE_CORE_URL` - Service Core URL
-- `ORCHESTRATOR_URL` - Orchestrator agent URL
-- `DISCORD_WEBHOOK` - Discord webhook URL
-- `JWT_SECRET` - Secret key for JWT token signing
-- `INTEGRATION_SERVICE_URL` - This service URL
+- `dashboard_url` - management dashboard url
+- `discord_api_url` - discord service url
+- `service_core_url` - service core url
+- `orchestrator_url` - orchestrator agent url
+- `discord_webhook` - discord webhook url
+- `jwt_secret` - secret key for jwt token signing
+- `integration_service_url` - this service url
 
-## API Endpoints
+## api endpoints
 
-### Auth
-- `POST /api/auth/login` - Login, returns JWT token
-- `POST /api/auth/verify` - Verify JWT token
-- `POST /api/auth/api-key` - Create API key
-- `POST /api/auth/oauth2/{platform}` - OAuth2 authorize
-- `POST /api/auth/oauth2/{platform}/callback` - OAuth2 callback
-- `POST /api/auth/token-exchange` - Exchange platform token
-- `POST /api/auth/2fa/setup` - Start TOTP setup (returns QR code secret)
-- `POST /api/auth/2fa/verify-setup` - Verify initial TOTP setup, enable 2FA
-- `POST /api/auth/2fa/verify` - Verify TOTP during login (temp_token → JWT)
-- `POST /api/auth/2fa/disable` - Disable 2FA (requires password)
-- `GET /api/auth/2fa/backup-codes` - Get backup codes
-- `POST /api/auth/2fa/verify-backup` - Verify backup code, bypass TOTP
+### auth
+- `post /api/auth/login` - login, returns jwt token
+- `post /api/auth/verify` - verify jwt token
+- `post /api/auth/api-key` - create api key
+- `post /api/auth/oauth2/{platform}` - oauth2 authorize
+- `post /api/auth/oauth2/{platform}/callback` - oauth2 callback
+- `post /api/auth/token-exchange` - exchange platform token
+- `post /api/auth/2fa/setup` - start totp setup (returns qr code secret)
+- `post /api/auth/2fa/verify-setup` - verify initial totp setup, enable 2fa
+- `post /api/auth/2fa/verify` - verify totp during login (temp_token → jwt)
+- `post /api/auth/2fa/disable` - disable 2fa (requires password)
+- `get /api/auth/2fa/backup-codes` - get backup codes
+- `post /api/auth/2fa/verify-backup` - verify backup code, bypass totp
 
-### Users
-- `POST /api/users` - Create user
-- `GET /api/users/{email}` - Get user
-- `PUT /api/users/{email}` - Update user
-- `GET /api/users/{email}/profile` - Get unified profile
-- `PUT /api/users/{email}/profile` - Update profile
-- `POST /api/users/{email}/link` - Link account
-- `GET /api/users/search` - Search users
-- `POST /api/users/{email}/sync` - Sync profile/roles
+### users
+- `post /api/users` - create user
+- `get /api/users/{email}` - get user
+- `put /api/users/{email}` - update user
+- `get /api/users/{email}/profile` - get unified profile
+- `put /api/users/{email}/profile` - update profile
+- `post /api/users/{email}/link` - link account
+- `get /api/users/search` - search users
+- `post /api/users/{email}/sync` - sync profile/roles
 
-### Notifications
-- `POST /api/notifications` - Send notification
-- `POST /api/notifications/server-event` - Server event notification
-- `GET /api/notifications/preferences/{user_id}` - Get preferences
-- `PUT /api/notifications/preferences/{user_id}` - Update preferences
-- `POST /api/notifications/digest/{user_id}` - Send digest
-- `POST /api/notifications/priority` - Send with priority
-- `POST /api/notifications/test` - Test notification delivery through specified channels (takes `channels` and `recipients` in JSON body)
+### notifications
+- `post /api/notifications` - send notification
+- `post /api/notifications/server-event` - server event notification
+- `get /api/notifications/preferences/{user_id}` - get preferences
+- `put /api/notifications/preferences/{user_id}` - update preferences
+- `post /api/notifications/digest/{user_id}` - send digest
+- `post /api/notifications/priority` - send with priority
+- `post /api/notifications/test` - test notification delivery through specified channels (takes `channels` and `recipients` in json body)
 
-### Messaging
-- `POST /api/messaging/bridge` - Bridge message (Discord↔Minecraft)
-- `POST /api/messaging/webhook/{platform}` - Webhook processor
-- `POST /api/messaging/convert` - Format conversion
+### messaging
+- `post /api/messaging/bridge` - bridge message (discord↔minecraft)
+- `post /api/messaging/webhook/{platform}` - webhook processor
+- `post /api/messaging/convert` - format conversion
 
-### Commands
-- `POST /api/commands/execute` - Execute command
-- `GET /api/commands` - List commands
-- `POST /api/commands/register` - Register command
-- `GET /api/commands/audit` - Command audit log
+### commands
+- `post /api/commands/execute` - execute command
+- `get /api/commands` - list commands
+- `post /api/commands/register` - register command
+- `get /api/commands/audit` - command audit log
 
-### Events
-- `POST /api/events/broadcast` - Broadcast event
-- `GET /api/events` - List events
-- `POST /api/events/listener` - Register listener
-- `POST /api/events/player/join` - Player join event
-- `POST /api/events/player/leave` - Player leave event
-- `POST /api/events/player/achievement` - Achievement event
-- `POST /api/events/player/vote` - Vote event
+### events
+- `post /api/events/broadcast` - broadcast event
+- `get /api/events` - list events
+- `post /api/events/listener` - register listener
+- `post /api/events/player/join` - player join event
+- `post /api/events/player/leave` - player leave event
+- `post /api/events/player/achievement` - achievement event
+- `post /api/events/player/vote` - vote event
 
-### Alerts
-- `POST /api/alerts` - Create alert
-- `GET /api/alerts` - Get alerts
-- `POST /api/alerts/{alert_id}/acknowledge` - Acknowledge alert
-- `PUT /api/alerts/channels/{channel_type}` - Configure channel
+### alerts
+- `post /api/alerts` - create alert
+- `get /api/alerts` - get alerts
+- `post /api/alerts/{alert_id}/acknowledge` - acknowledge alert
+- `put /api/alerts/channels/{channel_type}` - configure channel
 
-### Announcements
-- `POST /api/announcements` - Schedule announcement
-- `GET /api/announcements` - List scheduled
-- `DELETE /api/announcements/{announcement_id}` - Cancel
-- `POST /api/announcements/templates` - Create template
-- `GET /api/announcements/templates` - Get templates
+### announcements
+- `post /api/announcements` - schedule announcement
+- `get /api/announcements` - list scheduled
+- `delete /api/announcements/{announcement_id}` - cancel
+- `post /api/announcements/templates` - create template
+- `get /api/announcements/templates` - get templates
 
-### Modpacks
-- `GET /api/modpacks/search?query=&platform=curseforge|modrinth` - Search modpacks across CurseForge and Modrinth
-- `GET /api/modpacks/{platform}/{id}` - Get modpack details with version manifest
+### modpacks
+- `get /api/modpacks/search?query=&platform=curseforge|modrinth` - search modpacks across curseforge and modrinth
+- `get /api/modpacks/{platform}/{id}` - get modpack details with version manifest
 
-### Metrics
-- `GET /api/metrics` - Get metrics
-- `GET /api/metrics/dashboard` - Unified dashboard
-- `GET /api/metrics/prometheus` - Prometheus format
-- `GET /api/metrics/statistics` - Cross-platform stats
+### metrics
+- `get /api/metrics` - get metrics
+- `get /api/metrics/dashboard` - unified dashboard
+- `get /api/metrics/prometheus` - prometheus format
+- `get /api/metrics/statistics` - cross-platform stats
 
-### Config
-- `GET /api/config` - Get config
-- `PUT /api/config` - Update config
-- `GET /api/config/version/{version}` - Get version
-- `POST /api/config/rollback/{version}` - Rollback
-- `GET /api/config/diff/{v1}/{v2}` - Diff versions
-- `POST /api/config/validate` - Validate config
-- `POST /api/config/overlay/{env_name}` - Set overlay
+### config
+- `get /api/config` - get config
+- `put /api/config` - update config
+- `get /api/config/version/{version}` - get version
+- `post /api/config/rollback/{version}` - rollback
+- `get /api/config/diff/{v1}/{v2}` - diff versions
+- `post /api/config/validate` - validate config
+- `post /api/config/overlay/{env_name}` - set overlay
 
-### Permissions
-- `POST /api/permissions/check` - Check permission
-- `POST /api/permissions/grant` - Grant permission
-- `POST /api/permissions/revoke` - Revoke permission
-- `GET /api/permissions/user/{user_id}` - Get user permissions
-- `POST /api/permissions/roles` - Create role
-- `POST /api/permissions/roles/assign` - Assign role
+### permissions
+- `post /api/permissions/check` - check permission
+- `post /api/permissions/grant` - grant permission
+- `post /api/permissions/revoke` - revoke permission
+- `get /api/permissions/user/{user_id}` - get user permissions
+- `post /api/permissions/roles` - create role
+- `post /api/permissions/roles/assign` - assign role
 
-### Backups
-- `POST /api/backups` - Create backup
-- `GET /api/backups` - List backups
-- `POST /api/backups/restore` - Restore backup
-- `POST /api/backups/verify` - Verify backup
-- `DELETE /api/backups/cleanup` - Cleanup old backups
-- `POST /api/backups/cross-service` - Cross-service backup
-- `POST /api/backups/cross-service/restore` - Atomic restore
-- `GET /api/backups/logs` - Backup logs
-- `GET /api/backups/stats` - Backup stats
+### backups
+- `post /api/backups` - create backup
+- `get /api/backups` - list backups
+- `post /api/backups/restore` - restore backup
+- `post /api/backups/verify` - verify backup
+- `delete /api/backups/cleanup` - cleanup old backups
+- `post /api/backups/cross-service` - cross-service backup
+- `post /api/backups/cross-service/restore` - atomic restore
+- `get /api/backups/logs` - backup logs
+- `get /api/backups/stats` - backup stats
 
-### Resources
-- `GET /api/resources` - Get all resources
-- `POST /api/resources/allocate` - Allocate resource
-- `POST /api/resources/pools` - Create pool
-- `GET /api/resources/pools` - List pools
-- `POST /api/resources/pools/allocate` - Allocate from pool
-- `POST /api/resources/sync` - Sync resources
-- `GET /api/resources/allocation` - Allocation vs usage
-- `GET /api/resources/usage` - Resource usage
-- `GET /api/resources/cost` - Cost allocation
-- `GET /api/resources/trends` - Trend analysis
-- `GET /api/resources/forecast` - Forecast
-- `GET /api/resources/rebalance` - Rebalance suggestions
-- `POST /api/resources/optimization/analyze` - Optimization analysis
-- `POST /api/resources/schedule` - Schedule event
-- `GET /api/resources/schedule` - Get schedule
+### resources
+- `get /api/resources` - get all resources
+- `post /api/resources/allocate` - allocate resource
+- `post /api/resources/pools` - create pool
+- `get /api/resources/pools` - list pools
+- `post /api/resources/pools/allocate` - allocate from pool
+- `post /api/resources/sync` - sync resources
+- `get /api/resources/allocation` - allocation vs usage
+- `get /api/resources/usage` - resource usage
+- `get /api/resources/cost` - cost allocation
+- `get /api/resources/trends` - trend analysis
+- `get /api/resources/forecast` - forecast
+- `get /api/resources/rebalance` - rebalance suggestions
+- `post /api/resources/optimization/analyze` - optimization analysis
+- `post /api/resources/schedule` - schedule event
+- `get /api/resources/schedule` - get schedule
 
-### Logs
-- `POST /api/logs/search` - Search logs
-- `GET /api/logs/levels` - Log level counts
-- `POST /api/logs/cross-platform` - Log cross-platform event
-- `GET /api/logs/cross-platform` - Query cross-platform logs
-- `POST /api/logs/server/ingest` - Ingest server log
-- `GET /api/logs/server/tail` - Tail server logs
-- `GET /api/logs/backup` - Backup logs
-- `GET /api/logs/backup/stats` - Backup log stats
+### logs
+- `post /api/logs/search` - search logs
+- `get /api/logs/levels` - log level counts
+- `post /api/logs/cross-platform` - log cross-platform event
+- `get /api/logs/cross-platform` - query cross-platform logs
+- `post /api/logs/server/ingest` - ingest server log
+- `get /api/logs/server/tail` - tail server logs
+- `get /api/logs/backup` - backup logs
+- `get /api/logs/backup/stats` - backup log stats
 
-### Monitoring, Maintenance, Security
-- `GET /api/monitoring` - Integrated monitoring view
-- `GET /api/monitoring/alerts` - Alert correlation
-- `POST /api/maintenance/windows` - Create maintenance window
-- `GET /api/maintenance/windows` - List maintenance windows
-- `GET /api/security/events` - Security events
-- `POST /api/security/alert` - Report suspicious activity
+### monitoring, maintenance, security
+- `get /api/monitoring` - integrated monitoring view
+- `get /api/monitoring/alerts` - alert correlation
+- `post /api/maintenance/windows` - create maintenance window
+- `get /api/maintenance/windows` - list maintenance windows
+- `get /api/security/events` - security events
+- `post /api/security/alert` - report suspicious activity
 
-### Reports
-- `POST /api/reports/usage` - Usage report
-- `POST /api/reports/billing` - Billing report
-- `POST /api/reports/security` - Security report
-- `POST /api/reports/performance` - Performance report
-- `GET /api/reports` - List reports
+### reports
+- `post /api/reports/usage` - usage report
+- `post /api/reports/billing` - billing report
+- `post /api/reports/security` - security report
+- `post /api/reports/performance` - performance report
+- `get /api/reports` - list reports
 
-### Integrated
-- `GET /api/integrated/resource-management` - Unified resource dashboard
+### integrated
+- `get /api/integrated/resource-management` - unified resource dashboard
 
-## Branding
-- Cosmic Infra branding is the unified identity used across Infra Pilot. Tokens: Primary #6C5CE7, Secondary #EC4899, Accent #22D3EE.
-- This service participates in branding across the UI and docs. Logo variants exist and can be surfaced through shared branding assets.
+## branding
+- cosmic infra branding is the unified identity used across infra pilot. tokens: primary #6c5ce7, secondary #ec4899, accent #22d3ee.
+- this service participates in branding across the ui and docs. logo variants exist and can be surfaced through shared branding assets.

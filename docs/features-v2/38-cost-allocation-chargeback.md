@@ -1,30 +1,26 @@
-# Feature 38: Cost Allocation & Chargeback
+# feature 38: cost allocation & chargeback
 
-- **Feature ID:** 38
-- **Category:** Advanced Observability
-- **Primary Service:** Integration Service
-- **Effort:** Medium (4-6 PT)
-- **Dependencies:** Feature 24 (Multi-Cloud Cost Optimizer), Feature 28 (Team Workspaces)
+- feature id: 38
+- category: advanced observability
+- primary service: integration service
+- effort: medium (4-6 pt)
+- dependencies: feature 24 (multi-cloud cost optimizer), feature 28 (team workspaces)
 
----
+## overview
 
-## 1. Overview
+implement a comprehensive cost allocation and chargeback system that enables organizations to track cloud infrastructure spending by team, project, customer, or any custom dimension. supports both showback (informational) and chargeback (actual billing) models. generate monthly pdf and csv reports with per-tag cost breakdowns. integrate with cloud provider billing apis (aws cost explorer, gcp billing, azure cost management) and reconcile against provisioned resource inventory.
 
-Implement a comprehensive cost allocation and chargeback system that enables organizations to track cloud infrastructure spending by team, project, customer, or any custom dimension. Supports both showback (informational) and chargeback (actual billing) models. Generate monthly PDF and CSV reports with per-tag cost breakdowns. Integrate with cloud provider billing APIs (AWS Cost Explorer, GCP Billing, Azure Cost Management) and reconcile against provisioned resource inventory.
+### goals
 
-### Goals
+- tag all resources (servers, databases, networks, storage) with metadata dimensions
+- pull cost data from cloud provider billing apis and reconcile with inventory
+- compute per-tag cost breakdowns with support for hierarchy and aggregation
+- support showback (view-only) and chargeback (cross-charge) models
+- generate monthly chargeback reports in pdf and csv formats
+- track budgets per tag dimension and alert on overspend
+- expose cost data via rest api for integration with external billing systems
 
-- Tag all resources (servers, databases, networks, storage) with metadata dimensions
-- Pull cost data from cloud provider billing APIs and reconcile with inventory
-- Compute per-tag cost breakdowns with support for hierarchy and aggregation
-- Support showback (view-only) and chargeback (cross-charge) models
-- Generate monthly chargeback reports in PDF and CSV formats
-- Track budgets per tag dimension and alert on overspend
-- Expose cost data via REST API for integration with external billing systems
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -81,7 +77,7 @@ Implement a comprehensive cost allocation and chargeback system that enables org
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Tag Propagation Strategy
+### tag propagation strategy
 
 ```
 Cloud Provider Tag ──▶ Orchestrator Resource ──▶ Inventory Record
@@ -96,22 +92,20 @@ Cloud Provider Tag ──▶ Orchestrator Resource ──▶ Inventory Record
                                                         Budget: "platform-prod"
 ```
 
-### Showback vs Chargeback Models
+### showback vs chargeback models
 
-| Feature | Showback | Chargeback |
-|---------|----------|------------|
-| Purpose | Awareness & accountability | Cross-charge between teams |
-| Financial impact | Informational only | Actual invoice adjustment |
-| Granularity | Per-team/project breakdown | Per-consumer with unit pricing |
-| Approval needed | No | Yes (finance/admin) |
-| Report type | Dashboard + CSV | Formal PDF invoice |
-| Implementation | Computed costs displayed | Costs applied via credit/debit |
+| feature | showback | chargeback |
+|---|---|---|
+| purpose | awareness & accountability | cross-charge between teams |
+| financial impact | informational only | actual invoice adjustment |
+| granularity | per-team/project breakdown | per-consumer with unit pricing |
+| approval needed | no | yes (finance/admin) |
+| report type | dashboard + csv | formal pdf invoice |
+| implementation | computed costs displayed | costs applied via credit/debit |
 
----
+## data model
 
-## 3. Data Model
-
-### Cost Tag Definition
+### cost tag definition
 
 ```yaml
 cost_tag:
@@ -142,7 +136,7 @@ cost_tag:
         severity: "critical"
 ```
 
-### Resource Cost Allocation
+### resource cost allocation
 
 ```yaml
 resource_cost:
@@ -183,7 +177,7 @@ resource_cost:
     proportion: 1.0
 ```
 
-### Budget & Chargeback Report
+### budget & chargeback report
 
 ```yaml
 chargeback_report:
@@ -246,7 +240,7 @@ chargeback_report:
         percentage: 3.3
 ```
 
-### Reconciliation Record
+### reconciliation record
 
 ```yaml
 reconciliation:
@@ -266,13 +260,11 @@ reconciliation:
   status: "partial"                     # complete | partial | failed
 ```
 
----
+## api design
 
-## 4. API Design
+### tag management
 
-### Tag Management
-
-#### List Tags
+#### list tags
 
 ```
 GET /api/v2/cost/tags
@@ -281,7 +273,7 @@ GET /api/v2/cost/tags
   &per_page=50
 ```
 
-#### Create Tag Definition
+#### create tag definition
 
 ```
 POST /api/v2/cost/tags
@@ -308,16 +300,16 @@ POST /api/v2/cost/tags
 }
 ```
 
-### Resource Costs
+### resource costs
 
-#### Get Resource Cost
+#### get resource cost
 
 ```
 GET /api/v2/cost/resources/{resource_id}/cost
   ?period=2026-05
 ```
 
-#### List Resource Costs by Tag
+#### list resource costs by tag
 
 ```
 GET /api/v2/cost/by-tag
@@ -326,9 +318,9 @@ GET /api/v2/cost/by-tag
   &granularity=daily
 ```
 
-### Chargeback Reports
+### chargeback reports
 
-#### List Reports
+#### list reports
 
 ```
 GET /api/v2/cost/reports
@@ -336,7 +328,7 @@ GET /api/v2/cost/reports
   &type=showback
 ```
 
-#### Generate Report
+#### generate report
 
 ```
 POST /api/v2/cost/reports/generate
@@ -352,7 +344,7 @@ POST /api/v2/cost/reports/generate
 }
 ```
 
-Response `202`:
+response `202`:
 ```json
 {
   "report_id": "cbr-2026-05",
@@ -361,22 +353,22 @@ Response `202`:
 }
 ```
 
-#### Download Report
+#### download report
 
 ```
 GET /api/v2/cost/reports/{report_id}/download
   ?format=pdf
 ```
 
-### Budget Tracking
+### budget tracking
 
-#### List Budgets
+#### list budgets
 
 ```
 GET /api/v2/cost/budgets
 ```
 
-#### Get Budget Status
+#### get budget status
 
 ```
 GET /api/v2/cost/budgets/{tag_id}
@@ -402,9 +394,9 @@ GET /api/v2/cost/budgets/{tag_id}
 }
 ```
 
-### Reconciliation
+### reconciliation
 
-#### Run Reconciliation
+#### run reconciliation
 
 ```
 POST /api/v2/cost/reconciliation/run
@@ -417,7 +409,7 @@ POST /api/v2/cost/reconciliation/run
 }
 ```
 
-#### List Reconciliations
+#### list reconciliations
 
 ```
 GET /api/v2/cost/reconciliation
@@ -425,82 +417,74 @@ GET /api/v2/cost/reconciliation
   &status=partial
 ```
 
----
+## implementation plan
 
-## 5. Implementation Plan
+### phase 1: tag engine & cost ingestion (pt 1-2)
 
-### Phase 1: Tag Engine & Cost Ingestion (PT 1-2)
+| step | description | artifacts |
+|---|---|---|
+| 1.1 | tag crud endpoints, validation, propagation rules | `models/cost_tags.py`, `routes/cost.py` |
+| 1.2 | cloud billing adapters: aws cost explorer sdk | `adapters/aws_billing.py` |
+| 1.3 | cloud billing adapters: gcp billing + azure cost mgmt | `adapters/gcp_billing.py`, `adapters/azure_billing.py` |
+| 1.4 | inventory-to-billing reconciliation engine | `services/reconciliation.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 1.1 | Tag CRUD endpoints, validation, propagation rules | `models/cost_tags.py`, `routes/cost.py` |
-| 1.2 | Cloud billing adapters: AWS Cost Explorer SDK | `adapters/aws_billing.py` |
-| 1.3 | Cloud billing adapters: GCP Billing + Azure Cost Mgmt | `adapters/gcp_billing.py`, `adapters/azure_billing.py` |
-| 1.4 | Inventory-to-billing reconciliation engine | `services/reconciliation.py` |
+### phase 2: cost allocation engine (pt 3-4)
 
-### Phase 2: Cost Allocation Engine (PT 3-4)
+| step | description | artifacts |
+|---|---|---|
+| 2.1 | per-tag cost calculation with hierarchy support | `services/cost_allocation.py` |
+| 2.2 | showback vs chargeback models + budget tracking | `services/budget_tracker.py` |
+| 2.3 | rest api: cost queries, budgets, reports | `routes/cost.py` (extend) |
+| 2.4 | unit tests for tag propagation and cost math | `tests/test_cost_allocation.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 2.1 | Per-tag cost calculation with hierarchy support | `services/cost_allocation.py` |
-| 2.2 | Showback vs chargeback models + budget tracking | `services/budget_tracker.py` |
-| 2.3 | REST API: cost queries, budgets, reports | `routes/cost.py` (extend) |
-| 2.4 | Unit tests for tag propagation and cost math | `tests/test_cost_allocation.py` |
+### phase 3: reporting & panel ui (pt 5-6)
 
-### Phase 3: Reporting & Panel UI (PT 5-6)
+| step | description | artifacts |
+|---|---|---|
+| 3.1 | pdf report generator with charts and tables | `services/report_generator.py` |
+| 3.2 | csv export for raw cost data | `services/csv_exporter.py` |
+| 3.3 | panel ui: cost dashboard, tag explorer, budget gauges | panel components |
+| 3.4 | panel ui: report viewer, reconciliation summary | panel components |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 3.1 | PDF report generator with charts and tables | `services/report_generator.py` |
-| 3.2 | CSV export for raw cost data | `services/csv_exporter.py` |
-| 3.3 | Panel UI: cost dashboard, tag explorer, budget gauges | Panel components |
-| 3.4 | Panel UI: report viewer, reconciliation summary | Panel components |
+## service assignments
 
----
+| service | responsibility |
+|---|---|
+| integration service (primary) | tag management, cloud billing ingestion, cost allocation engine, reconciliation, budget tracking, report generation, rest api |
+| management panel | cost dashboard, tag management ui, budget gauge widgets, report viewer/download, untagged resources view |
+| orchestrator agent | tag propagation to provisioned resources, tag input during server create/update workflows |
+| discord service | budget overspend alerts, monthly cost summary notifications |
 
-## 6. Service Assignments
+## effort estimate: medium (4-6 pt)
 
-| Service | Responsibility |
-|---------|---------------|
-| **Integration Service** (primary) | Tag management, cloud billing ingestion, cost allocation engine, reconciliation, budget tracking, report generation, REST API |
-| **Management Panel** | Cost dashboard, tag management UI, budget gauge widgets, report viewer/download, untagged resources view |
-| **Orchestrator Agent** | Tag propagation to provisioned resources, tag input during server create/update workflows |
-| **Discord Service** | Budget overspend alerts, monthly cost summary notifications |
+| area | pt estimate |
+|---|---|
+| tag engine (crud, validation, propagation) | 1.0 |
+| cloud billing adapters (aws, gcp, azure) | 1.5 |
+| reconciliation engine | 0.5 |
+| cost allocation engine (per-tag calc, showback/chargeback) | 1.0 |
+| budget tracking + alerts | 0.5 |
+| report generation (pdf + csv) | 0.5 |
+| rest api endpoints | 0.5 |
+| panel ui (dashboard, tag explorer, reports) | 1.5 |
+| integration + e2e tests | 0.5 |
+| documentation | 0.5 |
+| total | **8.0 pt (rounded to 6 with billing sdk reuse)** |
 
----
+### risk factors
 
-## 7. Effort Estimate: Medium (4-6 PT)
+- cloud billing apis have different data freshness slas (aws ~24h, gcp ~48h, azure ~24h)
+- currency conversion and amortization (ri/sp) adds complexity for multi-provider setups
+- tag propagation lag: cloud tags applied at provisioning may take hours to appear in billing data
+- pdf report formatting is time-consuming to get right across different page sizes/locales
 
-| Area | PT Estimate |
-|------|-------------|
-| Tag engine (CRUD, validation, propagation) | 1.0 |
-| Cloud billing adapters (AWS, GCP, Azure) | 1.5 |
-| Reconciliation engine | 0.5 |
-| Cost allocation engine (per-tag calc, showback/chargeback) | 1.0 |
-| Budget tracking + alerts | 0.5 |
-| Report generation (PDF + CSV) | 0.5 |
-| REST API endpoints | 0.5 |
-| Panel UI (dashboard, tag explorer, reports) | 1.5 |
-| Integration + E2E tests | 0.5 |
-| Documentation | 0.5 |
-| **Total** | **8.0 PT (rounded to 6 with billing SDK reuse)** |
+## key metrics
 
-### Risk Factors
-
-- Cloud billing APIs have different data freshness SLAs (AWS ~24h, GCP ~48h, Azure ~24h)
-- Currency conversion and amortization (RI/SP) adds complexity for multi-provider setups
-- Tag propagation lag: cloud tags applied at provisioning may take hours to appear in billing data
-- PDF report formatting is time-consuming to get right across different page sizes/locales
-
----
-
-## 8. Key Metrics
-
-| Metric | Target |
-|--------|--------|
-| Cost data freshness | < 24h from cloud provider cut-off |
-| Reconciliation accuracy | > 99% match between billing and inventory |
-| Report generation time | < 30s per monthly report |
-| Supported tag dimensions | Unlimited (key-value pairs) |
-| API throughput | 100 req/s for cost queries |
-| Max resources tracked | 50,000 per organization |
+| metric | target |
+|---|---|
+| cost data freshness | < 24h from cloud provider cut-off |
+| reconciliation accuracy | > 99% match between billing and inventory |
+| report generation time | < 30s per monthly report |
+| supported tag dimensions | unlimited (key-value pairs) |
+| api throughput | 100 req/s for cost queries |
+| max resources tracked | 50,000 per organization |

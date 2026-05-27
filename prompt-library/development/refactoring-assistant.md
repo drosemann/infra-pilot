@@ -1,14 +1,14 @@
-# Refactoring Assistant
+# refactoring assistant
 
-## Description
+## description
 
-This prompt helps you analyze and refactor existing code to improve its structure, readability, maintainability, and performance while preserving functionality.
+this prompt helps you analyze and refactor existing code to improve its structure, readability, maintainability, and performance while preserving functionality.
 
-## Usage
+## usage
 
-Perfect for improving legacy code, preparing code for new features, reducing technical debt, and following best practices and design patterns.
+perfect for improving legacy code, preparing code for new features, reducing technical debt, and following best practices and design patterns.
 
-## Prompt
+## prompt
 
 ```markdown
 You are an expert code refactoring assistant. I need help refactoring the following code to improve its quality while maintaining the same functionality.
@@ -61,7 +61,7 @@ Please analyze the code and provide:
 Focus on making the code more readable, maintainable, and efficient while following established best practices.
 ```
 
-## Example Input
+## example input
 
 ```markdown
 Code to refactor:
@@ -91,7 +91,7 @@ Context:
 
 ```
 
-## Example Output
+## example output
 ```
 
 ## Code Quality Assessment
@@ -159,28 +159,31 @@ const processUsers = (users = []) => {
 
 ```
 
-## Variations
+## variations
 
-### Legacy Code Modernization
-Focus specifically on updating old syntax and patterns to modern standards while maintaining backward compatibility.
+### legacy code modernization
+focus specifically on updating old syntax and patterns to modern standards while maintaining backward compatibility.
 
-### Performance-Focused Refactoring
-Emphasize optimization for speed, memory usage, and scalability in the refactoring suggestions.
+### performance-focused refactoring
+emphasize optimization for speed, memory usage, and scalability in the refactoring suggestions.
 
-### Security-Focused Refactoring
-Prioritize identifying and fixing security vulnerabilities, input validation, and secure coding practices.
+### security-focused refactoring
+prioritize identifying and fixing security vulnerabilities, input validation, and secure coding practices.
 
-## Tips
-- Always preserve the original functionality unless explicitly asked to change it
-- Test thoroughly after refactoring to ensure no regressions
-- Refactor in small, incremental steps rather than large rewrites
-- Consider the team's skill level when suggesting modern patterns
-- Document any breaking changes clearly
+## tips
 
-## Related Prompts
-- [Code Review](./code-review.md) - For reviewing code quality
-- [Test Case Generator](./test-case-generator.md) - For creating tests after refactoring
-- [Documentation Generator](./documentation-generator.md) - For updating docs after refactoring
+• always preserve the original functionality unless explicitly asked to change it
+• test thoroughly after refactoring to ensure no regressions
+• refactor in small, incremental steps rather than large rewrites
+• consider the team's skill level when suggesting modern patterns
+• document any breaking changes clearly
 
-## Tags
+## related prompts
+
+• [code review](./code-review.md) - for reviewing code quality
+• [test case generator](./test-case-generator.md) - for creating tests after refactoring
+• [documentation generator](./documentation-generator.md) - for updating docs after refactoring
+
+## tags
+
 `refactoring` `code-quality` `best-practices` `modernization` `optimization` `maintainability` `technical-debt` `clean-code`

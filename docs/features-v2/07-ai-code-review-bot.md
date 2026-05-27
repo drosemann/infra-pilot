@@ -1,38 +1,34 @@
-# Feature 7: AI Code Review Bot
+# ai code review bot
 
-| Field | Value |
+| field | value |
 |-------|-------|
-| **ID** | F-007 |
-| **Name** | AI Code Review Bot |
-| **Category** | AI & Intelligence |
-| **Primary Service** | Discord Service |
-| **Effort** | Medium (4-6 PT) |
-| **Dependencies** | Feature 13 (Webhook Event Bus), GitHub App registration |
-| **Phase** | Phase 1 |
+| id | f-007 |
+| name | ai code review bot |
+| category | ai & intelligence |
+| primary service | discord service |
+| effort | medium (4-6 pt) |
+| dependencies | feature 13 (webhook event bus), github app registration |
+| phase | phase 1 |
 
----
+## overview
 
-## Overview
+the ai code review bot listens for github pull request webhook events, performs automated static analysis, security scanning, and configuration validation across the changed files, then posts a structured review summary directly to the configured discord channel. it also updates the pr status with check results and inline comments.
 
-The AI Code Review Bot listens for GitHub Pull Request webhook events, performs automated static analysis, security scanning, and configuration validation across the changed files, then posts a structured review summary directly to the configured Discord channel. It also updates the PR status with check results and inline comments.
+### goals
 
-### Goals
+- reduce code review cycle time by 40% through automated first-pass analysis
+- catch security issues, config mistakes, and api misuse before human review
+- deliver clear, actionable review summaries in discord with severity breakdown
+- provide pr status checks that block merges on critical findings
 
-- Reduce code review cycle time by 40% through automated first-pass analysis
-- Catch security issues, config mistakes, and API misuse before human review
-- Deliver clear, actionable review summaries in Discord with severity breakdown
-- Provide PR status checks that block merges on critical findings
+### non-goals
 
-### Non-Goals
+- not a replacement for human code review (ai findings are advisory)
+- does not auto-merge or auto-approve prs
+- not a ci/cd pipeline -- analysis runs parallel to existing ci
+- does not store full source code permanently (processes in memory, retains only metadata)
 
-- Not a replacement for human code review (AI findings are advisory)
-- Does not auto-merge or auto-approve PRs
-- Not a CI/CD pipeline — analysis runs parallel to existing CI
-- Does not store full source code permanently (processes in memory, retains only metadata)
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────────────────────────────────────┐
@@ -80,16 +76,16 @@ The AI Code Review Bot listens for GitHub Pull Request webhook events, performs 
                         │     Discord          │                          │
                         │  #code-reviews       │◀─────────────────────────┘
                         │  ┌────────────────┐  │
-                        │  │ 🔍 PR Review   │  │
+                        │  │ PR Review      │  │
                         │  │ #42: Fix       │  │
                         │  │ database pool  │  │
-                        │  │ 🟡 3 warnings  │  │
-                        │  │ 🔴 2 critical  │  │
+                        │  │ 3 warnings     │  │
+                        │  │ 2 critical     │  │
                         │  └────────────────┘  │
                         └─────────────────────┘
 ```
 
-### Event Flow
+### event flow
 
 ```
 GitHub PR Event ──► Webhook Receiver
@@ -129,85 +125,81 @@ GitHub PR Event ──► Webhook Receiver
                        └──► Add inline review comments (optional)
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: webhook & core infrastructure (week 1, 1.5 pt)
 
-### Phase 1: Webhook & Core Infrastructure (Week 1, 1.5 PT)
+1. **github webhook receiver**
+   - hmac-sha256 signature verification
+   - event filtering (pull_request, pull_request_review)
+   - rate limiting (github api best practices)
+   - queue-based processing (async to avoid webhook timeout)
+   - retry with exponential backoff
 
-1. **GitHub Webhook Receiver**
-   - HMAC-SHA256 signature verification
-   - Event filtering (pull_request, pull_request_review)
-   - Rate limiting (GitHub API best practices)
-   - Queue-based processing (async to avoid webhook timeout)
-   - Retry with exponential backoff
+2. **github api client**
+   - fetch pr diff and metadata
+   - post commit status checks
+   - create review comments (inline + summary)
+   - authenticate via github app installation token
 
-2. **GitHub API Client**
-   - Fetch PR diff and metadata
-   - Post commit status checks
-   - Create review comments (inline + summary)
-   - Authenticate via GitHub App installation token
+3. **discord bot publisher**
+   - rich embed message builder
+   - severity-colored embeds (green/yellow/red)
+   - action buttons (view pr, approve, request changes placeholder)
+   - thread creation for detailed discussion per review
 
-3. **Discord Bot Publisher**
-   - Rich embed message builder
-   - Severity-colored embeds (green/yellow/red)
-   - Action buttons (View PR, Approve, Request Changes placeholder)
-   - Thread creation for detailed discussion per review
+### phase 2: analysis pipeline (week 2-3, 2.5 pt)
 
-### Phase 2: Analysis Pipeline (Week 2-3, 2.5 PT)
+1. **security scanner**
+   - secret/credential detection (regex + entropy analysis)
+   - dependency vulnerability lookup (osv.dev api, github advisory db)
+   - semgrep-based sast with community rules
+   - dockerfile/hadolint integration
+   - secrets detection for common patterns (aws keys, tokens, connection strings)
 
-1. **Security Scanner**
-   - Secret/credential detection (regex + entropy analysis)
-   - Dependency vulnerability lookup (OSV.dev API, GitHub Advisory DB)
-   - Semgrep-based SAST with community rules
-   - Dockerfile/Hadolint integration
-   - Secrets detection for common patterns (AWS keys, tokens, connection strings)
+2. **config checker**
+   - yaml/json syntax and schema validation
+   - ci/cd config linting (github actions, docker compose)
+   - api misuse detection (known anti-patterns)
+   - infrastructure-as-code checks (terraform, helm, k8s manifests)
 
-2. **Config Checker**
-   - YAML/JSON syntax and schema validation
-   - CI/CD config linting (GitHub Actions, Docker Compose)
-   - API misuse detection (known anti-patterns)
-   - Infrastructure-as-code checks (Terraform, Helm, K8s manifests)
+3. **lint checker**
+   - language detection from file extensions
+   - invoke language-specific linters (eslint, ruff, clippy, etc.)
+   - aggregate and deduplicate results
 
-3. **Lint Checker**
-   - Language detection from file extensions
-   - Invoke language-specific linters (ESLint, Ruff, Clippy, etc.)
-   - Aggregate and deduplicate results
+4. **ai review engine**
+   - llm-based diff analysis
+   - context-aware code review (understand surrounding code)
+   - bug pattern detection (null pointer, race condition, resource leak)
+   - performance optimization suggestions
+   - rate-limited to avoid excessive api costs
 
-4. **AI Review Engine**
-   - LLM-based diff analysis
-   - Context-aware code review (understand surrounding code)
-   - Bug pattern detection (null pointer, race condition, resource leak)
-   - Performance optimization suggestions
-   - Rate-limited to avoid excessive API costs
+### phase 3: comments & status integration (week 3-4, 1.5 pt)
 
-### Phase 3: Comments & Status Integration (Week 3-4, 1.5 PT)
+1. **pr status manager**
+   - map severity levels to github check states:
+     - critical -> failure (blocks merge)
+     - warning -> neutral (advisory)
+     - info -> success (informational)
+   - update status on each analysis pass
+   - handle re-analysis on new commits
 
-1. **PR Status Manager**
-   - Map severity levels to GitHub check states:
-     - Critical → failure (blocks merge)
-     - Warning → neutral (advisory)
-     - Info → success (informational)
-   - Update status on each analysis pass
-   - Handle re-analysis on new commits
+2. **inline comment engine**
+   - deduplicate comments across analysis runs
+   - file+line anchored comments
+   - suggestion blocks with code fence
+   - batch create via github reviews api
 
-2. **Inline Comment Engine**
-   - Deduplicate comments across analysis runs
-   - File+line anchored comments
-   - Suggestion blocks with code fence
-   - Batch create via GitHub Reviews API
+3. **discord ux polish**
+   - customizable channel subscriptions per repo
+   - filter by minimum severity
+   - per-repository configuration command
+   - archive digests for large prs (summary-only mode)
 
-3. **Discord UX Polish**
-   - Customizable channel subscriptions per repo
-   - Filter by minimum severity
-   - Per-repository configuration command
-   - Archive digests for large PRs (summary-only mode)
+## api design
 
----
-
-## API Design
-
-### Internal Endpoints (Discord Service)
+### internal endpoints (discord service)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -218,7 +210,7 @@ GitHub PR Event ──► Webhook Receiver
 | `GET`  | `/config/{guildId}/{repoId}` | Get review config for repo |
 | `PATCH` | `/config/{guildId}/{repoId}` | Update review config |
 
-### Webhook Payload (GitHub → Infra Pilot)
+### webhook payload (github -> infra pilot)
 
 ```json
 {
@@ -254,12 +246,12 @@ GitHub PR Event ──► Webhook Receiver
 }
 ```
 
-### Discord Embed Output
+### discord embed output
 
 ```json
 {
   "embeds": [{
-    "title": "🔍 Code Review: PR #42 — Fix database connection pool configuration",
+    "title": "code review: pr #42 - fix database connection pool configuration",
     "url": "https://github.com/myorg/minecraft-server/pull/42",
     "color": 16776960,
     "fields": [
@@ -275,7 +267,7 @@ GitHub PR Event ──► Webhook Receiver
       },
       {
         "name": "Branch",
-        "value": "fix/db-pool → main",
+        "value": "fix/db-pool -> main",
         "inline": true
       },
       {
@@ -284,32 +276,30 @@ GitHub PR Event ──► Webhook Receiver
         "inline": true
       },
       {
-        "name": "🔴 Critical (2)",
-        "value": "• Hardcoded database password in `config.yml:24`\n• SQL injection vulnerable query in `Queries.java:88`",
+        "name": "critical (2)",
+        "value": "- hardcoded database password in `config.yml:24`\n- sql injection vulnerable query in `queries.java:88`",
         "inline": false
       },
       {
-        "name": "🟡 Warnings (3)",
-        "value": "• Connection pool timeout set to 30s (recommended ≤ 5s) in `config.yml:12`\n• Unused import `java.util.Date` in `Server.java:3`\n• Missing `@Override` annotation in `Service.java:45`",
+        "name": "warnings (3)",
+        "value": "- connection pool timeout set to 30s (recommended <= 5s) in `config.yml:12`\n- unused import `java.util.date` in `server.java:3`\n- missing `@override` annotation in `service.java:45`",
         "inline": false
       },
       {
-        "name": "🟢 Info (4)",
-        "value": "• Consider using try-with-resources in `Database.java:67`\n• Method `getPlayer()` could be static",
+        "name": "info (4)",
+        "value": "- consider using try-with-resources in `database.java:67`\n- method `getplayer()` could be static",
         "inline": false
       }
     ],
     "footer": {
-      "text": "Infra Pilot AI Code Review • Analysis took 12.4s"
+      "text": "infra pilot ai code review - analysis took 12.4s"
     },
     "timestamp": "2026-05-27T10:05:00Z"
   }]
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```yaml
 ReviewRequest:
@@ -323,12 +313,12 @@ ReviewRequest:
   status: "queued" | "processing" | "completed" | "failed"
 
 Repository:
-  full_name: string       # "myorg/minecraft-server"
+  full_name: string
   owner: string
   name: string
   clone_url: string
   default_branch: string
-  installation_id: integer # GitHub App installation
+  installation_id: integer
 
 PullRequest:
   number: integer
@@ -371,35 +361,31 @@ Finding:
   column: integer
   snippet: string
   suggested_fix: string
-  cve_id: string | null   # for dependency vulns
-  cwe_id: string | null    # for security findings
+  cve_id: string | null
+  cwe_id: string | null
   source: "semgrep" | "gitleaks" | "osv" | "hadolint" | "eslint" | "llm" | "builtin"
 
 ReviewConfig:
   id: string (UUID)
-  guild_id: string         # Discord guild
-  channel_id: string       # Discord channel for summaries
-  repo_pattern: string     # glob pattern for repos, e.g. "myorg/*"
-  min_severity: string     # "info" | "warning" | "critical"
+  guild_id: string
+  channel_id: string
+  repo_pattern: string
+  min_severity: string
   inline_comments: boolean
-  auto_approve: boolean    # approve on no critical findings
-  blocked_severities: string[]  # severities that block merge
-  enabled_checks: string[] # "security" | "config" | "lint" | "ai_review"
+  auto_approve: boolean
+  blocked_severities: string[]
+  enabled_checks: string[]
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Service | Responsibility |
 |---------|---------------|
-| **Discord Service** | Primary: Webhook receiver, analyzer pipeline, Discord publisher, PR status manager |
-| **Integration Service** | Secondary: GitHub API rate limiting coordination, webhook event bus routing |
-| **Service Core** | None directly; authentication, user/repo permission checks |
+| discord service | primary: webhook receiver, analyzer pipeline, discord publisher, pr status manager |
+| integration service | secondary: github api rate limiting coordination, webhook event bus routing |
+| service core | none directly; authentication, user/repo permission checks |
 
----
-
-## Effort Estimate
+## effort estimate
 
 | Phase | Task | PT | Owner |
 |-------|------|----|-------|
@@ -412,13 +398,11 @@ ReviewConfig:
 | P3 | PR status manager + inline comments | 0.5 | Backend |
 | P3 | Discord UX + per-repo config | 0.5 | Backend |
 | P3 | Testing + edge case handling | 0.25 | QA |
-| **Total** | | **5.25 PT** | |
+| total | | 5.25 pt | |
 
----
+## configuration
 
-## Configuration
-
-### Discord Bot Commands
+### discord bot commands
 
 ```
 /review register repo:myorg/minecraft-server channel:#code-reviews
@@ -428,7 +412,7 @@ ReviewConfig:
 /review ignore repo:myorg/minecraft-server file:"vendor/*"
 ```
 
-### YAML Configuration Example
+### yaml configuration example
 
 ```yaml
 # discord-service/config/code-review.yml
@@ -457,25 +441,21 @@ repositories:
         message: "AWS access key detected"
 ```
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| GitHub API rate limiting | Medium | Use GitHub App with higher limits; queue-based processing |
-| LLM API latency/cost | Medium | Parallel analysis; cache results for identical diffs; set max tokens per review |
-| False positives cause noise | High | Configurable severity thresholds; per-repo rule tuning; user feedback buttons |
-| Webhook timeout (10s GitHub limit) | High | Acknowledge immediately; process async with status polling |
-| Secret leak in transit/processing | Critical | Process in-memory only; no persistent storage of diffs; audit logging |
+| GitHub API rate limiting | medium | use github app with higher limits; queue-based processing |
+| llm api latency/cost | medium | parallel analysis; cache results for identical diffs; set max tokens per review |
+| false positives cause noise | high | configurable severity thresholds; per-repo rule tuning; user feedback buttons |
+| webhook timeout (10s github limit) | high | acknowledge immediately; process async with status polling |
+| secret leak in transit/processing | critical | process in-memory only; no persistent storage of diffs; audit logging |
 
----
+## future enhancements
 
-## Future Enhancements
-
-- **v2.0**: Auto-fix suggestions with GitHub suggestions API
-- **v2.1**: Learning mode — adapt to project-specific patterns
-- **v2.2**: Multi-repo dashboard in Management Panel
-- **v2.3**: GitLab/Bitbucket/Gitea support
-- **v2.4**: Team performance analytics (review velocity, common issues)
-- **v2.5**: Custom rule authoring UI
+- v2.0: auto-fix suggestions with github suggestions api
+- v2.1: learning mode -- adapt to project-specific patterns
+- v2.2: multi-repo dashboard in management panel
+- v2.3: gitlab/bitbucket/gitea support
+- v2.4: team performance analytics (review velocity, common issues)
+- v2.5: custom rule authoring ui

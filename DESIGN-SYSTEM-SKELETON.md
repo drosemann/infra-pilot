@@ -1,54 +1,53 @@
-# Design System Skeleton — Starter Template
+# design system skeleton — starter template
 
-A minimal, reusable design-system skeleton that wires tokens to core UI primitives (Card, Button, Grid, DonutChart) and provides layout scaffolding (Sidebar, Topbar) for a dense analytics dashboard.
+a minimal, reusable design-system skeleton that wires tokens to core ui primitives (card, button, grid, donutchart) and provides layout scaffolding (sidebar, topbar) for a dense analytics dashboard.
 
-## Goals
-- Provide a clean, maintainable foundation for a pixel-parity dashboard UI.
-- Be token-driven to enable branding/theme swaps with minimal code changes.
-- Be React/TypeScript-friendly with a small, approachable API.
+## goals
+• provide a clean, maintainable foundation for a pixel-parity dashboard ui.
+• be token-driven to enable branding/theme swaps with minimal code changes.
+• be react/typescript-friendly with a small, approachable api.
 
-## Tech Stack (Starter)
-- React + TypeScript
-- CSS Variables + optional CSS-in-JS (adapter-ready)
-- Lightweight ES modules for tokens
-- No heavy dependencies required for MVP
+## tech stack (starter)
+• react + typescript
+• css variables + optional css-in-js (adapter-ready)
+• lightweight es modules for tokens
+• no heavy dependencies required for mvp
 
-## Repository Layout (Proposed)
-- src/
-  - design-tokens/
-    - colors.ts
-    - typography.ts
-    - space.ts
-    - radius.ts
-    - shadow.ts
-    - breakpoints.ts
-  - design-system/
-    - index.ts
-    - theme/
-      - ThemeProvider.tsx
-      - useTheme.ts
-    - components/
-      - Card.tsx
-      - Button.tsx
-      - DonutChart.tsx
-      - Grid.tsx
-    - layout/
-      - Sidebar.tsx
-      - Topbar.tsx
-  - pages/
-    - DemoDashboard.tsx
-  - docs/
-    - design-tokens.md
-    - design-system.md
+## repository layout (proposed)
+• src/
+  • design-tokens/
+    • colors.ts
+    • typography.ts
+    • space.ts
+    • radius.ts
+    • shadow.ts
+    • breakpoints.ts
+  • design-system/
+    • index.ts
+    • theme/
+      • themeprovider.tsx
+      • usetheme.ts
+    • components/
+      • card.tsx
+      • button.tsx
+      • donutchart.tsx
+      • grid.tsx
+    • layout/
+      • sidebar.tsx
+      • topbar.tsx
+  • pages/
+    • demodashboard.tsx
+  • docs/
+    • design-tokens.md
+    • design-system.md
 
-## Getting Started (Template)
-- Install dependencies (adjust to your package manager)
-  - npm install
-  - or yarn install
-
-- Start the development server
-  - npm run start
-- Quick-start example (pseudo-code)
+## getting started (template)
+• install dependencies (adjust to your package manager)
+  • npm install
+  • or yarn install
+• start the development server
+  • npm run start
+• quick-start example (pseudo-code)
   ```tsx
   import React from 'react';
   import { ThemeProvider, Card, Button, DonutChart, Grid } from './design-system';
@@ -66,30 +65,30 @@ A minimal, reusable design-system skeleton that wires tokens to core UI primitiv
   export default DemoDashboard;
   ```
 
-## Primitives API (MVP)
-- Card: title, subtitle, children, variant, compact
-- Button: label, variant, onClick, disabled
-- DonutChart: value, size, thickness, color
-- Grid: columns, gap, children
-- Layout: Sidebar, Topbar
+## primitives api (mvp)
+• card: title, subtitle, children, variant, compact
+• button: label, variant, onclick, disabled
+• donutchart: value, size, thickness, color
+• grid: columns, gap, children
+• layout: sidebar, topbar
 
-## Demo Dashboard (Phase 2 — Demo-Only)
-- Create a DemoDashboard page that uses DS primitives to render a dense dashboard layout with static data.
+## demo dashboard (phase 2 — demo-only)
+• create a demodashboard page that uses ds primitives to render a dense dashboard layout with static data.
 
-## Theming and Tokens
-- This skeleton consumes tokens from the Design Tokens repo.
-- ThemeProvider exposes a context for colors, typography, spacing, and shadows.
-- CSS variables can be generated from tokens for CSS usage.
+## theming and tokens
+• this skeleton consumes tokens from the design tokens repo.
+• themeprovider exposes a context for colors, typography, spacing, and shadows.
+• css variables can be generated from tokens for css usage.
 
-## Accessibility
-- Ensure interactive controls have keyboard focus.
-- Provide ARIA labels for charts and live regions.
+## accessibility
+• ensure interactive controls have keyboard focus.
+• provide aria labels for charts and live regions.
 
-## Documentation
-- docs/design-tokens.md
-- docs/design-system.md
-- docs/quickstart.md
+## documentation
+• docs/design-tokens.md
+• docs/design-system.md
+• docs/quickstart.md
 
-## Contributing
-- Follow the project’s contributing guidelines.
-- Add tests and update docs when introducing new tokens or components.
+## contributing
+• follow the project's contributing guidelines.
+• add tests and update docs when introducing new tokens or components.

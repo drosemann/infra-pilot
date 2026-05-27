@@ -1,20 +1,16 @@
-# Feature 35: Custom Dashboard Builder
+# feature 35: custom dashboard builder
 
-- **Feature ID:** 35
-- **Status:** Planned
-- **Priority:** Medium
-- **Primary Service:** Management Panel
-- **Effort:** Extra Large (11+ PT)
+- feature id: 35
+- status: planned
+- priority: medium
+- primary service: management panel
+- effort: extra large (11+ pt)
 
----
+## overview
 
-## 1. Overview
+the custom dashboard builder is a drag-and-drop visual editor that enables operators to compose real-time operational dashboards without writing code. inspired by grafana, it supports multiple panel types (time-series graphs, stat singletons, log viewers, alert lists), configurable data source queries, dashboard sharing and templating. dashboards are persisted as json definitions and rendered entirely on the management panel front-end with data fetched through a unified query proxy.
 
-The Custom Dashboard Builder is a drag-and-drop visual editor that enables operators to compose real-time operational dashboards without writing code. Inspired by Grafana, it supports multiple panel types (time-series graphs, stat singletons, log viewers, alert lists), configurable data source queries, dashboard sharing and templating. Dashboards are persisted as JSON definitions and rendered entirely on the Management Panel front-end with data fetched through a unified query proxy.
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -64,11 +60,9 @@ The Custom Dashboard Builder is a drag-and-drop visual editor that enables opera
 └──────────────────────────────────────────────────────────────────┘
 ```
 
----
+## dashboard json schema
 
-## 3. Dashboard JSON Schema
-
-Dashboards are stored as JSON and versioned. Every mutation creates a new version.
+dashboards are stored as json and versioned. every mutation creates a new version.
 
 ```json
 {
@@ -229,27 +223,23 @@ Dashboards are stored as JSON and versioned. Every mutation creates a new versio
 }
 ```
 
----
+## panel types
 
-## 4. Panel Types
-
-| Type | Renderer | Data Source | Options |
+| type | renderer | data source | options |
 |---|---|---|---|
-| **timeseries** | uPlot / ECharts | Prometheus, InfluxDB, PostgreSQL | Line interpolation, fill opacity, stack mode, thresholds, axis units, legend |
-| **stat** | React + SVG | Prometheus, InfluxDB | Unit, color mode (text/background), thresholds, sparkline, value mapping |
-| **log** | React (virtual scroll) | Loki, Elasticsearch | Show/hide time, wrap lines, prettify JSON, search highlight |
-| **alert_list** | React table | Prometheus (ALERTS), Alertmanager API | Max items, group by severity, show labels, silence/acknowledge actions |
-| **table** | React Table | PostgreSQL, Prometheus (instant) | Column sorting, column reorder, cell formatting |
-| **bar_chart** | ECharts | Prometheus, InfluxDB | Orientation, grouping, color palette |
-| **heatmap** | ECharts | Prometheus (histogram_quantile) | Bucket bound display, color scale |
-| **pie_chart** | ECharts | Prometheus, InfluxDB | Label position, value mode (count/percentage) |
-| **text** | Markdown / HTML | — (static content) | Content, mode (raw HTML / Markdown) |
+| timeseries | uPlot / ECharts | Prometheus, InfluxDB, PostgreSQL | Line interpolation, fill opacity, stack mode, thresholds, axis units, legend |
+| stat | React + SVG | Prometheus, InfluxDB | Unit, color mode (text/background), thresholds, sparkline, value mapping |
+| log | React (virtual scroll) | Loki, Elasticsearch | Show/hide time, wrap lines, prettify JSON, search highlight |
+| alert_list | React table | Prometheus (ALERTS), Alertmanager API | Max items, group by severity, show labels, silence/acknowledge actions |
+| table | React Table | PostgreSQL, Prometheus (instant) | Column sorting, column reorder, cell formatting |
+| bar_chart | ECharts | Prometheus, InfluxDB | Orientation, grouping, color palette |
+| heatmap | ECharts | Prometheus (histogram_quantile) | Bucket bound display, color scale |
+| pie_chart | ECharts | Prometheus, InfluxDB | Label position, value mode (count/percentage) |
+| text | Markdown / HTML | — (static content) | Content, mode (raw HTML / Markdown) |
 
----
+## data source abstraction
 
-## 5. Data Source Abstraction
-
-The Query Proxy service translates a unified query request into backend-specific queries:
+the query proxy service translates a unified query request into backend-specific queries:
 
 ```json
 // Unified query request (POST /api/v1/dashboards/query)
@@ -281,13 +271,11 @@ The Query Proxy service translates a unified query request into backend-specific
 }
 ```
 
----
+## api design
 
-## 6. API Design
+### dashboard crud
 
-### 6.1 Dashboard CRUD
-
-| Method | Path | Description |
+| method | path | description |
 |---|---|---|
 | `GET` | `/api/v1/dashboards` | List dashboards (filterable by tag, owner) |
 | `POST` | `/api/v1/dashboards` | Create dashboard |
@@ -296,51 +284,49 @@ The Query Proxy service translates a unified query request into backend-specific
 | `DELETE` | `/api/v1/dashboards/{id}` | Soft-delete dashboard |
 | `POST` | `/api/v1/dashboards/{id}/fork` | Fork (clone as new dashboard) |
 
-### 6.2 Dashboard Versioning
+### dashboard versioning
 
-| Method | Path | Description |
+| method | path | description |
 |---|---|---|
 | `GET` | `/api/v1/dashboards/{id}/versions` | List version history |
 | `GET` | `/api/v1/dashboards/{id}/versions/{v}` | Get specific version |
 | `POST` | `/api/v1/dashboards/{id}/restore/{v}` | Restore a previous version |
 | `GET` | `/api/v1/dashboards/{id}/diff/{v1}...{v2}` | Get diff between two versions |
 
-### 6.3 Sharing & Permissions
+### sharing & permissions
 
-| Method | Path | Description |
+| method | path | description |
 |---|---|---|
 | `POST` | `/api/v1/dashboards/{id}/share` | Generate share link (optionally with expiry, password) |
 | `DELETE` | `/api/v1/dashboards/{id}/share/{share_id}` | Revoke share link |
 | `GET` | `/api/v1/dashboards/{id}/permissions` | Get access control list |
 | `PUT` | `/api/v1/dashboards/{id}/permissions` | Set access control list |
 
-### 6.4 Query Execution
+### query execution
 
-| Method | Path | Description |
+| method | path | description |
 |---|---|---|
 | `POST` | `/api/v1/dashboards/query` | Execute a unified query against a data source |
 | `GET` | `/api/v1/dashboards/datasources` | List configured data sources and their health |
 | `GET` | `/api/v1/dashboards/datasources/{uid}/types` | Get supported query types / metadata for a data source |
 
-### 6.5 Templating
+### templating
 
-| Method | Path | Description |
+| method | path | description |
 |---|---|---|
 | `POST` | `/api/v1/dashboards/variable-query` | Execute a variable query (e.g. label_values) and return options |
 
----
+## drag-and-drop canvas
 
-## 7. Drag-and-Drop Canvas
+the canvas is built on `react-grid-layout` with the following behaviours:
 
-The canvas is built on `react-grid-layout` with the following behaviours:
-
-- **Grid**: 24-column responsive layout, 30px row height unit
-- **Resize**: Drag from bottom-right corner; min (4, 2), max (24, 20) grid units
-- **Move**: Drag panel header; auto-reflow sibling panels
-- **Add**: Drag panel type from panel library into canvas; opens query editor on drop
-- **Duplicate**: `Ctrl+D` or context menu — copies panel with all settings
-- **Remove**: Context menu or `Delete` key — removes panel, reflows grid
-- **Undo/Redo**: Full history stack for all canvas mutations
+- grid: 24-column responsive layout, 30px row height unit
+- resize: drag from bottom-right corner; min (4, 2), max (24, 20) grid units
+- move: drag panel header; auto-reflow sibling panels
+- add: drag panel type from panel library into canvas; opens query editor on drop
+- duplicate: `ctrl+d` or context menu — copies panel with all settings
+- remove: context menu or `delete` key — removes panel, reflows grid
+- undo/redo: full history stack for all canvas mutations
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -374,13 +360,11 @@ The canvas is built on `react-grid-layout` with the following behaviours:
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
----
+## templating system
 
-## 8. Templating System
+dashboard variables allow dynamic filtering without editing panels. variable types:
 
-Dashboard variables allow dynamic filtering without editing panels. Variable types:
-
-| Type | Description | Example Query |
+| type | description | example query |
 |---|---|---|
 | `query` | Value list from a data source query | `label_values(pg_up, cluster)` |
 | `constant` | Single static value | `prod-us-east` |
@@ -388,11 +372,9 @@ Dashboard variables allow dynamic filtering without editing panels. Variable typ
 | `interval` | Time range presets | `1m, 5m, 15m, 30m, 1h, 6h, 12h, 1d` |
 | `textbox` | Free-form text input | `(user types a hostname)` |
 
-Variables are referenced in query expressions using `$variable` or `{{ variable }}` syntax.
+variables are referenced in query expressions using `$variable` or `{{ variable }}` syntax.
 
----
-
-## 9. Data Model
+## data model
 
 ```json
 {
@@ -436,57 +418,49 @@ Variables are referenced in query expressions using `$variable` or `{{ variable 
 }
 ```
 
----
+## service assignments
 
-## 10. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---|---|
-| **Management Panel (front-end)** | Drag-and-drop canvas (react-grid-layout), panel library, per-panel renderers (uPlot, ECharts, React Table), query editor, variable editor, dashboard share dialog |
-| **Management Panel (back-end)** | Dashboard CRUD, versioning, permissions, share link generation, variable query resolution |
-| **Query Proxy Service** | Unified query endpoint, per-datasource querier adapters, time-series normalization, result caching |
-| **Integration Service** | Health-check endpoint for each data source |
-| **Identity & Access** | Dashboard-level RBAC (viewer/editor/admin), share link authentication |
+| management panel (front-end) | drag-and-drop canvas (react-grid-layout), panel library, per-panel renderers (uPlot, ECharts, React Table), query editor, variable editor, dashboard share dialog |
+| management panel (back-end) | dashboard crud, versioning, permissions, share link generation, variable query resolution |
+| query proxy service | unified query endpoint, per-datasource querier adapters, time-series normalization, result caching |
+| integration service | health-check endpoint for each data source |
+| identity & access | dashboard-level rbac (viewer/editor/admin), share link authentication |
 
----
+## effort estimate
 
-## 11. Effort Estimate
-
-| Phase | Tasks | PT |
+| phase | tasks | pt |
 |---|---|---|
-| **Design** | Dashboard JSON schema, panel type spec, datasource adapter interface, wireframes | 1 |
-| **Canvas & drag-drop** | react-grid-layout integration, panel resize/move, add/remove/reorder, undo/redo | 2 |
-| **Panel renderers** | uPlot for time-series, stat panel, table, bar chart, heatmap (with ECharts), log viewer (virtual scroll), alert list | 3 |
-| **Query editor** | Datasource selector, query builder UI, variable interpolation, preview | 1 |
-| **Query proxy** | Datasource adapter framework, PromQL querier, LogQL querier, SQL querier, result normalization, caching | 1.5 |
-| **Versioning & diff** | Immutable version storage, restore, JSON-patch diff endpoint | 0.5 |
-| **Sharing & RBAC** | Share link generation (token-based), ACL CRUD, permission checks | 0.5 |
-| **Templating** | Variable engine, query-backed variable resolution, `$var` interpolation middleware | 1 |
-| **Testing & polish** | E2E tests (Cypress) for drag-drop, panel rendering, datasource queries; performance tuning | 1 |
-| **Documentation** | User guide with screenshot gallery, datasource setup guide, API reference | 0.5 |
-| **Total** | | **11+** |
+| design | dashboard json schema, panel type spec, datasource adapter interface, wireframes | 1 |
+| canvas & drag-drop | react-grid-layout integration, panel resize/move, add/remove/reorder, undo/redo | 2 |
+| panel renderers | uPlot for time-series, stat panel, table, bar chart, heatmap (with ECharts), log viewer (virtual scroll), alert list | 3 |
+| query editor | datasource selector, query builder ui, variable interpolation, preview | 1 |
+| query proxy | datasource adapter framework, promql querier, logql querier, sql querier, result normalization, caching | 1.5 |
+| versioning & diff | immutable version storage, restore, json-patch diff endpoint | 0.5 |
+| sharing & rbac | share link generation (token-based), acl crud, permission checks | 0.5 |
+| templating | variable engine, query-backed variable resolution, `$var` interpolation middleware | 1 |
+| testing & polish | e2e tests (cypress) for drag-drop, panel rendering, datasource queries; performance tuning | 1 |
+| documentation | user guide with screenshot gallery, datasource setup guide, api reference | 0.5 |
+| total | | **11+** |
 
----
+## data sources (initial release)
 
-## 12. Data Sources (Initial Release)
-
-| Datasource | Type | Query Language | Supported Panel Types |
+| datasource | type | query language | supported panel types |
 |---|---|---|---|
-| Prometheus | `prometheus` | PromQL | timeseries, stat, bar_chart, heatmap, alert_list |
-| Loki | `loki` | LogQL | log, timeseries (metric queries) |
-| PostgreSQL | `postgresql` | SQL | table, timeseries, stat, bar_chart |
-| InfluxDB | `influxdb` | Flux / InfluxQL | timeseries, stat, bar_chart |
-| OpenTSDB | `opentsdb` | OpenTSDB query | timeseries |
-| JSON API | `json` | JSONPath | table, stat |
-| Elasticsearch | `elasticsearch` | Query DSL | log, table, timeseries |
+| prometheus | `prometheus` | promql | timeseries, stat, bar_chart, heatmap, alert_list |
+| loki | `loki` | logql | log, timeseries (metric queries) |
+| postgresql | `postgresql` | sql | table, timeseries, stat, bar_chart |
+| influxdb | `influxdb` | flux / influxql | timeseries, stat, bar_chart |
+| opentsdb | `opentsdb` | opentsdb query | timeseries |
+| json api | `json` | jsonpath | table, stat |
+| elasticsearch | `elasticsearch` | query dsl | log, table, timeseries |
 
----
+## future considerations
 
-## 13. Future Considerations
-
-- **Annotations**: Overlay events (deployments, alerts) on time-series panels
-- **Alerting from dashboards**: One-click creation of alert rules from panel thresholds
-- **Public dashboards**: Share dashboards with password protection and no auth required
-- **Export / import**: JSON export/import for dashboard migration between instances
-- **Plugins**: Community datasource and panel plugin SDK
-- **AI-assisted panel generation**: Natural language → PromQL query generation
+- annotations: overlay events (deployments, alerts) on time-series panels
+- alerting from dashboards: one-click creation of alert rules from panel thresholds
+- public dashboards: share dashboards with password protection and no auth required
+- export / import: json export/import for dashboard migration between instances
+- plugins: community datasource and panel plugin sdk
+- ai-assisted panel generation: natural language → promql query generation

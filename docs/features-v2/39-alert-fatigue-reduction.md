@@ -1,29 +1,25 @@
-# Feature 39: Alert Fatigue Reduction
+# feature 39: alert fatigue reduction
 
-- **Feature ID:** 39
-- **Category:** Advanced Observability
-- **Primary Service:** Integration Service
-- **Effort:** Large (7-10 PT)
-- **Dependencies:** Feature 13 (Webhook Event Bus), Feature 30 (Incident Management), Feature 36 (SLO Tracking)
+- feature id: 39
+- category: advanced observability
+- primary service: integration service
+- effort: large (7-10 pt)
+- dependencies: feature 13 (webhook event bus), feature 30 (incident management), feature 36 (slo tracking)
 
----
+## overview
 
-## 1. Overview
+implement an intelligent alert management system that dramatically reduces alert fatigue for operators. the system provides real-time deduplication (collapsing identical alerts into single notifications), correlation (grouping related alerts from different sources into a single incident), maintenance window suppression (silencing alerts for planned operations), auto-escalation (escalating unacknowledged alerts through configurable policies), notification throttling (rate-limiting per channel/severity), and digest mode (periodic summary instead of per-alert notifications).
 
-Implement an intelligent alert management system that dramatically reduces alert fatigue for operators. The system provides real-time deduplication (collapsing identical alerts into single notifications), correlation (grouping related alerts from different sources into a single incident), maintenance window suppression (silencing alerts for planned operations), auto-escalation (escalating unacknowledged alerts through configurable policies), notification throttling (rate-limiting per channel/severity), and digest mode (periodic summary instead of per-alert notifications).
+### goals
 
-### Goals
+- reduce total alert volume by 60-80% through deduplication and correlation
+- eliminate notification storms from cascading failures via correlation groups
+- support scheduled and ad-hoc maintenance windows with automatic alert suppression
+- route alerts through escalation policies with time-based and acknowledgement-based triggers
+- throttle notifications per severity/channel to prevent channel flooding
+- provide periodic digest summaries for non-urgent alert categories
 
-- Reduce total alert volume by 60-80% through deduplication and correlation
-- Eliminate notification storms from cascading failures via correlation groups
-- Support scheduled and ad-hoc maintenance windows with automatic alert suppression
-- Route alerts through escalation policies with time-based and acknowledgement-based triggers
-- Throttle notifications per severity/channel to prevent channel flooding
-- Provide periodic digest summaries for non-urgent alert categories
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -74,7 +70,7 @@ Implement an intelligent alert management system that dramatically reduces alert
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Alert Lifecycle State Machine
+### alert lifecycle state machine
 
 ```
                     ┌──────────┐
@@ -95,21 +91,19 @@ Implement an intelligent alert management system that dramatically reduces alert
          └─────────────────────────────────┘
 ```
 
-### Correlation Strategies
+### correlation strategies
 
-| Strategy | Method | Example |
-|----------|--------|---------|
-| **Topology-based** | Resources related via dependency graph | Server down → dependent services alert grouped |
-| **Time-window** | Alerts within N minutes of same resource | CPU + memory + disk alerts at same time |
-| **Metric similarity** | Anomalies in related metrics | Response time spike + error rate increase |
-| **Cause-effect** | Root cause inferred from temporal order | Host down (cause) → service unreachable (effect) |
-| **Label match** | Same label dimensions | All alerts with `team: platform, env: prod` |
+| strategy | method | example |
+|---|---|---|
+| topology-based | resources related via dependency graph | server down → dependent services alert grouped |
+| time-window | alerts within n minutes of same resource | cpu + memory + disk alerts at same time |
+| metric similarity | anomalies in related metrics | response time spike + error rate increase |
+| cause-effect | root cause inferred from temporal order | host down (cause) → service unreachable (effect) |
+| label match | same label dimensions | all alerts with `team: platform, env: prod` |
 
----
+## data model
 
-## 3. Data Model
-
-### Alert Event (Ingested)
+### alert event (ingested)
 
 ```yaml
 alert_event:
@@ -134,7 +128,7 @@ alert_event:
   raw_payload: {}                      # Original source payload
 ```
 
-### Deduplication Record
+### deduplication record
 
 ```yaml
 dedup_record:
@@ -151,7 +145,7 @@ dedup_record:
   throttle_until: 1745712545          # Next allowed notification time
 ```
 
-### Correlation Group (Incident)
+### correlation group (incident)
 
 ```yaml
 correlation_group:
@@ -190,7 +184,7 @@ correlation_group:
       detail: "Acknowledged by user@example.com"
 ```
 
-### Maintenance Window
+### maintenance window
 
 ```yaml
 maintenance_window:
@@ -221,7 +215,7 @@ maintenance_window:
     channels: ["discord"]
 ```
 
-### Escalation Policy
+### escalation policy
 
 ```yaml
 escalation_policy:
@@ -264,7 +258,7 @@ escalation_policy:
   acknowledgement_resets: true        # Ack at level 1 stops escalation
 ```
 
-### Digest Configuration
+### digest configuration
 
 ```yaml
 digest_config:
@@ -282,13 +276,11 @@ digest_config:
   channels: ["discord-digest"]
 ```
 
----
+## api design
 
-## 4. API Design
+### alerts
 
-### Alerts
-
-#### Ingest Alert
+#### ingest alert
 
 ```
 POST /api/v2/alerts/ingest
@@ -314,7 +306,7 @@ POST /api/v2/alerts/ingest
 }
 ```
 
-Response `200`:
+response `200`:
 ```json
 {
   "alert_id": "aev-f8a2c9d1",
@@ -327,13 +319,13 @@ Response `200`:
 }
 ```
 
-#### Get Alert Details
+#### get alert details
 
 ```
 GET /api/v2/alerts/{alert_id}
 ```
 
-#### List Alerts
+#### list alerts
 
 ```
 GET /api/v2/alerts
@@ -346,7 +338,7 @@ GET /api/v2/alerts
   &per_page=50
 ```
 
-#### Acknowledge Alert
+#### acknowledge alert
 
 ```
 POST /api/v2/alerts/{alert_id}/acknowledge
@@ -359,7 +351,7 @@ POST /api/v2/alerts/{alert_id}/acknowledge
 }
 ```
 
-#### Resolve Alert
+#### resolve alert
 
 ```
 POST /api/v2/alerts/{alert_id}/resolve
@@ -373,9 +365,9 @@ POST /api/v2/alerts/{alert_id}/resolve
 }
 ```
 
-### Correlation Groups
+### correlation groups
 
-#### List Groups
+#### list groups
 
 ```
 GET /api/v2/alerts/groups
@@ -385,15 +377,15 @@ GET /api/v2/alerts/groups
   &per_page=20
 ```
 
-#### Get Group Details
+#### get group details
 
 ```
 GET /api/v2/alerts/groups/{group_id}
 ```
 
-### Maintenance Windows
+### maintenance windows
 
-#### List Windows
+#### list windows
 
 ```
 GET /api/v2/maintenance-windows
@@ -401,7 +393,7 @@ GET /api/v2/maintenance-windows
   &upcoming=true
 ```
 
-#### Create Window
+#### create window
 
 ```
 POST /api/v2/maintenance-windows
@@ -432,15 +424,15 @@ POST /api/v2/maintenance-windows
 }
 ```
 
-### Escalation Policies
+### escalation policies
 
-#### List Policies
+#### list policies
 
 ```
 GET /api/v2/escalation-policies
 ```
 
-#### Create Policy
+#### create policy
 
 ```
 POST /api/v2/escalation-policies
@@ -479,15 +471,15 @@ POST /api/v2/escalation-policies
 }
 ```
 
-### Digests
+### digests
 
-#### List Digests
+#### list digests
 
 ```
 GET /api/v2/alerts/digests
 ```
 
-#### Create Digest Config
+#### create digest config
 
 ```
 POST /api/v2/alerts/digests
@@ -508,9 +500,9 @@ POST /api/v2/alerts/digests
 }
 ```
 
-### Statistics
+### statistics
 
-#### Get Alert Reduction Stats
+#### get alert reduction stats
 
 ```
 GET /api/v2/alerts/stats
@@ -536,88 +528,80 @@ GET /api/v2/alerts/stats
 }
 ```
 
----
+## implementation plan
 
-## 5. Implementation Plan
+### phase 1: deduplication & ingestion pipeline (pt 1-3)
 
-### Phase 1: Deduplication & Ingestion Pipeline (PT 1-3)
+| step | description | artifacts |
+|---|---|---|
+| 1.1 | alert normalization layer: validate, normalize, fingerprint | `services/alert_normalizer.py` |
+| 1.2 | deduplication engine: hash-based, time-window, state tracking | `services/dedup_engine.py` |
+| 1.3 | alert ingest api endpoint with dedup response | `routes/alerts.py` |
+| 1.4 | persistent storage for dedup state, alert events | `models/alert.py`, `models/dedup.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 1.1 | Alert normalization layer: validate, normalize, fingerprint | `services/alert_normalizer.py` |
-| 1.2 | Deduplication engine: hash-based, time-window, state tracking | `services/dedup_engine.py` |
-| 1.3 | Alert ingest API endpoint with dedup response | `routes/alerts.py` |
-| 1.4 | Persistent storage for dedup state, alert events | `models/alert.py`, `models/dedup.py` |
+### phase 2: correlation & escalation engine (pt 4-6)
 
-### Phase 2: Correlation & Escalation Engine (PT 4-6)
+| step | description | artifacts |
+|---|---|---|
+| 2.1 | correlation engine: topology, time-window, label matching | `services/correlation_engine.py` |
+| 2.2 | correlation group lifecycle management | `services/group_manager.py` |
+| 2.3 | escalation policy engine with timer-based step progression | `services/escalation_engine.py` |
+| 2.4 | escalation policy crud + schedule/on-call integration | `routes/escalation.py`, `models/escalation.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 2.1 | Correlation engine: topology, time-window, label matching | `services/correlation_engine.py` |
-| 2.2 | Correlation group lifecycle management | `services/group_manager.py` |
-| 2.3 | Escalation policy engine with timer-based step progression | `services/escalation_engine.py` |
-| 2.4 | Escalation policy CRUD + schedule/on-call integration | `routes/escalation.py`, `models/escalation.py` |
+### phase 3: suppression, throttling, digest & panel (pt 7-10)
 
-### Phase 3: Suppression, Throttling, Digest & Panel (PT 7-10)
+| step | description | artifacts |
+|---|---|---|
+| 3.1 | maintenance window crud + automatic alert suppression | `services/maintenance_window.py`, `routes/maintenance.py` |
+| 3.2 | notification throttle: per-channel, per-severity rate limit | `services/throttle_engine.py` |
+| 3.3 | digest mode: cron-based summary generation, formatting | `services/digest_engine.py` |
+| 3.4 | panel ui: alert list, correlation group view, timeline | panel components |
+| 3.5 | panel ui: maintenance window scheduler, escalation policy editor | panel components |
+| 3.6 | panel ui: digest config, reduction statistics dashboard | panel components |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 3.1 | Maintenance window CRUD + automatic alert suppression | `services/maintenance_window.py`, `routes/maintenance.py` |
-| 3.2 | Notification throttle: per-channel, per-severity rate limit | `services/throttle_engine.py` |
-| 3.3 | Digest mode: cron-based summary generation, formatting | `services/digest_engine.py` |
-| 3.4 | Panel UI: alert list, correlation group view, timeline | Panel components |
-| 3.5 | Panel UI: maintenance window scheduler, escalation policy editor | Panel components |
-| 3.6 | Panel UI: digest config, reduction statistics dashboard | Panel components |
+## service assignments
 
----
+| service | responsibility |
+|---|---|
+| integration service (primary) | alert ingestion, deduplication, correlation engine, escalation engine, maintenance windows, notification throttling, digest mode, rest api |
+| management panel | alert dashboard, correlation group timeline, maintenance window scheduler, escalation policy editor, digest config, reduction stats |
+| discord service | alert notification delivery (embed format), digest delivery, escalation channel messages |
+| orchestrator agent | provide topology/relationship data for correlation engine, trigger maintenance windows from deployment workflows |
+| incident management (f30) | receive resolved correlation groups as incidents, integrate escalation policies |
 
-## 6. Service Assignments
+## effort estimate: large (7-10 pt)
 
-| Service | Responsibility |
-|---------|---------------|
-| **Integration Service** (primary) | Alert ingestion, deduplication, correlation engine, escalation engine, maintenance windows, notification throttling, digest mode, REST API |
-| **Management Panel** | Alert dashboard, correlation group timeline, maintenance window scheduler, escalation policy editor, digest config, reduction stats |
-| **Discord Service** | Alert notification delivery (embed format), digest delivery, escalation channel messages |
-| **Orchestrator Agent** | Provide topology/relationship data for correlation engine, trigger maintenance windows from deployment workflows |
-| **Incident Management** (F30) | Receive resolved correlation groups as incidents, integrate escalation policies |
+| area | pt estimate |
+|---|---|
+| alert ingestion + normalization pipeline | 1.0 |
+| deduplication engine (fingerprinting, state) | 1.5 |
+| correlation engine (topology, time, label) | 2.0 |
+| escalation policy engine (timer, steps, schedules) | 1.5 |
+| maintenance window suppression | 1.0 |
+| notification throttling | 0.5 |
+| digest mode (scheduling, formatting) | 1.0 |
+| rest api endpoints | 1.0 |
+| panel ui (alert list, groups, maintenance, escalation, stats) | 2.0 |
+| integration + e2e tests | 1.0 |
+| documentation | 0.5 |
+| total | **13.0 pt (rounded to 10 with framework reuse)** |
 
----
+### risk factors
 
-## 7. Effort Estimate: Large (7-10 PT)
+- correlation accuracy depends on resource topology graph completeness; initial correlations may be noisy
+- escalation policy timing requires robust scheduler (consider celery/apscheduler)
+- digest mode formatting varies significantly by channel (discord embed vs html email)
+- alert dedup fingerprint collisions require careful hash design
+- throttling logic must balance between reducing noise and not silencing real issues
 
-| Area | PT Estimate |
-|------|-------------|
-| Alert ingestion + normalization pipeline | 1.0 |
-| Deduplication engine (fingerprinting, state) | 1.5 |
-| Correlation engine (topology, time, label) | 2.0 |
-| Escalation policy engine (timer, steps, schedules) | 1.5 |
-| Maintenance window suppression | 1.0 |
-| Notification throttling | 0.5 |
-| Digest mode (scheduling, formatting) | 1.0 |
-| REST API endpoints | 1.0 |
-| Panel UI (alert list, groups, maintenance, escalation, stats) | 2.0 |
-| Integration + E2E tests | 1.0 |
-| Documentation | 0.5 |
-| **Total** | **13.0 PT (rounded to 10 with framework reuse)** |
+## key metrics
 
-### Risk Factors
-
-- Correlation accuracy depends on resource topology graph completeness; initial correlations may be noisy
-- Escalation policy timing requires robust scheduler (consider Celery/APScheduler)
-- Digest mode formatting varies significantly by channel (Discord embed vs HTML email)
-- Alert dedup fingerprint collisions require careful hash design
-- Throttling logic must balance between reducing noise and not silencing real issues
-
----
-
-## 8. Key Metrics
-
-| Metric | Target |
-|--------|--------|
-| Alert volume reduction | > 95% (raw alerts → notifications sent) |
-| Deduplication latency | < 500ms per alert |
-| Correlation latency | < 5s from alert ingest to group assignment |
-| Escalation step accuracy | 100% (no missed steps) |
-| Maintenance window suppression | 100% of scope-matched alerts during window |
-| Digest delivery | Within 5 minutes of scheduled time |
-| API throughput | 200 req/s for alert ingestion |
+| metric | target |
+|---|---|
+| alert volume reduction | > 95% (raw alerts → notifications sent) |
+| deduplication latency | < 500ms per alert |
+| correlation latency | < 5s from alert ingest to group assignment |
+| escalation step accuracy | 100% (no missed steps) |
+| maintenance window suppression | 100% of scope-matched alerts during window |
+| digest delivery | within 5 minutes of scheduled time |
+| api throughput | 200 req/s for alert ingestion |

@@ -1,29 +1,25 @@
-# AI Log Anomaly Detector
+# ai log anomaly detector
 
-> **Feature ID:** 1  
-> **Category:** AI & Intelligence  
-> **Primary Service:** Integration Service  
-> **Effort Estimate:** Large (7-10 PT)  
-> **Status:** Planned
+feature id: 1
+category: ai & intelligence
+primary service: integration service
+effort estimate: large (7-10 pt)
+status: planned
 
----
+## overview
 
-## Overview
+train an unsupervised ml model on historical server logs to detect anomalous patterns in real time. the detector identifies crash loops, intrusion attempts, silent failures, and other irregular log sequences that would otherwise go unnoticed until a customer reports an issue.
 
-Train an unsupervised ML model on historical server logs to detect anomalous patterns in real time. The detector identifies crash loops, intrusion attempts, silent failures, and other irregular log sequences that would otherwise go unnoticed until a customer reports an issue.
+alerts are pushed to the management panel via websocket and optionally forwarded to discord, slack, or email.
 
-Alerts are pushed to the Management Panel via WebSocket and optionally forwarded to Discord, Slack, or email.
+### goals
 
-### Goals
+- reduce mean time to detection (mttd) for silent failures from hours to seconds
+- automatically surface crash loops and repeated error patterns before they cascade
+- distinguish genuine anomalies from expected noise (deployments, scheduled restarts)
+- provide a feedback loop for operators to mark false positives, improving model accuracy over time
 
-- Reduce mean time to detection (MTTD) for silent failures from hours to seconds
-- Automatically surface crash loops and repeated error patterns before they cascade
-- Distinguish genuine anomalies from expected noise (deployments, scheduled restarts)
-- Provide a feedback loop for operators to mark false positives, improving model accuracy over time
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -81,20 +77,18 @@ Alerts are pushed to the Management Panel via WebSocket and optionally forwarded
 └─────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: log collection pipeline (2-3 pt)
 
-### Phase 1: Log Collection Pipeline (2-3 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Deploy log-agent sidecar to all managed nodes | Log shipper (Fluentd vector), config per node type |
-| 1.2 | Central log buffer with Kafka or Redis Streams | Buffered log topics, retention policy (7d raw, 90d aggregated) |
-| 1.3 | Log parsing & normalization | Structured schema: `{timestamp, source, level, message, service, host, container_id}` |
-| 1.4 | Feature extraction service | Extracted features written to time-series store |
+| 1.1 | deploy log-agent sidecar to all managed nodes | log shipper (fluentd vector), config per node type |
+| 1.2 | central log buffer with kafka or redis streams | buffered log topics, retention policy (7d raw, 90d aggregated) |
+| 1.3 | log parsing & normalization | structured schema: `{timestamp, source, level, message, service, host, container_id}` |
+| 1.4 | feature extraction service | extracted features written to time-series store |
 
-**Feature extraction logic:**
+**feature extraction logic:**
 
 ```python
 # pseudocode: log_feature_extractor.py
@@ -113,17 +107,17 @@ def extract_features(log_batch: list[dict]) -> dict:
     return features
 ```
 
-### Phase 2: Model Training Pipeline (3-4 PT)
+### phase 2: model training pipeline (3-4 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Historical log export & labeling | Labeled dataset (anomaly / normal) from past incidents |
-| 2.2 | Train Isolation Forest model | `model/isolation_forest.pkl` |
-| 2.3 | Train LSTM sequence model | `model/lstm_anomaly.h5` with sequence length=100 |
-| 2.4 | Ensemble calibrator | Weight optimizer for combining model outputs |
-| 2.5 | Model versioning & A/B deployment | MLflow registry, canary deployment strategy |
+| 2.1 | historical log export & labeling | labeled dataset (anomaly / normal) from past incidents |
+| 2.2 | train isolation forest model | `model/isolation_forest.pkl` |
+| 2.3 | train lstm sequence model | `model/lstm_anomaly.h5` with sequence length=100 |
+| 2.4 | ensemble calibrator | weight optimizer for combining model outputs |
+| 2.5 | model versioning & a/b deployment | mlflow registry, canary deployment strategy |
 
-**Model config:**
+**model config:**
 
 ```yaml
 # config/anomaly_detector.yaml
@@ -157,25 +151,23 @@ feedback:
   min_feedback_samples: 100
 ```
 
-### Phase 3: Alerting & Feedback Loop (2-3 PT)
+### phase 3: alerting & feedback loop (2-3 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Alert deduplication engine | Hash-based dedup, suppression per source + pattern |
-| 3.2 | Severity classification | Critical / Warning / Info based on anomaly score + source |
-| 3.3 | WebSocket push to Panel | Real-time alert feed |
-| 3.4 | Notification integrations | Discord embed, Slack message, email |
-| 3.5 | Feedback ingestion API | `POST /api/v1/anomalies/{id}/feedback` |
-| 3.6 | Scheduled retraining pipeline | Cron trigger, dataset refresh, model promotion |
+| 3.1 | alert deduplication engine | hash-based dedup, suppression per source + pattern |
+| 3.2 | severity classification | critical / warning / info based on anomaly score + source |
+| 3.3 | websocket push to panel | real-time alert feed |
+| 3.4 | notification integrations | discord embed, slack message, email |
+| 3.5 | feedback ingestion api | `POST /api/v1/anomalies/{id}/feedback` |
+| 3.6 | scheduled retraining pipeline | cron trigger, dataset refresh, model promotion |
 
----
+## api design
 
-## API Design
+### anomaly events (websocket)
 
-### Anomaly Events (WebSocket)
-
-**Topic:** `ws://<host>/ws/v1/events`  
-**Event type:** `anomaly.detected`
+**topic:** `ws://<host>/ws/v1/events`
+**event type:** `anomaly.detected`
 
 ```json
 {
@@ -202,9 +194,9 @@ feedback:
 }
 ```
 
-### REST API
+### rest api
 
-#### List Anomalies
+#### list anomalies
 
 ```
 GET /api/v1/anomalies
@@ -217,7 +209,7 @@ GET /api/v1/anomalies
   &offset=0
 ```
 
-Response:
+response:
 ```json
 {
   "anomalies": [
@@ -240,13 +232,13 @@ Response:
 }
 ```
 
-#### Submit Feedback
+#### submit feedback
 
 ```
 POST /api/v1/anomalies/{id}/feedback
 ```
 
-Request:
+request:
 ```json
 {
   "is_true_positive": false,
@@ -256,19 +248,19 @@ Request:
 }
 ```
 
-#### Get Anomaly Details
+#### get anomaly details
 
 ```
 GET /api/v1/anomalies/{id}
 ```
 
-#### Acknowledge / Resolve
+#### acknowledge / resolve
 
 ```
 PATCH /api/v1/anomalies/{id}
 ```
 
-Request:
+request:
 ```json
 {
   "status": "acknowledged",
@@ -276,9 +268,7 @@ Request:
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/anomaly.py
@@ -333,7 +323,7 @@ class Feedback:
     submitted_at: datetime
 ```
 
-**Database Schema (PostgreSQL + TimescaleDB):**
+**database schema (postgresql + timescaledb):**
 
 ```sql
 -- Log events (raw, short retention)
@@ -393,20 +383,16 @@ CREATE TABLE anomaly_feedback (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | Log collection pipeline, feature extraction, model inference, alert manager, feedback API |
-| **Orchestrator Agent** | Deploy log-agent sidecar configuration, manage log buffer infrastructure (Kafka/Redis) |
-| **Management Panel** | WebSocket alert feed, anomaly detail view, feedback UI, historical search |
-| **Discord Bot / Notifications** | Forward critical anomalies to Discord/Slack channels |
+| integration service | log collection pipeline, feature extraction, model inference, alert manager, feedback api |
+| orchestrator agent | deploy log-agent sidecar configuration, manage log buffer infrastructure (kafka/redis) |
+| management panel | websocket alert feed, anomaly detail view, feedback ui, historical search |
+| discord bot / notifications | forward critical anomalies to discord/slack channels |
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/log_agent.yaml
@@ -444,48 +430,42 @@ agent:
 }
 ```
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Log agent sidecar deployment | 1 | Docker orchestration |
-| 1.2 | Central log buffer setup (Kafka/Redis) | 1 | Infrastructure |
-| 1.3 | Log parsing & normalization | 0.5 | Log schema definition |
-| 1.4 | Feature extraction service | 1 | Parsing pipeline |
-| 2.1 | Historical dataset preparation | 1 | Phase 1 completion |
-| 2.2 | Isolation Forest training | 1 | Labeled dataset |
-| 2.3 | LSTM training | 1.5 | GPU-available infra |
-| 2.4 | Ensemble calibrator | 0.5 | Both models trained |
-| 2.5 | Model registry & deployment | 0.5 | MLflow setup |
-| 3.1 | Alert deduplication | 0.5 | Anomaly event schema |
-| 3.2 | Severity classification | 0.5 | Scoring pipeline |
-| 3.3 | WebSocket push | 0.5 | Panel WebSocket infra |
-| 3.4 | Notification integrations | 0.5 | Discord/Slack webhooks |
-| 3.5 | Feedback API | 0.5 | REST API framework |
-| 3.6 | Scheduled retraining | 0.5 | Cron + MLflow |
-| | **Total** | **10.5** | |
+| 1.1 | log agent sidecar deployment | 1 | docker orchestration |
+| 1.2 | central log buffer setup (kafka/redis) | 1 | infrastructure |
+| 1.3 | log parsing & normalization | 0.5 | log schema definition |
+| 1.4 | feature extraction service | 1 | parsing pipeline |
+| 2.1 | historical dataset preparation | 1 | phase 1 completion |
+| 2.2 | isolation forest training | 1 | labeled dataset |
+| 2.3 | lstm training | 1.5 | gpu-available infra |
+| 2.4 | ensemble calibrator | 0.5 | both models trained |
+| 2.5 | model registry & deployment | 0.5 | mlflow setup |
+| 3.1 | alert deduplication | 0.5 | anomaly event schema |
+| 3.2 | severity classification | 0.5 | scoring pipeline |
+| 3.3 | websocket push | 0.5 | panel websocket infra |
+| 3.4 | notification integrations | 0.5 | discord/slack webhooks |
+| 3.5 | feedback api | 0.5 | rest api framework |
+| 3.6 | scheduled retraining | 0.5 | cron + mlflow |
+| | total | 10.5 | |
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| High false-positive rate | Alert fatigue, ignored alerts | Feedback loop, dynamic threshold tuning, ensemble scoring |
-| Log volume at scale | Storage costs, latency | Sampling for high-volume sources, tiered retention, Kafka compression |
-| Model drift over time | Degraded detection accuracy | Weekly retraining, drift monitoring, automatic rollback to previous model |
-| Privacy / sensitive logs | Compliance violation | PII redaction pipeline, configurable exclude patterns, audit trail |
+| high false-positive rate | alert fatigue, ignored alerts | feedback loop, dynamic threshold tuning, ensemble scoring |
+| log volume at scale | storage costs, latency | sampling for high-volume sources, tiered retention, kafka compression |
+| model drift over time | degraded detection accuracy | weekly retraining, drift monitoring, automatic rollback to previous model |
+| privacy / sensitive logs | compliance violation | pii redaction pipeline, configurable exclude patterns, audit trail |
 
----
+## metrics & kpis
 
-## Metrics & KPIs
-
-| Metric | Target | Measurement |
+| metric | target | measurement |
 |--------|--------|-------------|
-| MTTD (mean time to detect) | < 30s | Time from error to anomaly event creation |
-| Precision (accuracy of alerts) | > 90% | True positives / (TP + FP) |
-| Recall (anomalies caught) | > 85% | TP / (TP + FN) from post-mortem review |
-| Feedback response rate | > 20% of alerts | Feedback count / total anomaly events |
-| Model training time | < 4 hours | End-to-end pipeline duration |
+| mttd (mean time to detect) | < 30s | time from error to anomaly event creation |
+| precision (accuracy of alerts) | > 90% | true positives / (tp + fp) |
+| recall (anomalies caught) | > 85% | tp / (tp + fn) from post-mortem review |
+| feedback response rate | > 20% of alerts | feedback count / total anomaly events |
+| model training time | < 4 hours | end-to-end pipeline duration |

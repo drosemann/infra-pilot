@@ -1,41 +1,37 @@
-# Feature 30: Incident Management
+# feature 30: incident management
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 30 |
-| Feature Name | Incident Management |
-| Primary Service | Integration Service |
-| Effort Estimate | Large (7–10 PT) |
-| Dependencies | Auth Service, Notification Service, PagerDuty/Opsgenie API |
-| Priority | High |
+| feature id | 30 |
+| feature name | incident management |
+| primary service | integration service |
+| effort estimate | large (7-10 pt) |
+| dependencies | auth service, notification service, pagerduty/opsgenie api |
+| priority | high |
 
----
+## 1. overview
 
-## 1. Overview
+the incident management feature provides a complete lifecycle for operational incidents: detection, alerting, on-call scheduling, escalation, timeline tracking, post-mortem documentation, and optional public status page. it integrates with pagerduty and opsgenie for alert routing and on-call synchronization.
 
-The Incident Management feature provides a complete lifecycle for operational incidents: detection, alerting, on-call scheduling, escalation, timeline tracking, post-mortem documentation, and optional public status page. It integrates with PagerDuty and Opsgenie for alert routing and on-call synchronization.
+### 1.1 goals
 
-### 1.1 Goals
+- define on-call schedules with rotation support
+- configure escalation policies with time-based and approval-based rules
+- track incidents from detection through resolution
+- provide post-mortem templates for blameless retrospectives
+- sync on-call rotations with pagerduty and opsgenie
+- optional public status page for external stakeholders
 
-- Define on-call schedules with rotation support
-- Configure escalation policies with time-based and approval-based rules
-- Track incidents from detection through resolution
-- Provide post-mortem templates for blameless retrospectives
-- Sync on-call rotations with PagerDuty and Opsgenie
-- Optional public status page for external stakeholders
+### 1.2 non-goals
 
-### 1.2 Non-Goals
+- replace full-featured monitoring (prometheus, grafana, datadog)
+- incident response runbook automation (future scope)
+- sla/slo tracking and reporting
+- root cause analysis automation
 
-- Replace full-featured monitoring (Prometheus, Grafana, Datadog)
-- Incident response runbook automation (future scope)
-- SLA/SLO tracking and reporting
-- Root cause analysis automation
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### 2.1 High-Level Diagram
+### 2.1 high-level diagram
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -69,21 +65,22 @@ The Incident Management feature provides a complete lifecycle for operational in
 └──────────────┘  └──────────────────┘  └──────────────────────┘
 ```
 
-### 2.2 Component Descriptions
+### 2.2 component descriptions
 
-| Component | Role | Technology |
+| component | role | technology |
 |-----------|------|------------|
-| On-Call Scheduler | Manages rotation schedules, user assignments, overrides | Go / Node.js |
-| Escalation Engine | Evaluates escalation policies, routes to next responder | Integration Service |
-| Incident Lifecycle | State machine for incident tracking (detecting → acknowledged → resolving → resolved) | Integration Service |
-| Post-Mortem Templates | CRUD for markdown-based post-mortem documents | Integration Service |
-| PagerDuty Sync | Bidirectional sync of on-call schedules and alerts | REST API + Webhooks |
-| Opsgenie Sync | Bidirectional sync of on-call schedules and alerts | REST API + Webhooks |
-| Status Page Renderer | Generates public HTML/JSON status page | Static site generation |
+| on-call scheduler | manages rotation schedules, user assignments, overrides | go / node.js |
+| escalation engine | evaluates escalation policies, routes to next responder | integration service |
+| incident lifecycle | state machine for incident tracking (detecting to acknowledged to resolving to resolved) | integration service |
+| post-mortem templates | crud for markdown-based post-mortem documents | integration service |
+| pagerduty sync | bidirectional sync of on-call schedules and alerts | rest api + webhooks |
+| opsgenie sync | bidirectional sync of on-call schedules and alerts | rest api + webhooks |
+| status page renderer | generates public html/json status page | static site generation |
 
-### 2.3 Incident State Machine
+### 2.3 incident state machine
 
 ```
+
                   ┌──────────────┐
                   │  Detecting   │
                   └──────┬───────┘
@@ -105,50 +102,47 @@ The Incident Management feature provides a complete lifecycle for operational in
           │       ┌──────────────┐
           └───────│   Resolved   │
                   └──────────────┘
+
 ```
 
----
+## 3. implementation plan
 
-## 3. Implementation Plan
+### phase 1: on-call scheduling (pt 2-3)
 
-### Phase 1: On-Call Scheduling (PT 2–3)
-
-| Task | Description |
+| task | description |
 |------|-------------|
-| 1.1 | Define data models: schedules, rotations, shifts, overrides |
-| 1.2 | Implement schedule CRUD with recurrence rules (RRULE / iCalendar) |
-| 1.3 | Implement rotation assignment (primary, secondary, tertiary) |
-| 1.4 | Coverage gap detection and alerting |
-| 1.5 | Manual override support (swap shifts, temporary reassignment) |
+| 1.1 | define data models: schedules, rotations, shifts, overrides |
+| 1.2 | implement schedule crud with recurrence rules (rrule / icalendar) |
+| 1.3 | implement rotation assignment (primary, secondary, tertiary) |
+| 1.4 | coverage gap detection and alerting |
+| 1.5 | manual override support (swap shifts, temporary reassignment) |
 
-### Phase 2: Incident Lifecycle (PT 2–3)
+### phase 2: incident lifecycle (pt 2-3)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 2.1 | Define incident data model + state machine |
-| 2.2 | Incident CRUD endpoints |
-| 2.3 | Escalation policy engine (time-based delays, routing rules) |
-| 2.4 | Escalation timer service (check for unacknowledged, escalate) |
-| 2.5 | Incident timeline tracking (auto-log state transitions + manual entries) |
-| 2.6 | Notification dispatch on state changes (Slack, email, SMS) |
+| 2.1 | define incident data model + state machine |
+| 2.2 | incident crud endpoints |
+| 2.3 | escalation policy engine (time-based delays, routing rules) |
+| 2.4 | escalation timer service (check for unacknowledged, escalate) |
+| 2.5 | incident timeline tracking (auto-log state transitions + manual entries) |
+| 2.6 | notification dispatch on state changes (slack, email, sms) |
 
-### Phase 3: Integrations & Status Page (PT 3–4)
+### phase 3: integrations & status page (pt 3-4)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 3.1 | PagerDuty REST API integration: pull on-call schedules, push alerts |
-| 3.2 | Opsgenie REST API integration: pull on-call schedules, push alerts |
-| 3.3 | Inbound webhook handlers for PagerDuty/Opsgenie alerts → auto-create incidents |
-| 3.4 | Post-mortem template CRUD + markdown rendering |
-| 3.5 | Post-mortem export (PDF, markdown) |
-| 3.6 | Public status page generator (components, incidents, uptime timeline) |
-| 3.7 | Status page API for external consumers (JSON feed) |
+| 3.1 | pagerduty rest api integration: pull on-call schedules, push alerts |
+| 3.2 | opsgenie rest api integration: pull on-call schedules, push alerts |
+| 3.3 | inbound webhook handlers for pagerduty/opsgenie alerts to auto-create incidents |
+| 3.4 | post-mortem template crud + markdown rendering |
+| 3.5 | post-mortem export (pdf, markdown) |
+| 3.6 | public status page generator (components, incidents, uptime timeline) |
+| 3.7 | status page api for external consumers (json feed) |
 
----
+## 4. api design
 
-## 4. API Design
-
-### 4.1 On-Call Schedule Endpoints
+### 4.1 on-call schedule endpoints
 
 ```
 POST   /api/v2/oncall/schedules                    Create schedule
@@ -164,7 +158,7 @@ GET    /api/v2/oncall/who-is-oncall                 Current on-call for all sche
 GET    /api/v2/oncall/who-is-oncall?schedule_id=:id  Current on-call for specific schedule
 ```
 
-### 4.2 Escalation Policy Endpoints
+### 4.2 escalation policy endpoints
 
 ```
 POST   /api/v2/escalation-policies                  Create policy
@@ -174,7 +168,7 @@ PUT    /api/v2/escalation-policies/:id               Update policy
 DELETE /api/v2/escalation-policies/:id               Delete policy
 ```
 
-### 4.3 Incident Endpoints
+### 4.3 incident endpoints
 
 ```
 POST   /api/v2/incidents                            Create incident
@@ -187,7 +181,7 @@ POST   /api/v2/incidents/:id/escalate               Manually escalate
 POST   /api/v2/incidents/:id/timeline               Add timeline entry
 ```
 
-### 4.4 Post-Mortem Endpoints
+### 4.4 post-mortem endpoints
 
 ```
 POST   /api/v2/post-mortems                         Create post-mortem
@@ -197,7 +191,7 @@ PUT    /api/v2/post-mortems/:id                      Update post-mortem
 POST   /api/v2/post-mortems/:id/export              Export (markdown, PDF)
 ```
 
-### 4.5 Status Page Endpoints
+### 4.5 status page endpoints
 
 ```
 POST   /api/v2/status-pages                         Create status page config
@@ -208,9 +202,9 @@ PUT    /api/v2/status-pages/:id                      Update page
 GET    /api/v2/status-pages/:id/public               Public status JSON (no auth)
 ```
 
-### 4.6 Request/Response Examples
+### 4.6 request/response examples
 
-**Create Schedule:**
+**create schedule:**
 ```json
 POST /api/v2/oncall/schedules
 {
@@ -239,7 +233,7 @@ Response 201:
 }
 ```
 
-**Create Escalation Policy:**
+**create escalation policy:**
 ```json
 POST /api/v2/escalation-policies
 {
@@ -270,7 +264,7 @@ POST /api/v2/escalation-policies
 }
 ```
 
-**Create Incident:**
+**create incident:**
 ```json
 POST /api/v2/incidents
 {
@@ -296,7 +290,7 @@ Response 201:
 }
 ```
 
-**Resolve Incident:**
+**resolve incident:**
 ```json
 POST /api/v2/incidents/inc_20260527_001/resolve
 {
@@ -315,7 +309,7 @@ Response 200:
 }
 ```
 
-**Status Page (public JSON):**
+**status page (public json):**
 ```json
 GET /api/v2/status-pages/sp_infrapilot/public
 
@@ -341,149 +335,143 @@ Response 200:
 }
 ```
 
----
-
-## 5. Data Model
+## 5. data model
 
 ### 5.1 `oncall_schedules`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | VARCHAR(64) (PK) | Human-readable slug |
-| name | VARCHAR(128) | Display name |
-| description | TEXT | Optional description |
-| timezone | VARCHAR(64) | IANA timezone |
-| rotation_type | ENUM | `weekly`, `daily`, `custom` |
-| shift_start | TIME | When shift begins |
-| shift_duration_hours | INT | Length of each shift |
-| handoff_day | VARCHAR(16) | Day of week for handoff |
-| handoff_time | TIME | Time of handoff |
-| created_by | UUID (FK → users) | Creator |
-| created_at | TIMESTAMPTZ | Creation |
-| updated_at | TIMESTAMPTZ | Last update |
+| id | varchar(64) (pk) | human-readable slug |
+| name | varchar(128) | display name |
+| description | text | optional description |
+| timezone | varchar(64) | iana timezone |
+| rotation_type | enum | `weekly`, `daily`, `custom` |
+| shift_start | time | when shift begins |
+| shift_duration_hours | int | length of each shift |
+| handoff_day | varchar(16) | day of week for handoff |
+| handoff_time | time | time of handoff |
+| created_by | uuid (fk to users) | creator |
+| created_at | timestamptz | creation |
+| updated_at | timestamptz | last update |
 
 ### 5.2 `oncall_members`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| schedule_id | VARCHAR(64) (FK) | Parent schedule |
-| user_id | UUID (FK → users) | Team member |
-| rank | INT | 1 = primary, 2 = secondary, etc. |
-| is_active | BOOLEAN | Whether currently participating |
+| id | uuid (pk) | auto-generated |
+| schedule_id | varchar(64) (fk) | parent schedule |
+| user_id | uuid (fk to users) | team member |
+| rank | int | 1 = primary, 2 = secondary, etc. |
+| is_active | boolean | whether currently participating |
 
 ### 5.3 `oncall_overrides`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| schedule_id | VARCHAR(64) (FK) | Parent schedule |
-| original_user_id | UUID (FK → users) | Who is being replaced |
-| replacement_user_id | UUID (FK → users) | Replacement |
-| starts_at | TIMESTAMPTZ | Override start |
-| ends_at | TIMESTAMPTZ | Override end |
-| reason | TEXT | Justification |
-| created_by | UUID (FK → users) | Who created override |
+| id | uuid (pk) | auto-generated |
+| schedule_id | varchar(64) (fk) | parent schedule |
+| original_user_id | uuid (fk to users) | who is being replaced |
+| replacement_user_id | uuid (fk to users) | replacement |
+| starts_at | timestamptz | override start |
+| ends_at | timestamptz | override end |
+| reason | text | justification |
+| created_by | uuid (fk to users) | who created override |
 
 ### 5.4 `escalation_policies`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | VARCHAR(64) (PK) | Human-readable slug |
-| name | VARCHAR(128) | Display name |
-| rules | JSONB | Array of escalation rules with targets and delays |
-| created_by | UUID (FK → users) | Creator |
-| created_at | TIMESTAMPTZ | Creation |
-| updated_at | TIMESTAMPTZ | Last update |
+| id | varchar(64) (pk) | human-readable slug |
+| name | varchar(128) | display name |
+| rules | jsonb | array of escalation rules with targets and delays |
+| created_by | uuid (fk to users) | creator |
+| created_at | timestamptz | creation |
+| updated_at | timestamptz | last update |
 
 ### 5.5 `incidents`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | VARCHAR(64) (PK) | e.g., `inc_20260527_001` |
-| title | TEXT | Short description |
-| severity | ENUM | `critical`, `major`, `minor`, `warning` |
-| status | ENUM | `detecting`, `acknowledged`, `investigating`, `resolving`, `resolved` |
-| source | VARCHAR(64) | Detection source (prometheus, pagerduty, manual) |
-| source_id | VARCHAR(128) | External alert ID |
-| description | TEXT | Full description |
-| affected_components | TEXT[] | List of affected services |
-| escalation_policy_id | VARCHAR(64) (FK) | Active escalation policy |
-| acknowledged_by | UUID (FK → users, nullable) | Who acknowledged |
-| acknowledged_at | TIMESTAMPTZ | When acknowledged |
-| resolved_by | UUID (FK → users, nullable) | Who resolved |
-| resolved_at | TIMESTAMPTZ | When resolved |
-| resolution_notes | TEXT | How it was resolved |
-| root_cause | TEXT | Identified RCA |
-| created_at | TIMESTAMPTZ | Creation |
-| updated_at | TIMESTAMPTZ | Last update |
+| id | varchar(64) (pk) | e.g., `inc_20260527_001` |
+| title | text | short description |
+| severity | enum | `critical`, `major`, `minor`, `warning` |
+| status | enum | `detecting`, `acknowledged`, `investigating`, `resolving`, `resolved` |
+| source | varchar(64) | detection source (prometheus, pagerduty, manual) |
+| source_id | varchar(128) | external alert id |
+| description | text | full description |
+| affected_components | text[] | list of affected services |
+| escalation_policy_id | varchar(64) (fk) | active escalation policy |
+| acknowledged_by | uuid (fk to users, nullable) | who acknowledged |
+| acknowledged_at | timestamptz | when acknowledged |
+| resolved_by | uuid (fk to users, nullable) | who resolved |
+| resolved_at | timestamptz | when resolved |
+| resolution_notes | text | how it was resolved |
+| root_cause | text | identified rca |
+| created_at | timestamptz | creation |
+| updated_at | timestamptz | last update |
 
 ### 5.6 `incident_timeline`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | BIGSERIAL (PK) | Auto-increment |
-| incident_id | VARCHAR(64) (FK) | Parent incident |
-| entry_type | ENUM | `created`, `acknowledged`, `note`, `escalated`, `resolved`, `reopened` |
-| detail | TEXT | Free-text entry |
-| actor_id | UUID (FK → users, nullable) | Who created entry |
-| created_at | TIMESTAMPTZ | Immutable timestamp |
+| id | bigserial (pk) | auto-increment |
+| incident_id | varchar(64) (fk) | parent incident |
+| entry_type | enum | `created`, `acknowledged`, `note`, `escalated`, `resolved`, `reopened` |
+| detail | text | free-text entry |
+| actor_id | uuid (fk to users, nullable) | who created entry |
+| created_at | timestamptz | immutable timestamp |
 
 ### 5.7 `post_mortems`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| incident_id | VARCHAR(64) (FK, nullable) | Related incident |
-| title | VARCHAR(256) | Post-mortem title |
-| template_id | UUID (FK → templates) | Template used |
-| content | JSONB | Structured fields based on template |
-| document | TEXT | Rendered markdown |
-| created_by | UUID (FK → users) | Author |
-| created_at | TIMESTAMPTZ | Creation |
-| updated_at | TIMESTAMPTZ | Last update |
+| id | uuid (pk) | auto-generated |
+| incident_id | varchar(64) (fk, nullable) | related incident |
+| title | varchar(256) | post-mortem title |
+| template_id | uuid (fk to templates) | template used |
+| content | jsonb | structured fields based on template |
+| document | text | rendered markdown |
+| created_by | uuid (fk to users) | author |
+| created_at | timestamptz | creation |
+| updated_at | timestamptz | last update |
 
 ### 5.8 `post_mortem_templates`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| name | VARCHAR(128) | Template name |
-| schema | JSONB | Field definitions (title, summary, timeline, rca, action-items) |
-| markdown_template | TEXT | Go template / Handlebars template for rendering |
-| created_by | UUID (FK → users) | Creator |
+| id | uuid (pk) | auto-generated |
+| name | varchar(128) | template name |
+| schema | jsonb | field definitions (title, summary, timeline, rca, action-items) |
+| markdown_template | text | go template / handlebars template for rendering |
+| created_by | uuid (fk to users) | creator |
 
 ### 5.9 `status_pages`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Auto-generated |
-| name | VARCHAR(128) | Status page title |
-| subdomain | VARCHAR(64) | e.g., `status.example.com` |
-| is_public | BOOLEAN | Whether publicly accessible |
-| components | JSONB | List of service components and their status |
-| custom_css | TEXT | Optional custom styling |
-| created_by | UUID (FK → users) | Creator |
-| created_at | TIMESTAMPTZ | Creation |
-| updated_at | TIMESTAMPTZ | Last update |
+| id | uuid (pk) | auto-generated |
+| name | varchar(128) | status page title |
+| subdomain | varchar(64) | e.g., `status.example.com` |
+| is_public | boolean | whether publicly accessible |
+| components | jsonb | list of service components and their status |
+| custom_css | text | optional custom styling |
+| created_by | uuid (fk to users) | creator |
+| created_at | timestamptz | creation |
+| updated_at | timestamptz | last update |
 
----
+## 6. service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|-----------------|
-| **Integration Service** (primary) | On-call scheduling engine, escalation engine, incident lifecycle, post-mortem CRUD, status page generator |
-| **Notification Service** | Slack alerts, email notifications, SMS (via Twilio) for incident state changes |
-| **PagerDuty (external)** | On-call schedule sync source-of-truth, alert routing |
-| **Opsgenie (external)** | On-call schedule sync source-of-truth, alert routing |
-| **Database** | All schedule, incident, post-mortem, and status page data |
+| **integration service** (primary) | on-call scheduling engine, escalation engine, incident lifecycle, post-mortem crud, status page generator |
+| **notification service** | slack alerts, email notifications, sms (via twilio) for incident state changes |
+| **pagerduty (external)** | on-call schedule sync source-of-truth, alert routing |
+| **opsgenie (external)** | on-call schedule sync source-of-truth, alert routing |
+| **database** | all schedule, incident, post-mortem, and status page data |
 
----
+## 7. integration patterns
 
-## 7. Integration Patterns
-
-### 7.1 PagerDuty Sync
+### 7.1 pagerduty sync
 
 ```yaml
 # Configuration
@@ -500,7 +488,7 @@ pagerduty:
 # 5. When incident is resolved in Infra Pilot → push to PD
 ```
 
-### 7.2 Escalation Timer Flow
+### 7.2 escalation timer flow
 
 ```
 1. Incident created → status = "detecting"
@@ -512,24 +500,20 @@ pagerduty:
 5. If acknowledged but not resolved within policy threshold → re-escalate
 ```
 
----
+## 8. effort estimate
 
-## 8. Effort Estimate
-
-| Phase | Person-Days |
+| phase | person-days |
 |-------|-------------|
-| Phase 1: On-Call Scheduling | 2–3 PT |
-| Phase 2: Incident Lifecycle | 2–3 PT |
-| Phase 3: Integrations & Status Page | 3–4 PT |
-| **Total** | **7–10 PT** |
+| phase 1: on-call scheduling | 2-3 pt |
+| phase 2: incident lifecycle | 2-3 pt |
+| phase 3: integrations & status page | 3-4 pt |
+| **total** | **7-10 pt** |
 
----
+## 9. future enhancements
 
-## 9. Future Enhancements
-
-- Runbook automation (attach automated remediation to incident types)
-- SLA breach prediction and alerting
-- Incident metrics dashboard (MTTD, MTTR, etc.)
-- AI-powered root cause suggestion
-- Video/voice conference bridge auto-creation on incident open
-- Multi-region status page aggregation
+- runbook automation (attach automated remediation to incident types)
+- sla breach prediction and alerting
+- incident metrics dashboard (mttd, mttr, etc.)
+- ai-powered root cause suggestion
+- video/voice conference bridge auto-creation on incident open
+- multi-region status page aggregation

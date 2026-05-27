@@ -1,37 +1,37 @@
-# Project Documentation Template
+# project documentation template
 
-Overview
-- Short description of the project, purpose, and scope.
+overview
+- short description of the project, purpose, and scope.
 
-Quick Start
-- Prerequisites
-- Setup commands
-- How to run locally
+quick start
+- prerequisites
+- setup commands
+- how to run locally
 
-Architecture
-- High-level architecture diagram (Mermaid) and data flow
-- Key components and responsibilities
+architecture
+- high-level architecture diagram (mermaid) and data flow
+- key components and responsibilities
 
-Development
-- Coding standards
-- Local development workflow
-- Testing strategy
+development
+- coding standards
+- local development workflow
+- testing strategy
 
-Branding
-- Branding tokens and color palette
-- Logo assets and usage guidelines
-- UI kit guidelines
+branding
+- branding tokens and color palette
+- logo assets and usage guidelines
+- ui kit guidelines
 
-API
-- List of public APIs or interfaces with brief descriptions
-- Endpoints or contract summaries
+api
+- list of public apis or interfaces with brief descriptions
+- endpoints or contract summaries
 
-Deployment
-- How to deploy (Docker, Kubernetes, etc.)
-- Environment variables and secrets handling
+deployment
+- how to deploy (docker, kubernetes, etc.)
+- environment variables and secrets handling
 
-Contributing
-- How to contribute, guidelines, and code of conduct
+contributing
+- how to contribute, guidelines, and code of conduct
 
-License
-- License information
+license
+- license information

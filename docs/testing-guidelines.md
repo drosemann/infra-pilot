@@ -1,16 +1,16 @@
-# Testing Guidelines
+# testing guidelines
 
-Diese Seite bietet kurze, wiederverwendbare Templates für Unit- und Integrationstests.
+diese seite bietet kurze, wiederverwendbare templates für unit- und integrationstests.
 
-## Grundsätze
+## grundsätze
 
-- Nutze sprechende Testnamen mit Verhalten im Fokus.
-- Halte Tests isoliert (keine Abhängigkeit von Reihenfolge/externem Zustand).
-- Vermeide doppelte Assertions derselben Aussage.
-- Nutze Parametrisierung bei mehr als 3 ähnlichen Fällen.
-- Stelle klare Failure-Messages bereit.
+- nutze sprechende testnamen mit verhalten im fokus.
+- halte tests isoliert (keine abhängigkeit von reihenfolge/externem zustand).
+- vermeide doppelte assertions derselben aussage.
+- nutze parametrisierung bei mehr als 3 ähnlichen fällen.
+- stelle klare failure-messages bereit.
 
-## Unit-Test Template (Python / pytest)
+## unit-test template (python / pytest)
 
 ```python
 import pytest
@@ -35,7 +35,7 @@ def test_normalize_name_returns_expected_value(input_value, expected):
     assert result == expected, f"Expected {expected!r} for input {value!r}, got {result!r}"
 ```
 
-## Unit-Test Template (JavaScript / Jest)
+## unit-test template (javascript / jest)
 
 ```javascript
 describe("normalizeName", () => {
@@ -56,7 +56,7 @@ describe("normalizeName", () => {
 });
 ```
 
-## Integrationstest Template (Python / pytest)
+## integrationstest template (python / pytest)
 
 ```python
 def test_provision_server_creates_db_record_and_emits_event(db_session, event_bus, api_client):
@@ -78,7 +78,7 @@ def test_provision_server_creates_db_record_and_emits_event(db_session, event_bu
     assert event_bus.contains("server.provisioned"), "Expected provisioning event to be emitted"
 ```
 
-## Integrationstest Template (Java / JUnit)
+## integrationstest template (java / junit)
 
 ```java
 @Test

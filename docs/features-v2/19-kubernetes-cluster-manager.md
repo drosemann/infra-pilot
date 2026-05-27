@@ -1,32 +1,30 @@
-# Feature 19: Kubernetes Cluster Manager
+# feature 19: kubernetes cluster manager
 
-- **Plan ID:** #19
-- **Category:** Advanced Infrastructure
-- **Primary Service:** Orchestrator Agent
-- **Effort:** Extra Large (11+ PT)
-- **Dependencies:** Feature 16 (GitOps Sync), Feature 26 (Service Mesh)
+- plan id: #19
+- category: advanced infrastructure
+- primary service: orchestrator agent
+- effort: extra large (11+ pt)
+- dependencies: feature 16 (gitops sync), feature 26 (service mesh)
 
-## Overview
+## overview
 
-Deploy and manage K3s/K8s clusters through Infra Pilot. Users provision single-node or multi-node Kubernetes clusters, manage node pools, deploy workloads via Helm, access clusters through a Panel-based kubectl proxy, and configure pod auto-scaling. Supports both lightweight K3s for edge/small deployments and full K8s for production-grade clusters.
+deploy and manage k3s/k8s clusters through infra pilot. users provision single-node or multi-node kubernetes clusters, manage node pools, deploy workloads via helm, access clusters through a panel-based kubectl proxy, and configure pod auto-scaling. supports both lightweight k3s for edge/small deployments and full k8s for production-grade clusters.
 
-### Key Capabilities
+### key capabilities
 
-| Capability | Description |
+| capability | description |
 |---|---|
-| Cluster Provisioning | One-click K3s/K8s cluster creation with configurable version, CNI, and storage backend |
-| Node Pool Management | Dynamic add/remove of worker nodes with taints, labels, and instance sizing |
-| kubectl Proxy | Browser-based kubectl terminal via the Panel with RBAC scoping |
-| Helm Chart Repository | Built-in chart repository with versioning, one-click installs, and rollback |
-| Pod Auto-Scaling | HPA/VPA configuration through Panel UI, custom metrics support |
-| Cluster Monitoring | Prometheus/Grafana stack auto-deployment, node/pod metrics, alerting |
-| Backup & Restore | Velero-based cluster backup to S3-compatible storage |
+| cluster provisioning | one-click k3s/k8s cluster creation with configurable version, cni, and storage backend |
+| node pool management | dynamic add/remove of worker nodes with taints, labels, and instance sizing |
+| kubectl proxy | browser-based kubectl terminal via the panel with rbac scoping |
+| helm chart repository | built-in chart repository with versioning, one-click installs, and rollback |
+| pod auto-scaling | hpa/vpa configuration through panel ui, custom metrics support |
+| cluster monitoring | prometheus/grafana stack auto-deployment, node/pod metrics, alerting |
+| backup & restore | velero-based cluster backup to s3-compatible storage |
 
----
+## architecture
 
-## Architecture
-
-### System Context
+### system context
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -52,7 +50,7 @@ Deploy and manage K3s/K8s clusters through Infra Pilot. Users provision single-n
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Component Architecture
+### component architecture
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -81,7 +79,7 @@ Deploy and manage K3s/K8s clusters through Infra Pilot. Users provision single-n
 └──────────────────────────────────────────────────┘
 ```
 
-### Interaction Flow
+### interaction flow
 
 ```
 Panel User                    Orchestrator Agent              Target Node(s)
@@ -104,79 +102,75 @@ Panel User                    Orchestrator Agent              Target Node(s)
     │                              │                              │
     │  Panel opens kubectl proxy   │                              │
     │  WebSocket tunnel            │                              │
-    │══════════════════════════════╪═══════════════════▶│          │
+    │══════════════════════════════╪═══════════════▶│          │
     │  kubectl get pods -A        │                              │
-    │◀═════════════════════════════╪════════════════════│          │
+    │◀═════════════════════════════╪════════════════│          │
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: core cluster provisioning (4 pt)
 
-### Phase 1: Core Cluster Provisioning (4 PT)
-
-| Task | Description |
+| task | description |
 |---|---|
-| 1.1 | Implement K3s installation driver (SSH-based, cloud-init, Ansible) |
-| 1.2 | Implement K8s installation driver (kubeadm wrapper) |
-| 1.3 | Cluster creation API endpoint with async workflow |
-| 1.4 | Cluster state machine (provisioning → running → error → deleting) |
-| 1.5 | TLS certificate management for cluster API access |
+| 1.1 | implement k3s installation driver (ssh-based, cloud-init, ansible) |
+| 1.2 | implement k8s installation driver (kubeadm wrapper) |
+| 1.3 | cluster creation api endpoint with async workflow |
+| 1.4 | cluster state machine (provisioning → running → error → deleting) |
+| 1.5 | tls certificate management for cluster api access |
 
-### Phase 2: Node Pool Management (2 PT)
+### phase 2: node pool management (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 2.1 | Node pool CRUD operations (add/drain/remove worker nodes) |
-| 2.2 | Auto-scaling group integration (cloud provider ASGs) |
-| 2.3 | Taint, label, and toleration management UI |
-| 2.4 | Node health monitoring and auto-replacement |
+| 2.1 | node pool crud operations (add/drain/remove worker nodes) |
+| 2.2 | auto-scaling group integration (cloud provider asgs) |
+| 2.3 | taint, label, and toleration management ui |
+| 2.4 | node health monitoring and auto-replacement |
 
-### Phase 3: kubectl Proxy & Panel Integration (2 PT)
+### phase 3: kubectl proxy & panel integration (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 3.1 | WebSocket-based kubectl proxy in Orchestrator Agent |
-| 3.2 | Browser-based terminal component in Panel (xterm.js) |
-| 3.3 | RBAC scoping (kubeconfig generation with limited permissions) |
-| 3.4 | Audit logging of all kubectl commands executed via proxy |
+| 3.1 | websocket-based kubectl proxy in orchestrator agent |
+| 3.2 | browser-based terminal component in panel (xterm.js) |
+| 3.3 | rbac scoping (kubeconfig generation with limited permissions) |
+| 3.4 | audit logging of all kubectl commands executed via proxy |
 
-### Phase 4: Helm Integration (2 PT)
+### phase 4: helm integration (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 4.1 | Helm SDK integration in Orchestrator Agent |
-| 4.2 | Built-in chart repository (OCI-compatible, S3-backed) |
-| 4.3 | One-click chart install/upgrade/rollback from Panel |
-| 4.4 | Chart versioning and dependency resolution |
+| 4.1 | helm sdk integration in orchestrator agent |
+| 4.2 | built-in chart repository (oci-compatible, s3-backed) |
+| 4.3 | one-click chart install/upgrade/rollback from panel |
+| 4.4 | chart versioning and dependency resolution |
 
-### Phase 5: Auto-Scaling & Monitoring (2 PT)
+### phase 5: auto-scaling & monitoring (2 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 5.1 | HPA/VPA configuration API and Panel form |
-| 5.2 | Custom metrics adapter for HPA |
-| 5.3 | Auto-deploy Prometheus + Grafana stack per cluster |
-| 5.4 | Cluster-level dashboards and alert rules |
+| 5.1 | hpa/vpa configuration api and panel form |
+| 5.2 | custom metrics adapter for hpa |
+| 5.3 | auto-deploy prometheus + grafana stack per cluster |
+| 5.4 | cluster-level dashboards and alert rules |
 
-### Phase 6: Backup & Security (1 PT)
+### phase 6: backup & security (1 pt)
 
-| Task | Description |
+| task | description |
 |---|---|
-| 6.1 | Velero integration for cluster backup/restore |
-| 6.2 | Scheduled backups with retention policy |
-| 6.3 | Cluster upgrade workflow (K8s/K3s version bump) |
-| 6.4 | Security scanning (CIS benchmark, Trivy on node images) |
+| 6.1 | velero integration for cluster backup/restore |
+| 6.2 | scheduled backups with retention policy |
+| 6.3 | cluster upgrade workflow (k8s/k3s version bump) |
+| 6.4 | security scanning (cis benchmark, trivy on node images) |
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
+all endpoints are prefixed with `/api/v2/k8s`.
 
-All endpoints are prefixed with `/api/v2/k8s`.
-
-#### Clusters
+#### clusters
 
 ```
 GET    /api/v2/k8s/clusters                          — List clusters
@@ -189,7 +183,7 @@ POST   /api/v2/k8s/clusters/{cluster_id}/upgrade      — Trigger cluster upgrad
 POST   /api/v2/k8s/clusters/{cluster_id}/backup       — Trigger manual backup
 ```
 
-#### Node Pools
+#### node pools
 
 ```
 GET    /api/v2/k8s/clusters/{cluster_id}/nodepools           — List node pools
@@ -199,7 +193,7 @@ PATCH  /api/v2/k8s/clusters/{cluster_id}/nodepools/{pool_id} — Update node poo
 DELETE /api/v2/k8s/clusters/{cluster_id}/nodepools/{pool_id} — Delete node pool
 ```
 
-#### Helm Charts
+#### helm charts
 
 ```
 GET    /api/v2/k8s/helm/repos                  — List chart repos
@@ -211,13 +205,13 @@ POST   /api/v2/k8s/clusters/{cluster_id}/helm/upgrade   — Upgrade release
 POST   /api/v2/k8s/clusters/{cluster_id}/helm/rollback  — Rollback release
 ```
 
-#### Proxy
+#### proxy
 
 ```
 WS     /api/v2/k8s/clusters/{cluster_id}/proxy/ws   — WebSocket kubectl proxy
 ```
 
-#### Auto-Scaling
+#### auto-scaling
 
 ```
 GET    /api/v2/k8s/clusters/{cluster_id}/hpa                  — List HPA rules
@@ -226,9 +220,9 @@ PATCH  /api/v2/k8s/clusters/{cluster_id}/hpa/{hpa_id}         — Update HPA rul
 DELETE /api/v2/k8s/clusters/{cluster_id}/hpa/{hpa_id}         — Delete HPA rule
 ```
 
-### Request/Response Examples
+### request/response examples
 
-#### Create Cluster
+#### create cluster
 
 ```json
 POST /api/v2/k8s/clusters
@@ -268,7 +262,7 @@ POST /api/v2/k8s/clusters
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -280,7 +274,7 @@ Response:
 }
 ```
 
-#### Install Helm Chart
+#### install helm chart
 
 ```json
 POST /api/v2/k8s/clusters/kc-euprod-7f2a/helm/install
@@ -301,7 +295,7 @@ POST /api/v2/k8s/clusters/kc-euprod-7f2a/helm/install
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -314,11 +308,9 @@ Response:
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Cluster
+### cluster
 
 ```sql
 CREATE TABLE k8s_clusters (
@@ -406,7 +398,7 @@ CREATE TABLE k8s_backups (
 );
 ```
 
-### State Machine
+### state machine
 
 ```
                 ┌──────────────────────────────────────┐
@@ -444,50 +436,44 @@ CREATE TABLE k8s_backups (
                └────────────────────────────────────┘
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Component | Service | Responsibilities |
+| component | service | responsibilities |
 |---|---|---|
-| Cluster Manager Core | **Orchestrator Agent** | Cluster lifecycle, node pool management, Helm operations |
-| kubectl Proxy | **Orchestrator Agent** | WebSocket proxy, kubeconfig generation, audit logging |
-| Metrics Bridge | **Orchestrator Agent** | Prometheus auto-deploy, metric scraping, HPA config |
-| Cluster UI | **Management Panel** | Cluster dashboard, kubectl terminal, chart browser |
-| Backup Controller | **Orchestrator Agent** | Velero integration, backup scheduling, restore workflows |
-| Notification Events | **Integration Service** | Cluster status alerts, backup completion, scaling events |
-| GitOps Sync | **Orchestrator Agent** (+ Feature 16) | Config-as-code via Git repositories |
-| Service Mesh | **Integration Service** (+ Feature 26) | mTLS, traffic splitting for canary deployments |
+| cluster manager core | **orchestrator agent** | cluster lifecycle, node pool management, helm operations |
+| kubectl proxy | **orchestrator agent** | websocket proxy, kubeconfig generation, audit logging |
+| metrics bridge | **orchestrator agent** | prometheus auto-deploy, metric scraping, hpa config |
+| cluster ui | **management panel** | cluster dashboard, kubectl terminal, chart browser |
+| backup controller | **orchestrator agent** | velero integration, backup scheduling, restore workflows |
+| notification events | **integration service** | cluster status alerts, backup completion, scaling events |
+| gitops sync | **orchestrator agent** (+ feature 16) | config-as-code via git repositories |
+| service mesh | **integration service** (+ feature 26) | mtls, traffic splitting for canary deployments |
 
----
+## effort estimate
 
-## Effort Estimate
-
-| Phase | Tasks | PT |
+| phase | tasks | pt |
 |---|---|---|
-| Phase 1: Core Provisioning | 1.1–1.5 | 4 |
-| Phase 2: Node Pool Management | 2.1–2.4 | 2 |
-| Phase 3: kubectl Proxy & Panel | 3.1–3.4 | 2 |
-| Phase 4: Helm Integration | 4.1–4.4 | 2 |
-| Phase 5: Auto-Scaling & Monitoring | 5.1–5.4 | 2 |
-| Phase 6: Backup & Security | 6.1–6.4 | 1 |
-| **Total** | **24 tasks** | **13 PT** |
+| phase 1: core provisioning | 1.1–1.5 | 4 |
+| phase 2: node pool management | 2.1–2.4 | 2 |
+| phase 3: kubectl proxy & panel | 3.1–3.4 | 2 |
+| phase 4: helm integration | 4.1–4.4 | 2 |
+| phase 5: auto-scaling & monitoring | 5.1–5.4 | 2 |
+| phase 6: backup & security | 6.1–6.4 | 1 |
+| **total** | **24 tasks** | **13 pt** |
 
-### Risk Factors
+### risk factors
 
-| Risk | Mitigation |
+| risk | mitigation |
 |---|---|
-| K8s version fragmentation across clusters | Pin supported versions, automate ugprade testing |
-| Multi-cloud node provisioning complexity | Abstract via cloud provider factory pattern |
-| Long-running cluster operations (upgrade, backup) | Fully async workflows with status streaming |
-| Security — kubectl proxy privilege escalation | RBAC scoping per user, audit log all commands |
-| Helm chart compatibility issues | Chart validation sandbox, pre-install dry-run |
+| k8s version fragmentation across clusters | pin supported versions, automate ugprade testing |
+| multi-cloud node provisioning complexity | abstract via cloud provider factory pattern |
+| long-running cluster operations (upgrade, backup) | fully async workflows with status streaming |
+| security -- kubectl proxy privilege escalation | rbac scoping per user, audit log all commands |
+| helm chart compatibility issues | chart validation sandbox, pre-install dry-run |
 
----
+## monitoring & observability
 
-## Monitoring & Observability
-
-### Prometheus Metrics (Cluster Manager)
+### prometheus metrics (cluster manager)
 
 ```python
 # Cluster-level
@@ -508,7 +494,7 @@ k8s_proxy_commands_total{action}   # Counter — kubectl commands proxied
 k8s_proxy_active_sessions          # Gauge — active proxy connections
 ```
 
-### Logging
+### logging
 
 ```json
 {
@@ -521,16 +507,12 @@ k8s_proxy_active_sessions          # Gauge — active proxy connections
 }
 ```
 
----
+## related documents
 
-## Related Documents
+- [architecture overview](../architecture/overview.md)
+- [orchestrator agent architecture](../architecture/orchestrator-agent.md)
+- [feature 16: gitops sync](16-gitops-sync.md)
+- [feature 26: service mesh](26-service-mesh.md)
+- [implementation plan v2](../feature-implementation-plan-v2.md)
 
-- [Architecture Overview](../architecture/overview.md)
-- [Orchestrator Agent Architecture](../architecture/orchestrator-agent.md)
-- [Feature 16: GitOps Sync](16-gitops-sync.md)
-- [Feature 26: Service Mesh](26-service-mesh.md)
-- [Implementation Plan v2](../feature-implementation-plan-v2.md)
-
----
-
-**Last Updated:** May 2026
+**last updated:** may 2026

@@ -1,35 +1,31 @@
-# Feature 11: Infra Pilot CLI
+# infra pilot cli
 
-- **Feature ID:** 11
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** New `cli/` directory
-- **Effort Estimate:** Large (7-10 PT)
-- **Dependencies:** Stable REST API (v1), Authentication Service
-- **Phase:** Phase 2 (Weeks 5-8)
+- feature id: 11
+- category: developer ecosystem & api
+- primary service: new `cli/` directory
+- effort estimate: large (7-10 pt)
+- dependencies: stable rest api (v1), authentication service
+- phase: phase 2 (weeks 5-8)
 
----
+## overview
 
-## Overview
+the **infra pilot cli** (`ipilot`) is a command-line tool that provides authenticated access to the infra pilot api. it enables developers and operators to manage servers, deployments, databases, dns records, and other infrastructure resources directly from the terminal. the cli supports scripting, automation pipelines, and ci/cd integration.
 
-The **Infra Pilot CLI** (`ipilot`) is a command-line tool that provides authenticated access to the Infra Pilot API. It enables developers and operators to manage servers, deployments, databases, DNS records, and other infrastructure resources directly from the terminal. The CLI supports scripting, automation pipelines, and CI/CD integration.
+### goals
 
-### Goals
+- provide a fast, ergonomic cli for all infra panel rest api operations
+- support multiple output formats (json, table, yaml) for both human and machine consumption
+- enable scripting and automation with non-interactive mode and exit codes
+- offer shell tab completion for bash, zsh, fish, and powershell
+- securely manage api tokens and multi-account profiles
 
-- Provide a fast, ergonomic CLI for all Infra Panel REST API operations
-- Support multiple output formats (JSON, table, YAML) for both human and machine consumption
-- Enable scripting and automation with non-interactive mode and exit codes
-- Offer shell tab completion for bash, zsh, fish, and PowerShell
-- Securely manage API tokens and multi-account profiles
+### non-goals
 
-### Non-Goals
+- replace the management panel ui for complex workflows
+- provide real-time terminal emulation (handled by collaborative terminal, feature 27)
+- serve as an api gateway or rate-limiting layer
 
-- Replace the Management Panel UI for complex workflows
-- Provide real-time terminal emulation (handled by Collaborative Terminal, Feature 27)
-- Serve as an API gateway or rate-limiting layer
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -83,7 +79,7 @@ The **Infra Pilot CLI** (`ipilot`) is a command-line tool that provides authenti
               └───────────────────────┘
 ```
 
-### Directory Structure
+### directory structure
 
 ```
 cli/
@@ -120,51 +116,47 @@ cli/
 └── go.mod / go.sum
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase a: scaffolding & auth (2-3 pt)
 
-### Phase A: Scaffolding & Auth (2-3 PT)
+1. initialize go module and cobra cli structure
+2. implement `cmd/root.go` with global flags (`--format`, `--profile`, `--quiet`, `--verbose`)
+3. build `auth/` module with device-code oauth flow
+4. implement token storage via os keyring (fallback to encrypted file)
+5. add `ipilot login` and `ipilot logout` commands
+6. write config file management (`~/.ipilot/config.yaml`)
 
-1. Initialize Go module and Cobra CLI structure
-2. Implement `cmd/root.go` with global flags (`--format`, `--profile`, `--quiet`, `--verbose`)
-3. Build `auth/` module with device-code OAuth flow
-4. Implement token storage via OS keyring (fallback to encrypted file)
-5. Add `ipilot login` and `ipilot logout` commands
-6. Write config file management (`~/.ipilot/config.yaml`)
+### phase b: api client layer (2 pt)
 
-### Phase B: API Client Layer (2 PT)
+1. build `client/client.go` with configurable base url, timeouts, retry
+2. implement request signing and auth header injection
+3. add response middleware for error handling and rate-limit awareness
+4. implement pagination helpers (cursor-based and offset-based)
+5. add request/response logging in verbose mode
 
-1. Build `client/client.go` with configurable base URL, timeouts, retry
-2. Implement request signing and auth header injection
-3. Add response middleware for error handling and rate-limit awareness
-4. Implement pagination helpers (cursor-based and offset-based)
-5. Add request/response logging in verbose mode
+### phase c: core commands (2-3 pt)
 
-### Phase C: Core Commands (2-3 PT)
+1. implement `ipilot server [list|show|create|delete|start|stop|restart]`
+2. implement `ipilot deploy [create|status|rollback]`
+3. implement `ipilot logs [service] --follow` with websocket streaming
+4. implement `ipilot db [list|create|backup|restore]`
+5. implement `ipilot dns [list|create|delete|update]`
+6. implement `ipilot backup [list|create|restore]`
 
-1. Implement `ipilot server [list|show|create|delete|start|stop|restart]`
-2. Implement `ipilot deploy [create|status|rollback]`
-3. Implement `ipilot logs [service] --follow` with WebSocket streaming
-4. Implement `ipilot db [list|create|backup|restore]`
-5. Implement `ipilot dns [list|create|delete|update]`
-6. Implement `ipilot backup [list|create|restore]`
+### phase d: output formatting & completion (1-2 pt)
 
-### Phase D: Output Formatting & Completion (1-2 PT)
+1. build `output/` formatters with auto-detection based on `--format`
+2. implement table formatter with column auto-width
+3. add `--quiet` mode (single id output for scripting)
+4. implement `ipilot completion [shell]` with all subcommands and flags
+5. add `IPILOT_FORMAT` and `IPILOT_PROFILE` environment variable support
 
-1. Build `output/` formatters with auto-detection based on `--format`
-2. Implement table formatter with column auto-width
-3. Add `--quiet` mode (single ID output for scripting)
-4. Implement `ipilot completion [shell]` with all subcommands and flags
-5. Add `IPILOT_FORMAT` and `IPILOT_PROFILE` environment variable support
+## api design
 
----
+the cli wraps the existing infra panel rest api. key endpoints consumed:
 
-## API Design
-
-The CLI wraps the existing Infra Panel REST API. Key endpoints consumed:
-
-### Server Operations
+### server operations
 
 | Method | Endpoint | CLI Command |
 |--------|----------|-------------|
@@ -176,7 +168,7 @@ The CLI wraps the existing Infra Panel REST API. Key endpoints consumed:
 | `POST` | `/api/v1/servers/:id/stop` | `ipilot server stop <id>` |
 | `POST` | `/api/v1/servers/:id/restart` | `ipilot server restart <id>` |
 
-### Deploy Operations
+### deploy operations
 
 | Method | Endpoint | CLI Command |
 |--------|----------|-------------|
@@ -184,18 +176,16 @@ The CLI wraps the existing Infra Panel REST API. Key endpoints consumed:
 | `GET` | `/api/v1/deployments/:id` | `ipilot deploy status <id>` |
 | `POST` | `/api/v1/deployments/:id/rollback` | `ipilot deploy rollback <id>` |
 
-### Logs
+### logs
 
 | Method | Endpoint | CLI Command |
 |--------|----------|-------------|
 | `GET` | `/api/v1/servers/:id/logs` | `ipilot logs <id>` |
 | `WS` | `/api/v1/servers/:id/logs/stream` | `ipilot logs <id> --follow` |
 
----
+## data model
 
-## Data Model
-
-### CLI Config File (`~/.ipilot/config.yaml`)
+### cli config file (`~/.ipilot/config.yaml`)
 
 ```yaml
 current_profile: production
@@ -210,9 +200,9 @@ profiles:
     timeout_seconds: 60
 ```
 
-### Token Storage
+### token storage
 
-Tokens are stored in the OS keyring when available, falling back to an encrypted file at `~/.ipilot/tokens.json`:
+tokens are stored in the os keyring when available, falling back to an encrypted file at `~/.ipilot/tokens.json`:
 
 ```json
 {
@@ -227,9 +217,7 @@ Tokens are stored in the OS keyring when available, falling back to an encrypted
 }
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
@@ -244,9 +232,7 @@ Tokens are stored in the OS keyring when available, falling back to an encrypted
 | Documentation | Developer Experience | User guide, examples |
 | E2E tests | QA | Integration test suite |
 
----
-
-## Effort Estimate Breakdown
+## effort estimate breakdown
 
 | Task | PT | Dependencies |
 |------|----|-------------|
@@ -260,13 +246,11 @@ Tokens are stored in the OS keyring when available, falling back to an encrypted
 | Tab completion | 0.5 | All commands defined |
 | Documentation | 0.5 | All features implemented |
 | E2E tests | 1.0 | CLI stable |
-| **Total** | **10.0** | |
+| total | 10.0 | |
 
----
+## usage examples
 
-## Usage Examples
-
-### Basic Usage
+### basic usage
 
 ```bash
 # List servers with table output
@@ -291,7 +275,7 @@ ipilot deploy create --service web --image nginx:1.25 --replicas 3
 ipilot config set-profile staging
 ```
 
-### Scripting
+### scripting
 
 ```bash
 #!/bin/bash
@@ -306,7 +290,7 @@ SERVER_ID=$(ipilot server create \
 echo "Created server: $SERVER_ID"
 ```
 
-### Tab Completion
+### tab completion
 
 ```bash
 # Install completion for current shell
@@ -317,9 +301,7 @@ ipilot completion bash > ~/.ipilot/completion.bash
 source ~/.ipilot/completion.bash
 ```
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -328,15 +310,13 @@ source ~/.ipilot/completion.bash
 | Large output sets | Memory pressure | Streaming pagination, `--limit` flag, cursor-based iteration |
 | WebSocket reconnection | Log stream interruption | Automatic reconnect with backoff, buffer management |
 
----
+## acceptance criteria
 
-## Acceptance Criteria
-
-- [ ] `ipilot login` completes device-code OAuth flow and stores token
-- [ ] All server CRUD commands function correctly with JSON and table output
+- [ ] `ipilot login` completes device-code oauth flow and stores token
+- [ ] all server crud commands function correctly with json and table output
 - [ ] `ipilot logs --follow` streams logs with < 2s latency and reconnects on disconnect
-- [ ] `ipilot deploy create` accepts all required flags and returns deployment ID
+- [ ] `ipilot deploy create` accepts all required flags and returns deployment id
 - [ ] `--format json`, `--format yaml`, `--format table` produce correct output for every command
-- [ ] Tab completion generates valid scripts for bash, zsh, fish, and PowerShell
-- [ ] Exit codes: 0 for success, 1 for user error, 2 for API/server error
-- [ ] Tests pass: unit (80%+ coverage), integration (all commands), E2E (happy path)
+- [ ] tab completion generates valid scripts for bash, zsh, fish, and powershell
+- [ ] exit codes: 0 for success, 1 for user error, 2 for api/server error
+- [ ] tests pass: unit (80%+ coverage), integration (all commands), e2e (happy path)

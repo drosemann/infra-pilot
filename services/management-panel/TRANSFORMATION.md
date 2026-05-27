@@ -1,48 +1,44 @@
-# Docker Panel - Complete Transformation Guide
+# docker panel - complete transformation guide
 
-## 📢 What Changed
+## what changed
 
-The **Docker Panel (management-panel service)** has been completely transformed from a Convex-based prototype into a **production-ready, self-hosted Docker container management panel** powered by Supabase and Express.js.
+the **docker panel (management-panel service)** has been completely transformed from a convex-based prototype into a **production-ready, self-hosted docker container management panel** powered by supabase and express.js.
 
----
+## new product vision
 
-## 🎯 New Product Vision
+### personal mode (default)
+a **simple, lightweight docker management panel** for self-hosters, developers, and hobby projects.
 
-### Personal Mode (Default) 🏠
-A **simple, lightweight Docker management panel** for self-hosters, developers, and hobby projects.
+**features:**
+- docker app creation, deletion, updates
+- container start/stop/restart controls
+- logs and status monitoring
+- environment variable and port configuration
+- volume/mount management
+- simple admin authentication
 
-**Features:**
-- Docker app creation, deletion, updates
-- Container start/stop/restart controls
-- Logs and status monitoring
-- Environment variable and port configuration
-- Volume/mount management
-- Simple admin authentication
+**perfect for:**
+- home labs
+- learning docker
+- testing and development
+- self-hosted hobby projects
+- individual developers
 
-**Perfect for:**
-- 🏠 Home labs
-- 🎓 Learning Docker
-- 🧪 Testing and development
-- 🚀 Self-hosted hobby projects
-- 👤 Individual developers
+### business mode (optional)
+full-featured hosting control panel (roadmap, not yet implemented).
 
-### Business Mode (Optional) 🚀
-Full-featured hosting control panel (roadmap, not yet implemented).
+**will include:**
+- customer account management
+- plans and pricing tiers
+- billing integration
+- white-label branding
+- team and staff management
+- audit logging
+- advanced rbac
 
-**Will include:**
-- Customer account management
-- Plans and pricing tiers
-- Billing integration
-- White-label branding
-- Team and staff management
-- Audit logging
-- Advanced RBAC
+## what was deleted
 
----
-
-## 📁 What Was Deleted
-
-### Convex-Based Code (No Longer Needed)
+### convex-based code (no longer needed)
 ```
 ❌ convex/                  (entire backend)
 ❌ setup.mjs               (Convex setup script)
@@ -50,16 +46,14 @@ Full-featured hosting control panel (roadmap, not yet implemented).
 ❌ src/SignOutButton.tsx   (old auth component)
 ```
 
-### Outdated Documentation
+### outdated documentation
 ```
 ❌ REDESIGN_PLAN.md        (old redesign plan)
 ```
 
----
+## what was created
 
-## ✨ What Was Created
-
-### Backend API Server (445 lines)
+### backend api server (445 lines)
 ```
 📄 server/index.ts
 ├─ Express.js REST API
@@ -73,7 +67,7 @@ Full-featured hosting control panel (roadmap, not yet implemented).
 └─ Supabase integration
 ```
 
-### Database Schema (119 lines)
+### database schema (119 lines)
 ```
 📄 db/schema.sql
 ├─ setup_config           (mode, initialization state)
@@ -85,7 +79,7 @@ Full-featured hosting control panel (roadmap, not yet implemented).
 └─ Row-level security policies
 ```
 
-### Frontend Pages (4 complete pages)
+### frontend pages (4 complete pages)
 ```
 📄 src/pages/Setup.tsx              (150 lines)
    └─ Mode selection + admin creation
@@ -100,7 +94,7 @@ Full-featured hosting control panel (roadmap, not yet implemented).
    └─ App management with 5 tabs
 ```
 
-### Utilities & Core Libraries
+### utilities & core libraries
 ```
 📄 src/lib/api.ts         (90 lines)   - API client
 📄 src/lib/auth.ts        (35 lines)   - Supabase auth helpers
@@ -108,7 +102,7 @@ Full-featured hosting control panel (roadmap, not yet implemented).
 📄 src/components/MainLayout.tsx      - Main layout wrapper
 ```
 
-### Documentation (1,200+ lines)
+### documentation (1,200+ lines)
 ```
 📄 README-DOCKER-PANEL.md         - Getting started guide
 📄 IMPLEMENTATION_SUMMARY.md       - Complete overview
@@ -118,58 +112,54 @@ Full-featured hosting control panel (roadmap, not yet implemented).
 📄 docs/ARCHITECTURE.md            - Technical architecture
 ```
 
-### Configuration Files
+### configuration files
 ```
 📄 .env.local.example              - Environment template
 📄 setup.sh                        - Quick-start script
 ```
 
----
-
-## 🔄 Updated Files
+## updated files
 
 ### 1. `package.json`
-**Changes:**
-- ❌ Removed: `convex`, `@convex-dev/auth`, `convex dev` scripts
-- ✅ Added: `@supabase/supabase-js`, `express`, `react-router-dom`, `axios`, `ts-node`
-- Updated dev scripts to use `ts-node` instead of Convex
+**changes:**
+- removed: `convex`, `@convex-dev/auth`, `convex dev` scripts
+- added: `@supabase/supabase-js`, `express`, `react-router-dom`, `axios`, `ts-node`
+- updated dev scripts to use `ts-node` instead of convex
 
 ### 2. `src/App.tsx`
-**Before:** Convex Auth provider + stub UI
-**After:** 
-- React Router setup with type-safe routing
-- ConfigContext for mode management
-- Setup wizard on first load
-- Conditional rendering based on auth status
-- Feature gate integration
+**before:** convex auth provider + stub ui
+**after:** 
+- react router setup with type-safe routing
+- configcontext for mode management
+- setup wizard on first load
+- conditional rendering based on auth status
+- feature gate integration
 
 ### 3. `src/main.tsx`
-**Before:** ConvexAuthProvider + ConvexReactClient
-**After:** Simple React entry point (Supabase auth is opt-in)
+**before:** convexauthprovider + convexreactclient
+**after:** simple react entry point (supabase auth is opt-in)
 
 ### 4. `README.md` (root repository)
-**Changes:**
-- Added "Docker Panel (NEW)" section with quick start
-- Highlighted Personal Mode as default
-- Links to Docker Panel documentation
-- Updated quick start options
+**changes:**
+- added "docker panel (new)" section with quick start
+- highlighted personal mode as default
+- links to docker panel documentation
+- updated quick start options
 
 ### 5. `README.md` (management-panel service)
-**Before:** Single paragraph about Convex setup
-**After:** 
+**before:** single paragraph about convex setup
+**after:** 
 - 200+ lines of comprehensive documentation
-- Features matrix (Personal vs Business)
-- Tech stack overview
-- API reference
-- Configuration guide
-- Troubleshooting section
-- Roadmap
+- features matrix (personal vs business)
+- tech stack overview
+- api reference
+- configuration guide
+- troubleshooting section
+- roadmap
 
----
+## architecture transformation
 
-## 🏗️ Architecture Transformation
-
-### Before: Convex-Based
+### before: convex-based
 ```
 React App
     ↓ (useQuery/useMutation)
@@ -182,13 +172,13 @@ Convex Infrastructure
     └─ Database
 ```
 
-**Limitations:**
-- Tightly coupled to Convex platform
-- Limited customization
-- Hard to add feature toggling
-- Vendor lock-in
+**limitations:**
+- tightly coupled to convex platform
+- limited customization
+- hard to add feature toggling
+- vendor lock-in
 
-### After: Supabase + Express.js
+### after: supabase + express.js
 ```
 React + React Router
     ↓ (JWT tokens)
@@ -204,36 +194,32 @@ Supabase Infrastructure
     └─ RLS policies
 ```
 
-**Advantages:**
-- ✅ Independent, self-hosted
-- ✅ Full customization control
-- ✅ Clean feature gate separation
-- ✅ Industry-standard stack
-- ✅ No vendor lock-in
-- ✅ Easy to deploy anywhere
+**advantages:**
+- independent, self-hosted
+- full customization control
+- clean feature gate separation
+- industry-standard stack
+- no vendor lock-in
+- easy to deploy anywhere
 
----
+## feature matrix
 
-## 📊 Feature Matrix
-
-| Feature | Personal Mode | Business Mode |
+| feature | personal mode | business mode |
 |---------|:-------------:|:-------------:|
-| Docker app CRUD | ✅ | ✅ |
-| Container controls | ✅ | ✅ |
-| Logs streaming | ✅ | ✅ |
-| Environment vars | ✅ | ✅ |
-| Port mapping | ✅ | ✅ |
-| Volume mounts | ✅ | ✅ |
-| Admin auth | ✅ | ✅ |
-| **Customer management** | ❌ | ✅ |
-| **Plans/pricing** | ❌ | ✅ |
-| **Billing** | ❌ | ✅ |
-| **White-label** | ❌ | ✅ |
-| **Team management** | ❌ | ✅ |
+| docker app crud | ✅ | ✅ |
+| container controls | ✅ | ✅ |
+| logs streaming | ✅ | ✅ |
+| environment vars | ✅ | ✅ |
+| port mapping | ✅ | ✅ |
+| volume mounts | ✅ | ✅ |
+| admin auth | ✅ | ✅ |
+| **customer management** | ❌ | ✅ |
+| **plans/pricing** | ❌ | ✅ |
+| **billing** | ❌ | ✅ |
+| **white-label** | ❌ | ✅ |
+| **team management** | ❌ | ✅ |
 
----
-
-## 🚀 Quick Start (3 Commands)
+## quick start (3 commands)
 
 ```bash
 cd services/management-panel
@@ -245,144 +231,128 @@ cp .env.local.example .env.local
 npm install && npm run dev
 ```
 
-**Visit:** http://localhost:5173
+**visit:** http://localhost:5173
 
-**Then:**
-1. Select Personal Mode or Business Mode
-2. Create admin account
-3. Start managing Docker apps!
+**then:**
+• select personal mode or business mode
+• create admin account
+• start managing docker apps!
 
----
+## documentation
 
-## 📚 Documentation
+all documentation is included in the repository:
 
-All documentation is included in the repository:
-
-| Document | Purpose |
+| document | purpose |
 |----------|---------|
-| [README-DOCKER-PANEL.md](README-DOCKER-PANEL.md) | Getting started guide |
-| [CHANGELOG.md](CHANGELOG.md) | Transformation details |
-| [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | Complete overview |
-| [docs/PERSONAL_MODE.md](docs/PERSONAL_MODE.md) | Mode architecture |
-| [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md) | Database setup |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
+| [quick start](README-DOCKER-PANEL.md) | getting started guide |
+| [changelog](CHANGELOG.md) | transformation details |
+| [implementation summary](IMPLEMENTATION_SUMMARY.md) | complete overview |
+| [mode architecture](docs/PERSONAL_MODE.md) | mode architecture |
+| [database setup](docs/DATABASE_SETUP.md) | database setup |
+| [technical architecture](docs/ARCHITECTURE.md) | technical architecture |
 
----
+## security
 
-## 🔐 Security
+### authentication
+- supabase auth (email + password)
+- jwt tokens in authorization header
+- tokens stored in localstorage (client-side)
 
-### Authentication
-- Supabase Auth (email + password)
-- JWT tokens in Authorization header
-- Tokens stored in localStorage (client-side)
+### authorization
+- row-level security (rls) on database
+- api-level jwt validation
+- feature gates for mode-based access
 
-### Authorization
-- Row-level security (RLS) on database
-- API-level JWT validation
-- Feature gates for mode-based access
+### data isolation
+- users see only their own resources
+- rls policies enforced at database level
+- admin-only setup configuration
 
-### Data Isolation
-- Users see only their own resources
-- RLS policies enforced at database level
-- Admin-only setup configuration
+## roadmap
 
----
+### phase 1: complete
+- [x] convex → supabase migration
+- [x] personal mode with full features
+- [x] setup wizard
+- [x] docker app management
+- [x] dashboard and detail pages
+- [x] feature gates framework
+- [x] comprehensive documentation
 
-## 🛣️ Roadmap
+### phase 2: business mode mvp
+- [ ] customer management
+- [ ] plans and pricing
+- [ ] billing integration
+- [ ] audit logging
+- [ ] team management
 
-### ✅ Phase 1: Complete
-- [x] Convex → Supabase migration
-- [x] Personal Mode with full features
-- [x] Setup wizard
-- [x] Docker app management
-- [x] Dashboard and detail pages
-- [x] Feature gates framework
-- [x] Comprehensive documentation
+### phase 3: docker integration
+- [ ] live container creation
+- [ ] real-time status updates
+- [ ] image management
+- [ ] health monitoring
+- [ ] resource metrics
 
-### ⏳ Phase 2: Business Mode MVP
-- [ ] Customer management
-- [ ] Plans and pricing
-- [ ] Billing integration
-- [ ] Audit logging
-- [ ] Team management
+### phase 4: advanced
+- [ ] white-label system
+- [ ] multi-region support
+- [ ] advanced analytics
 
-### ⏳ Phase 3: Docker Integration
-- [ ] Live container creation
-- [ ] Real-time status updates
-- [ ] Image management
-- [ ] Health monitoring
-- [ ] Resource metrics
+## what you get
 
-### ⏳ Phase 4: Advanced
-- [ ] White-label system
-- [ ] Multi-region support
-- [ ] Advanced analytics
+• production-ready code
+- typescript throughout
+- error handling on all endpoints
+- security best practices
+- environment-based configuration
 
----
+• complete documentation
+- quick start guide
+- architecture documentation
+- database setup instructions
+- api reference
 
-## 💻 What You Get
+• extensible design
+- feature gates for easy toggling
+- modular components
+- clean separation of concerns
+- ready for business mode
 
-✅ **Production-Ready Code**
-- TypeScript throughout
-- Error handling on all endpoints
-- Security best practices
-- Environment-based configuration
+• modern stack
+- react 19 + typescript
+- express.js backend
+- postgresql database
+- supabase infrastructure
+- tailwind css styling
 
-✅ **Complete Documentation**
-- Quick start guide
-- Architecture documentation
-- Database setup instructions
-- API reference
+## learning path
 
-✅ **Extensible Design**
-- Feature gates for easy toggling
-- Modular components
-- Clean separation of concerns
-- Ready for Business Mode
+• read: [quick start](README-DOCKER-PANEL.md) - 5 minute overview
+• setup: [database setup](docs/DATABASE_SETUP.md) - 10 minute setup
+• run: `npm run dev` - start developing
+• learn: [mode architecture](docs/PERSONAL_MODE.md) - deep dive into architecture
+• deploy: [database setup](docs/DATABASE_SETUP.md#production-deployment) - production setup
 
-✅ **Modern Stack**
-- React 19 + TypeScript
-- Express.js backend
-- PostgreSQL database
-- Supabase infrastructure
-- Tailwind CSS styling
+## summary
 
----
+the docker panel has been modernized, simplified, and made self-hostable with a focus on personal mode for individual users. the new architecture is:
 
-## 📖 Learning Path
+- simple - 3 commands to get started
+- modern - current tech stack
+- documented - comprehensive guides
+- secure - rls + jwt authentication
+- extensible - ready for business mode
+- independent - no vendor lock-in
 
-1. **Read:** [README-DOCKER-PANEL.md](README-DOCKER-PANEL.md) - 5 minute overview
-2. **Setup:** [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md) - 10 minute setup
-3. **Run:** `npm run dev` - Start developing
-4. **Learn:** [docs/PERSONAL_MODE.md](docs/PERSONAL_MODE.md) - Deep dive into architecture
-5. **Deploy:** [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md#production-deployment) - Production setup
+ready to use, deploy, and extend immediately.
 
----
+## quick links
 
-## 🎉 Summary
+- [quick start](README-DOCKER-PANEL.md)
+- [architecture](docs/ARCHITECTURE.md)
+- [database setup](docs/DATABASE_SETUP.md)
+- [mode design](docs/PERSONAL_MODE.md)
+- [full details](IMPLEMENTATION_SUMMARY.md)
+- [changelog](CHANGELOG.md)
 
-The Docker Panel has been **modernized, simplified, and made self-hostable** with a focus on **Personal Mode for individual users**. The new architecture is:
-
-- ✅ **Simple** - 3 commands to get started
-- ✅ **Modern** - Current tech stack
-- ✅ **Documented** - Comprehensive guides
-- ✅ **Secure** - RLS + JWT authentication
-- ✅ **Extensible** - Ready for Business Mode
-- ✅ **Independent** - No vendor lock-in
-
-**Ready to use, deploy, and extend immediately.** 🚀
-
----
-
-## 🔗 Quick Links
-
-- 📖 [Quick Start](README-DOCKER-PANEL.md)
-- 🏗️ [Architecture](docs/ARCHITECTURE.md)
-- 🗄️ [Database Setup](docs/DATABASE_SETUP.md)
-- 🎛️ [Mode Design](docs/PERSONAL_MODE.md)
-- 📋 [Full Details](IMPLEMENTATION_SUMMARY.md)
-- 📝 [Changelog](CHANGELOG.md)
-
----
-
-**Built with ❤️ for self-hosters and developers** 🚀
+built for self-hosters and developers

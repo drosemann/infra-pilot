@@ -1,22 +1,18 @@
-# Feature 47: Secrets Management
+﻿# feature 47: secrets management
 
-- **Feature ID:** 47
-- **Status:** Planned
-- **Priority:** Critical
-- **Primary Service:** Integration Service
-- **Supporting Services:** Orchestrator Agent, API Gateway, Auth Service
-- **Effort:** Medium (4–6 PT)
-- **Dependencies:** Auth Service (RBAC), Orchestrator Agent (container injection)
+- feature id: 47
+- status: planned
+- priority: critical
+- primary service: integration service
+- supporting services: orchestrator agent, api gateway, auth service
+- effort: medium (4-6 pt)
+- dependencies: auth service (rbac), orchestrator agent (container injection)
 
----
+## overview
 
-## 1. Overview
+integrate hashicorp vault as the central secrets backend. provide dynamic secrets (short-lived credentials), automated database credential rotation, and encrypted environment variable injection into containers at deployment time. all secret access is audited.
 
-Integrate HashiCorp Vault as the central secrets backend. Provide dynamic secrets (short-lived credentials), automated database credential rotation, and encrypted environment variable injection into containers at deployment time. All secret access is audited.
-
----
-
-## 2. Architecture
+## architecture
 
 ```
                                ┌──────────────────────┐
@@ -55,53 +51,49 @@ Integrate HashiCorp Vault as the central secrets backend. Provide dynamic secret
 └──────────────────────┘    └────────────────────────────┘
 ```
 
-**Data Flow:**
+**data flow:**
 
-1. **Authentication** — Integration Service authenticates to Vault using Kubernetes service account JWT (or AppRole). A short-lived Vault token is issued.
-2. **Dynamic Secret Request** — When a deployment is created, the Integration Service requests dynamic credentials from Vault (e.g., database user with a 24h TTL).
-3. **Rotation** — The Rotation Manager monitors credential TTLs. When a secret is 25% from expiry, a rotation is triggered: new credentials are issued, the old ones are revoked after a cooldown window.
-4. **Injection** — Secrets are encrypted with the Vault Transit Engine and injected into the deployment manifest as environment variables or volume mounts via a sidecar.
-5. **Audit** — Every secret access is logged to the audit store. Logs include requester identity, secret path, operation type, and timestamp.
+• authentication — integration service authenticates to vault using kubernetes service account jwt (or approle). a short-lived vault token is issued.
+• dynamic secret request — when a deployment is created, the integration service requests dynamic credentials from vault (e.g., database user with a 24h ttl).
+• rotation — the rotation manager monitors credential ttl. when a secret is 25% from expiry, a rotation is triggered: new credentials are issued, the old ones are revoked after a cooldown window.
+• injection — secrets are encrypted with the vault transit engine and injected into the deployment manifest as environment variables or volume mounts via a sidecar.
+• audit — every secret access is logged to the audit store. logs include requester identity, secret path, operation type, and timestamp.
 
----
+## implementation plan
 
-## 3. Implementation Plan
-
-### Phase 1 — Vault Integration (2 PT)
-| Step | Description |
+### phase 1 — vault integration (2 pt)
+| step | description |
 |------|-------------|
-| 1.1  | Deploy Vault cluster (HA mode with Raft backend) |
-| 1.2  | Implement Vault client SDK wrapper (auth, CRUD, lease mgmt) |
-| 1.3  | Set up Kubernetes auth method for pod-level authentication |
-| 1.4  | Create KV engine for static secrets migration |
+| 1.1  | deploy vault cluster (ha mode with raft backend) |
+| 1.2  | implement vault client sdk wrapper (auth, crud, lease mgmt) |
+| 1.3  | set up kubernetes auth method for pod-level authentication |
+| 1.4  | create kv engine for static secrets migration |
 
-### Phase 2 — Dynamic Secrets (1.5 PT)
-| Step | Description |
+### phase 2 — dynamic secrets (1.5 pt)
+| step | description |
 |------|-------------|
-| 2.1  | Configure Vault Database engine for Postgres & MySQL |
-| 2.2  | Implement dynamic secret request API |
-| 2.3  | Add lease lifecycle management (renew, revoke) |
+| 2.1  | configure vault database engine for postgres & mysql |
+| 2.2  | implement dynamic secret request api |
+| 2.3  | add lease lifecycle management (renew, revoke) |
 
-### Phase 3 — Rotation (1 PT)
-| Step | Description |
+### phase 3 — rotation (1 pt)
+| step | description |
 |------|-------------|
-| 3.1  | Rotation Manager — schedule-based and event-based triggers |
-| 3.2  | Database credential rotation with connection draining |
-| 3.3  | Rotation notification webhook |
+| 3.1  | rotation manager — schedule-based and event-based triggers |
+| 3.2  | database credential rotation with connection draining |
+| 3.3  | rotation notification webhook |
 
-### Phase 4 — Injection & Audit (1.5 PT)
-| Step | Description |
+### phase 4 — injection & audit (1.5 pt)
+| step | description |
 |------|-------------|
-| 4.1  | Encrypted env injection via Kubernetes Mutation Webhook |
-| 4.2  | Vault Agent sidecar injector |
-| 4.3  | Audit log pipeline (Vault audit → Kafka → S3 / SIEM) |
-| 4.4  | Access control policies (path-based RBAC) |
+| 4.1  | encrypted env injection via kubernetes mutation webhook |
+| 4.2  | vault agent sidecar injector |
+| 4.3  | audit log pipeline (vault audit → kafka → s3 / siem) |
+| 4.4  | access control policies (path-based rbac) |
 
----
+## api design
 
-## 4. API Design
-
-### 4.1 Secret Operations
+### secret operations
 
 ```
 POST   /api/v1/secrets                   → Create / store a static secret
@@ -111,7 +103,7 @@ DELETE /api/v1/secrets/{path}            → Delete / revoke secret
 POST   /api/v1/secrets/{path}/rotate     → Force rotation
 ```
 
-### 4.2 Dynamic Secrets
+### dynamic secrets
 
 ```
 POST   /api/v1/secrets/dynamic           → Request dynamic credentials
@@ -121,21 +113,21 @@ POST   /api/v1/secrets/dynamic/{id}/renew    → Renew lease
 POST   /api/v1/secrets/dynamic/{id}/revoke   → Revoke immediately
 ```
 
-### 4.3 Injection
+### injection
 
 ```
 POST   /api/v1/secrets/inject            → Inject secrets into deployment manifest
   Body: { deployment_id, secrets: [{ path, env_var }] }
 ```
 
-### 4.4 Audit
+### audit
 
 ```
 GET    /api/v1/secrets/audit             → Query audit log
   Params: secret_path, user_id, start_date, end_date, page, limit
 ```
 
-### 4.5 Example: Request Dynamic Database Credentials
+### example: request dynamic database credentials
 
 ```json
 POST /api/v1/secrets/dynamic
@@ -164,11 +156,9 @@ Response 201:
 }
 ```
 
----
+## data model
 
-## 5. Data Model
-
-### 5.1 Secret
+### secret
 
 ```yaml
 Secret:
@@ -184,7 +174,7 @@ Secret:
   updated_at: timestamp
 ```
 
-### 5.2 Lease
+### lease
 
 ```yaml
 Lease:
@@ -199,7 +189,7 @@ Lease:
   status: string                          # "active" | "expiring" | "revoked"
 ```
 
-### 5.3 Audit Entry
+### audit entry
 
 ```yaml
 AuditEntry:
@@ -215,7 +205,7 @@ AuditEntry:
   metadata: object
 ```
 
-### 5.4 Rotation Policy
+### rotation policy
 
 ```yaml
 RotationPolicy:
@@ -227,36 +217,30 @@ RotationPolicy:
   notify_on_rotation: list<string>        # Email/webhook targets
 ```
 
----
+## service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | Vault client SDK, dynamic secret lifecycle, rotation manager, audit logging |
-| **Orchestrator Agent** | Vault sidecar injector, Kubernetes MutatingWebhookConfiguration for env injection |
-| **API Gateway** | Route /api/v1/secrets/*, enforce mTLS between services and Vault |
-| **Auth Service** | Vault Kubernetes auth integration, path-based access policies |
-| **Compliance (Feature 46)** | Consume audit logs for SOC 2 CC6.1 (Logical and Physical Access Control) evidence |
+| **integration service** | vault client sdk, dynamic secret lifecycle, rotation manager, audit logging |
+| **orchestrator agent** | vault sidecar injector, kubernetes mutatingwebhookconfiguration for env injection |
+| **api gateway** | route /api/v1/secrets/*, enforce mtls between services and vault |
+| **auth service** | vault kubernetes auth integration, path-based access policies |
+| **compliance (feature 46)** | consume audit logs for soc 2 cc6.1 (logical and physical access control) evidence |
 
----
+## effort estimate
 
-## 7. Effort Estimate
-
-| Phase | PT | Dependencies |
+| phase | pt | dependencies |
 |-------|----|--------------|
-| Vault Integration | 2 | Cluster deployment, client SDK, auth methods |
-| Dynamic Secrets | 1.5 | Database engine, lease lifecycle |
-| Rotation | 1 | Rotation manager, connection draining |
-| Injection & Audit | 1.5 | Webhook injector, audit pipeline |
-| **Total** | **6** | Ranges 4–6 depending on Vault HA complexity |
+| vault integration | 2 | cluster deployment, client sdk, auth methods |
+| dynamic secrets | 1.5 | database engine, lease lifecycle |
+| rotation | 1 | rotation manager, connection draining |
+| injection & audit | 1.5 | webhook injector, audit pipeline |
+| **total** | **6** | ranges 4-6 depending on vault ha complexity |
 
----
+## open questions
 
-## 8. Open Questions
-
-- Should we support cloud-native secret stores (AWS Secrets Manager / GCP Secret Manager) as a fallback?
-- What is the strategy for Vault unsealing in production (auto-unseal with KMS vs Shamir)?
-- How do we handle cross-cluster secret replication for DR?
-- Should the rotation manager force rotation on security incidents (e.g., credential leak)?
-- What is the performance impact of the MutatingWebhook on deployment latency?
+• should we support cloud-native secret stores (aws secrets manager / gcp secret manager) as a fallback?
+• what is the strategy for vault unsealing in production (auto-unseal with kms vs shamir)?
+• how do we handle cross-cluster secret replication for dr?
+• should the rotation manager force rotation on security incidents (e.g., credential leak)?
+• what is the performance impact of the mutatingwebhook on deployment latency?

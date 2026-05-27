@@ -1,35 +1,31 @@
-# Feature 12: Terraform Provider
+# terraform provider
 
-- **Feature ID:** 12
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** New `infra/terraform/` directory
-- **Effort Estimate:** Large (7-10 PT)
-- **Dependencies:** Stable REST API (v1), Feature 11 (CLI) for shared API client patterns
-- **Phase:** Phase 2 (Weeks 5-8)
+- feature id: 12
+- category: developer ecosystem & api
+- primary service: new `infra/terraform/` directory
+- effort estimate: large (7-10 pt)
+- dependencies: stable rest api (v1), feature 11 (cli) for shared api client patterns
+- phase: phase 2 (weeks 5-8)
 
----
+## overview
 
-## Overview
+the **terraform provider for infra pilot** (`terraform-provider-infrapilot`) enables infrastructure-as-code management of infra pilot resources -- servers, databases, dns records, and firewall rules -- via hashicorp terraform. users define their infrastructure declaratively in hcl and manage the full lifecycle through `terraform plan`, `terraform apply`, and `terraform destroy`.
 
-The **Terraform Provider for Infra Pilot** (`terraform-provider-infrapilot`) enables infrastructure-as-code management of Infra Pilot resources — servers, databases, DNS records, and firewall rules — via HashiCorp Terraform. Users define their infrastructure declaratively in HCL and manage the full lifecycle through `terraform plan`, `terraform apply`, and `terraform destroy`.
+### goals
 
-### Goals
+- provide terraform resources for all core infra panel entities (server, database, dns, firewall, backup)
+- support full crud lifecycle with import capability
+- generate valid hcl and json plan output for ci/cd pipelines
+- include comprehensive acceptance tests with real api interactions
+- maintain provider documentation via `terraform docs`-compatible format
 
-- Provide Terraform resources for all core Infra Panel entities (server, database, DNS, firewall, backup)
-- Support full CRUD lifecycle with import capability
-- Generate valid HCL and JSON plan output for CI/CD pipelines
-- Include comprehensive acceptance tests with real API interactions
-- Maintain provider documentation via `terraform docs`-compatible format
+### non-goals
 
-### Non-Goals
+- manage kubernetes clusters (handled by feature 19)
+- replace the existing rest api or cli
+- provide terraform cdk (cloud development kit) bindings
 
-- Manage Kubernetes clusters (handled by Feature 19)
-- Replace the existing REST API or CLI
-- Provide Terraform CDK (Cloud Development Kit) bindings
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -82,7 +78,7 @@ The **Terraform Provider for Infra Pilot** (`terraform-provider-infrapilot`) ena
               └───────────────────────────┘
 ```
 
-### Directory Structure
+### directory structure
 
 ```
 infra/terraform/
@@ -130,51 +126,47 @@ infra/terraform/
         └── backup_test.go        # Backup acceptance tests
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase a: provider scaffolding (2 pt)
 
-### Phase A: Provider Scaffolding (2 PT)
+1. initialize go module with `terraform-plugin-framework` (v1+) -- the modern sdk
+2. implement `provider.go` with provider schema: `api_url`, `api_token`, `timeout`
+3. build `internal/client/client.go` -- generic http client wrapping the rest api
+4. implement authentication, request signing, error mapping to terraform diagnostics
+5. register the provider in `main.go` using `tf6server` protocol
 
-1. Initialize Go module with `terraform-plugin-framework` (v1+) — the modern SDK
-2. Implement `provider.go` with provider schema: `api_url`, `api_token`, `timeout`
-3. Build `internal/client/client.go` — generic HTTP client wrapping the REST API
-4. Implement authentication, request signing, error mapping to Terraform diagnostics
-5. Register the provider in `main.go` using `tf6server` protocol
+### phase b: server resource (2 pt)
 
-### Phase B: Server Resource (2 PT)
+1. implement `infrapilot_server` resource schema with all attributes (name, region, plan, image, ssh_keys, tags, etc.)
+2. implement crud handlers mapping to rest endpoints
+3. add plan modifiers (requiresreplace, plan-time validation)
+4. implement `readcontext` with refresh logic for external changes
+5. add import support (`importerstate`)
 
-1. Implement `infrapilot_server` resource schema with all attributes (name, region, plan, image, ssh_keys, tags, etc.)
-2. Implement CRUD handlers mapping to REST endpoints
-3. Add plan modifiers (RequiresReplace, plan-time validation)
-4. Implement `ReadContext` with refresh logic for external changes
-5. Add import support (`ImporterState`)
+### phase c: database & dns resources (2 pt)
 
-### Phase C: Database & DNS Resources (2 PT)
+1. implement `infrapilot_database` -- database type, version, storage size, backups
+2. implement `infrapilot_dns_record` -- zone, name, type, ttl, value
+3. implement `infrapilot_firewall_rule` -- direction, protocol, ports, source/dest cidr
+4. implement `infrapilot_backup` -- schedule, retention, target
 
-1. Implement `infrapilot_database` — database type, version, storage size, backups
-2. Implement `infrapilot_dns_record` — zone, name, type, TTL, value
-3. Implement `infrapilot_firewall_rule` — direction, protocol, ports, source/dest CIDR
-4. Implement `infrapilot_backup` — schedule, retention, target
+### phase d: data sources & acceptance tests (2-3 pt)
 
-### Phase D: Data Sources & Acceptance Tests (2-3 PT)
+1. implement `infrapilot_server` data source (lookup by name or id)
+2. implement `infrapilot_image` data source (available os images)
+3. write acceptance tests for each resource with real api calls
+4. add test sweepers for cleanup
+5. generate terraform registry documentation
 
-1. Implement `infrapilot_server` data source (lookup by name or ID)
-2. Implement `infrapilot_image` data source (available OS images)
-3. Write acceptance tests for each resource with real API calls
-4. Add test sweepers for cleanup
-5. Generate Terraform Registry documentation
+### phase e: ci & publishing (1 pt)
 
-### Phase E: CI & Publishing (1 PT)
+1. configure github actions for cross-compilation (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64)
+2. add gpg signing for release artifacts
+3. publish to terraform registry via automated workflow
+4. write quickstart guide and example configurations
 
-1. Configure GitHub Actions for cross-compilation (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64)
-2. Add GPG signing for release artifacts
-3. Publish to Terraform Registry via automated workflow
-4. Write quickstart guide and example configurations
-
----
-
-## Resource Schema Design
+## resource schema design
 
 ### `infrapilot_server`
 
@@ -201,7 +193,7 @@ resource "infrapilot_server" "web" {
 }
 ```
 
-**Schema attributes:**
+**schema attributes:**
 
 | Attribute | Type | Required | ForceNew | Description |
 |-----------|------|----------|----------|-------------|
@@ -243,11 +235,9 @@ resource "infrapilot_database" "main" {
 }
 ```
 
----
+## api design
 
-## API Design
-
-The provider maps to the existing Infra Pilot REST API. Each resource implements Terraform's CRUD lifecycle:
+the provider maps to the existing infra pilot rest api. each resource implements terraform's crud lifecycle:
 
 | Resource | Create | Read | Update | Delete |
 |----------|--------|------|--------|--------|
@@ -257,9 +247,9 @@ The provider maps to the existing Infra Pilot REST API. Each resource implements
 | `infrapilot_firewall_rule` | `POST /api/v1/firewall/rules` | `GET /api/v1/firewall/rules/:id` | `PUT /api/v1/firewall/rules/:id` | `DELETE /api/v1/firewall/rules/:id` |
 | `infrapilot_backup` | `POST /api/v1/backups` | `GET /api/v1/backups/:id` | `PUT /api/v1/backups/:id` | `DELETE /api/v1/backups/:id` |
 
-### Error Handling
+### error handling
 
-Terraform API errors are mapped to Terraform diagnostics:
+terraform api errors are mapped to terraform diagnostics:
 
 ```go
 if resp.StatusCode == http.StatusNotFound {
@@ -275,11 +265,9 @@ if resp.StatusCode == http.StatusTooManyRequests {
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Internal Model (Example: Server)
+### internal model (example: server)
 
 ```go
 type ServerModel struct {
@@ -298,7 +286,7 @@ type ServerModel struct {
 }
 ```
 
-### JSON Plan Output Example
+### json plan output example
 
 ```json
 {
@@ -333,9 +321,7 @@ type ServerModel struct {
 }
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
@@ -350,9 +336,7 @@ type ServerModel struct {
 | CI/CD & publishing | DevOps | Cross-compile, GPG sign, registry |
 | Documentation | Developer Experience | Registry docs, examples |
 
----
-
-## Effort Estimate Breakdown
+## effort estimate breakdown
 
 | Task | PT | Dependencies |
 |------|----|-------------|
@@ -367,13 +351,11 @@ type ServerModel struct {
 | Acceptance tests | 1.5 | All resources stable |
 | CI/CD cross-compile & registry | 1.0 | GPG key, registry account |
 | Documentation | 0.5 | All resources done |
-| **Total** | **9.5** | |
+| total | 9.5 | |
 
----
+## usage examples
 
-## Usage Examples
-
-### Basic Provider Configuration
+### basic provider configuration
 
 ```hcl
 terraform {
@@ -401,7 +383,7 @@ variable "infrapilot_api_token" {
 }
 ```
 
-### Complete Example: Web Application Stack
+### complete example: web application stack
 
 ```hcl
 # Look up available image
@@ -456,36 +438,32 @@ output "web_ip" {
 }
 ```
 
-### Import Existing Resources
+### import existing resources
 
 ```bash
 terraform import infrapilot_server.web srv_abc123
 terraform import infrapilot_database.main db_xyz789
 ```
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | API rate limits during `terraform plan` | Failed runs, degraded UX | Implement client-side caching of read responses during plan |
-| Resource drift between `apply` and external changes | State inconsistency | Use `ReadContext` to refresh state before every plan |
+| Resource drift between `apply` and external changes | State inconsistency | Use `readcontext` to refresh state before every plan |
 | Breaking API changes | Provider incompatibility | API version negotiation, provider version constraints |
-| Long-running server creation | Timeout during `apply` | Use state polling with configurable timeout in resource `Create` |
-| State file contains sensitive data | Credential exposure | Mark API token and passwords as `Sensitive: true` in schema |
+| Long-running server creation | Timeout during `apply` | Use state polling with configurable timeout in resource `create` |
+| State file contains sensitive data | Credential exposure | Mark API token and passwords as `sensitive: true` in schema |
 
----
+## acceptance criteria
 
-## Acceptance Criteria
-
-- [ ] Provider compiles for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64
-- [ ] `provider "infrapilot"` configuration validates API token and URL
-- [ ] All 5 resources support full CRUD lifecycle via acceptance tests
-- [ ] Resource import works for all resource types
-- [ ] Data sources return correct results for server and image lookups
-- [ ] Plan modifiers correctly detect force-new changes (region, image change)
-- [ ] Sensitive fields are marked and redacted in logs/state
-- [ ] Terraform Registry documentation renders correctly with all examples
-- [ ] CI pipeline produces signed releases with GPG
-- [ ] E2E test: `terraform apply` + `terraform destroy` completes without manual steps
+- [ ] provider compiles for linux/amd64, linux/arm64, darwin/amd64, darwin/arm64
+- [ ] `provider "infrapilot"` configuration validates api token and url
+- [ ] all 5 resources support full crud lifecycle via acceptance tests
+- [ ] resource import works for all resource types
+- [ ] data sources return correct results for server and image lookups
+- [ ] plan modifiers correctly detect force-new changes (region, image change)
+- [ ] sensitive fields are marked and redacted in logs/state
+- [ ] terraform registry documentation renders correctly with all examples
+- [ ] ci pipeline produces signed releases with gpg
+- [ ] e2e test: `terraform apply` + `terraform destroy` completes without manual steps

@@ -1,20 +1,20 @@
-# Provider Neutral Mapping
+# provider neutral mapping
 
-Overview
-- Use neutral tokens in tests to decouple from real cloud providers.
-- A resolver translates tokens to concrete provider identities for the test run.
+overview
+• use neutral tokens in tests to decouple from real cloud providers.
+• a resolver translates tokens to concrete provider identities for the test run.
 
-Files
-- infra/naming/provider_map.yaml: base mapping
-- infra/overrides/provider_map.yaml: environment-specific overrides
-- infra/naming/resolver.py: token resolver API
+files
+• `infra/naming/provider_map.yaml`: base mapping
+• `infra/overrides/provider_map.yaml`: environment-specific overrides
+• `infra/naming/resolver.py`: token resolver api
 
-Example
-- Provider map (provider_map.yaml):
-  PROVIDER_MOCK: mock-provider
-- Overrides (overrides/provider_map.yaml):
-  PROVIDER_MOCK: mock-provider-ci
+example
+• provider map (`provider_map.yaml`):
+  `provider_mock: mock-provider`
+• overrides (`overrides/provider_map.yaml`):
+  `provider_mock: mock-provider-ci`
 
-Usage
-- In tests: from infra.naming import resolver; provider = resolver.resolve_provider("PROVIDER_MOCK");
-- Use REGION_MOCK_US_EAST, SKU_MOCK_SMALL similarly; all tokens map via resolver
+usage
+• in tests: `from infra.naming import resolver; provider = resolver.resolve_provider("provider_mock");`
+• use `region_mock_us_east`, `sku_mock_small` similarly; all tokens map via resolver

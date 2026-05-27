@@ -1,21 +1,21 @@
-Cosmic Infra Branding Guidelines (Infra Pilot)
+cosmic infra branding guidelines (infra pilot)
 
-- Primary: #6C5CE7
-- Secondary: #EC4899
-- Accent: #22D3EE
-- Background: #0B0720
-- Text: #F6F3FF
+- primary: #6C5CE7
+- secondary: #EC4899
+- accent: #22D3EE
+- background: #0B0720
+- text: #F6F3FF
 
-Logo: branding/assets/logo.svg
+logo: branding/assets/logo.svg
 
-Usage:
-- Primary color for header, buttons, and highlights.
-- Accent color for hover/focus states.
-- Ensure high contrast on all surfaces.
+usage:
+- primary color for header, buttons, and highlights.
+- accent color for hover/focus states.
+- ensure high contrast on all surfaces.
 
-UI Components:
-- Button: BrandButton using brand.primary
-- Card: BrandCard
-- Input: BrandInput
+ui components:
+- button: brandbutton using brand.primary
+- card: brandcard
+- input: brandinput
 
-Version: 1.0
+version: 1.0

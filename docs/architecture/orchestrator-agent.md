@@ -1,10 +1,10 @@
-# Orchestrator Agent Architecture
+# orchestrator agent architecture
 
-## 🎯 Purpose
+## purpose
 
-The Orchestrator Agent is the core provisioning and orchestration engine, handling all infrastructure provisioning requests, workflow execution, and service coordination.
+the orchestrator agent is the core provisioning and orchestration engine, handling all infrastructure provisioning requests, workflow execution, and service coordination.
 
-## 🏗️ Component Structure
+## component structure
 
 ```
 orchestrator-agent/
@@ -31,16 +31,16 @@ orchestrator-agent/
     └── conftest.py
 ```
 
-## 🔌 API Endpoints
+## api endpoints
 
-### Servers
+### servers
 
-#### Get Servers
+#### get servers
 ```
 GET /api/servers?filter=running&limit=50
 ```
 
-Response:
+response:
 ```json
 {
   "servers": [
@@ -61,12 +61,12 @@ Response:
 }
 ```
 
-#### Provision Server
+#### provision server
 ```
 POST /api/servers/provision
 ```
 
-Request:
+request:
 ```json
 {
   "name": "new-server-01",
@@ -81,7 +81,7 @@ Request:
 }
 ```
 
-Response:
+response:
 ```json
 {
   "deployment_id": "dep-12345",
@@ -90,29 +90,29 @@ Response:
 }
 ```
 
-#### Get Server Details
+#### get server details
 ```
 GET /api/servers/{server_id}
 ```
 
-#### Update Server
+#### update server
 ```
 PATCH /api/servers/{server_id}
 ```
 
-#### Delete Server
+#### delete server
 ```
 DELETE /api/servers/{server_id}
 ```
 
-### Deployments
+### deployments
 
-#### Get Deployment Status
+#### get deployment status
 ```
 GET /api/deployments/{deployment_id}
 ```
 
-Response:
+response:
 ```json
 {
   "id": "dep-12345",
@@ -127,16 +127,14 @@ Response:
 }
 ```
 
-### Metrics
+### metrics
 
-#### Get Server Metrics
+#### get server metrics
 ```
 GET /api/servers/{server_id}/metrics?window=24h
 ```
 
----
-
-## 🔄 Provisioning Workflow
+## provisioning workflow
 
 ```
 User Request
@@ -177,9 +175,9 @@ Update Status → Running
 Notify User
 ```
 
-## 🏢 Event Handlers
+## event handlers
 
-### Discord Events
+### discord events
 
 ```python
 # Handle /provision command
@@ -191,7 +189,7 @@ async def handle_provision_command(interaction: discord.Interaction, params: dic
     )
 ```
 
-### Webhook Events
+### webhook events
 
 ```python
 # Handle remote system updates
@@ -201,7 +199,7 @@ async def handle_pterodactyl_installed(webhook_data: dict):
     await orchestrator.mark_as_running(server_id)
 ```
 
-### API Events
+### api events
 
 ```python
 # Handle REST API calls
@@ -211,7 +209,7 @@ async def provision_via_api(request: ProvisionRequest) -> ProvisionResponse:
     return ProvisionResponse(deployment_id=deployment_id)
 ```
 
-## 🐛 Error Handling
+## error handling
 
 ```python
 class ProvisioningError(Exception):
@@ -238,7 +236,7 @@ async def provision_with_retry(config: ServerConfig):
         skip_retry()  # Don't retry
 ```
 
-## 📊 State Management
+## state management
 
 ```python
 # Server lifecycle states
@@ -260,11 +258,9 @@ valid_transitions = {
 }
 ```
 
----
+## external integrations
 
-## 🔌 External Integrations
-
-### Pterodactyl API
+### pterodactyl api
 
 ```python
 class PterodactylClient:
@@ -286,7 +282,7 @@ class PterodactylClient:
         pass
 ```
 
-### Cloud Providers
+### cloud providers
 
 ```python
 class CloudProviderFactory:
@@ -311,9 +307,7 @@ class CloudProvider(ABC):
         pass
 ```
 
----
-
-## 📈 Monitoring & Logging
+## monitoring & logging
 
 ```python
 # Prometheus metrics
@@ -338,17 +332,13 @@ logger.info(f"Server provisioned: {server_id}")
 logger.error(f"Provisioning failed: {error}", exc_info=True)
 ```
 
----
+## security considerations
 
-## 🔐 Security Considerations
+• validate all inputs against schema
+• use asyncio locks for concurrent operations
+• implement rate limiting
+• log all operations (without sensitive data)
+• use secrets manager for credentials
+• implement rbac for api access
 
-- Validate all inputs against schema
-- Use asyncio locks for concurrent operations
-- Implement rate limiting
-- Log all operations (without sensitive data)
-- Use secrets manager for credentials
-- Implement RBAC for API access
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

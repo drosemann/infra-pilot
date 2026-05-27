@@ -1,73 +1,73 @@
-# Docker Panel - Getting Started
+# docker panel - getting started
 
-This is a self-hosted Docker management panel with Personal Mode (simple) and Hosting Business Mode (full-featured) support.
+this is a self-hosted docker management panel with personal mode (simple) and hosting business mode (full-featured) support.
 
-## Quick Start
+## quick start
 
-### Requirements
+### requirements
 
-- Node.js 18+ and npm
-- Docker and Docker Daemon (running locally or remotely)
-- Supabase (self-hosted via Docker Compose recommended)
+- node.js 18+ and npm
+- docker and docker daemon (running locally or remotely)
+- supabase (self-hosted via docker compose recommended)
 
-### Installation
+### installation
 
-1. **Clone and install dependencies**
+• clone and install dependencies
    ```bash
    cd services/management-panel
    npm install
    ```
 
-2. **Set up environment**
+• set up environment
    ```bash
    cp .env.local.example .env.local
    ```
 
-3. **Configure Supabase** (optional if using self-hosted)
+• configure supabase (optional if using self-hosted)
    
-   The easiest way is to use Supabase Docker Compose:
+   the easiest way is to use supabase docker compose:
    ```bash
    # Pull docker-compose from https://github.com/supabase/supabase/tree/master/docker
    # Edit docker-compose.yml with your JWT secret
    docker-compose -f docker-compose.yml up -d
    ```
 
-   Then connect to the local instance:
+   then connect to the local instance:
    ```
    VITE_SUPABASE_URL=http://localhost:54321
    VITE_SUPABASE_ANON_KEY=<your-anon-key>
    ```
 
-4. **Initialize database**
+• initialize database
    ```bash
    # Login to Supabase dashboard (http://localhost:3000) with default credentials
    # Navigate to SQL Editor
    # Copy contents from db/schema.sql and execute
    ```
 
-5. **Start development servers**
+• start development servers
    ```bash
    npm run dev
    ```
 
-   This starts:
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:3001
+   this starts:
+   - frontend: http://localhost:5173
+   - backend api: http://localhost:3001
 
-6. **First-time setup**
-   - Visit http://localhost:5173
-   - Select Personal Mode (or Business Mode)
-   - Create your admin account
-   - Done! You're ready to manage Docker apps
+• first-time setup
+   - visit http://localhost:5173
+   - select personal mode (or business mode)
+   - create your admin account
+   - done! you're ready to manage docker apps
 
-### Production Deployment
+### production deployment
 
-1. **Build**
+• build
    ```bash
    npm run build
    ```
 
-2. **Environment Setup**
+• environment setup
    ```bash
    # Point to your production Supabase instance
    VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -75,19 +75,17 @@ This is a self-hosted Docker management panel with Personal Mode (simple) and Ho
    VITE_API_URL=https://api.yourdomain.com
    ```
 
-3. **Run Backend**
+• run backend
    ```bash
    node server/index.ts  # Daemonize with PM2, systemd, or Docker
    ```
 
-4. **Serve Frontend**
+• serve frontend
    ```bash
    npx serve dist/  # Or use Nginx, Vercel, etc.
    ```
 
----
-
-## Project Structure
+## project structure
 
 ```
 services/management-panel/
@@ -112,56 +110,52 @@ services/management-panel/
 └── tsconfig.json
 ```
 
----
+## features
 
-## Features
+### personal mode (default)
 
-### Personal Mode (Default)
+• docker app management
+- create, read, update, delete docker applications
+- pull images from docker hub or custom registries
+- port mapping (host ↔ container)
+- environment variable configuration
+- volume/mount management
+- memory and cpu limits
 
-✅ **Docker App Management**
-- Create, read, update, delete Docker applications
-- Pull images from Docker Hub or custom registries
-- Port mapping (host ↔ container)
-- Environment variable configuration
-- Volume/mount management
-- Memory and CPU limits
+• container controls
+- start/stop/restart containers
+- view container status in real-time
+- stream logs (paginated retrieval)
+- container health polling
 
-✅ **Container Controls**
-- Start/stop/restart containers
-- View container status in real-time
-- Stream logs (paginated retrieval)
-- Container health polling
+• dashboard
+- quick overview of app status
+- total, running, stopped, error counts
+- click-to-manage app list
 
-✅ **Dashboard**
-- Quick overview of app status
-- Total, running, stopped, error counts
-- Click-to-manage app list
+### hosting business mode (coming soon)
 
-### Hosting Business Mode (Coming Soon)
+• customer account management
+• plans and pricing tiers
+• billing integration hooks
+• white-label branding
+• team and staff rbac
+• audit logging
 
-⏳ Customer account management  
-⏳ Plans and pricing tiers  
-⏳ Billing integration hooks  
-⏳ White-label branding  
-⏳ Team and staff RBAC  
-⏳ Audit logging  
+for details, see [personal mode](docs/PERSONAL_MODE.md)
 
-For details, see [PERSONAL_MODE.md](docs/PERSONAL_MODE.md)
+## api overview
 
----
+all api calls require bearer token in `authorization` header after setup.
 
-## API Overview
-
-All API calls require Bearer token in `Authorization` header after setup.
-
-### Setup Endpoints
+### setup endpoints
 
 ```
 GET  /api/setup/status         # Check if initialized
 POST /api/setup/init           # Initialize with mode + admin account
 ```
 
-### Docker App Endpoints
+### docker app endpoints
 
 ```
 GET    /api/apps               # List user's apps
@@ -171,7 +165,7 @@ PATCH  /api/apps/:appId        # Update app settings
 DELETE /api/apps/:appId        # Delete app
 ```
 
-### Container Control
+### container control
 
 ```
 POST   /api/apps/:appId/start      # Start container
@@ -180,7 +174,7 @@ POST   /api/apps/:appId/restart    # Restart container
 GET    /api/apps/:appId/logs       # Get logs (paginated)
 ```
 
-### User & Config
+### user & config
 
 ```
 GET    /api/user               # Get current user profile
@@ -188,20 +182,18 @@ GET    /api/config/mode        # Get setup mode
 GET    /health                 # Health check
 ```
 
----
+## docker integration (todo)
 
-## Docker Integration (TODO)
+currently, the backend stores app configurations but doesn't actually pull/run containers yet.
 
-Currently, the backend stores app configurations but doesn't actually pull/run containers yet.
+to add docker integration:
 
-To add Docker integration:
-
-1. **Install Docker SDK**
+• install docker sdk
    ```bash
    npm install dockerode
    ```
 
-2. **Update backend** to actually interact with Docker API:
+• update backend to actually interact with docker api:
    ```typescript
    // server/index.ts
    import Docker from 'dockerode';
@@ -211,93 +203,81 @@ To add Docker integration:
    });
    ```
 
-3. **Implement container operations** in start/stop/restart/create routes
+• implement container operations in start/stop/restart/create routes
 
-See [docs/DOCKER_INTEGRATION.md](docs/DOCKER_INTEGRATION.md) for detailed implementation guide (TODO).
+see [docker integration](docs/DOCKER_INTEGRATION.md) for detailed implementation guide (todo).
 
----
+## mode architecture
 
-## Mode Architecture
+### personal mode
+- single-user self-hosting focus
+- simple, minimal ui
+- no customer/billing features
+- perfect for hobby projects and home labs
 
-### Personal Mode
-- Single-user self-hosting focus
-- Simple, minimal UI
-- No customer/billing features
-- Perfect for hobby projects and home labs
+### business mode
+- multi-customer hosting platform
+- full admin panel with business features
+- billing hooks and white-label support
+- professional hosting company ready
 
-### Business Mode
-- Multi-customer hosting platform
-- Full admin panel with business features
-- Billing hooks and white-label support
-- Professional hosting company ready
+you can start in personal mode and upgrade to business mode later without losing data.
 
-You can start in Personal Mode and upgrade to Business Mode later without losing data.
+see [personal mode](docs/PERSONAL_MODE.md) for complete architecture details.
 
-See [docs/PERSONAL_MODE.md](docs/PERSONAL_MODE.md) for complete architecture details.
+## development
 
----
-
-## Development
-
-### Run Tests (TODO)
+### run tests (todo)
 ```bash
 npm run test
 ```
 
-### Linting
+### linting
 ```bash
 npm run lint
 ```
 
-### Build
+### build
 ```bash
 npm run build
 ```
 
-### Preview Production Build
+### preview production build
 ```bash
 npm run preview
 ```
 
----
+## troubleshooting
 
-## Troubleshooting
+### "failed to check setup status"
+- ensure backend api is running on `http://localhost:3001`
+- check `vite_api_url` in `.env.local`
 
-### "Failed to check setup status"
-- Ensure backend API is running on `http://localhost:3001`
-- Check `VITE_API_URL` in `.env.local`
+### "connection refused" to supabase
+- verify supabase is running (`docker ps`)
+- check `vite_supabase_url` points to correct instance
+- ensure jwt secret is configured
 
-### "Connection refused" to Supabase
-- Verify Supabase is running (`docker ps`)
-- Check `VITE_SUPABASE_URL` points to correct instance
-- Ensure JWT secret is configured
+### "not authenticated" after setup
+- token might have expired; reload page
+- check localstorage has `sb_access_token`
+- verify backend validates token correctly
 
-### "Not authenticated" after setup
-- Token might have expired; reload page
-- Check localStorage has `sb_access_token`
-- Verify backend validates token correctly
+### docker operations fail
+- ensure docker daemon is running
+- check `docker_host` environment variable
+- verify permissions on docker.sock (if using unix socket)
 
-### Docker operations fail
-- Ensure Docker daemon is running
-- Check `DOCKER_HOST` environment variable
-- Verify permissions on docker.sock (if using Unix socket)
+## contributing
 
----
+see [contributing](../../../CONTRIBUTING.md) in repository root.
 
-## Contributing
+## license
 
-See [CONTRIBUTING.md](../../../CONTRIBUTING.md) in repository root.
+mit - see [license](../../../LICENSE) in repository root.
 
----
+## support
 
-## License
-
-MIT - See [LICENSE](../../../LICENSE) in repository root.
-
----
-
-## Support
-
-- 📖 [Mode Architecture Docs](docs/PERSONAL_MODE.md)
-- 🐛 [GitHub Issues](https://github.com/DaaanielTV/infra-pilot/issues)
-- 💬 [Discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
+- [mode architecture docs](docs/PERSONAL_MODE.md)
+- [github issues](https://github.com/DaaanielTV/infra-pilot/issues)
+- [discussions](https://github.com/DaaanielTV/infra-pilot/discussions)

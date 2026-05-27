@@ -1,19 +1,19 @@
-# Development Workflow & Contributing
+# development workflow & contributing
 
-This guide helps you contribute code and improvements to Infra Pilot.
+this guide helps you contribute code and improvements to infra pilot.
 
-## 🌳 Git Workflow
+## git workflow
 
-### Main Branches
+### main branches
 
-| Branch | Purpose | Protection |
+| branch | purpose | protection |
 |--------|---------|-----------|
-| `main` | Production-ready code | Required PR review, tests pass |
-| `develop` | Integration branch | Required tests pass |
+| `main` | production-ready code | required pr review, tests pass |
+| `develop` | integration branch | required tests pass |
 
-### Feature Branches
+### feature branches
 
-Name feature branches clearly:
+name feature branches clearly:
 ```
 feature/user-authentication
 fix/server-provisioning-timeout
@@ -22,11 +22,9 @@ chore/upgrade-dependencies
 perf/optimize-db-queries
 ```
 
----
+## development cycle
 
-## 🔄 Development Cycle
-
-### 1. Fork & Clone
+### fork & clone
 
 ```bash
 # Fork on GitHub, then clone your fork
@@ -37,7 +35,7 @@ cd infra-pilot
 git remote add upstream https://github.com/DaaanielTV/infra-pilot.git
 ```
 
-### 2. Create Feature Branch
+### create feature branch
 
 ```bash
 # Fetch latest from upstream
@@ -47,7 +45,7 @@ git fetch upstream
 git checkout -b feature/my-feature upstream/develop
 ```
 
-### 3. Make Changes
+### make changes
 
 ```bash
 # Edit files in your service
@@ -58,7 +56,7 @@ cd services/orchestrator-agent
 # Commit frequently with clear messages
 ```
 
-### 4. Test Locally
+### test locally
 
 ```bash
 # Run service-specific tests
@@ -73,7 +71,7 @@ npm run lint         # JavaScript
 npm run type-check   # TypeScript
 ```
 
-### 5. Commit & Push
+### commit & push
 
 ```bash
 # Stage changes
@@ -92,15 +90,15 @@ Fixes #123"
 git push origin feature/my-feature
 ```
 
-### 6. Create Pull Request
+### create pull request
 
-On GitHub:
-- Title: Clear, descriptive title
-- Description: Use PR template
-- Reference issues: `Fixes #123`
-- Add labels: `type/feature`, `service/orchestrator`
+on github:
+• title: clear, descriptive title
+• description: use pr template
+• reference issues: `fixes #123`
+• add labels: `type/feature`, `service/orchestrator`
 
-### 7. Respond to Review
+### respond to review
 
 ```bash
 # Address feedback
@@ -113,11 +111,9 @@ git rebase upstream/develop
 git push -f origin feature/my-feature
 ```
 
----
+## commit message guidelines
 
-## 📋 Commit Message Guidelines
-
-### Format
+### format
 
 ```
 <type>(<scope>): <subject>
@@ -127,18 +123,18 @@ git push -f origin feature/my-feature
 <footer>
 ```
 
-### Types
+### types
 
-- `feat` - New feature
-- `fix` - Bug fix
-- `docs` - Documentation
-- `style` - Code style (formatting, semicolons, etc)
-- `refactor` - Code refactoring
-- `perf` - Performance improvements
-- `test` - Adding tests
-- `chore` - Build, dependencies, tooling
+• `feat` - new feature
+• `fix` - bug fix
+• `docs` - documentation
+• `style` - code style (formatting, semicolons, etc)
+• `refactor` - code refactoring
+• `perf` - performance improvements
+• `test` - adding tests
+• `chore` - build, dependencies, tooling
 
-### Examples
+### examples
 
 ```
 feat(orchestrator): add server auto-scaling
@@ -166,28 +162,24 @@ Fixes #789
 docs: update architecture documentation with new data flow
 ```
 
----
+## testing requirements
 
-## 🧪 Testing Requirements
+### before creating pr
 
-### Before Creating PR
+• write tests alongside features
+• run full test suite locally
+• verify no regressions in other areas
 
-### Before Creating PR
+### test coverage
 
-1. **Write tests** alongside features
-2. **Run full test suite** locally
-3. **Verify no regressions** in other areas
-
-### Test Coverage
-
-| Service | Minimum Coverage | Command |
+| service | minimum coverage | command |
 |---------|------------------|---------|
 | orchestrator-agent | 80% | `pytest --cov=services/orchestrator-agent` |
 | management-dashboard | 70% | `npm run test -- --coverage` |
 | discord-service | 70% | `npm run test -- --coverage` |
 | service-core | 75% | `mvn test jacoco:report` |
 
-### Running Tests
+### running tests
 
 ```bash
 # All tests
@@ -206,11 +198,9 @@ pytest --cov=services/orchestrator-agent tests/
 mvn test -Dtest=ServerTest
 ```
 
----
+## code quality standards
 
-## 🎯 Code Quality Standards
-
-### Linting
+### linting
 
 ```bash
 # JavaScript/TypeScript
@@ -222,7 +212,7 @@ pylint services/orchestrator-agent/
 black services/orchestrator-agent/  # Format code
 ```
 
-### Type Checking
+### type checking
 
 ```bash
 # TypeScript
@@ -232,7 +222,7 @@ npm run type-check
 mypy services/orchestrator-agent/
 ```
 
-### Code Formatting
+### code formatting
 
 ```bash
 # Auto-format all code
@@ -240,36 +230,32 @@ npm run format            # JavaScript
 black .                    # Python
 ```
 
----
+## pr checklist
 
-## ✅ PR Checklist
+before submitting pr:
 
-Before submitting PR:
+• [ ] code follows project standards
+• [ ] tests added/updated and passing
+• [ ] no linting errors (`npm run lint` / `pylint`)
+• [ ] type checking passes (`npm run type-check`)
+• [ ] documentation updated if needed
+• [ ] no console warnings/errors
+• [ ] commits are clean and descriptive
+• [ ] tested with related services
+• [ ] no breaking changes (or documented)
 
-- [ ] Code follows project standards
-- [ ] Tests added/updated and passing
-- [ ] No linting errors (`npm run lint` / `pylint`)
-- [ ] Type checking passes (`npm run type-check`)
-- [ ] Documentation updated if needed
-- [ ] No console warnings/errors
-- [ ] Commits are clean and descriptive
-- [ ] Tested with related services
-- [ ] No breaking changes (or documented)
+## code review process
 
----
+### what reviewers look for
 
-## 🔍 Code Review Process
+• correctness - does it work as intended?
+• tests - are there adequate tests?
+• performance - are there performance concerns?
+• security - are there security issues?
+• standards - does it follow conventions?
+• documentation - are changes documented?
 
-### What Reviewers Look For
-
-1. **Correctness** - Does it work as intended?
-2. **Tests** - Are there adequate tests?
-3. **Performance** - Are there performance concerns?
-4. **Security** - Are there security issues?
-5. **Standards** - Does it follow conventions?
-6. **Documentation** - Are changes documented?
-
-### Responding to Review
+### responding to review
 
 ```bash
 # If changes needed
@@ -283,29 +269,25 @@ git rebase -i upstream/develop
 git push -f origin feature/my-feature
 ```
 
----
+## documentation
 
-## 📖 Documentation
+### when to update docs
 
-### When to Update Docs
+• architecture changes → update [docs/architecture/](../architecture/)
+• api changes → update [docs/api/](../api/)
+• setup changes → update [docs/setup/](../setup/)
+• new feature → add to [readme.md](../../README.md)
 
-- Architecture changes → Update [docs/architecture/](../architecture/)
-- API changes → Update [docs/api/](../api/)
-- Setup changes → Update [docs/setup/](../setup/)
-- New feature → Add to [README.md](../../README.md)
+### documentation style
 
-### Documentation Style
+• clear, active voice
+• code examples included
+• link to related docs
+• keep up-to-date with code
 
-- Clear, active voice
-- Code examples included
-- Link to related docs
-- Keep up-to-date with code
+## advanced topics
 
----
-
-## 🚀 Advanced Topics
-
-### Rebasing & Squashing
+### rebasing & squashing
 
 ```bash
 # Rebase on latest develop
@@ -319,7 +301,7 @@ git rebase -i upstream/develop
 # Mark commits as 's' to squash
 ```
 
-### Signing Commits
+### signing commits
 
 ```bash
 # Generate GPG key (if not done)
@@ -336,23 +318,17 @@ git commit -S -m "message"
 git log --show-signature
 ```
 
----
+## learning resources
 
-## 🎓 Learning Resources
+• [system architecture](../architecture/overview.md)
+• [code standards](code-standards.md)
+• [testing strategy](testing-strategy.md)
+• [service documentation](../architecture/)
 
-- [System Architecture](../architecture/overview.md)
-- [Code Standards](code-standards.md)
-- [Testing Strategy](testing-strategy.md)
-- [Service Documentation](../architecture/)
+## getting help
 
----
+• questions? open a discussion on github
+• bug found? file an issue with reproduction steps
+• security issue? see [security.md](../../SECURITY.md)
 
-## 🆘 Getting Help
-
-- **Questions?** Open a discussion on GitHub
-- **Bug found?** File an issue with reproduction steps
-- **Security issue?** See [SECURITY.md](../../SECURITY.md)
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

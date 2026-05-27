@@ -1,41 +1,39 @@
-# 🐳 Docker Panel
+# docker panel
 
-**Self-hosted Docker container management panel** with Personal Mode for individual users and optional Hosting Business Mode.
+self-hosted docker container management panel with personal mode for individual users and optional hosting business mode.
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![React 19](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev)
-[![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-brightgreen?logo=node.js)](https://nodejs.org/)
+[![mit license](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
+[![typescript](https://img.shields.io/badge/TypeScript-5.0%2B-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![react 19](https://img.shields.io/badge/React-19-61dafb?logo=react)](https://react.dev)
+[![node.js 18+](https://img.shields.io/badge/Node.js-18%2B-brightgreen?logo=node.js)](https://nodejs.org/)
 
-## 🎯 Overview
+## overview
 
-**Docker Panel** is a Pterodactyl-inspired web panel for managing Docker containers locally. Perfect for self-hosters, hobby projects, and home labs.
+docker panel is a pterodactyl-inspired web panel for managing docker containers locally. perfect for self-hosters, hobby projects, and home labs.
 
-### ✨ Personal Mode (Default)
-- 🐳 **Docker App Management** - Create, deploy, and manage containerized applications
-- 🎛️ **Container Controls** - Start/stop/restart via real Docker API calls
-- 📊 **Dashboard** - Real-time status and metrics with live WebSocket updates
-- 🔍 **Logs & Monitoring** - Stream application logs via WebSocket in real-time
-- ⚙️ **Configuration** - Port mapping, environment variables, volume mounts
-- 🔐 **Simple Auth** - Single admin account with rate-limited login
-- 📋 **Audit Trail** - Append-only log of all mutations with timeline viewer
-- 🔎 **Global Search** - Cmd+K palette to search apps, backups, and audit logs
-- 🖥️ **Web Terminal** - In-browser container shell via WebSocket + Docker exec
-- 📬 **Notification Channels** - Email, webhook, and Telegram alert delivery
-- 📱 **PWA Support** - Installable as desktop app with offline caching
-- 🎉 **Onboarding Wizard** - Guided 5-step tour after first-time setup
+### personal mode (default)
+- docker app management - create, deploy, and manage containerized applications
+- container controls - start/stop/restart via real docker api calls
+- dashboard - real-time status and metrics with live websocket updates
+- logs & monitoring - stream application logs via websocket in real-time
+- configuration - port mapping, environment variables, volume mounts
+- simple auth - single admin account with rate-limited login
+- audit trail - append-only log of all mutations with timeline viewer
+- global search - cmd+k palette to search apps, backups, and audit logs
+- web terminal - in-browser container shell via websocket + docker exec
+- notification channels - email, webhook, and telegram alert delivery
+- pwa support - installable as desktop app with offline caching
+- onboarding wizard - guided 5-step tour after first-time setup
 
-### 🚀 Business Mode (Optional)
-- ✅ All Personal Mode features +
-- 👥 Customer account management
-- 💰 Plans and pricing tiers
-- 🏷️ White-label branding
-- 👔 Team and staff management
-- 📋 Audit logging (Business Mode extension)
+### business mode (optional)
+- all personal mode features +
+- customer account management
+- plans and pricing tiers
+- white-label branding
+- team and staff management
+- audit logging (business mode extension)
 
----
-
-## 🚀 Quick Start (3 Commands)
+## quick start (3 commands)
 
 ```bash
 # 1. Get the code
@@ -48,54 +46,51 @@ cp .env.local.example .env.local
 npm install && npm run dev
 ```
 
-### Demo Feature Flag (per-env)
+### demo feature flag (per-env)
 
-- Gate the Seed Demo UI behind a per-environment feature flag to avoid accidental usage in prod-like environments.
-- Env var: `VITE_DEMO_FEATURE_ENABLED`
-- Default: false (flag is off unless explicitly enabled)
-- How to enable/disable:
-  - Local development: set in your .env.local
-    - Add: `VITE_DEMO_FEATURE_ENABLED=true`
-  - Staging/QA: set to `true` to enable demo flows for testers, or `false` to hide in testing
-  - Production: keep it `false` to avoid accidental seeds
-- Verification:
-  - Start frontend and check that the Seed Demo button appears only when the flag is enabled.
-  - Click Seed Demo to see the confirmation modal before seeding.
-- Notes:
-- This flag gates only the UI; the backend seed endpoints remain available to programmatic use when needed and are still protected by Business Mode.
+- gate the seed demo ui behind a per-environment feature flag to avoid accidental usage in prod-like environments.
+- env var: `vite_demo_feature_enabled`
+- default: false (flag is off unless explicitly enabled)
+- how to enable/disable:
+  - local development: set in your .env.local
+    - add: `vite_demo_feature_enabled=true`
+  - staging/qa: set to `true` to enable demo flows for testers, or `false` to hide in testing
+  - production: keep it `false` to avoid accidental seeds
+- verification:
+  - start frontend and check that the seed demo button appears only when the flag is enabled.
+  - click seed demo to see the confirmation modal before seeding.
+- notes:
+- this flag gates only the ui; the backend seed endpoints remain available to programmatic use when needed and are still protected by business mode.
 
-### QA Checklist (Gating Demo Per-Env)
-- Development (VITE_DEMO_FEATURE_ENABLED=true)
-  - Seed Demo button is visible on the Customers page in Business Mode.
-  - Click Seed Demo to open the confirmation modal; confirm to seed.
-  - Verify the UI shows a success toast with seeded counts and the Customers list refreshes.
-  - Verify the Seed Demo action is not shown when the flag is off.
-- Staging/QA (VITE_DEMO_FEATURE_ENABLED=true or false)
-  - If true, perform the same checks as Development.
-  - If false, Seed Demo button should be hidden; confirm gating works in this environment.
-- Production (VITE_DEMO_FEATURE_ENABLED not set or false)
-  - Seed Demo button must be hidden; UI should reflect no demo button.
-  - Optional: try calling the API directly with a valid token and confirm backend blocks based on Business Mode as designed.
-- Validation steps (end-to-end)
-  - Start both frontend and backend, login as a Business Mode admin, navigate to Customers, ensure gating behavior matches env flag.
-  - Seed Demo idempotence: verify re-clicking Seed Demo (when enabled) does not crash and either updates or leaves data idempotently.
-- Troubleshooting
-  - If Seed Demo button is missing, verify VITE_DEMO_FEATURE_ENABLED is set to true and the frontend is restarted to pick up the env var.
-  - If Seed Demo still seeds in prod-like env, rebuild the frontend to ensure the flag is re-evaluated.
+### qa checklist (gating demo per-env)
+- development (`vite_demo_feature_enabled=true`)
+  - seed demo button is visible on the customers page in business mode.
+  - click seed demo to open the confirmation modal; confirm to seed.
+  - verify the ui shows a success toast with seeded counts and the customers list refreshes.
+  - verify the seed demo action is not shown when the flag is off.
+- staging/qa (`vite_demo_feature_enabled=true` or false)
+  - if true, perform the same checks as development.
+  - if false, seed demo button should be hidden; confirm gating works in this environment.
+- production (`vite_demo_feature_enabled` not set or false)
+  - seed demo button must be hidden; ui should reflect no demo button.
+  - optional: try calling the api directly with a valid token and confirm backend blocks based on business mode as designed.
+- validation steps (end-to-end)
+  - start both frontend and backend, login as a business mode admin, navigate to customers, ensure gating behavior matches env flag.
+  - seed demo idempotence: verify re-clicking seed demo (when enabled) does not crash and either updates or leaves data idempotently.
+- troubleshooting
+  - if seed demo button is missing, verify `vite_demo_feature_enabled` is set to true and the frontend is restarted to pick up the env var.
+  - if seed demo still seeds in prod-like env, rebuild the frontend to ensure the flag is re-evaluated.
 
-**Then open:** http://localhost:5173
+then open: http://localhost:5173
 
-**First-time setup will guide you through:**
-1. Choose Personal Mode or Business Mode
-2. Create admin account
-3. Start managing Docker apps
+first-time setup will guide you through:
+• choose personal mode or business mode
+• create admin account
+• start managing docker apps
 
----
+## native desktop shell (zero-native)
 
-
-## 🖥️ Native Desktop Shell (zero-native)
-
-The panel can also run as a zero-native desktop app. The React/Vite UI is loaded into a native WebView, while the Express API remains the local backend on `http://127.0.0.1:3001`.
+the panel can also run as a zero-native desktop app. the react/vite ui is loaded into a native webview, while the express api remains the local backend on `http://127.0.0.1:3001`.
 
 ```bash
 # Terminal 1: API
@@ -105,82 +100,76 @@ npm run dev:backend
 npm run desktop:dev -- -Dzero-native-path=/absolute/path/to/zero-native
 ```
 
-Useful scripts:
+useful scripts:
 
 - `npm run desktop:validate` validates `app.zon`.
 - `npm run desktop:doctor` checks the host zero-native environment.
 - `npm run desktop:package -- -Dzero-native-path=/absolute/path/to/zero-native` packages the built `dist/` assets.
 
-See the repository guide at [`../../docs/desktop/zero-native-management-panel.md`](../../docs/desktop/zero-native-management-panel.md).
+see the repository guide at [`../../docs/desktop/zero-native-management-panel.md`](../../docs/desktop/zero-native-management-panel.md).
 
-## 📚 Documentation
+## documentation
 
-| Document | Topic |
+| document | topic |
 |----------|-------|
-| [Docker Panel Quick Start](README-DOCKER-PANEL.md) | Getting started guide |
-| [Personal Mode Architecture](docs/PERSONAL_MODE.md) | Mode design & feature gates |
-| [Database Setup Guide](docs/DATABASE_SETUP.md) | Supabase configuration |
-| [System Architecture](docs/ARCHITECTURE.md) | Technical diagrams & flows |
-| [Implementation Summary](IMPLEMENTATION_SUMMARY.md) | Complete overview |
+| [docker panel quick start](README-DOCKER-PANEL.md) | getting started guide |
+| [personal mode architecture](docs/PERSONAL_MODE.md) | mode design & feature gates |
+| [database setup guide](docs/DATABASE_SETUP.md) | supabase configuration |
+| [system architecture](docs/ARCHITECTURE.md) | technical diagrams & flows |
+| [implementation summary](IMPLEMENTATION_SUMMARY.md) | complete overview |
 
----
+## features at a glance
 
-## ⚡ Features at a Glance
+### personal mode
+- docker app crud (create, read, update, delete)
+- container start/stop/restart controls
+- real-time logs and status monitoring
+- environment variable configuration
+- port mapping (host ↔ container)
+- volume/mount management
+- memory and cpu limits
+- simple dashboard with app grid
+- server performance monitoring with real-time metrics (tps, cpu, memory, player count)
+- health check dashboard with uptime tracking and incident timeline
+- backup job automation and scheduling with retention policies
+- access log viewer for authentication and console events
+- reports generation with csv/pdf export
+- alert configuration (metric thresholds) and alert history
+- maintenance window scheduling
+- config version control with snapshot and rollback
+- config editor — in-browser yaml/json config editor with syntax highlighting
+- java version selector — switch between java 8/11/17/21 per server
+- mysql database per click — instant mysql container provisioning
+- git deployment webhook — auto-deploy on github push
+- cronjob scheduler — scheduled tasks via cron expressions
+- real-time resource graphs — live cpu/memory/disk gauges with sparklines
+- log search — full-text log search with filters and pagination
+- prepaid billing — pay-as-you-go balance system with transaction history
+- modpack-installer — one-click modpack install from curseforge/modrinth
+- 2fa (totp) — two-factor authentication via totp
+- discord token validation — validate bot token before container start
 
-### Personal Mode ✅
-- Docker app CRUD (create, read, update, delete)
-- Container start/stop/restart controls
-- Real-time logs and status monitoring
-- Environment variable configuration
-- Port mapping (host ↔ container)
-- Volume/mount management
-- Memory and CPU limits
-- Simple dashboard with app grid
-- Server performance monitoring with real-time metrics (TPS, CPU, memory, player count)
-- Health check dashboard with uptime tracking and incident timeline
-- Backup job automation and scheduling with retention policies
-- Access log viewer for authentication and console events
-- Reports generation with CSV/PDF export
-- Alert configuration (metric thresholds) and alert history
-- Maintenance window scheduling
-- Config version control with snapshot and rollback
-- Config Editor — In-browser YAML/JSON config editor with syntax highlighting
-- Java Version Selector — Switch between Java 8/11/17/21 per server
-- MySQL Database per Click — Instant MySQL container provisioning
-- Git Deployment Webhook — Auto-deploy on GitHub push
-- Cronjob Scheduler — Scheduled tasks via cron expressions
-- Real-time Resource Graphs — Live CPU/memory/disk gauges with sparklines
-- Log Search — Full-text log search with filters and pagination
-- Prepaid Billing — Pay-as-you-go balance system with transaction history
-- Modpack-Installer — One-click modpack install from CurseForge/Modrinth
-- 2FA (TOTP) — Two-factor authentication via TOTP
-- Discord Token Validation — Validate bot token before container start
+### business mode (roadmap)
+- customer accounts and management
+- plans and pricing configuration
+- billing integration hooks
+- white-label branding
+- team/staff rbac
+- audit logging
+- advanced analytics
 
-### Business Mode (Roadmap) 🔜
-- Customer accounts and management
-- Plans and pricing configuration
-- Billing integration hooks
-- White-label branding
-- Team/staff RBAC
-- Audit logging
-- Advanced analytics
+## tech stack
 
----
-
-## 🏗️ Tech Stack
-
-| Layer | Technology | Why |
+| layer | technology | why |
 |-------|-----------|-----|
-| Frontend | React 19 + TypeScript | Modern, type-safe |
-| Styling | Tailwind CSS | Utility-first, dark mode |
-| Routing | React Router v6 | Industry standard |
-| Backend | Express.js | Lightweight, async |
-| Database | PostgreSQL + Supabase | Structured, RLS security |
-| Auth | Supabase Auth | Built-in, scalable |
+| frontend | react 19 + typescript | modern, type-safe |
+| styling | tailwind css | utility-first, dark mode |
+| routing | react router v6 | industry standard |
+| backend | express.js | lightweight, async |
+| database | postgresql + supabase | structured, rls security |
+| auth | supabase auth | built-in, scalable |
 
----
-
-## 📂 Project Structure
+## project structure
 
 ```
 services/management-panel/
@@ -214,23 +203,21 @@ services/management-panel/
 └── tsconfig.json        # TypeScript config
 ```
 
----
+## api reference
 
-## 🔌 API Reference
-
-### Interactive Docs
+### interactive docs
 ```
 GET    /api/docs                          Swagger UI (browser)
 GET    /api/openapi.json                  OpenAPI 3.1 spec (JSON)
 ```
 
-### Setup
+### setup
 ```
 GET    /api/setup/status                  Check if initialized
 POST   /api/setup/init                    Initialize with admin + mode (rate-limited: 10 req/15min)
 ```
 
-### Docker Apps
+### docker apps
 ```
 GET    /api/apps                          List user's apps
 POST   /api/apps                          Create new app
@@ -239,7 +226,7 @@ PATCH  /api/apps/:appId                   Update app settings
 DELETE /api/apps/:appId                   Delete app
 ```
 
-### Container Control (Real Docker exec)
+### container control (real docker exec)
 ```
 POST   /api/apps/:appId/start             Start container via `docker start`
 POST   /api/apps/:appId/stop              Stop container via `docker stop`
@@ -247,37 +234,37 @@ POST   /api/apps/:appId/restart           Restart container via `docker restart`
 GET    /api/apps/:appId/logs              Get logs (paginated)
 ```
 
-### WebSocket Real-Time
+### websocket real-time
 ```
 ws://host:3001?appId=<id>                 WebSocket connection for live logs & metrics
   → {"type":"subscribe","appId":"<id>"}         Starts docker logs -f streaming
   → {"type":"subscribe:metrics","appId":"<id>"} Starts docker stats every 2s
 ```
 
-### User & Config
+### user & config
 ```
 GET    /api/user                          Current user profile
 GET    /api/config/mode                   Get mode (personal/business)
 GET    /health                            API health check
 ```
 
-### Monitoring & Metrics
+### monitoring & metrics
 ```
 GET    /api/apps/:appId/metrics            Server metrics (TPS, CPU, memory, players) with time range
 GET    /api/metrics/aggregated             Aggregated metrics across all apps
 ```
 
-### Audit Trail
+### audit trail
 ```
 GET    /api/audit-log                     Paginated audit log (?user_id=&entity_type=&action=&start_date=&end_date=)
 ```
 
-### Global Search
+### global search
 ```
 GET    /api/search?q=<query>              Search apps, backups, and audit logs (min 2 chars)
 ```
 
-### Notification Channels
+### notification channels
 ```
 GET    /api/notification-channels          List notification channels
 POST   /api/notification-channels          Create channel (type: email|webhook|telegram, config: JSON)
@@ -286,14 +273,14 @@ DELETE /api/notification-channels/:id      Delete channel
 POST   /api/notification-channels/:id/test Send test notification
 ```
 
-### Access Logs & Config Versions
+### access logs & config versions
 ```
 GET    /api/logs/access                    Access logs (paginated)
 GET    /api/apps/:appId/config-versions    Config version history
 POST   /api/apps/:appId/config-versions    Create config snapshot
 POST   /api/apps/:appId/config-versions/:version/rollback  Rollback to version
 
-### Config Editor
+### config editor
 ```
 GET    /api/apps/:appId/config              Get app config (YAML/JSON)
 POST   /api/apps/:appId/config              Update app config
@@ -302,14 +289,14 @@ POST   /config/write                        Write config file to disk
 POST   /config/validate                     Validate YAML/JSON syntax
 ```
 
-### Databases
+### databases
 ```
 GET    /api/databases                       List MySQL databases
 POST   /api/databases                       Provision a new MySQL container
 DELETE /api/databases/:id                   Remove a MySQL database
 ```
 
-### Billing
+### billing
 ```
 GET    /api/billing/balance                 Get current credit balance
 POST   /api/billing/topup                   Add credits to balance
@@ -318,18 +305,18 @@ GET    /api/billing/cost-estimate           Estimate cost for a configuration
 GET    /api/billing/rates                   Current billing rates
 ```
 
-### Modpack Installer
+### modpack installer
 ```
 GET    /api/modpacks/search                 Search modpacks (?query=&platform=)
 POST   /api/apps/:appId/modpacks/install    Install modpack on server
 ```
 
-### Validation
+### validation
 ```
 POST   /api/validate/discord-token          Validate Discord bot token
 ```
 
-### Deployments
+### deployments
 ```
 GET    /api/deployments                     List deployments
 POST   /api/deployments                     Create deployment
@@ -337,7 +324,7 @@ DELETE /api/deployments/:id                 Delete deployment
 PATCH  /api/deployments/:id/toggle          Toggle deployment active/inactive
 ```
 
-### Real-Time Metrics
+### real-time metrics
 ```
 GET    /api/metrics/realtime                Live CPU/memory/disk metrics
 GET    /api/metrics/history                 Historical metric data
@@ -345,7 +332,7 @@ GET    /api/metrics/stream/config           Configure streaming metrics
 GET    /api/metrics/grafana-url             Get Grafana dashboard URL
 ```
 
-### Scheduled Tasks
+### scheduled tasks
 ```
 GET    /api/scheduled-tasks                 List scheduled tasks
 POST   /api/scheduled-tasks                 Create scheduled task
@@ -353,14 +340,14 @@ PATCH  /api/scheduled-tasks/:id             Update scheduled task
 DELETE /api/scheduled-tasks/:id             Delete scheduled task
 ```
 
-### Maintenance Windows
+### maintenance windows
 ```
 GET    /api/maintenance-windows            List maintenance windows
 POST   /api/maintenance-windows            Create maintenance window
 PATCH  /api/maintenance-windows/:id        Update window
 ```
 
-### Backups
+### backups
 ```
 GET    /api/backup-jobs                    List backup jobs
 POST   /api/backup-jobs                    Create backup job
@@ -369,7 +356,7 @@ DELETE /api/backup-jobs/:id                Delete job
 GET    /api/backup-jobs/:jobId/status      Backup execution history
 ```
 
-### Alerting
+### alerting
 ```
 GET    /api/alert-configs                  List alert configurations
 POST   /api/alert-configs                  Create alert config
@@ -379,18 +366,18 @@ GET    /api/alert-history                  Alert trigger history
 POST   /api/alert-history/:id/acknowledge  Acknowledge alert
 ```
 
-### Health Checks
+### health checks
 ```
 GET    /api/health-checks                  Health check results (optional ?app_id= filter)
 ```
 
-### Reports
+### reports
 ```
 GET    /api/reports                        Generate report (optional start_date, end_date)
 GET    /api/reports/export                 Export report (?format=csv|pdf)
 ```
 
-### Customers (Business Mode)
+### customers (business mode)
 ```
 GET    /api/customers                      List customers
 POST   /api/customers                      Create customer
@@ -399,13 +386,11 @@ DELETE /api/customers/:customerId          Delete customer
 POST   /api/seed-demo                      Seed demo data (Business Mode only)
 ```
 
----
+## configuration
 
-## ⚙️ Configuration
+### environment variables
 
-### Environment Variables
-
-Create `.env.local` (see `.env.local.example`):
+create `.env.local` (see `.env.local.example`):
 
 ```bash
 # Supabase (localhost dev)
@@ -419,222 +404,196 @@ VITE_API_URL=http://localhost:3001
 DOCKER_HOST=unix:///var/run/docker.sock
 ```
 
-### Production Setup
+### production setup
 
-See [Database Setup Guide](docs/DATABASE_SETUP.md#production-deployment) for:
-- Managed Supabase configuration
-- Production environment variables
-- Deployment recommendations
+see [database setup guide](docs/DATABASE_SETUP.md#production-deployment) for:
+- managed supabase configuration
+- production environment variables
+- deployment recommendations
 
----
+## development
 
-## 🚦 Development
-
-### Install
+### install
 ```bash
 npm install
 ```
 
-### Start Dev Servers
+### start dev servers
 ```bash
 # Both frontend (5173) and backend (3001)
 npm run dev
 ```
 
-### Build for Production
+### build for production
 ```bash
 npm run build
 ```
 
-### Lint & Type Check
+### lint & type check
 ```bash
 npm run lint
 ```
 
-### Preview Production Build
+### preview production build
 ```bash
 npm run preview
 ```
 
----
+## security
 
-## 🔒 Security
+- **authentication**: supabase auth (email + password)
+- **authorization**: jwt tokens in `authorization` header
+- **database security**: row-level security (rls) policies
+- **user isolation**: users only access their own resources
+- **feature gates**: mode-based access control
 
-- **Authentication**: Supabase Auth (email + password)
-- **Authorization**: JWT tokens in `Authorization` header
-- **Database Security**: Row-level security (RLS) policies
-- **User Isolation**: Users only access their own resources
-- **Feature Gates**: Mode-based access control
+## docker integration
 
----
+the panel manages docker containers via direct `docker` cli calls (start/stop/restart through `child_process.exec`). container configurations are stored in postgresql via supabase with full rls enforcement.
 
-## 🐳 Docker Integration
+real-time monitoring is handled via:
+- **websocket live streaming** - `docker logs -f` and `docker stats --no-stream` pushed to browser in real-time
+- **web terminal** - in-browser shell via websocket + `docker exec`
+- **server metrics** - tps, cpu, memory, player count, lag spike detection
+- **health checks** - http ping, port checks with uptime/degraded/down status
+- **backup system** - scheduled backup jobs with retention and status tracking
+- **access logging** - authentication and console access event recording
 
-The panel manages Docker containers via direct `docker` CLI calls (start/stop/restart through `child_process.exec`). Container configurations are stored in PostgreSQL via Supabase with full RLS enforcement.
+## use cases
 
-Real-time monitoring is handled via:
-- **WebSocket live streaming** - `docker logs -f` and `docker stats --no-stream` pushed to browser in real-time
-- **Web Terminal** - In-browser shell via WebSocket + `docker exec`
-- **Server metrics** - TPS, CPU, memory, player count, lag spike detection
-- **Health checks** - HTTP ping, port checks with uptime/degraded/down status
-- **Backup system** - Scheduled backup jobs with retention and status tracking
-- **Access logging** - Authentication and console access event recording
+### personal mode
+- home lab automation
+- self-hosted hobby projects
+- learning docker
+- running small production services
+- testing and development
 
----
+### business mode (coming soon)
+- managed hosting platform
+- vps reselling
+- container-as-a-service
+- multi-tenant environments
 
-## 🎯 Use Cases
+## roadmap
 
-### Personal Mode
-✅ Home lab automation  
-✅ Self-hosted hobby projects  
-✅ Learning Docker  
-✅ Running small production services  
-✅ Testing and development  
+### phase 1 complete
+- [x] supabase migration from convex
+- [x] setup wizard with mode selection
+- [x] docker app crud (full backend + frontend)
+- [x] dashboard and app detail pages
+- [x] feature gates framework
+- [x] comprehensive documentation
 
-### Business Mode (Coming Soon)
-✅ Managed hosting platform  
-✅ VPS reselling  
-✅ Container-as-a-Service  
-✅ Multi-tenant environments  
+### phase 2 monitoring & operations
+- [x] server metrics collection (tps, cpu, memory, players)
+- [x] health check dashboard with uptime tracking
+- [x] backup job automation and scheduling
+- [x] access log viewer
+- [x] alert configuration and history
+- [x] maintenance window scheduling
+- [x] config version control with rollback
+- [x] reports generation with csv/pdf export
+- [x] real docker calls (docker exec for start/stop/restart)
+- [x] real-time websocket for live logs & metrics
+- [x] rate-limited login (10 req/15min)
 
----
+### phase 3 ux & platform
+- [x] theme persistence (localstorage dark/light mode)
+- [x] onboarding wizard (5-step tour)
+- [x] pwa support (manifest + service worker)
+- [x] mobile-responsive layout (hamburger menu)
+- [x] global search (cmd+k palette)
+- [x] audit trail with timeline viewer
+- [x] web terminal (in-browser container shell)
+- [x] notification channels (email, webhook, telegram)
+- [x] openapi/swagger docs at /api/docs
 
-## 🛣️ Roadmap
+### phase 4 business mode
+- [ ] customer management
+- [ ] plans/pricing ui
+- [ ] billing integration hooks
+- [ ] team management
+- [ ] multi-tenant rbac
 
-### Phase 1 ✅ Complete
-- [x] Supabase migration from Convex
-- [x] Setup wizard with mode selection
-- [x] Docker app CRUD (full backend + frontend)
-- [x] Dashboard and app detail pages
-- [x] Feature gates framework
-- [x] Comprehensive documentation
+### phase 5 advanced
+- [ ] white-label system
+- [ ] multi-region support
+- [ ] advanced analytics dashboard
+- [ ] kubernetes mode
 
-### Phase 2 ✅ Monitoring & Operations
-- [x] Server metrics collection (TPS, CPU, memory, players)
-- [x] Health check dashboard with uptime tracking
-- [x] Backup job automation and scheduling
-- [x] Access log viewer
-- [x] Alert configuration and history
-- [x] Maintenance window scheduling
-- [x] Config version control with rollback
-- [x] Reports generation with CSV/PDF export
-- [x] Real Docker calls (docker exec for start/stop/restart)
-- [x] Real-time WebSocket for live logs & metrics
-- [x] Rate-limited login (10 req/15min)
+### phase 6 new features
+- [x] config editor (in-browser yaml/json with syntax highlighting)
+- [x] java version selector (8/11/17/21 per server)
+- [x] mysql database per click (instant container provisioning)
+- [x] git deployment webhook (auto-deploy on github push)
+- [x] cronjob scheduler (cron-based scheduled tasks)
+- [x] real-time resource graphs (live gauges + sparklines)
+- [x] log search (full-text search with filters & pagination)
+- [x] prepaid billing (pay-as-you-go balance system)
+- [x] modpack-installer (one-click curseforge/modrinth install)
+- [x] 2fa (totp) (two-factor authentication)
+- [x] discord token validation (validate bot token before start)
 
-### Phase 3 ✅ UX & Platform
-- [x] Theme persistence (localStorage dark/light mode)
-- [x] Onboarding wizard (5-step tour)
-- [x] PWA support (manifest + service worker)
-- [x] Mobile-responsive layout (hamburger menu)
-- [x] Global search (Cmd+K palette)
-- [x] Audit trail with timeline viewer
-- [x] Web terminal (in-browser container shell)
-- [x] Notification channels (email, webhook, Telegram)
-- [x] OpenAPI/Swagger docs at /api/docs
+## learn more
 
-### Phase 4 ⏳ Business Mode
-- [ ] Customer management
-- [ ] Plans/pricing UI
-- [ ] Billing integration hooks
-- [ ] Team management
-- [ ] Multi-tenant RBAC
+- **mode architecture**: read [docs/personal_mode.md](docs/PERSONAL_MODE.md)
+- **system design**: see [docs/architecture.md](docs/ARCHITECTURE.md)
+- **database setup**: follow [docs/database_setup.md](docs/DATABASE_SETUP.md)
+- **full details**: check [implementation_summary.md](IMPLEMENTATION_SUMMARY.md)
 
-### Phase 5 ⏳ Advanced
-- [ ] White-label system
-- [ ] Multi-region support
-- [ ] Advanced analytics dashboard
-- [ ] Kubernetes mode
+## troubleshooting
 
-### Phase 6 ✅ New Features
-- [x] Config Editor (in-browser YAML/JSON with syntax highlighting)
-- [x] Java Version Selector (8/11/17/21 per server)
-- [x] MySQL Database per Click (instant container provisioning)
-- [x] Git Deployment Webhook (auto-deploy on GitHub push)
-- [x] Cronjob Scheduler (cron-based scheduled tasks)
-- [x] Real-time Resource Graphs (live gauges + sparklines)
-- [x] Log Search (full-text search with filters & pagination)
-- [x] Prepaid Billing (pay-as-you-go balance system)
-- [x] Modpack-Installer (one-click CurseForge/Modrinth install)
-- [x] 2FA (TOTP) (two-factor authentication)
-- [x] Discord Token Validation (validate bot token before start)
+### "failed to check setup status"
+- ensure backend api is running on `http://localhost:3001`
+- check `vite_api_url` in `.env.local`
 
----
+### "connection refused" to supabase
+- verify supabase is running (`docker ps`)
+- check `vite_supabase_url` points to correct instance
+- see [database setup guide](docs/DATABASE_SETUP.md)
 
-## 📖 Learn More
+### "not authenticated" after setup
+- check localstorage has `sb_access_token`
+- reload page to refresh token
+- verify backend validates token correctly
 
-- **Mode Architecture**: Read [docs/PERSONAL_MODE.md](docs/PERSONAL_MODE.md)
-- **System Design**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Database Setup**: Follow [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md)
-- **Full Details**: Check [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
+## dependencies
 
----
+### core
+- **react** - ui framework
+- **react-router-dom** - client-side routing
+- **@supabase/supabase-js** - database & auth
+- **axios** - http client
+- **sonner** - toast notifications
 
-## 🐛 Troubleshooting
+### development
+- **typescript** - type safety
+- **tailwindcss** - styling
+- **vite** - build tool
+- **eslint** - linting
 
-### "Failed to check setup status"
-- Ensure backend API is running on `http://localhost:3001`
-- Check `VITE_API_URL` in `.env.local`
+for full list, see [package.json](package.json).
 
-### "Connection refused" to Supabase
-- Verify Supabase is running (`docker ps`)
-- Check `VITE_SUPABASE_URL` points to correct instance
-- See [Database Setup Guide](docs/DATABASE_SETUP.md)
+## contributing
 
-### "Not authenticated" after setup
-- Check localStorage has `sb_access_token`
-- Reload page to refresh token
-- Verify backend validates token correctly
+see [contributing](../../CONTRIBUTING.md) in repository root.
 
----
+## license
 
-## 📦 Dependencies
+mit - see [license](../../LICENSE)
 
-### Core
-- **react** - UI framework
-- **react-router-dom** - Client-side routing
-- **@supabase/supabase-js** - Database & auth
-- **axios** - HTTP client
-- **sonner** - Toast notifications
+## getting started
 
-### Development
-- **typescript** - Type safety
-- **tailwindcss** - Styling
-- **vite** - Build tool
-- **eslint** - Linting
+• **read**: [readme-docker-panel.md](README-DOCKER-PANEL.md) (getting started guide)
+• **setup**: follow [docs/database_setup.md](docs/DATABASE_SETUP.md)
+• **run**: `npm run dev`
+• **visit**: http://localhost:5173
+• **explore**: create your first docker app!
 
-For full list, see [package.json](package.json).
+## support
 
----
+- [full documentation](docs/)
+- [github issues](https://github.com/DaaanielTV/infra-pilot/issues)
+- [discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
 
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) in repository root.
-
----
-
-## 📄 License
-
-MIT - See [LICENSE](../../LICENSE)
-
----
-
-## 🎉 Getting Started
-
-1. **Read**: [README-DOCKER-PANEL.md](README-DOCKER-PANEL.md) (Getting Started Guide)
-2. **Setup**: Follow [docs/DATABASE_SETUP.md](docs/DATABASE_SETUP.md)
-3. **Run**: `npm run dev`
-4. **Visit**: http://localhost:5173
-5. **Explore**: Create your first Docker app!
-
----
-
-## 📞 Support
-
-- 📖 [Full Documentation](docs/)
-- 🐛 [GitHub Issues](https://github.com/DaaanielTV/infra-pilot/issues)
-- 💬 [Discussions](https://github.com/DaaanielTV/infra-pilot/discussions)
-
----
-
-**Built with ❤️ for self-hosters and developers**
+built for self-hosters and developers

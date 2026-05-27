@@ -1,30 +1,26 @@
-# AI Threat Detection
+# ai threat detection
 
-> **Feature ID:** 4  
-> **Category:** AI & Intelligence  
-> **Primary Service:** Orchestrator Agent  
-> **Effort Estimate:** Large (7-10 PT)  
-> **Status:** Planned
+feature id: 4
+category: ai & intelligence
+primary service: orchestrator agent
+effort estimate: large (7-10 pt)
+status: planned
 
----
+## overview
 
-## Overview
+behavioral analysis of container processes, ssh login patterns, and network traffic to detect security threats in real time. the system establishes per-server and per-container behavioral baselines, then flags deviations that may indicate compromise, intrusion, or policy violations.
 
-Behavioral analysis of container processes, SSH login patterns, and network traffic to detect security threats in real time. The system establishes per-server and per-container behavioral baselines, then flags deviations that may indicate compromise, intrusion, or policy violations.
+when a threat is detected, a security incident is raised with supporting evidence, severity classification, and recommended remediation steps.
 
-When a threat is detected, a security incident is raised with supporting evidence, severity classification, and recommended remediation steps.
+### goals
 
-### Goals
+- detect compromised containers through abnormal process execution
+- identify brute-force ssh attacks and unusual login patterns
+- flag anomalous network connections (unexpected egress, port scanning)
+- raise structured security incidents with forensic evidence
+- integrate with existing alerting and incident management workflows
 
-- Detect compromised containers through abnormal process execution
-- Identify brute-force SSH attacks and unusual login patterns
-- Flag anomalous network connections (unexpected egress, port scanning)
-- Raise structured security incidents with forensic evidence
-- Integrate with existing alerting and incident management workflows
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -79,21 +75,19 @@ When a threat is detected, a security incident is raised with supporting evidenc
 └──────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: data collection (2-3 pt)
 
-### Phase 1: Data Collection (2-3 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Deploy auditd rules for process monitoring | `audit.rules` capturing execve, fork, file modifications |
-| 1.2 | SSH auth log collection agent | Tail `auth.log`, parse structured events |
-| 1.3 | Network flow data collection | eBPF-based per-container traffic monitor or ntopng |
-| 1.4 | Event normalization pipeline | Unified schema: `{event_type, timestamp, source, data}` |
-| 1.5 | Event buffer & persistence | Kafka topic + TimescaleDB for time-series analysis |
+| 1.1 | deploy auditd rules for process monitoring | `audit.rules` capturing execve, fork, file modifications |
+| 1.2 | ssh auth log collection agent | tail `auth.log`, parse structured events |
+| 1.3 | network flow data collection | ebpf-based per-container traffic monitor or ntopng |
+| 1.4 | event normalization pipeline | unified schema: `{event_type, timestamp, source, data}` |
+| 1.5 | event buffer & persistence | kafka topic + timescaledb for time-series analysis |
 
-**Audit rules:**
+**audit rules:**
 
 ```bash
 # /etc/audit/rules.d/threat-detection.rules
@@ -111,7 +105,7 @@ When a threat is detected, a security incident is raised with supporting evidenc
 -w /var/run/docker.sock -p rw -k docker_sock
 ```
 
-**Normalized event schema:**
+**normalized event schema:**
 
 ```yaml
 # config/event_schema.yaml
@@ -127,16 +121,16 @@ events:
     source: ebpf
 ```
 
-### Phase 2: Behavioral Baselines (2 PT)
+### phase 2: behavioral baselines (2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Process baseline per container image | Allow-listed binaries, typical command-line patterns |
-| 2.2 | SSH login baseline per host | Expected users, source IP ranges, login frequency |
-| 2.3 | Network traffic baseline per container | Expected egress destinations, port usage, protocol mix |
-| 2.4 | Baseline persistence & versioning | Baseline snapshots, automatic weekly recalibration |
+| 2.1 | process baseline per container image | allow-listed binaries, typical command-line patterns |
+| 2.2 | ssh login baseline per host | expected users, source ip ranges, login frequency |
+| 2.3 | network traffic baseline per container | expected egress destinations, port usage, protocol mix |
+| 2.4 | baseline persistence & versioning | baseline snapshots, automatic weekly recalibration |
 
-**Baseline model:**
+**baseline model:**
 
 ```python
 # pseudocode: behavioral_baseline.py
@@ -168,18 +162,18 @@ class ProcessBaseline:
         return AnomalyScore(score=min(score, 1.0), reasons=self._reasons)
 ```
 
-### Phase 3: Anomaly Scoring & Incident Creation (2-3 PT)
+### phase 3: anomaly scoring & incident creation (2-3 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Process anomaly scorer | Compares events against process baseline |
-| 3.2 | Auth anomaly scorer | Geo-IP mismatch, impossible travel, credential stuffing |
-| 3.3 | Network anomaly scorer | Unexpected egress, beaconing detection, port scan detection |
-| 3.4 | Aggregated threat scoring | Weighted combination of sub-scores |
-| 3.5 | Incident creation & evidence packaging | Structured incident with timeline, affected resources, indicators of compromise |
-| 3.6 | Remediation suggestion engine | Lookup table + ML classification for recommended actions |
+| 3.1 | process anomaly scorer | compares events against process baseline |
+| 3.2 | auth anomaly scorer | geo-ip mismatch, impossible travel, credential stuffing |
+| 3.3 | network anomaly scorer | unexpected egress, beaconing detection, port scan detection |
+| 3.4 | aggregated threat scoring | weighted combination of sub-scores |
+| 3.5 | incident creation & evidence packaging | structured incident with timeline, affected resources, indicators of compromise |
+| 3.6 | remediation suggestion engine | lookup table + ml classification for recommended actions |
 
-**Scoring config:**
+**scoring config:**
 
 ```yaml
 # config/threat_scoring.yaml
@@ -219,7 +213,7 @@ scoring:
     data_exfil_bytes_per_s: 104857600  # 100 MB/s
 ```
 
-**Incident structure:**
+**incident structure:**
 
 ```json
 {
@@ -252,22 +246,20 @@ scoring:
 }
 ```
 
-### Phase 4: Response & Remediation (1-2 PT)
+### phase 4: response & remediation (1-2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 4.1 | Automated containment actions | Network isolation, container stop, user lockout |
-| 4.2 | Incident lifecycle management | Status transitions: `open → investigating → contained → resolved` |
-| 4.3 | Forensics evidence packaging | Log export, process tree, network pcap |
-| 4.4 | Integration with SIEM / notification channels | Splunk, ELK, Discord, Slack |
+| 4.1 | automated containment actions | network isolation, container stop, user lockout |
+| 4.2 | incident lifecycle management | status transitions: `open → investigating → contained → resolved` |
+| 4.3 | forensics evidence packaging | log export, process tree, network pcap |
+| 4.4 | integration with siem / notification channels | splunk, elk, discord, slack |
 
----
+## api design
 
-## API Design
+### rest api
 
-### REST API
-
-#### List Incidents
+#### list incidents
 
 ```
 GET /api/v1/incidents
@@ -280,7 +272,7 @@ GET /api/v1/incidents
   &limit=50
 ```
 
-Response:
+response:
 ```json
 {
   "incidents": [
@@ -303,21 +295,21 @@ Response:
 }
 ```
 
-#### Get Incident Details
+#### get incident details
 
 ```
 GET /api/v1/incidents/{id}
 ```
 
-Response: (full incident JSON as shown above)
+response: (full incident json as shown above)
 
-#### Update Incident Status
+#### update incident status
 
 ```
 PATCH /api/v1/incidents/{id}
 ```
 
-Request:
+request:
 ```json
 {
   "status": "investigating",
@@ -326,13 +318,13 @@ Request:
 }
 ```
 
-#### Trigger Containment Action
+#### trigger containment action
 
 ```
 POST /api/v1/incidents/{id}/contain
 ```
 
-Request:
+request:
 ```json
 {
   "action": "isolate_container",
@@ -341,7 +333,7 @@ Request:
 }
 ```
 
-Response:
+response:
 ```json
 {
   "action_id": "act-789",
@@ -350,7 +342,7 @@ Response:
 }
 ```
 
-#### Get Baseline Status
+#### get baseline status
 
 ```
 GET /api/v1/threat/baselines
@@ -358,7 +350,7 @@ GET /api/v1/threat/baselines
   &type=process,network,auth
 ```
 
-Response:
+response:
 ```json
 {
   "baselines": [
@@ -374,13 +366,13 @@ Response:
 }
 ```
 
-#### Acknowledge Baseline Drift
+#### acknowledge baseline drift
 
 ```
 POST /api/v1/threat/baselines/recalibrate
 ```
 
-Request:
+request:
 ```json
 {
   "resource": "container:web-01",
@@ -389,9 +381,7 @@ Request:
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/threat_detection.py
@@ -467,7 +457,7 @@ class ContainmentAction:
     completed_at: datetime | None
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- Security events (raw, short retention)
@@ -531,20 +521,16 @@ CREATE TABLE containment_actions (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Orchestrator Agent** | Data collection (auditd, auth logs, network flows), behavioral baselines, anomaly scoring, incident creation, containment actions |
-| **Integration Service** | Notification dispatch (Discord/Slack), SIEM forwarding, incident management workflow |
-| **Management Panel** | Incident dashboard, timeline view, evidence browser, containment action UI, baseline management |
-| **Discord / Slack** | Critical incident alerts with action buttons (acknowledge, contain, dismiss) |
+| orchestrator agent | data collection (auditd, auth logs, network flows), behavioral baselines, anomaly scoring, incident creation, containment actions |
+| integration service | notification dispatch (discord/slack), siem forwarding, incident management workflow |
+| management panel | incident dashboard, timeline view, evidence browser, containment action ui, baseline management |
+| discord / slack | critical incident alerts with action buttons (acknowledge, contain, dismiss) |
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/threat_detection.yaml
@@ -585,54 +571,48 @@ integrations:
     channel: "#security"
 ```
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Auditd rule deployment | 0.5 | Node access |
-| 1.2 | SSH log collection agent | 0.5 | Log pipeline |
-| 1.3 | Network flow data collection | 1 | eBPF / kernel support |
-| 1.4 | Event normalization pipeline | 0.5 | Event schema |
-| 1.5 | Event buffer & persistence | 0.5 | Kafka + TimescaleDB |
-| 2.1 | Process baseline engine | 1 | Normalized events |
-| 2.2 | SSH baseline engine | 0.5 | Auth events |
-| 2.3 | Network baseline engine | 0.5 | Network events |
-| 2.4 | Baseline persistence | 0.5 | DB schema |
-| 3.1 | Process anomaly scorer | 1 | Process baseline |
-| 3.2 | Auth anomaly scorer | 0.5 | SSH baseline |
-| 3.3 | Network anomaly scorer | 0.5 | Network baseline |
-| 3.4 | Aggregated threat scoring | 0.5 | All scorers |
-| 3.5 | Incident creation | 1 | Aggregated score |
-| 3.6 | Remediation suggestions | 0.5 | Incident data |
-| 4.1 | Containment actions | 0.5 | Cloud/Docker API |
-| 4.2 | Incident lifecycle | 0.25 | State machine |
-| 4.3 | Forensics packaging | 0.5 | Evidence store |
-| 4.4 | SIEM/notification integration | 0.5 | Integration service |
-| | **Total** | **10.75** | |
+| 1.1 | auditd rule deployment | 0.5 | node access |
+| 1.2 | ssh log collection agent | 0.5 | log pipeline |
+| 1.3 | network flow data collection | 1 | ebpf / kernel support |
+| 1.4 | event normalization pipeline | 0.5 | event schema |
+| 1.5 | event buffer & persistence | 0.5 | kafka + timescaledb |
+| 2.1 | process baseline engine | 1 | normalized events |
+| 2.2 | ssh baseline engine | 0.5 | auth events |
+| 2.3 | network baseline engine | 0.5 | network events |
+| 2.4 | baseline persistence | 0.5 | db schema |
+| 3.1 | process anomaly scorer | 1 | process baseline |
+| 3.2 | auth anomaly scorer | 0.5 | ssh baseline |
+| 3.3 | network anomaly scorer | 0.5 | network baseline |
+| 3.4 | aggregated threat scoring | 0.5 | all scorers |
+| 3.5 | incident creation | 1 | aggregated score |
+| 3.6 | remediation suggestions | 0.5 | incident data |
+| 4.1 | containment actions | 0.5 | cloud/docker api |
+| 4.2 | incident lifecycle | 0.25 | state machine |
+| 4.3 | forensics packaging | 0.5 | evidence store |
+| 4.4 | siem/notification integration | 0.5 | integration service |
+| | total | 10.75 | |
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| False positives cause alert fatigue | Ignored real threats | Baseline calibration, configurable thresholds, feedback loop for tuning |
-| eBPF/kernel compatibility | Missing network events | Fallback to ntopng or tcpdump-based collection |
-| Baseline drift after updates | Incorrect anomaly flags | Auto-recalibration after deployments, grace period post-update |
-| Performance overhead of monitoring | CPU/memory cost | Sampling for high-traffic hosts, configurable event rate limits |
-| Containment action causes outage | Service disruption | Require human approval for auto-contain, pre-check dependencies |
+| false positives cause alert fatigue | ignored real threats | baseline calibration, configurable thresholds, feedback loop for tuning |
+| ebpf/kernel compatibility | missing network events | fallback to ntopng or tcpdump-based collection |
+| baseline drift after updates | incorrect anomaly flags | auto-recalibration after deployments, grace period post-update |
+| performance overhead of monitoring | cpu/memory cost | sampling for high-traffic hosts, configurable event rate limits |
+| containment action causes outage | service disruption | require human approval for auto-contain, pre-check dependencies |
 
----
+## metrics & kpis
 
-## Metrics & KPIs
-
-| Metric | Target | Measurement |
+| metric | target | measurement |
 |--------|--------|-------------|
-| Mean time to detect (MTTD) | < 60s | Time from event to incident creation |
-| Mean time to contain (MTTC) | < 5min | Time from incident to containment action |
-| True positive rate | > 90% | Confirmed incidents / total incidents |
-| False positive rate | < 10% | False incidents / total incidents |
-| Baseline recalibration time | < 30min | Full pipeline time for a single resource |
-| Containment action success rate | > 99% | Successful actions / total actions executed |
+| mean time to detect (mttd) | < 60s | time from event to incident creation |
+| mean time to contain (mttc) | < 5min | time from incident to containment action |
+| true positive rate | > 90% | confirmed incidents / total incidents |
+| false positive rate | < 10% | false incidents / total incidents |
+| baseline recalibration time | < 30min | full pipeline time for a single resource |
+| containment action success rate | > 99% | successful actions / total actions executed |

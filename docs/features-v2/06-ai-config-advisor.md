@@ -1,37 +1,33 @@
-# Feature 6: AI Config Advisor
+# ai config advisor
 
-| Field | Value |
+| field | value |
 |-------|-------|
-| **ID** | F-006 |
-| **Name** | AI Config Advisor |
-| **Category** | AI & Intelligence |
-| **Primary Service** | Management Panel |
-| **Effort** | Medium (4-6 PT) |
-| **Dependencies** | Feature 13 (Webhook Event Bus), Feature 14 (API Gateway) |
-| **Phase** | Phase 1 |
+| id | f-006 |
+| name | ai config advisor |
+| category | ai & intelligence |
+| primary service | management panel |
+| effort | medium (4-6 pt) |
+| dependencies | feature 13 (webhook event bus), feature 14 (api gateway) |
+| phase | phase 1 |
 
----
+## overview
 
-## Overview
+the ai config advisor analyzes server configuration files (jvm flags, yaml, properties, toml, json) against a comprehensive database of best practices. it identifies suboptimal settings, security risks, and performance bottlenecks, then presents clear recommendations with a one-click apply mechanism including diff preview.
 
-The AI Config Advisor analyzes server configuration files (JVM flags, YAML, properties, TOML, JSON) against a comprehensive database of best practices. It identifies suboptimal settings, security risks, and performance bottlenecks, then presents clear recommendations with a one-click apply mechanism including diff preview.
+### goals
 
-### Goals
+- reduce server misconfiguration incidents by 60%
+- surface 10+ actionable recommendations per average server scan
+- enable one-click safe application of config changes
+- provide clear before/after diff for every suggested change
 
-- Reduce server misconfiguration incidents by 60%
-- Surface 10+ actionable recommendations per average server scan
-- Enable one-click safe application of config changes
-- Provide clear before/after diff for every suggested change
+### non-goals
 
-### Non-Goals
+- not a configuration management system (no continuous sync)
+- does not modify configs without explicit user approval
+- not responsible for runtime config reload -- applies changes to files only
 
-- Not a configuration management system (no continuous sync)
-- Does not modify configs without explicit user approval
-- Not responsible for runtime config reload — applies changes to files only
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -71,7 +67,7 @@ The AI Config Advisor analyzes server configuration files (JVM flags, YAML, prop
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
+### data flow
 
 ```
 User clicks "Scan" ──► Config Fetcher retrieves files
@@ -96,43 +92,41 @@ User clicks "Scan" ──► Config Fetcher retrieves files
                     Apply result notification
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: core engine (week 1-2, 2 pt)
 
-### Phase 1: Core Engine (Week 1-2, 2 PT)
-
-1. **Config Parser Library** — Build parsers for:
-   - JVM flags (`-X`, `-XX:` notation)
-   - YAML/TOML/JSON (using existing libraries)
-   - Java `.properties` files
+1. **config parser library** -- build parsers for:
+   - jvm flags (`-x`, `-xx:` notation)
+   - yaml/toml/json (using existing libraries)
+   - java `.properties` files
    - `.env` files
-   - Generic key=value formats
-   - XML (server.xml, web.xml)
+   - generic key=value formats
+   - xml (server.xml, web.xml)
 
-2. **Config Fetcher Module**
-   - SSH-based file retrieval (agentless)
-   - API-based fetch for agent-managed servers
-   - Direct file upload from Panel
-   - Git repository source support
+2. **config fetcher module**
+   - ssh-based file retrieval (agentless)
+   - api-based fetch for agent-managed servers
+   - direct file upload from panel
+   - git repository source support
 
-3. **Data Model** — Implement `ConfigurationFile`, `ConfigEntry`, `Rule`, `RuleResult` models (see below)
+3. **data model** -- implement `configurationfile`, `configentry`, `rule`, `routeresult` models (see below)
 
-### Phase 2: Rule Engine & Database (Week 2-3, 1.5 PT)
+### phase 2: rule engine & database (week 2-3, 1.5 pt)
 
-1. **Rule Engine** — Build with:
-   - Pattern matching (regex, JSONPath, JMESPath, XPath)
-   - Value comparison (range, set membership, semantic version)
-   - Cross-file reference checks
-   - Context-aware rules (e.g., "if X is set, Y should also be set")
+1. **rule engine** -- build with:
+   - pattern matching (regex, jsonpath, jmespath, xpath)
+   - value comparison (range, set membership, semantic version)
+   - cross-file reference checks
+   - context-aware rules (e.g., "if x is set, y should also be set")
 
-2. **Best Practice Database**
+2. **best practice database**
    - 50+ curated v1 rules
-   - Versioned rule schema with semantic versioning
-   - Community contribution pipeline
-   - Auto-update mechanism
+   - versioned rule schema with semantic versioning
+   - community contribution pipeline
+   - auto-update mechanism
 
-3. **Rule Categories**
+3. **rule categories**
 
 | Category | Example Rules | Source |
 |----------|--------------|--------|
@@ -143,33 +137,31 @@ User clicks "Scan" ──► Config Fetcher retrieves files
 | Performance | Connection pool size ≤ (core_count * 2) + 1 | HikariCP |
 | Minecraft | `view-distance` ≤ 10 for <4 GB RAM, simulation-distance ≤ view-distance | PaperMC |
 
-### Phase 3: Apply Engine & UI (Week 3-4, 2.5 PT)
+### phase 3: apply engine & ui (week 3-4, 2.5 pt)
 
-1. **Apply Engine**
-   - Automatic file backup before any modification
-   - Atomic file patching with verification
-   - Rollback mechanism (undo last apply)
-   - Dry-run mode (no changes, just report what would change)
+1. **apply engine**
+   - automatic file backup before any modification
+   - atomic file patching with verification
+   - rollback mechanism (undo last apply)
+   - dry-run mode (no changes, just report what would change)
 
-2. **Diff Viewer** — Side-by-side diff with:
-   - Syntax-highlighted before/after
-   - Line-level change highlighting
-   - Accept/reject per change
-   - Comment annotation
+2. **diff viewer** -- side-by-side diff with:
+   - syntax-highlighted before/after
+   - line-level change highlighting
+   - accept/reject per change
+   - comment annotation
 
-3. **Dashboard Integration**
-   - Scan history with trend tracking
-   - Configuration health score (0-100)
-   - Exportable reports (PDF, HTML)
-   - Scheduled recurring scans
+3. **dashboard integration**
+   - scan history with trend tracking
+   - configuration health score (0-100)
+   - exportable reports (pdf, html)
+   - scheduled recurring scans
 
----
+## api design
 
-## API Design
+### endpoints
 
-### Endpoints
-
-All endpoints are prefixed with `/api/v2/config-advisor`.
+all endpoints are prefixed with `/api/v2/config-advisor`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -184,7 +176,7 @@ All endpoints are prefixed with `/api/v2/config-advisor`.
 | `GET`  | `/history` | Get scan history for a server |
 | `GET`  | `/health-score` | Get configuration health score |
 
-### Request/Response Examples
+### request/response examples
 
 **POST /api/v2/config-advisor/scan**
 
@@ -215,7 +207,7 @@ All endpoints are prefixed with `/api/v2/config-advisor`.
 }
 ```
 
-**Response**
+**response**
 
 ```json
 {
@@ -273,11 +265,9 @@ All endpoints are prefixed with `/api/v2/config-advisor`.
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Core Entities
+### core entities
 
 ```yaml
 ConfigurationFile:
@@ -293,7 +283,7 @@ ConfigurationFile:
 ConfigEntry:
   id: string (UUID)
   file_id: string
-  key: string          # e.g. "java.options.Xmx"
+  key: string
   value: string
   line_number: integer
   line_content: string
@@ -303,8 +293,8 @@ ConfigEntry:
 Rule:
   id: string (UUID)
   name: string
-  rule_id: string      # machine-readable, e.g. "jvm-xmx-ratio"
-  version: string      # semver
+  rule_id: string
+  version: string
   category: string
   severity: "critical" | "warning" | "info" | "style"
   scope: "single_file" | "cross_file" | "cross_server"
@@ -312,21 +302,21 @@ Rule:
   remediation: Remediation
   metadata:
     author: string
-    source: string     # URL or reference
+    source: string
     tags: string[]
     created: datetime
     updated: datetime
 
 Condition:
   type: "pattern" | "value_range" | "value_set" | "exists" | "not_exists" | "cross_reference"
-  target: string       # JSONPath/XPATH/key expression
-  operator: string     # "matches", "eq", "lt", "gt", "in", "not_in", etc.
+  target: string
+  operator: string
   value: any
 
 Remediation:
   suggested_value: string | null
-  template: string     # template string with placeholders
-  warning: string      # optional warning before applying
+  template: string
+  warning: string
   restart_required: boolean
 
 RuleResult:
@@ -367,11 +357,9 @@ Scan:
   health_score: integer
 ```
 
----
+## rule examples
 
-## Rule Examples
-
-### JVM Memory Rule (YAML definition)
+### jvm memory rule (yaml definition)
 
 ```yaml
 rule_id: jvm-xmx-ratio
@@ -398,7 +386,7 @@ metadata:
   tags: ["jvm", "memory", "heap"]
 ```
 
-### Security: Hardcoded Credential Detection
+### security: hardcoded credential detection
 
 ```yaml
 rule_id: sec-hardcoded-credential
@@ -421,20 +409,16 @@ metadata:
   tags: ["security", "credentials", "secrets"]
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Service | Responsibility |
 |---------|---------------|
-| **Management Panel** | Primary: Config fetch orchestration, rule engine, apply engine, UI, diff viewer, scan history |
-| **Integration Service** | Secondary: Webhook notifications on scan complete, export report delivery |
-| **Orchestrator Agent** | Secondary: Agent-based config collection for managed servers |
-| **Service Core** | None directly; authentication/authorization shared |
+| management panel | primary: config fetch orchestration, rule engine, apply engine, ui, diff viewer, scan history |
+| integration service | secondary: webhook notifications on scan complete, export report delivery |
+| orchestrator agent | secondary: agent-based config collection for managed servers |
+| service core | none directly; authentication/authorization shared |
 
----
-
-## Effort Estimate
+## effort estimate
 
 | Phase | Task | PT | Owner |
 |-------|------|----|-------|
@@ -448,27 +432,23 @@ metadata:
 | P3 | Dashboard integration | 0.5 | Frontend |
 | P3 | Scheduled scans | 0.25 | Backend |
 | P3 | Export reports | 0.25 | Backend/Frontend |
-| **Total** | | **6.0 PT** | |
+| total | | 6.0 pt | |
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| SSH connection failures for config fetch | Medium | Fallback to manual upload; retry with backoff |
-| False positives from rule engine | High | Allow per-rule silencing; user feedback loop to improve rules |
-| Destructive apply on critical config | High | Mandatory backup before apply; preview diff; rollback always available |
-| Rule database becomes stale | Medium | Auto-update mechanism; deprecate outdated rules; community contributions |
-| Cross-file rules are complex | Medium | Ship v1 with single-file rules only; cross-file in v2 |
+| SSH connection failures for config fetch | medium | fallback to manual upload; retry with backoff |
+| false positives from rule engine | high | allow per-rule silencing; user feedback loop to improve rules |
+| destructive apply on critical config | high | mandatory backup before apply; preview diff; rollback always available |
+| rule database becomes stale | medium | auto-update mechanism; deprecate outdated rules; community contributions |
+| cross-file rules are complex | medium | ship v1 with single-file rules only; cross-file in v2 |
 
----
+## future enhancements
 
-## Future Enhancements
-
-- **v2.0**: Cross-file and cross-server rule analysis
-- **v2.1**: ML-driven custom rule suggestions based on past changes
-- **v2.2**: Config drift detection (config vs. runtime state)
-- **v2.3**: Team-shared rule sets and compliance baselines
-- **v2.4**: Ansible/Puppet/Chef manifest analysis
-- **v2.5**: Auto-remediation workflows with approval gates
+- v2.0: cross-file and cross-server rule analysis
+- v2.1: ml-driven custom rule suggestions based on past changes
+- v2.2: config drift detection (config vs. runtime state)
+- v2.3: team-shared rule sets and compliance baselines
+- v2.4: ansible/puppet/chef manifest analysis
+- v2.5: auto-remediation workflows with approval gates

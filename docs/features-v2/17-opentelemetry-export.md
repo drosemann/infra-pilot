@@ -1,38 +1,34 @@
-# Feature 17: OpenTelemetry Export
+# feature 17: opentelemetry export
 
-- **Feature #:** 17
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Integration Service
-- **Supporting Services:** Orchestrator Agent, Management Panel, Discord Service, Service Core
-- **Effort:** Medium (4-6 PT)
-- **Dependencies:** Feature #14 (API Gateway & Rate Limiting)
+- feature #: 17
+- category: developer ecosystem & api
+- primary service: integration service
+- supporting services: orchestrator agent, management panel, discord service, service core
+- effort: medium (4-6 pt)
+- dependencies: feature #14 (api gateway & rate limiting)
 
----
+## 1. overview
 
-## 1. Overview
+opentelemetry export enables infra pilot to emit traces, metrics, and logs via the opentelemetry protocol (otlp) to any otel-compatible backend (grafana tempo, jaeger, signoz, datadog, new relic, honeycomb, etc.). distributed trace context propagates across all services (panel → integration service → orchestrator agent → service core), enabling end-to-end request visibility.
 
-OpenTelemetry Export enables Infra Pilot to emit traces, metrics, and logs via the OpenTelemetry Protocol (OTLP) to any OTel-compatible backend (Grafana Tempo, Jaeger, SigNoz, Datadog, New Relic, Honeycomb, etc.). Distributed trace context propagates across all services (Panel → Integration Service → Orchestrator Agent → Service Core), enabling end-to-end request visibility.
+### goals
 
-### Goals
+- export traces, metrics, and logs via otlp (grpc and http/protobuf)
+- distributed trace propagation across all microservices
+- automatic instrumentation of http handlers, database queries, and message queues
+- configurable sampling (rate-based, head-based, tail-based)
+- correlation between traces, metrics, and logs via consistent span/trace ids
+- minimal performance overhead (~1-3% latency increase at 100% sampling)
 
-- Export traces, metrics, and logs via OTLP (gRPC and HTTP/protobuf)
-- Distributed trace propagation across all microservices
-- Automatic instrumentation of HTTP handlers, database queries, and message queues
-- Configurable sampling (rate-based, head-based, tail-based)
-- Correlation between traces, metrics, and logs via consistent span/trace IDs
-- Minimal performance overhead (~1-3% latency increase at 100% sampling)
+### non-goals
 
-### Non-Goals
+- running an otel collector as part of infra pilot (users bring their own backend/collector)
+- replacing existing prometheus metrics endpoint (otel supplements, does not replace)
+- custom otel instrumentation sdk development — use standard sdks
 
-- Running an OTel Collector as part of Infra Pilot (users bring their own backend/collector)
-- Replacing existing Prometheus metrics endpoint (OTel supplements, does not replace)
-- Custom OTel instrumentation SDK development — use standard SDKs
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### High-Level Component Diagram
+### high-level component diagram
 
 ```
 ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
@@ -63,7 +59,7 @@ OpenTelemetry Export enables Infra Pilot to emit traces, metrics, and logs via t
                   └─────────────────────────────┘
 ```
 
-### Trace Propagation Flow
+### trace propagation flow
 
 ```
 Browser / External Request
@@ -94,9 +90,9 @@ Browser / External Request
 └──────────────────┘
 ```
 
-### Span Attributes (Enrichment)
+### span attributes (enrichment)
 
-Every span carries standardized attributes for correlation:
+every span carries standardized attributes for correlation:
 
 ```json
 {
@@ -129,11 +125,9 @@ Every span carries standardized attributes for correlation:
 }
 ```
 
----
+## 3. data model
 
-## 3. Data Model
-
-### Configuration
+### configuration
 
 ```json
 {
@@ -181,24 +175,24 @@ Every span carries standardized attributes for correlation:
 }
 ```
 
-### Metrics Exported
+### metrics exported
 
-| Metric Name | Type | Description | Unit |
-|-------------|------|-------------|------|
-| `infrapilot.server.provisioning.duration` | Histogram | Time to provision a server | ms |
-| `infrapilot.server.backup.duration` | Histogram | Time to complete backup | ms |
-| `infrapilot.server.backup.size` | Histogram | Backup size | bytes |
-| `infrapilot.api.request.duration` | Histogram | API request latency | ms |
-| `infrapilot.api.request.count` | Counter | Total API requests | count |
-| `infrapilot.api.request.errors` | Counter | API request errors | count |
-| `infrapilot.discord.command.count` | Counter | Discord command invocations | count |
-| `infrapilot.db.connection.pool.size` | Gauge | Active DB connections | count |
-| `infrapilot.db.query.duration` | Histogram | Database query latency | ms |
-| `infrapilot.queue.depth` | Gauge | Message queue depth | count |
+| metric name | type | description | unit |
+|---|---|---|---|
+| `infrapilot.server.provisioning.duration` | histogram | time to provision a server | ms |
+| `infrapilot.server.backup.duration` | histogram | time to complete backup | ms |
+| `infrapilot.server.backup.size` | histogram | backup size | bytes |
+| `infrapilot.api.request.duration` | histogram | api request latency | ms |
+| `infrapilot.api.request.count` | counter | total api requests | count |
+| `infrapilot.api.request.errors` | counter | api request errors | count |
+| `infrapilot.discord.command.count` | counter | discord command invocations | count |
+| `infrapilot.db.connection.pool.size` | gauge | active db connections | count |
+| `infrapilot.db.query.duration` | histogram | database query latency | ms |
+| `infrapilot.queue.depth` | gauge | message queue depth | count |
 
-### Log Correlation
+### log correlation
 
-Structured logs include trace context for correlation:
+structured logs include trace context for correlation:
 
 ```json
 {
@@ -217,74 +211,70 @@ Structured logs include trace context for correlation:
 }
 ```
 
----
+## 4. implementation plan
 
-## 4. Implementation Plan
+### phase 1: sdk integration & auto-instrumentation (weeks 1-2, 2.5 pt)
 
-### Phase 1: SDK Integration & Auto-Instrumentation (Weeks 1-2, 2.5 PT)
+| task | service | description |
+|---|---|---|
+| 1.1 | integration service | add otel node.js sdk + auto-instrumentation packages |
+| 1.2 | orchestrator agent | add otel python sdk + auto-instrumentation packages |
+| 1.3 | discord service | add otel node.js sdk + auto-instrumentation |
+| 1.4 | service core | add otel java sdk + auto-instrumentation (openliberty/quarkus) |
+| 1.5 | management panel | add otel web sdk (web vitals, fetch instrumentation) |
+| 1.6 | all | configure otlp exporter, batching, compression, tls |
 
-| Task | Service | Description |
-|------|---------|-------------|
-| 1.1 | Integration Service | Add OTel Node.js SDK + auto-instrumentation packages |
-| 1.2 | Orchestrator Agent | Add OTel Python SDK + auto-instrumentation packages |
-| 1.3 | Discord Service | Add OTel Node.js SDK + auto-instrumentation |
-| 1.4 | Service Core | Add OTel Java SDK + auto-instrumentation (OpenLiberty/Quarkus) |
-| 1.5 | Management Panel | Add OTel Web SDK (Web Vitals, fetch instrumentation) |
-| 1.6 | All | Configure OTLP exporter, batching, compression, TLS |
+deliverables: all services instrumented and exporting traces to configurable otlp endpoint.
 
-**Deliverables:** All services instrumented and exporting traces to configurable OTLP endpoint.
+### phase 2: trace propagation (week 2-3, 1 pt)
 
-### Phase 2: Trace Propagation (Week 2-3, 1 PT)
+| task | service | description |
+|---|---|---|
+| 2.1 | all | ensure w3c tracecontext (traceparent/tracestate) propagation |
+| 2.2 | integration service | add propagation through grpc metadata |
+| 2.3 | orchestrator agent | add propagation through aiohttp client requests |
+| 2.4 | management panel | add propagation through fetch/axios interceptors |
+| 2.5 | all | add baggage propagation for tenant/user context |
 
-| Task | Service | Description |
-|------|---------|-------------|
-| 2.1 | All | Ensure W3C TraceContext (traceparent/tracestate) propagation |
-| 2.2 | Integration Service | Add propagation through gRPC metadata |
-| 2.3 | Orchestrator Agent | Add propagation through aiohttp client requests |
-| 2.4 | Management Panel | Add propagation through fetch/axios interceptors |
-| 2.5 | All | Add baggage propagation for tenant/user context |
+deliverables: end-to-end distributed traces across all service boundaries.
 
-**Deliverables:** End-to-end distributed traces across all service boundaries.
+### phase 3: metrics export (week 3, 1 pt)
 
-### Phase 3: Metrics Export (Week 3, 1 PT)
+| task | service | description |
+|---|---|---|
+| 3.1 | integration service | define & register otel metrics (histograms, counters, gauges) |
+| 3.2 | orchestrator agent | define & register otel metrics for provisioning operations |
+| 3.3 | service core | define & register otel metrics for game server lifecycle |
+| 3.4 | integration service | add exemplar support (trace-to-metrics correlation) |
+| 3.5 | all | configure delta vs cumulative temporality |
 
-| Task | Service | Description |
-|------|---------|-------------|
-| 3.1 | Integration Service | Define & register OTel metrics (histograms, counters, gauges) |
-| 3.2 | Orchestrator Agent | Define & register OTel metrics for provisioning operations |
-| 3.3 | Service Core | Define & register OTel metrics for game server lifecycle |
-| 3.4 | Integration Service | Add exemplar support (trace-to-metrics correlation) |
-| 3.5 | All | Configure delta vs cumulative temporality |
+deliverables: custom metrics exported via otlp with exemplar support.
 
-**Deliverables:** Custom metrics exported via OTLP with exemplar support.
+### phase 4: log correlation (week 4, 1 pt)
 
-### Phase 4: Log Correlation (Week 4, 1 PT)
+| task | service | description |
+|---|---|---|
+| 4.1 | all | inject trace_id/span_id into all structured log entries |
+| 4.2 | all | configure otel log exporter (severity filtering, batching) |
+| 4.3 | integration service | add log correlation dashboard config (optional grafana) |
+| 4.4 | shared | document trace-to-log query patterns |
 
-| Task | Service | Description |
-|------|---------|-------------|
-| 4.1 | All | Inject trace_id/span_id into all structured log entries |
-| 4.2 | All | Configure OTel log exporter (severity filtering, batching) |
-| 4.3 | Integration Service | Add log correlation dashboard config (optional Grafana) |
-| 4.4 | Shared | Document trace-to-log query patterns |
+deliverables: all logs include trace context; logs exportable via otlp.
 
-**Deliverables:** All logs include trace context; logs exportable via OTLP.
+### phase 5: sampler configuration & performance (week 5, 0.5 pt)
 
-### Phase 5: Sampler Configuration & Performance (Week 5, 0.5 PT)
+| task | service | description |
+|---|---|---|
+| 5.1 | all | head-based sampling configuration (rate, trace id ratio) |
+| 5.2 | integration service | tail-based sampler (sample only interesting spans: errors, slow) |
+| 5.3 | all | load testing at 100% and 1% sampling; measure overhead |
+| 5.4 | shared | document recommended sampling strategies per environment |
 
-| Task | Service | Description |
-|------|---------|-------------|
-| 5.1 | All | Head-based sampling configuration (rate, trace ID ratio) |
-| 5.2 | Integration Service | Tail-based sampler (sample only interesting spans: errors, slow) |
-| 5.3 | All | Load testing at 100% and 1% sampling; measure overhead |
-| 5.4 | Shared | Document recommended sampling strategies per environment |
+deliverables: configurable sampling strategies with validated performance characteristics.
 
-**Deliverables:** Configurable sampling strategies with validated performance characteristics.
+## 5. api design
 
----
-
-## 5. API Design
-
-### Configuration Endpoint
+### configuration endpoint
 
 ```yaml
 GET /api/v2/otel/status
@@ -315,23 +305,23 @@ GET /api/v2/otel/status
 }
 ```
 
-### Environment Variables
+### environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OTEL_SDK_DISABLED` | `false` | Disable OTel SDK entirely |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | OTLP gRPC endpoint |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | OTLP protocol (`grpc`/`http/protobuf`) |
-| `OTEL_EXPORTER_OTLP_HEADERS` | — | Custom headers (e.g., API key) |
-| `OTEL_EXPORTER_OTLP_COMPRESSION` | `gzip` | Compression (`gzip`/`none`) |
-| `OTEL_TRACES_SAMPLER` | `parentbased_always_on` | Sampler type |
-| `OTEL_TRACES_SAMPLER_ARG` | `1.0` | Sampler argument (ratio) |
-| `OTEL_METRICS_EXPORTER` | `otlp` | Metrics exporter |
-| `OTEL_LOGS_EXPORTER` | `otlp` | Logs exporter |
-| `OTEL_SERVICE_NAME` | `infrapilot` | Service name for resource |
-| `OTEL_RESOURCE_ATTRIBUTES` | — | Additional resource attributes |
+| variable | default | description |
+|---|---|---|
+| `OTEL_SDK_DISABLED` | `false` | disable otel sdk entirely |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4317` | otlp grpc endpoint |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | otlp protocol (`grpc`/`http/protobuf`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | — | custom headers (e.g., api key) |
+| `OTEL_EXPORTER_OTLP_COMPRESSION` | `gzip` | compression (`gzip`/`none`) |
+| `OTEL_TRACES_SAMPLER` | `parentbased_always_on` | sampler type |
+| `OTEL_TRACES_SAMPLER_ARG` | `1.0` | sampler argument (ratio) |
+| `OTEL_METRICS_EXPORTER` | `otlp` | metrics exporter |
+| `OTEL_LOGS_EXPORTER` | `otlp` | logs exporter |
+| `OTEL_SERVICE_NAME` | `infrapilot` | service name for resource |
+| `OTEL_RESOURCE_ATTRIBUTES` | — | additional resource attributes |
 
-### Sampler Configuration
+### sampler configuration
 
 ```yaml
 traces:
@@ -352,23 +342,19 @@ traces:
     #   - rate: 0.01  # background rate for normal spans
 ```
 
----
+## 6. service assignments
 
-## 6. Service Assignments
+| service | responsibilities |
+|---|---|
+| integration service | otel node.js sdk + auto-instrumentation, grpc/http propagation, metric registration, tail-based sampling logic, status api |
+| orchestrator agent | otel python sdk + auto-instrumentation (aiohttp, psycopg2, redis), trace propagation, provisioning metrics |
+| management panel | otel web sdk (web vitals, fetch instrumentation), traceparent propagation via http headers |
+| discord service | otel node.js sdk + auto-instrumentation, discord.js hook instrumentation, command metrics |
+| service core | otel java sdk + auto-instrumentation (jax-rs, jdbc, rabbitmq), jvm metrics, game server lifecycle spans |
 
-| Service | Responsibilities |
-|---------|-----------------|
-| **Integration Service** | OTel Node.js SDK + auto-instrumentation, gRPC/HTTP propagation, metric registration, tail-based sampling logic, status API |
-| **Orchestrator Agent** | OTel Python SDK + auto-instrumentation (aiohttp, psycopg2, redis), trace propagation, provisioning metrics |
-| **Management Panel** | OTel Web SDK (Web Vitals, fetch instrumentation), traceparent propagation via HTTP headers |
-| **Discord Service** | OTel Node.js SDK + auto-instrumentation, Discord.js hook instrumentation, command metrics |
-| **Service Core** | OTel Java SDK + auto-instrumentation (JAX-RS, JDBC, RabbitMQ), JVM metrics, game server lifecycle spans |
+## 7. example: distributed trace output
 
----
-
-## 7. Example: Distributed Trace Output
-
-### Single Request Trace (Panel → Integration → Orchestrator → DB)
+### single request trace (panel → integration → orchestrator → db)
 
 ```
 Trace: 0af7651916cd43dd8448eb211c80319c
@@ -382,7 +368,7 @@ Trace: 0af7651916cd43dd8448eb211c80319c
 │                   └── Span: redis.command.set        (1ms)  [Orchestrator Agent]
 ```
 
-### Span with Error
+### span with error
 
 ```json
 {
@@ -418,34 +404,30 @@ Trace: 0af7651916cd43dd8448eb211c80319c
 }
 ```
 
----
+## 8. effort estimate
 
-## 8. Effort Estimate
+| phase | pt | dependencies |
+|---|---|---|
+| phase 1: sdk integration & auto-instrumentation | 2.5 | feature #14 (api gateway) — for rate limiting on export |
+| phase 2: trace propagation | 1.0 | phase 1 |
+| phase 3: metrics export | 1.0 | phase 1 |
+| phase 4: log correlation | 1.0 | phase 1 |
+| phase 5: sampler configuration & performance | 0.5 | phase 1 |
+| buffer (15%) | 0.9 | — |
+| total | ~6.9 pt | — |
 
-| Phase | PT | Dependencies |
-|-------|----|-------------|
-| Phase 1: SDK Integration & Auto-Instrumentation | 2.5 | Feature #14 (API Gateway) — for rate limiting on export |
-| Phase 2: Trace Propagation | 1.0 | Phase 1 |
-| Phase 3: Metrics Export | 1.0 | Phase 1 |
-| Phase 4: Log Correlation | 1.0 | Phase 1 |
-| Phase 5: Sampler Configuration & Performance | 0.5 | Phase 1 |
-| **Buffer (15%)** | **0.9** | — |
-| **Total** | **~6.9 PT** | — |
+### risk factors
 
-### Risk Factors
+- sdk version compatibility: opentelemetry sdks across languages must agree on otlp version (v0/v1)
+- auto-instrumentation blind spots: not all libraries are covered — manual instrumentation needed for custom middleware
+- performance at scale: high-throughput services may need judicious sampling to avoid overwhelming the exporter
+- java agent compatibility: service core runs java 8+; otel java agent requires java 8 minimum (ok) but may conflict with existing agents (jmx, etc.)
 
-- **SDK version compatibility:** OpenTelemetry SDKs across languages must agree on OTLP version (v0/v1)
-- **Auto-instrumentation blind spots:** Not all libraries are covered — manual instrumentation needed for custom middleware
-- **Performance at scale:** High-throughput services may need judicious sampling to avoid overwhelming the exporter
-- **Java agent compatibility:** Service Core runs Java 8+; OTel Java agent requires Java 8 minimum (OK) but may conflict with existing agents (JMX, etc.)
+## 9. security & compliance
 
----
-
-## 9. Security & Compliance
-
-- OTLP connection uses TLS by default; mTLS supported for mutual authentication
-- API keys can be passed via OTLP headers for collector authentication
-- Sampling must never drop error spans with security relevance (auth failures, permission errors)
-- Span attributes must not include secrets, passwords, or PII; attribute filtering middleware strips sensitive fields
-- OTel export is outbound-only — no inbound listener required
-- All OTel configuration is tenant-isolated where applicable (multi-tenant deployments)
+- otlp connection uses tls by default; mtls supported for mutual authentication
+- api keys can be passed via otlp headers for collector authentication
+- sampling must never drop error spans with security relevance (auth failures, permission errors)
+- span attributes must not include secrets, passwords, or pii; attribute filtering middleware strips sensitive fields
+- otel export is outbound-only — no inbound listener required
+- all otel configuration is tenant-isolated where applicable (multi-tenant deployments)

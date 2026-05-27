@@ -1,31 +1,27 @@
-# Feature 37: Synthetic Monitoring
+# feature 37: synthetic monitoring
 
-- **Feature ID:** 37
-- **Category:** Advanced Observability
-- **Primary Service:** Orchestrator Agent
-- **Effort:** Medium (4-6 PT)
-- **Dependencies:** Feature 13 (Webhook Event Bus), Feature 36 (SLO Tracking)
+- feature id: 37
+- category: advanced observability
+- primary service: orchestrator agent
+- effort: medium (4-6 pt)
+- dependencies: feature 13 (webhook event bus), feature 36 (slo tracking)
 
----
+## overview
 
-## 1. Overview
+deploy a global network of synthetic monitoring probes that simulate real user traffic to verify service availability, performance, and correctness. run http/s checks, tcp port checks, minecraft server pings, ssl certificate expiry monitoring, and dns resolution tests from multiple geographic locations. alert immediately when degradation is detected and track response time trends over time.
 
-Deploy a global network of synthetic monitoring probes that simulate real user traffic to verify service availability, performance, and correctness. Run HTTP/S checks, TCP port checks, Minecraft server pings, SSL certificate expiry monitoring, and DNS resolution tests from multiple geographic locations. Alert immediately when degradation is detected and track response time trends over time.
+### supported check types
 
-### Supported Check Types
+| check type | description | metrics collected |
+|---|---|---|
+| http/https | full request/response validation | status code, response time, body match, redirect chain |
+| tcp port | tcp connect check | connection time, port open/closed |
+| icmp ping | network layer reachability | packet loss %, round-trip time |
+| ssl/tls | certificate validity check | days to expiry, issuer, sans, chain validity |
+| dns resolution | record lookup verification | resolution time, record match, nxdomain detection |
+| minecraft ping | minecraft server query | online status, player count, motd, version, latency |
 
-| Check Type | Description | Metrics Collected |
-|------------|-------------|-------------------|
-| HTTP/HTTPS | Full request/response validation | Status code, response time, body match, redirect chain |
-| TCP Port | TCP connect check | Connection time, port open/closed |
-| ICMP Ping | Network layer reachability | Packet loss %, round-trip time |
-| SSL/TLS | Certificate validity check | Days to expiry, issuer, SANs, chain validity |
-| DNS Resolution | Record lookup verification | Resolution time, record match, NXDOMAIN detection |
-| Minecraft Ping | Minecraft server query | Online status, player count, MOTD, version, latency |
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -71,33 +67,31 @@ Deploy a global network of synthetic monitoring probes that simulate real user t
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-### Probe Location Architecture
+### probe location architecture
 
-Each probe is a lightweight Docker container running a Python agent that:
+each probe is a lightweight docker container running a python agent that:
 
-1. Connects to the Orchestrator Agent via gRPC for configuration and heartbeat
-2. Pulls its assigned check schedule every 60s
-3. Executes checks and reports results asynchronously
-4. Stores a local buffer (last 1000 results) for offline resilience
-5. Reports its own health (CPU, memory, connectivity) to the orchestrator
+• connects to the orchestrator agent via grpc for configuration and heartbeat
+• pulls its assigned check schedule every 60s
+• executes checks and reports results asynchronously
+• stores a local buffer (last 1000 results) for offline resilience
+• reports its own health (cpu, memory, connectivity) to the orchestrator
 
-### Planned Probe Locations (Initial)
+### planned probe locations (initial)
 
-| Location | Region | Provider |
-|----------|--------|----------|
-| us-east-1 | N. Virginia | AWS |
-| us-west-1 | N. California | AWS |
-| eu-west-1 | Ireland | AWS |
-| eu-central-1 | Frankfurt | AWS |
-| ap-southeast-1 | Singapore | AWS |
-| sa-east-1 | Sao Paulo | AWS |
-| eu-west-2 | London | Hetzner |
+| location | region | provider |
+|---|---|---|
+| us-east-1 | n. virginia | aws |
+| us-west-1 | n. california | aws |
+| eu-west-1 | ireland | aws |
+| eu-central-1 | frankfurt | aws |
+| ap-southeast-1 | singapore | aws |
+| sa-east-1 | sao paulo | aws |
+| eu-west-2 | london | hetzner |
 
----
+## data model
 
-## 3. Data Model
-
-### Check Definition
+### check definition
 
 ```yaml
 synthetic_check:
@@ -150,7 +144,7 @@ synthetic_check:
     environment: "production"
 ```
 
-### Check Result
+### check result
 
 ```yaml
 check_result:
@@ -192,7 +186,7 @@ check_result:
   raw_output: null                  # Stored for debugging (truncated)
 ```
 
-### Probe Agent
+### probe agent
 
 ```yaml
 probe_agent:
@@ -212,13 +206,11 @@ probe_agent:
     network_tx_bytes: 524288
 ```
 
----
+## api design
 
-## 4. API Design
+### check management
 
-### Check Management
-
-#### List Checks
+#### list checks
 
 ```
 GET /api/v2/synthetic/checks
@@ -228,7 +220,7 @@ GET /api/v2/synthetic/checks
   &per_page=50
 ```
 
-#### Create Check
+#### create check
 
 ```
 POST /api/v2/synthetic/checks
@@ -260,7 +252,7 @@ POST /api/v2/synthetic/checks
 }
 ```
 
-Response `201`:
+response `201`:
 ```json
 {
   "id": "check-http-web-prod",
@@ -269,25 +261,25 @@ Response `201`:
 }
 ```
 
-#### Get Check Details
+#### get check details
 
 ```
 GET /api/v2/synthetic/checks/{check_id}
 ```
 
-#### Update Check
+#### update check
 
 ```
 PATCH /api/v2/synthetic/checks/{check_id}
 ```
 
-#### Delete Check
+#### delete check
 
 ```
 DELETE /api/v2/synthetic/checks/{check_id}
 ```
 
-#### Trigger Immediate Check
+#### trigger immediate check
 
 ```
 POST /api/v2/synthetic/checks/{check_id}/run
@@ -299,15 +291,15 @@ POST /api/v2/synthetic/checks/{check_id}/run
 }
 ```
 
-### Results
+### results
 
-#### Get Latest Results
+#### get latest results
 
 ```
 GET /api/v2/synthetic/checks/{check_id}/results/latest
 ```
 
-#### Query Results History
+#### query results history
 
 ```
 GET /api/v2/synthetic/checks/{check_id}/results
@@ -319,7 +311,7 @@ GET /api/v2/synthetic/checks/{check_id}/results
   &per_page=100
 ```
 
-#### Get Response Time Series
+#### get response time series
 
 ```
 GET /api/v2/synthetic/checks/{check_id}/timeseries
@@ -328,102 +320,94 @@ GET /api/v2/synthetic/checks/{check_id}/timeseries
   &aggregate=avg
 ```
 
-### Probes
+### probes
 
-#### List Probes
+#### list probes
 
 ```
 GET /api/v2/synthetic/probes
 ```
 
-#### Get Probe Details
+#### get probe details
 
 ```
 GET /api/v2/synthetic/probes/{probe_id}
 ```
 
-#### Get Probe Heartbeat Log
+#### get probe heartbeat log
 
 ```
 GET /api/v2/synthetic/probes/{probe_id}/heartbeats
   ?window=24h
 ```
 
----
+## implementation plan
 
-## 5. Implementation Plan
+### phase 1: probe runner & check execution (pt 1-2)
 
-### Phase 1: Probe Runner & Check Execution (PT 1-2)
+| step | description | artifacts |
+|---|---|---|
+| 1.1 | define check configuration schema and db models | `models/synthetic.py` |
+| 1.2 | implement check executors: http, tcp, ping | `executors/http.py`, `executors/tcp.py`, `executors/ping.py` |
+| 1.3 | implement check executors: ssl, dns, minecraft | `executors/ssl.py`, `executors/dns.py`, `executors/minecraft.py` |
+| 1.4 | build probe agent bootstrap script + dockerfile | `infra/probe-agent/Dockerfile`, `probe_agent.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 1.1 | Define check configuration schema and DB models | `models/synthetic.py` |
-| 1.2 | Implement check executors: HTTP, TCP, Ping | `executors/http.py`, `executors/tcp.py`, `executors/ping.py` |
-| 1.3 | Implement check executors: SSL, DNS, Minecraft | `executors/ssl.py`, `executors/dns.py`, `executors/minecraft.py` |
-| 1.4 | Build probe agent bootstrap script + Dockerfile | `infra/probe-agent/Dockerfile`, `probe_agent.py` |
+### phase 2: orchestration & scheduling (pt 3-4)
 
-### Phase 2: Orchestration & Scheduling (PT 3-4)
+| step | description | artifacts |
+|---|---|---|
+| 2.1 | probe dispatcher: assign checks to probes, load balancing | `services/probe_dispatcher.py` |
+| 2.2 | schedule engine: cron-like intervals with jitter | `services/schedule_engine.py` |
+| 2.3 | result aggregator: merge multi-probe results, deduplicate | `services/result_aggregator.py` |
+| 2.4 | probe agent heartbeats and health monitoring | `services/probe_health.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 2.1 | Probe dispatcher: assign checks to probes, load balancing | `services/probe_dispatcher.py` |
-| 2.2 | Schedule engine: cron-like intervals with jitter | `services/schedule_engine.py` |
-| 2.3 | Result aggregator: merge multi-probe results, deduplicate | `services/result_aggregator.py` |
-| 2.4 | Probe agent heartbeats and health monitoring | `services/probe_health.py` |
+### phase 3: alerting & dashboard (pt 5-6)
 
-### Phase 3: Alerting & Dashboard (PT 5-6)
+| step | description | artifacts |
+|---|---|---|
+| 3.1 | alert evaluation: degradation detection, multi-probe consensus | `services/alert_evaluator.py` |
+| 3.2 | rest api endpoints for checks, results, probes | `routes/synthetic.py` |
+| 3.3 | panel ui: check list, create/edit form, probe map | panel components |
+| 3.4 | panel ui: results dashboard, response time charts, alert history | panel components |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 3.1 | Alert evaluation: degradation detection, multi-probe consensus | `services/alert_evaluator.py` |
-| 3.2 | REST API endpoints for checks, results, probes | `routes/synthetic.py` |
-| 3.3 | Panel UI: check list, create/edit form, probe map | Panel components |
-| 3.4 | Panel UI: results dashboard, response time charts, alert history | Panel components |
+## service assignments
 
----
+| service | responsibility |
+|---|---|
+| orchestrator agent (primary) | check definition management, probe dispatch, schedule engine, result aggregation, alert evaluation, rest api |
+| probe agent (new sub-component) | lightweight python agent deployed at each location, executes checks, reports results |
+| management panel | check configuration ui, results dashboard, probe map visualization, alert configuration |
+| integration service | receives check results for slo integration, webhook dispatch on alert |
+| discord service | alert notifications with check status, response time graphs |
 
-## 6. Service Assignments
+## effort estimate: medium (4-6 pt)
 
-| Service | Responsibility |
-|---------|---------------|
-| **Orchestrator Agent** (primary) | Check definition management, probe dispatch, schedule engine, result aggregation, alert evaluation, REST API |
-| **Probe Agent** (new sub-component) | Lightweight Python agent deployed at each location, executes checks, reports results |
-| **Management Panel** | Check configuration UI, results dashboard, probe map visualization, alert configuration |
-| **Integration Service** | Receives check results for SLO integration, webhook dispatch on alert |
-| **Discord Service** | Alert notifications with check status, response time graphs |
+| area | pt estimate |
+|---|---|
+| check executors (http, tcp, ping, ssl, dns, minecraft) | 1.5 |
+| probe agent + docker image | 1.0 |
+| probe dispatcher + schedule engine | 1.0 |
+| result aggregation + alert evaluation | 1.0 |
+| rest api endpoints | 0.5 |
+| panel ui (check config, results dashboard, probe map) | 1.5 |
+| integration + e2e tests | 0.5 |
+| documentation | 0.5 |
+| total | **7.5 pt (rounded to 6 with framework reuse)** |
 
----
+### risk factors
 
-## 7. Effort Estimate: Medium (4-6 PT)
+- minecraft protocol parsing may need library adaptation (use `mcstatus` python library)
+- probe network deployment requires at least 3 cloud regions for meaningful multi-region coverage
+- ssl check accuracy depends on proper sni support and certificate chain validation
+- dns check reliability may vary by probe location's upstream resolver behavior
 
-| Area | PT Estimate |
-|------|-------------|
-| Check executors (HTTP, TCP, Ping, SSL, DNS, Minecraft) | 1.5 |
-| Probe agent + Docker image | 1.0 |
-| Probe dispatcher + schedule engine | 1.0 |
-| Result aggregation + alert evaluation | 1.0 |
-| REST API endpoints | 0.5 |
-| Panel UI (check config, results dashboard, probe map) | 1.5 |
-| Integration + E2E tests | 0.5 |
-| Documentation | 0.5 |
-| **Total** | **7.5 PT (rounded to 6 with framework reuse)** |
+## key metrics
 
-### Risk Factors
-
-- Minecraft protocol parsing may need library adaptation (use `mcstatus` Python library)
-- Probe network deployment requires at least 3 cloud regions for meaningful multi-region coverage
-- SSL check accuracy depends on proper SNI support and certificate chain validation
-- DNS check reliability may vary by probe location's upstream resolver behavior
-
----
-
-## 8. Key Metrics
-
-| Metric | Target |
-|--------|--------|
-| Check execution frequency | Every 60s minimum, configurable per check |
-| End-to-end result latency | < 5s from execution to API |
-| Probe locations at launch | 7 (AWS regions + Hetzner) |
-| Maximum checks per probe | 500 |
-| Probe agent resource usage | < 256 MB RAM, < 0.5 CPU core |
-| API throughput | 200 req/s for results ingestion |
+| metric | target |
+|---|---|
+| check execution frequency | every 60s minimum, configurable per check |
+| end-to-end result latency | < 5s from execution to api |
+| probe locations at launch | 7 (aws regions + hetzner) |
+| maximum checks per probe | 500 |
+| probe agent resource usage | < 256 mb ram, < 0.5 cpu core |
+| api throughput | 200 req/s for results ingestion |

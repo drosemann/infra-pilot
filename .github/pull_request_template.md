@@ -1,70 +1,68 @@
-## Description
+## description
 
-<!-- Clear description of the changes made -->
+<!-- clear description of the changes made -->
 
-## Type of Change
+## type of change
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to change)
-- [ ] Documentation update
-- [ ] Dependency update
+- [ ] bug fix (non-breaking change that fixes an issue)
+- [ ] new feature (non-breaking change that adds functionality)
+- [ ] breaking change (fix or feature that would cause existing functionality to change)
+- [ ] documentation update
+- [ ] dependency update
 
-## Related Issue
+## related issue
 
-<!-- Link the issue(s) this PR addresses -->
-Closes #
+<!-- link the issue(s) this pr addresses -->
+closes #
 
-## Component(s) Affected
+## component(s) affected
 
 - [ ] service-core
 - [ ] orchestrator-agent
 - [ ] discord-service
 - [ ] management-panel
 - [ ] documentation
-- [ ] workflows/CI
+- [ ] workflows/ci
 - [ ] other
 
-## Testing
+## testing
 
-<!-- Describe the testing you've done -->
+<!-- describe the testing you've done -->
 
-**Test Coverage:**
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Manual testing completed
+test coverage:
+- [ ] unit tests added/updated
+- [ ] integration tests added/updated
+- [ ] manual testing completed
 
-**How to Test:**
-1.
-2.
-3.
+how to test:
+•
+•
+•
 
-## Checklist
+## checklist
 
-- [ ] Code follows the project's style guidelines
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings or errors
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests passed locally with my changes
-- [ ] Any dependent changes have been merged and published
+- [ ] code follows the project's style guidelines
+- [ ] i have performed a self-review of my own code
+- [ ] i have commented my code, particularly in hard-to-understand areas
+- [ ] i have made corresponding changes to the documentation
+- [ ] my changes generate no new warnings or errors
+- [ ] i have added tests that prove my fix is effective or that my feature works
+- [ ] new and existing unit tests passed locally with my changes
+- [ ] any dependent changes have been merged and published
 
-## Breaking Changes
+## breaking changes
 
-<!-- If this is a breaking change, clearly describe what breaks and why -->
+<!-- if this is a breaking change, clearly describe what breaks and why -->
 
-## Migration Guide
+## migration guide
 
-<!-- If applicable, provide instructions for users to migrate -->
+<!-- if applicable, provide instructions for users to migrate -->
 
-## Additional Context
+## additional context
 
-<!-- Any additional context, screenshots, or information -->
+<!-- any additional context, screenshots, or information -->
 
----
-
-**Notes:**
-- Keep PR size reasonable (focused on one change/feature)
-- Run tests locally before submitting: `./scripts/test.sh`
-- Follow commit message guidelines in [CONTRIBUTING.md](../CONTRIBUTING.md)
+notes:
+• keep pr size reasonable (focused on one change/feature)
+• run tests locally before submitting: `./scripts/test.sh`
+• follow commit message guidelines in [contributing.md](../CONTRIBUTING.md)

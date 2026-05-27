@@ -1,74 +1,72 @@
-# Database Setup Instructions
+# database setup instructions
 
-## Using Supabase with Docker Compose
+## using supabase with docker compose
 
-### Step 1: Clone Supabase Docker Repository
+### step 1: clone supabase docker repository
 
 ```bash
 git clone https://github.com/supabase/supabase.git
 cd supabase/docker
 ```
 
-### Step 2: Configure Environment
+### step 2: configure environment
 
-Edit `docker/.env` and set a strong JWT secret:
+edit `docker/.env` and set a strong jwt secret:
 
 ```bash
 JWT_SECRET=your-super-secret-jwt-key-min-32-chars
 ```
 
-### Step 3: Start Supabase
+### step 3: start supabase
 
 ```bash
 docker compose up -d
 ```
 
-This starts:
-- API: http://localhost:8000
-- Supabase Dashboard: http://localhost:3000
-- PostgreSQL: localhost:5432
+this starts:
+- api: http://localhost:8000
+- supabase dashboard: http://localhost:3000
+- postgresql: localhost:5432
 
-### Step 4: Access Dashboard
+### step 4: access dashboard
 
-1. Go to http://localhost:3000
-2. Email: `supabase@example.com`
-3. Password: `password`
+• go to http://localhost:3000
+• email: `supabase@example.com`
+• password: `password`
 
-### Step 5: Create Anon Key
+### step 5: create anon key
 
-1. In Supabase Dashboard, go to **Settings → API**
-2. Copy the `anon` public key
-3. Add to `.env.local`:
+• in supabase dashboard, go to **settings → api**
+• copy the `anon` public key
+• add to `.env.local`:
    ```
    VITE_SUPABASE_ANON_KEY=eyJhbGc...
    ```
 
-### Step 6: Initialize Schema
+### step 6: initialize schema
 
-1. In Supabase Dashboard, go to **SQL Editor**
-2. Create new query
-3. Copy contents of `db/schema.sql`
-4. Execute
+• in supabase dashboard, go to **sql editor**
+• create new query
+• copy contents of `db/schema.sql`
+• execute
 
-Or via psql:
+or via psql:
 
 ```bash
 psql -h localhost -U postgres -d postgres < db/schema.sql
 ```
 
-(Default postgres password: `postgres`)
+(default postgres password: `postgres`)
 
-### Step 7: Enable JWT Auth
+### step 7: enable jwt auth
 
-In Supabase Dashboard → Settings → Auth, ensure:
-- Email/Password enabled
-- Email confirmation disabled (for dev)
+in supabase dashboard → settings → auth, ensure:
+- email/password enabled
+- email confirmation disabled (for dev)
 
----
+## environment variables
 
-## Environment Variables
-
-Create `.env.local`:
+create `.env.local`:
 
 ```bash
 # Supabase (Docker Compose)
@@ -82,51 +80,47 @@ VITE_API_URL=http://localhost:3001
 DOCKER_HOST=unix:///var/run/docker.sock
 ```
 
----
+## production deployment
 
-## Production Deployment
+### using managed supabase
 
-### Using Managed Supabase
-
-1. Sign up at https://supabase.com
-2. Create a new project
-3. Go to Settings → API
-4. Copy your `URL` and `anon key`
-5. Set in production environment:
+• sign up at https://supabase.com
+• create a new project
+• go to settings → api
+• copy your `url` and `anon key`
+• set in production environment:
    ```
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=<your-key>
    ```
-6. Run schema migration on your production database
+• run schema migration on your production database
 
-### Self-Hosted PostgreSQL
+### self-hosted postgresql
 
-If not using Supabase, you need to:
+if not using supabase, you need to:
 
-1. Set up PostgreSQL 15+
-2. Create a database for the panel
-3. Run `db/schema.sql` to initialize
-4. Set up Supabase Auth (separate component) OR migrate to a simpler auth method
-5. Update backend to connect to your PostgreSQL instance
+• set up postgresql 15+
+• create a database for the panel
+• run `db/schema.sql` to initialize
+• set up supabase auth (separate component) or migrate to a simpler auth method
+• update backend to connect to your postgresql instance
 
----
+## troubleshooting
 
-## Troubleshooting
-
-### Port 54321 already in use
+### port 54321 already in use
 ```bash
 lsof -i :54321
 kill -9 <PID>
 # Or change docker-compose port mapping
 ```
 
-### Can't connect to PostgreSQL
+### can't connect to postgresql
 ```bash
 docker compose logs postgres
 # Check credentials in docker/.env
 ```
 
-### Schema migration fails
+### schema migration fails
 ```bash
 # Check DB logs
 docker compose logs postgres
@@ -135,21 +129,19 @@ docker compose logs postgres
 psql -h localhost -U postgres -d postgres
 ```
 
-### JWT Secret format invalid
-Must be minimum 32 characters. Generate with:
+### jwt secret format invalid
+must be minimum 32 characters. generate with:
 
 ```bash
 openssl rand -base64 32
 ```
 
----
+## next steps
 
-## Next Steps
-
-Once setup is complete:
+once setup is complete:
 
 ```bash
 npm run dev
 ```
 
-Then visit http://localhost:5173 to initialize the panel.
+then visit http://localhost:5173 to initialize the panel.

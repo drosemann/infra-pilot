@@ -1,37 +1,33 @@
-# Feature 15: Plugin Marketplace
+# plugin marketplace
 
-- **Feature #:** 15
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Management Panel
-- **Supporting Services:** Integration Service, Orchestrator Agent, Discord Service, Service Core
-- **Effort:** Extra Large (11+ PT)
-- **Dependencies:** Feature #14 (API Gateway & Rate Limiting), Feature #13 (Webhook Event Bus)
+- feature #: 15
+- category: developer ecosystem & api
+- primary service: management panel
+- supporting services: integration service, orchestrator agent, discord service, service core
+- effort: extra large (11+ pt)
+- dependencies: feature #14 (api gateway & rate limiting), feature #13 (webhook event bus)
 
----
+## 1. overview
 
-## 1. Overview
+the plugin marketplace enables a community-driven plugin ecosystem for infra pilot. developers can upload, publish, version, and distribute plugins that extend the management panel ui, discord bot commands, and orchestrator agent behavior. end-users discover, install, and manage plugins through a one-click interface with automatic dependency resolution.
 
-The Plugin Marketplace enables a community-driven plugin ecosystem for Infra Pilot. Developers can upload, publish, version, and distribute plugins that extend the Management Panel UI, Discord Bot commands, and Orchestrator Agent behavior. End-users discover, install, and manage plugins through a one-click interface with automatic dependency resolution.
+### goals
 
-### Goals
+- allow third-party developers to extend every major surface of infra pilot
+- provide secure sandboxed execution for plugins
+- automate dependency resolution and version management
+- deliver a marketplace experience (search, ratings, compatibility badges)
+- support semantic versioning with upgrade/downgrade paths
 
-- Allow third-party developers to extend every major surface of Infra Pilot
-- Provide secure sandboxed execution for plugins
-- Automate dependency resolution and version management
-- Deliver a marketplace experience (search, ratings, compatibility badges)
-- Support semantic versioning with upgrade/downgrade paths
+### non-goals
 
-### Non-Goals
+- full-blown ide or plugin sdk debugger (v1 ships with cli scaffolding only)
+- multi-tenant plugin hosting (each instance runs its own registry)
+- paid plugin distribution (no billing integration in this iteration)
 
-- Full-blown IDE or plugin SDK debugger (v1 ships with CLI scaffolding only)
-- Multi-tenant plugin hosting (each instance runs its own registry)
-- Paid plugin distribution (no billing integration in this iteration)
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### High-Level Component Diagram
+### high-level component diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -70,7 +66,7 @@ The Plugin Marketplace enables a community-driven plugin ecosystem for Infra Pil
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Plugin Types
+### plugin types
 
 | Type | Extension Point | Sandbox |
 |------|----------------|---------|
@@ -80,7 +76,7 @@ The Plugin Marketplace enables a community-driven plugin ecosystem for Infra Pil
 | `orchestrator-hook` | Event hooks (server.start, backup.complete) | WASM / gVisor |
 | `service-core` | Java-based game server lifecycle extensions | ClassLoader isolation |
 
-### Plugin Lifecycle
+### plugin lifecycle
 
 ```
 Publisher Upload
@@ -89,7 +85,7 @@ Publisher Upload
 Registry Validation (signature, schema, malware scan)
      │
      ▼
-Published (draft → review → public)
+Published (draft -> review -> public)
      │
      ▼
 User Discover (search, browse categories)
@@ -108,11 +104,9 @@ Activated (hot-reload or restart)
 Runtime (metrics, health checks, updates)
 ```
 
----
+## 3. data model
 
-## 3. Data Model
-
-### Plugin Package
+### plugin package
 
 ```json
 {
@@ -134,7 +128,7 @@ Runtime (metrics, health checks, updates)
 }
 ```
 
-### Plugin Version
+### plugin version
 
 ```json
 {
@@ -183,7 +177,7 @@ Runtime (metrics, health checks, updates)
 }
 ```
 
-### Plugin Installation (per-tenant)
+### plugin installation (per-tenant)
 
 ```json
 {
@@ -206,7 +200,7 @@ Runtime (metrics, health checks, updates)
 }
 ```
 
-### SQL Schema (Primary Tables)
+### sql schema (primary tables)
 
 ```sql
 -- Plugin registry (global, shared across tenants)
@@ -264,13 +258,11 @@ CREATE TABLE plugin_dependency_resolutions (
 );
 ```
 
----
+## 4. api design
 
-## 4. API Design
+### plugin registry api (integration service)
 
-### Plugin Registry API (Integration Service)
-
-All endpoints prefixed with `/api/v2/plugins`.
+all endpoints prefixed with `/api/v2/plugins`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -285,7 +277,7 @@ All endpoints prefixed with `/api/v2/plugins`.
 | `GET` | `/{package_id}/download` | Download latest compatible version |
 | `GET` | `/{package_id}/download/{version}` | Download specific version |
 
-### Installation API
+### installation api
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -297,7 +289,7 @@ All endpoints prefixed with `/api/v2/plugins`.
 | `POST` | `/installations/{id}/upgrade` | Upgrade to latest compatible version |
 | `POST` | `/installations/{id}/downgrade` | Downgrade to specific version |
 
-### Marketplace Query Parameters
+### marketplace query parameters
 
 ```
 GET /api/v2/plugins?type=orchestrator-hook
@@ -310,7 +302,7 @@ GET /api/v2/plugins?type=orchestrator-hook
                    &compatible=2.5.0
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -338,7 +330,7 @@ Response:
 }
 ```
 
-### Installation Request
+### installation request
 
 ```json
 POST /api/v2/plugins/installations
@@ -351,7 +343,7 @@ POST /api/v2/plugins/installations
 }
 ```
 
-Response:
+response:
 
 ```json
 {
@@ -364,11 +356,9 @@ Response:
 }
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
-
-### Phase 1: Foundation (Weeks 1-2, 4 PT)
+### phase 1: foundation (weeks 1-2, 4 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -379,9 +369,9 @@ Response:
 | 1.5 | Management Panel | Plugin Browser UI (list, search, detail view) |
 | 1.6 | Shared | Plugin manifest schema & validation library |
 
-**Deliverables:** Registry API operational, basic browse UI, schema validation.
+**deliverables:** registry api operational, basic browse ui, schema validation.
 
-### Phase 2: Installation Engine (Weeks 3-5, 4 PT)
+### phase 2: installation engine (weeks 3-5, 4 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -392,9 +382,9 @@ Response:
 | 2.5 | Integration Service | Installation CRUD API |
 | 2.6 | Management Panel | One-click install / uninstall UI |
 
-**Deliverables:** Plugins can be installed and activated on Orchestrator Agent.
+**deliverables:** plugins can be installed and activated on orchestrator agent.
 
-### Phase 3: Sandboxing & Security (Weeks 5-7, 2 PT)
+### phase 3: sandboxing & security (weeks 5-7, 2 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -404,9 +394,9 @@ Response:
 | 3.4 | Integration Service | Malware scan integration (ClamAV / custom rules) |
 | 3.5 | Shared | Permission manifest enforcement at runtime |
 
-**Deliverables:** All plugin types execute in isolated sandboxes with permission controls.
+**deliverables:** all plugin types execute in isolated sandboxes with permission controls.
 
-### Phase 4: Marketplace Experience (Weeks 7-9, 1.5 PT)
+### phase 4: marketplace experience (weeks 7-9, 1.5 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -416,9 +406,9 @@ Response:
 | 4.4 | Integration Service | Compatibility badge computation |
 | 4.5 | Management Panel | Plugin update notifications (badge in header) |
 
-**Deliverables:** Full marketplace UX with ratings, compatibility, and publisher tools.
+**deliverables:** full marketplace ux with ratings, compatibility, and publisher tools.
 
-### Phase 5: Discord Bot Plugins (Week 10, 1 PT)
+### phase 5: discord bot plugins (week 10, 1 pt)
 
 | Task | Service | Description |
 |------|---------|-------------|
@@ -426,9 +416,9 @@ Response:
 | 5.2 | Discord Service | Plugin command routing & permission checking |
 | 5.3 | Discord Service | Plugin hot-reload for command updates |
 
-**Deliverables:** Discord command plugins operational.
+**deliverables:** discord command plugins operational.
 
-### Phase 6: Polish & Docs (Week 11, 0.5 PT)
+### phase 6: polish & docs (week 11, 0.5 pt)
 
 | Task | Description |
 |------|-------------|
@@ -437,11 +427,9 @@ Response:
 | 6.3 | Performance & load testing (50+ concurrent installs) |
 | 6.4 | Documentation for marketplace operators |
 
-**Deliverables:** Developer docs, CLI scaffolding tool, production readiness validation.
+**deliverables:** developer docs, cli scaffolding tool, production readiness validation.
 
----
-
-## 6. Service Assignments
+## 6. service assignments
 
 | Service | Responsibilities |
 |---------|-----------------|
@@ -451,11 +439,9 @@ Response:
 | **Discord Service** | Dynamic command registration, plugin command routing, subprocess isolation |
 | **Service Core** | ClassLoader isolation for Java plugins, lifecycle hooks for game server extensions |
 
----
+## 7. configuration example
 
-## 7. Configuration Example
-
-### Plugin Manifest (`plugin.yaml`)
+### plugin manifest (`plugin.yaml`)
 
 ```yaml
 api_version: "2.0"
@@ -498,7 +484,7 @@ lifecycle:
 entry: main.js
 ```
 
-### Panel Configuration (infrapilot.yaml)
+### panel configuration (infrapilot.yaml)
 
 ```yaml
 plugins:
@@ -519,9 +505,7 @@ plugins:
     allow_manual_uploads: true
 ```
 
----
-
-## 8. Effort Estimate
+## 8. effort estimate
 
 | Phase | PT | Dependencies |
 |-------|----|-------------|
@@ -531,24 +515,22 @@ plugins:
 | Phase 4: Marketplace Experience | 1.5 | Phase 2 |
 | Phase 5: Discord Bot Plugins | 1.0 | Phase 2 |
 | Phase 6: Polish & Docs | 0.5 | Phases 1-5 |
-| **Buffer (15%)** | **1.9** | — |
-| **Total** | **~14.9 PT** | — |
+| buffer (15%) | 1.9 | - |
+| total | ~14.9 pt | - |
 
-### Risk Factors
+### risk factors
 
-- **Sandboxing complexity:** gVisor on non-Linux systems requires workarounds (WSL2, Docker VM)
-- **Dependency resolution:** DAG cycles and diamond dependencies need careful handling
-- **Plugin API stability:** Breaking SDK changes require migration path for published plugins
-- **Malware scanning:** False positives can erode publisher trust
+- **sandboxing complexity:** gvisor on non-linux systems requires workarounds (wsl2, docker vm)
+- **dependency resolution:** dag cycles and diamond dependencies need careful handling
+- **plugin api stability:** breaking sdk changes require migration path for published plugins
+- **malware scanning:** false positives can erode publisher trust
 
----
+## 9. security & compliance
 
-## 9. Security & Compliance
-
-- All plugin artifacts signed via Ed25519 (publisher private key)
-- Checksum verification before every installation
-- Sandbox resource limits (CPU, memory, network, filesystem)
-- Permission manifest enforced at runtime — no ambient authority
-- Rate-limited uploads and installations per publisher/tenant
-- Audit log for every plugin lifecycle event (upload, install, activate, deactivate)
-- Semver range constraints prevent incompatible upgrades
+- all plugin artifacts signed via ed25519 (publisher private key)
+- checksum verification before every installation
+- sandbox resource limits (cpu, memory, network, filesystem)
+- permission manifest enforced at runtime -- no ambient authority
+- rate-limited uploads and installations per publisher/tenant
+- audit log for every plugin lifecycle event (upload, install, activate, deactivate)
+- semver range constraints prevent incompatible upgrades

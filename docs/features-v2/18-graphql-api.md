@@ -1,39 +1,35 @@
-# Feature 18: GraphQL API
+# feature 18: graphql api
 
-- **Feature #:** 18
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Integration Service
-- **Supporting Services:** Orchestrator Agent, Management Panel
-- **Effort:** Medium (4-6 PT)
-- **Dependencies:** Feature #14 (API Gateway & Rate Limiting), Feature #17 (OpenTelemetry Export)
+- feature #: 18
+- category: developer ecosystem & api
+- primary service: integration service
+- supporting services: orchestrator agent, management panel
+- effort: medium (4-6 pt)
+- dependencies: feature #14 (api gateway & rate limiting), feature #17 (opentelemetry export)
 
----
+## 1. overview
 
-## 1. Overview
+the graphql api provides an optional graphql layer alongside the existing rest api. it enables clients to query exactly the data they need, receive real-time updates via subscriptions (websocket), and interact with the full infra pilot resource model through a single endpoint. the layer includes n+1 query prevention via dataloader, authentication middleware, and support for schema stitching to compose multiple service schemas.
 
-The GraphQL API provides an optional GraphQL layer alongside the existing REST API. It enables clients to query exactly the data they need, receive real-time updates via subscriptions (WebSocket), and interact with the full Infra Pilot resource model through a single endpoint. The layer includes N+1 query prevention via DataLoader, authentication middleware, and support for schema stitching to compose multiple service schemas.
+### goals
 
-### Goals
+- single `/graphql` endpoint for all queries and mutations
+- real-time subscriptions for server events, logs, and metrics
+- dataloader-based batching to prevent n+1 query problems
+- jwt-based auth middleware with field-level permission checking
+- schema stitching to compose schemas from integration service, orchestrator agent, and service core
+- backward compatible -- existing rest api unchanged; graphql is additive
 
-- Single `/graphql` endpoint for all queries and mutations
-- Real-time subscriptions for server events, logs, and metrics
-- DataLoader-based batching to prevent N+1 query problems
-- JWT-based auth middleware with field-level permission checking
-- Schema stitching to compose schemas from Integration Service, Orchestrator Agent, and Service Core
-- Backward compatible — existing REST API unchanged; GraphQL is additive
+### non-goals
 
-### Non-Goals
+- replacing rest api entirely (rest remains primary, graphql is optional)
+- automatic schema generation from rest endpoints (hand-written schema with resolvers)
+- federated graphql (apollo federation) in v1 -- schema stitching is simpler
+- graphql as a bff (backend for frontend) -- the schema is general-purpose
 
-- Replacing REST API entirely (REST remains primary, GraphQL is optional)
-- Automatic schema generation from REST endpoints (hand-written schema with resolvers)
-- Federated GraphQL (Apollo Federation) in v1 — schema stitching is simpler
-- GraphQL as a BFF (Backend for Frontend) — the schema is general-purpose
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### High-Level Component Diagram
+### high-level component diagram
 
 ```
 ┌──────────────────┐       ┌──────────────────────────────────────────┐
@@ -45,45 +41,45 @@ The GraphQL API provides an optional GraphQL layer alongside the existing REST A
 │  Subscriptions   │◄──────┤  │  ┌──────────┐  ┌──────────────────┐  │ │
 │                  │       │  │  │ Schema   │  │ Auth Middleware   │  │ │
 └──────────────────┘       │  │  │ (Stitched)│  │ (JWT + RBAC)     │  │ │
-                           │  │  └────┬─────┘  └──────────────────┘  │ │
-                           │  │       │                               │ │
-                           │  │       ▼                               │ │
-                           │  │  ┌──────────────────────────────────┐ │ │
-                           │  │  │      Resolvers                   │ │ │
-                           │  │  │  ┌────────┐  ┌───────────────┐  │ │ │
-                           │  │  │  │ Query  │  │ Mutation      │  │ │ │
-                           │  │  │  │ ────── │  │ ────────────  │  │ │ │
-                           │  │  │  │ servers│  │ createServer  │  │ │ │
-                           │  │  │  │ server │  │ deleteServer  │  │ │ │
-                           │  │  │  │ logs   │  │ updateConfig  │  │ │ │
-                           │  │  │  │ metrics│  │ deployBackup  │  │ │ │
-                           │  │  │  └───┬────┘  └───────┬───────┘  │ │ │
-                           │  │  │      │               │           │ │ │
-                           │  │  │      ▼               ▼           │ │ │
-                           │  │  │  ┌─────────────────────────┐     │ │ │
-                           │  │  │  │     DataLoader Cache     │     │ │ │
-                           │  │  │  │  (batches + caches per  │     │ │ │
-                           │  │  │  │   request context)      │     │ │ │
-                           │  │  │  └────────┬────────────────┘     │ │ │
-                           │  │  │           │                       │ │ │
-                           │  │  └───────────┼───────────────────────┘ │ │
-                           │  └──────────────┼─────────────────────────┘ │
-                           │                 │                           │
-                           └─────────────────┼───────────────────────────┘
-                                             │
-               ┌─────────────────────────────┼─────────────────────────────┐
-               │              ┌──────────────┴──────────────┐              │
-               │              ▼              ▼              ▼              │
-               │     ┌────────────┐  ┌──────────────┐  ┌──────────┐       │
-               │     │REST API    │  │Orchestrator  │  │Service   │       │
-               │     │(Integration│  │Agent (Python)│  │Core(Java)│       │
-               │     │ Service)   │  │              │  │          │       │
-               │     └────────────┘  └──────────────┘  └──────────┘       │
-               │                                                          │
-               └──────────────────────────────────────────────────────────┘
+                            │  │  └────┬─────┘  └──────────────────┘  │ │
+                            │  │       │                               │ │
+                            │  │       ▼                               │ │
+                            │  │  ┌──────────────────────────────────┐ │ │
+                            │  │  │      Resolvers                   │ │ │
+                            │  │  │  ┌────────┐  ┌───────────────┐  │ │ │
+                            │  │  │  │ Query  │  │ Mutation      │  │ │ │
+                            │  │  │  │ ────── │  │ ────────────  │  │ │ │
+                            │  │  │  │ servers│  │ createServer  │  │ │ │
+                            │  │  │  │ server │  │ deleteServer  │  │ │ │
+                            │  │  │  │ logs   │  │ updateConfig  │  │ │ │
+                            │  │  │  │ metrics│  │ deployBackup  │  │ │ │
+                            │  │  │  └───┬────┘  └───────┬───────┘  │ │ │
+                            │  │  │      │               │           │ │ │
+                            │  │  │      ▼               ▼           │ │ │
+                            │  │  │  ┌─────────────────────────┐     │ │ │
+                            │  │  │  │     DataLoader Cache     │     │ │ │
+                            │  │  │  │  (batches + caches per  │     │ │ │
+                            │  │  │  │   request context)      │     │ │ │
+                            │  │  │  └────────┬────────────────┘     │ │ │
+                            │  │  │           │                       │ │ │
+                            │  │  └───────────┼───────────────────────┘ │ │
+                            │  └──────────────┼─────────────────────────┘ │
+                            │                 │                           │
+                            └─────────────────┼───────────────────────────┘
+                                              │
+                ┌─────────────────────────────┼─────────────────────────────┐
+                │              ┌──────────────┴──────────────┐              │
+                │              ▼              ▼              ▼              │
+                │     ┌────────────┐  ┌──────────────┐  ┌──────────┐       │
+                │     │REST API    │  │Orchestrator  │  │Service   │       │
+                │     │(Integration│  │Agent (Python)│  │Core(Java)│       │
+                │     │ Service)   │  │              │  │          │       │
+                │     └────────────┘  └──────────────┘  └──────────┘       │
+                │                                                          │
+                └──────────────────────────────────────────────────────────┘
 ```
 
-### Request Lifecycle
+### request lifecycle
 
 ```
 1. Client sends GraphQL query to POST /graphql (or WebSocket for subscriptions)
@@ -94,7 +90,7 @@ The GraphQL API provides an optional GraphQL layer alongside the existing REST A
 6. Response assembled and returned (JSON for queries, stream for subscriptions)
 ```
 
-### Subscription Transport
+### subscription transport
 
 ```
 WebSocket Connection (graphql-ws protocol)
@@ -135,11 +131,9 @@ Client receives:
   }
 ```
 
----
+## 3. data model
 
-## 3. Data Model
-
-### GraphQL Schema (Core)
+### graphql schema (core)
 
 ```graphql
 # ============================================================
@@ -463,21 +457,19 @@ scalar JSON
 scalar Provider
 ```
 
----
+## 4. api design
 
-## 4. API Design
+### endpoints
 
-### Endpoints
-
-| Endpoint | Protocol | Description |
+| endpoint | protocol | description |
 |----------|----------|-------------|
-| `POST /api/v2/graphql` | HTTP | GraphQL queries and mutations |
-| `GET /api/v2/graphql` | HTTP | GraphiQL IDE (development mode) |
-| `ws://host/api/v2/graphql` | WebSocket | GraphQL subscriptions (graphql-ws) |
+| `POST /api/v2/graphql` | http | graphql queries and mutations |
+| `GET /api/v2/graphql` | http | graphiql ide (development mode) |
+| `ws://host/api/v2/graphql` | websocket | graphql subscriptions (graphql-ws) |
 
-### Authentication
+### authentication
 
-The auth middleware extracts the JWT from the `Authorization` header (HTTP) or connection params (WebSocket):
+the auth middleware extracts the jwt from the `authorization` header (http) or connection params (websocket):
 
 ```json
 // HTTP Request
@@ -499,9 +491,9 @@ Content-Type: application/json
 }
 ```
 
-### Query Examples
+### query examples
 
-**Get servers with nested backups and metrics:**
+**get servers with nested backups and metrics:**
 
 ```graphql
 query GetServers {
@@ -538,7 +530,7 @@ query GetServers {
 }
 ```
 
-**Single server with logs:**
+**single server with logs:**
 
 ```graphql
 query GetServerWithLogs($id: ID!) {
@@ -562,7 +554,7 @@ query GetServerWithLogs($id: ID!) {
 }
 ```
 
-**Create server mutation:**
+**create server mutation:**
 
 ```graphql
 mutation CreateServer($input: CreateServerInput!) {
@@ -582,9 +574,9 @@ mutation CreateServer($input: CreateServerInput!) {
 }
 ```
 
-### Subscription Examples
+### subscription examples
 
-**Listen to all server events:**
+**listen to all server events:**
 
 ```graphql
 subscription WatchServerEvents {
@@ -598,7 +590,7 @@ subscription WatchServerEvents {
 }
 ```
 
-**Listen to error logs for a specific server:**
+**listen to error logs for a specific server:**
 
 ```graphql
 subscription WatchServerErrors($serverId: ID!) {
@@ -610,7 +602,7 @@ subscription WatchServerErrors($serverId: ID!) {
 }
 ```
 
-**Listen to real-time metrics stream:**
+**listen to real-time metrics stream:**
 
 ```graphql
 subscription WatchMetrics($serverId: ID!) {
@@ -623,74 +615,70 @@ subscription WatchMetrics($serverId: ID!) {
 }
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
+### phase 1: graphql server setup & schema (week 1, 2 pt)
 
-### Phase 1: GraphQL Server Setup & Schema (Week 1, 2 PT)
-
-| Task | Service | Description |
+| task | service | description |
 |------|---------|-------------|
-| 1.1 | Integration Service | Install GraphQL Yoga (or Apollo Server), configure HTTP + WebSocket |
-| 1.2 | Integration Service | Define core GraphQL schema (type definitions + resolvers) |
-| 1.3 | Integration Service | Implement auth middleware (JWT extraction, RBAC context) |
-| 1.4 | Integration Service | Set up GraphiQL IDE (development only) |
-| 1.5 | Integration Service | Configure rate limiting per query complexity |
+| 1.1 | integration service | install graphql yoga (or apollo server), configure http + websocket |
+| 1.2 | integration service | define core graphql schema (type definitions + resolvers) |
+| 1.3 | integration service | implement auth middleware (jwt extraction, rbac context) |
+| 1.4 | integration service | set up graphiql ide (development only) |
+| 1.5 | integration service | configure rate limiting per query complexity |
 
-**Deliverables:** GraphQL endpoint operational with core schema and auth.
+**deliverables:** graphql endpoint operational with core schema and auth.
 
-### Phase 2: Resolvers & DataLoader (Weeks 1-2, 1.5 PT)
+### phase 2: resolvers & dataloader (weeks 1-2, 1.5 pt)
 
-| Task | Service | Description |
+| task | service | description |
 |------|---------|-------------|
-| 2.1 | Integration Service | Implement query resolvers (servers, backups, logs, metrics, DNS, deployments) |
-| 2.2 | Integration Service | Implement mutation resolvers (CRUD for all resource types) |
-| 2.3 | Integration Service | Create DataLoader instances for N+1 prevention (server → backups, server → metrics, etc.) |
-| 2.4 | Integration Service | Add field-level permission checks in resolvers |
-| 2.5 | Integration Service | Add query complexity analysis and depth limiting |
+| 2.1 | integration service | implement query resolvers (servers, backups, logs, metrics, dns, deployments) |
+| 2.2 | integration service | implement mutation resolvers (crud for all resource types) |
+| 2.3 | integration service | create dataloader instances for n+1 prevention (server → backups, server → metrics, etc.) |
+| 2.4 | integration service | add field-level permission checks in resolvers |
+| 2.5 | integration service | add query complexity analysis and depth limiting |
 
-**Deliverables:** All queries and mutations functional with DataLoader batching.
+**deliverables:** all queries and mutations functional with dataloader batching.
 
-### Phase 3: Subscriptions (Week 2-3, 1.5 PT)
+### phase 3: subscriptions (week 2-3, 1.5 pt)
 
-| Task | Service | Description |
+| task | service | description |
 |------|---------|-------------|
-| 3.1 | Integration Service | Implement WebSocket transport (graphql-ws) |
-| 3.2 | Integration Service | Create PubSub adapter backed by Redis |
-| 3.3 | Integration Service | Implement subscription resolvers (serverEvents, serverLogs, serverMetrics, deploymentEvents, alertEvents) |
-| 3.4 | Integration Service | Add WebSocket auth (connection_init token validation) |
-| 3.5 | Integration Service | Implement subscription filtering (per-server, per-level) |
-| 3.6 | Management Panel | Demo: live-updating dashboard via subscriptions |
+| 3.1 | integration service | implement websocket transport (graphql-ws) |
+| 3.2 | integration service | create pubsub adapter backed by redis |
+| 3.3 | integration service | implement subscription resolvers (serverevents, serverlogs, servermetrics, deploymenteventsevents) |
+| 3.4 | integration service | add websocket auth (connection_init token validation) |
+| 3.5 | integration service | implement subscription filtering (per-server, per-level) |
+| 3.6 | management panel | demo: live-updating dashboard via subscriptions |
 
-**Deliverables:** Real-time subscriptions operational for events, logs, and metrics.
+**deliverables:** real-time subscriptions operational for events, logs, and metrics.
 
-### Phase 4: Schema Stitching (Week 3, 1 PT)
+### phase 4: schema stitching (week 3, 1 pt)
 
-| Task | Service | Description |
+| task | service | description |
 |------|---------|-------------|
-| 4.1 | Orchestrator Agent | Expose internal GraphQL schema (or REST → GQL schema mapping) |
-| 4.2 | Service Core | Expose internal GraphQL schema (or REST → GQL schema mapping) |
-| 4.3 | Integration Service | Implement schema stitching (merge schemas from multiple services) |
-| 4.4 | Integration Service | Add delegation resolvers for remote schemas |
+| 4.1 | orchestrator agent | expose internal graphql schema (or rest → gql schema mapping) |
+| 4.2 | service core | expose internal graphql schema (or rest → gql schema mapping) |
+| 4.3 | integration service | implement schema stitching (merge schemas from multiple services) |
+| 4.4 | integration service | add delegation resolvers for remote schemas |
 
-**Deliverables:** Stitched schema combining data from Integration Service, Orchestrator Agent, and Service Core.
+**deliverables:** stitched schema combining data from integration service, orchestrator agent, and service core.
 
-### Phase 5: Testing & Documentation (Week 4, 0.5 PT)
+### phase 5: testing & documentation (week 4, 0.5 pt)
 
-| Task | Service | Description |
+| task | service | description |
 |------|---------|-------------|
-| 5.1 | All | Integration tests for all query/mutation/subscription paths |
-| 5.2 | Integration Service | Query performance testing (N+1 prevention verification) |
-| 5.3 | Integration Service | Load testing (concurrent subscriptions, high-frequency metrics) |
-| 5.4 | Shared | API documentation (GraphQL schema docs, example queries) |
+| 5.1 | all | integration tests for all query/mutation/subscription paths |
+| 5.2 | integration service | query performance testing (n+1 prevention verification) |
+| 5.3 | integration service | load testing (concurrent subscriptions, high-frequency metrics) |
+| 5.4 | shared | api documentation (graphql schema docs, example queries) |
 
-**Deliverables:** Tested and documented GraphQL API.
+**deliverables:** tested and documented graphql api.
 
----
+## 6. dataloader strategy
 
-## 6. DataLoader Strategy
-
-### Batch Loading Patterns
+### batch loading patterns
 
 ```
 Without DataLoader (N+1 problem):
@@ -707,33 +695,29 @@ With DataLoader:
     2. SELECT * FROM backups WHERE server_id IN ('srv_01', 'srv_02', ...)  (1 query)
 ```
 
-### DataLoader Instances
+### dataloader instances
 
-| Loader | Key | Batch Function | Cache Scope |
+| loader | key | batch function | cache scope |
 |--------|-----|----------------|-------------|
-| `serverLoader` | `server.id` | `SELECT * FROM servers WHERE id IN ($keys)` | Per-request |
-| `backupLoader` | `server.id` | `SELECT * FROM backups WHERE server_id IN ($keys)` | Per-request |
-| `dnsLoader` | `dns.id` | `SELECT * FROM dns_records WHERE id IN ($keys)` | Per-request |
-| `deploymentLoader` | `server.id` | `SELECT * FROM deployments WHERE server_id IN ($keys)` | Per-request |
-| `userLoader` | `user.id` | `SELECT * FROM users WHERE id IN ($keys)` | Per-request |
-| `metricsLoader` | `server.id` | Batch fetch from Prometheus/InfluxDB | Per-request |
+| `serverLoader` | `server.id` | `SELECT * FROM servers WHERE id IN ($keys)` | per-request |
+| `backupLoader` | `server.id` | `SELECT * FROM backups WHERE server_id IN ($keys)` | per-request |
+| `dnsLoader` | `dns.id` | `SELECT * FROM dns_records WHERE id IN ($keys)` | per-request |
+| `deploymentLoader` | `server.id` | `SELECT * FROM deployments WHERE server_id IN ($keys)` | per-request |
+| `userLoader` | `user.id` | `SELECT * FROM users WHERE id IN ($keys)` | per-request |
+| `metricsLoader` | `server.id` | batch fetch from prometheus/influxdb | per-request |
 
----
+## 7. service assignments
 
-## 7. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|-----------------|
-| **Integration Service** | GraphQL server (Yoga/Apollo), schema definition, resolver implementation, DataLoader batching, WebSocket subscriptions, auth middleware, query complexity analysis, schema stitching orchestrator |
-| **Orchestrator Agent** | Expose internal GraphQL schema (or REST endpoints consumed by resolvers), publish events for subscription topics |
-| **Management Panel** | GraphQL client integration (Apollo Client or URQL), subscription hooks for live-updating UI, demo dashboards |
-| **Service Core** | Expose internal GraphQL schema for game-server-specific types |
+| **integration service** | graphql server (yoga/apollo), schema definition, resolver implementation, dataloader batching, websocket subscriptions, auth middleware, query complexity analysis, schema stitching orchestrator |
+| **orchestrator agent** | expose internal graphql schema (or rest endpoints consumed by resolvers), publish events for subscription topics |
+| **management panel** | graphql client integration (apollo client or urql), subscription hooks for live-updating ui, demo dashboards |
+| **service core** | expose internal graphql schema for game-server-specific types |
 
----
+## 8. configuration example
 
-## 8. Configuration Example
-
-**infrapilot.yaml** (GraphQL configuration):
+**infrapilot.yaml** (graphql configuration):
 
 ```yaml
 graphql:
@@ -769,36 +753,32 @@ graphql:
     complexity_per_minute: 5000
 ```
 
----
+## 9. effort estimate
 
-## 9. Effort Estimate
-
-| Phase | PT | Dependencies |
+| phase | pt | dependencies |
 |-------|----|-------------|
-| Phase 1: GraphQL Server Setup & Schema | 2.0 | Feature #14 (API Gateway & Rate Limiting) |
-| Phase 2: Resolvers & DataLoader | 1.5 | Phase 1 |
-| Phase 3: Subscriptions | 1.5 | Phase 1, Redis |
-| Phase 4: Schema Stitching | 1.0 | Phase 1, Orchestrator Agent GQL schema |
-| Phase 5: Testing & Documentation | 0.5 | Phases 1-4 |
-| **Buffer (15%)** | **0.9** | — |
-| **Total** | **~7.4 PT** | — |
+| phase 1: graphql server setup & schema | 2.0 | feature #14 (api gateway & rate limiting) |
+| phase 2: resolvers & dataloader | 1.5 | phase 1 |
+| phase 3: subscriptions | 1.5 | phase 1, redis |
+| phase 4: schema stitching | 1.0 | phase 1, orchestrator agent gql schema |
+| phase 5: testing & documentation | 0.5 | phases 1-4 |
+| **buffer (15%)** | **0.9** | -- |
+| **total** | **~7.4 pt** | -- |
 
-### Risk Factors
+### risk factors
 
-- **Subscription scaling:** Each WebSocket connection consumes memory; long-lived subscriptions for 1000+ concurrent users need horizontal scaling with sticky sessions or a shared PubSub
-- **Schema stitching complexity:** Type conflicts across service schemas (e.g., different `Server` types) require manual merge configuration
-- **Performance:** Deeply nested queries without DataLoader can cause cascading DB load; complexity analysis must be strict
-- **WebSocket proxy:** Load balancers (Nginx, HAProxy) must be configured for WebSocket upgrade and long-lived connections
+- **subscription scaling:** each websocket connection consumes memory; long-lived subscriptions for 1000+ concurrent users need horizontal scaling with sticky sessions or a shared pubsub
+- **schema stitching complexity:** type conflicts across service schemas (e.g., different `server` types) require manual merge configuration
+- **performance:** deeply nested queries without dataloader can cause cascading db load; complexity analysis must be strict
+- **websocket proxy:** load balancers (nginx, haproxy) must be configured for websocket upgrade and long-lived connections
 
----
+## 10. security & compliance
 
-## 10. Security & Compliance
-
-- JWT required for all queries, mutations, and subscriptions
-- Field-level authorization: users can only query resources they have permission for
-- Query complexity limits prevent abusive queries (malicious or accidental)
-- Subscription rate limiting: max N subscriptions per connection, throttled event delivery
-- Input validation: all mutation inputs sanitized and validated against schema
-- Depth limiting prevents deeply nested recursive queries
-- TLS required in production for both HTTP and WebSocket transports
-- Audit logging for all mutations (who performed what action)
+- jwt required for all queries, mutations, and subscriptions
+- field-level authorization: users can only query resources they have permission for
+- query complexity limits prevent abusive queries (malicious or accidental)
+- subscription rate limiting: max n subscriptions per connection, throttled event delivery
+- input validation: all mutation inputs sanitized and validated against schema
+- depth limiting prevents deeply nested recursive queries
+- tls required in production for both http and websocket transports
+- audit logging for all mutations (who performed what action)

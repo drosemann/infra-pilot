@@ -1,22 +1,18 @@
-# Feature 48: Container Image Scanner
+﻿# feature 48: container image scanner
 
-- **Feature ID:** 48
-- **Status:** Planned
-- **Priority:** High
-- **Primary Service:** Orchestrator Agent
-- **Supporting Services:** Integration Service, API Gateway, Notification Service
-- **Effort:** Medium (4–6 PT)
-- **Dependencies:** Registry integration (Docker Hub, ECR, GCR, Harbor), Vulnerability database access
+- feature id: 48
+- status: planned
+- priority: high
+- primary service: orchestrator agent
+- supporting services: integration service, api gateway, notification service
+- effort: medium (4-6 pt)
+- dependencies: registry integration (docker hub, ecr, gcr, harbor), vulnerability database access
 
----
+## overview
 
-## 1. Overview
+integrate container image scanning (trivy, snyk, grype) into the image pull / deployment pipeline. each image is scanned for cves before deployment. results include severity scoring, fix versions, and auto-remediation via pull request. policy enforcement blocks deployments containing critical cves.
 
-Integrate container image scanning (Trivy, Snyk, Grype) into the image pull / deployment pipeline. Each image is scanned for CVEs before deployment. Results include severity scoring, fix versions, and auto-remediation via pull request. Policy enforcement blocks deployments containing critical CVEs.
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -50,56 +46,52 @@ Integrate container image scanning (Trivy, Snyk, Grype) into the image pull / de
 └─────────────────┘  └─────────────────┘  └──────────────────────────┘
 ```
 
-**Data Flow:**
+**data flow:**
 
-1. **Trigger** — Scanning is triggered on image push to registry, pre-deployment, or on a schedule (re-scan).
-2. **Pull & Digest** — The Orchestrator Agent pulls the image manifest and resolves the digest for cache-busting.
-3. **Scan** — The Scanner Engine runs Trivy (and optionally Grype/Snyk) against the image. Results are normalized into a standard CVE format.
-4. **Policy Evaluation** — The Policy Enforcer checks each finding against severity rules. Critical CVEs without an exception cause the deployment to be blocked.
-5. **Reporting** — Results are stored in the Report Store. Notifications are sent via Slack/email/webhook.
-6. **Remediation** — For fixable CVEs, the Remediation Engine can create a PR that updates base images or applies patches.
+• trigger — scanning is triggered on image push to registry, pre-deployment, or on a schedule (re-scan).
+• pull & digest — the orchestrator agent pulls the image manifest and resolves the digest for cache-busting.
+• scan — the scanner engine runs trivy (and optionally grype/snyk) against the image. results are normalized into a standard cve format.
+• policy evaluation — the policy enforcer checks each finding against severity rules. critical cves without an exception cause the deployment to be blocked.
+• reporting — results are stored in the report store. notifications are sent via slack/email/webhook.
+• remediation — for fixable cves, the remediation engine can create a pr that updates base images or applies patches.
 
----
+## implementation plan
 
-## 3. Implementation Plan
-
-### Phase 1 — Scanning Foundation (2 PT)
-| Step | Description |
+### phase 1 — scanning foundation (2 pt)
+| step | description |
 |------|-------------|
-| 1.1  | Integrate Trivy as the primary scanner (Go library / CLI) |
-| 1.2  | Normalize scan results into a unified CVE schema |
-| 1.3  | Implement CVE database cache with daily sync from NVD/GHSA |
-| 1.4  | Add scan trigger on image push (registry webhook) |
+| 1.1  | integrate trivy as the primary scanner (go library / cli) |
+| 1.2  | normalize scan results into a unified cve schema |
+| 1.3  | implement cve database cache with daily sync from nvd/ghsa |
+| 1.4  | add scan trigger on image push (registry webhook) |
 
-### Phase 2 — Policy Engine (1.5 PT)
-| Step | Description |
+### phase 2 — policy engine (1.5 pt)
+| step | description |
 |------|-------------|
-| 2.1  | Policy engine with YAML-based severity rules |
-| 2.2  | Enforce "block on critical CVE" by default |
-| 2.3  | Allowlist management (waived CVEs with expiry) |
-| 2.4  | Integration with deployment pipeline (fail on policy violation) |
+| 2.1  | policy engine with yaml-based severity rules |
+| 2.2  | enforce "block on critical cve" by default |
+| 2.3  | allowlist management (waived cves with expiry) |
+| 2.4  | integration with deployment pipeline (fail on policy violation) |
 
-### Phase 3 — Reporting & Remediation (1.5 PT)
-| Step | Description |
+### phase 3 — reporting & remediation (1.5 pt)
+| step | description |
 |------|-------------|
-| 3.1  | Scan report storage (Postgres / S3) with historical tracking |
-| 3.2  | Notification integration (Slack, email, webhook) |
-| 3.3  | Remediation Engine — PR creation with fix version suggestions |
-| 3.4  | Trend dashboard API (CVE counts over time, fix rate) |
+| 3.1  | scan report storage (postgres / s3) with historical tracking |
+| 3.2  | notification integration (slack, email, webhook) |
+| 3.3  | remediation engine — pr creation with fix version suggestions |
+| 3.4  | trend dashboard api (cve counts over time, fix rate) |
 
-### Phase 4 — Advanced Scanning (1 PT)
-| Step | Description |
+### phase 4 — advanced scanning (1 pt)
+| step | description |
 |------|-------------|
-| 4.1  | Add Grype as secondary scanner for cross-validation |
-| 4.2  | Add Snyk API integration (license compliance, SAST) |
-| 4.3  | Multi-architecture image scanning (arm64, amd64) |
-| 4.4  | SBOM generation (CycloneDX / SPDX) |
+| 4.1  | add grype as secondary scanner for cross-validation |
+| 4.2  | add snyk api integration (license compliance, sast) |
+| 4.3  | multi-architecture image scanning (arm64, amd64) |
+| 4.4  | sbom generation (cyclonedx / spdx) |
 
----
+## api design
 
-## 4. API Design
-
-### 4.1 Scans
+### scans
 
 ```
 POST   /api/v1/scans                          → Trigger a scan
@@ -110,7 +102,7 @@ GET    /api/v1/scans/{id}                     → Scan detail + CVE list
 GET    /api/v1/scans/{id}/summary             → Summary counts by severity
 ```
 
-### 4.2 Policies
+### policies
 
 ```
 GET    /api/v1/policies                       → List scan policies
@@ -119,7 +111,7 @@ DELETE /api/v1/policies/{id}                  → Remove policy
 GET    /api/v1/policies/{id}/evaluate?image=  → Dry-run evaluation
 ```
 
-### 4.3 Allowlist
+### allowlist
 
 ```
 GET    /api/v1/allowlist                      → List waived CVEs
@@ -129,7 +121,7 @@ POST   /api/v1/allowlist                      → Add CVE waiver
 DELETE /api/v1/allowlist/{id}
 ```
 
-### 4.4 Remediation
+### remediation
 
 ```
 POST   /api/v1/remediations                   → Auto-create remediation PR
@@ -138,7 +130,7 @@ POST   /api/v1/remediations                   → Auto-create remediation PR
 GET    /api/v1/remediations                   → List PRs created
 ```
 
-### 4.5 Example: Trigger Scan
+### example: trigger scan
 
 ```json
 POST /api/v1/scans
@@ -161,7 +153,7 @@ Response 201:
 }
 ```
 
-### 4.6 Example: Policy Evaluation Result
+### example: policy evaluation result
 
 ```json
 {
@@ -197,11 +189,9 @@ Response 201:
 }
 ```
 
----
+## data model
 
-## 5. Data Model
-
-### 5.1 Scan
+### scan
 
 ```yaml
 Scan:
@@ -221,7 +211,7 @@ Scan:
   completed_at: timestamp
 ```
 
-### 5.2 Vulnerability
+### vulnerability
 
 ```yaml
 Vulnerability:
@@ -229,7 +219,7 @@ Vulnerability:
   scan_id: string
   cve_id: string                            # "CVE-2026-1234"
   severity: string                          # "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
-  score: float                              # CVSS v3 score 0.0–10.0
+  score: float                              # CVSS v3 score 0.0-10.0
   package_name: string
   installed_version: string
   fixed_version: string                     # null if no fix available
@@ -241,7 +231,7 @@ Vulnerability:
   references: list<string>
 ```
 
-### 5.3 Policy
+### policy
 
 ```yaml
 Policy:
@@ -264,7 +254,7 @@ Policy:
   updated_at: timestamp
 ```
 
-### 5.4 Allowlist Entry (Waiver)
+### allowlist entry (waiver)
 
 ```yaml
 AllowlistEntry:
@@ -276,7 +266,7 @@ AllowlistEntry:
   created_at: timestamp
 ```
 
-### 5.5 Remediation PR
+### remediation pr
 
 ```yaml
 RemediationPR:
@@ -290,37 +280,31 @@ RemediationPR:
   created_at: timestamp
 ```
 
----
+## service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Orchestrator Agent** | Primary service — image pulling, scanner engine, policy enforcer, remediation PR creation |
-| **Integration Service** | CVE database sync (NVD/GHSA), notification dispatch, trend analytics API |
-| **API Gateway** | Route /api/v1/scans/* and /api/v1/policies/*, authenticate developers |
-| **Notification Service** | Slack / email / webhook delivery on policy violations |
-| **Compliance (Feature 46)** | Consume scan results as evidence for SOC 2 CC6.1 (patching) and CC7.1 (vulnerability management) |
+| **orchestrator agent** | primary service — image pulling, scanner engine, policy enforcer, remediation pr creation |
+| **integration service** | cve database sync (nvd/ghsa), notification dispatch, trend analytics api |
+| **api gateway** | route /api/v1/scans/* and /api/v1/policies/*, authenticate developers |
+| **notification service** | slack / email / webhook delivery on policy violations |
+| **compliance (feature 46)** | consume scan results as evidence for soc 2 cc6.1 (patching) and cc7.1 (vulnerability management) |
 
----
+## effort estimate
 
-## 7. Effort Estimate
-
-| Phase | PT | Dependencies |
+| phase | pt | dependencies |
 |-------|----|--------------|
-| Scanning Foundation | 2 | Trivy integration, CVE database, push-trigger |
-| Policy Engine | 1.5 | Severity rules, deployment blocking, allowlist |
-| Reporting & Remediation | 1.5 | Reports, notifications, auto-PR creation |
-| Advanced Scanning | 1 | Grype/Snyk, multi-arch, SBOM |
-| **Total** | **6** | Ranges 4–6 depending on number of scanners integrated |
+| scanning foundation | 2 | trivy integration, cve database, push-trigger |
+| policy engine | 1.5 | severity rules, deployment blocking, allowlist |
+| reporting & remediation | 1.5 | reports, notifications, auto-pr creation |
+| advanced scanning | 1 | grype/snyk, multi-arch, sbom |
+| **total** | **6** | ranges 4-6 depending on number of scanners integrated |
 
----
+## open questions
 
-## 8. Open Questions
-
-- Should we support on-premise registries (Harbor, Nexus) with air-gapped CVE databases?
-- What is the SLA for CVE database freshness (4h / 12h / 24h)?
-- How do we handle images with no known CVE database (distroless, scratch)?
-- Should the auto-remediation PR be auto-merged on low-severity findings?
-- Do we need integration with external ticketing systems (Jira, Linear) for critical CVEs?
-- What is the strategy for handling false positives (noise reduction)?
+• should we support on-premise registries (harbor, nexus) with air-gapped cve databases?
+• what is the sla for cve database freshness (4h / 12h / 24h)?
+• how do we handle images with no known cve database (distroless, scratch)?
+• should the auto-remediation pr be auto-merged on low-severity findings?
+• do we need integration with external ticketing systems (jira, linear) for critical cves?
+• what is the strategy for handling false positives (noise reduction)?

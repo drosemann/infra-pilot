@@ -1,34 +1,24 @@
-# Feature 44: Theme Studio
+﻿# feature 44: theme studio
 
-- **Feature ID:** 44
-- **Status:** Planned
-- **Priority:** Medium
-- **Primary Service:** Management Panel
-- **Effort Estimate:** Medium (4–6 PT)
-- **Dependencies:** Feature 43 (WCAG contrast tokens as baseline)
+- feature id: 44
+- status: planned
+- priority: medium
+- primary service: management panel
+- effort estimate: medium (4-6 pt)
+- dependencies: feature 43 (wcag contrast tokens as baseline)
 
----
+## overview
 
-## 1. Overview
+a visual theme builder that lets users customise the look and feel of the management panel without writing css. users manipulate colours, fonts, border radii, spacing, and shadows through a graphical editor, see changes in a live preview pane, and export the result as a portable json theme bundle. a community gallery allows sharing and discovering themes.
 
-A visual theme builder that lets users customise the look and feel of the
-Management Panel without writing CSS. Users manipulate colours, fonts, border
-radii, spacing, and shadows through a graphical editor, see changes in a live
-preview pane, and export the result as a portable JSON theme bundle. A
-community gallery allows sharing and discovering themes.
+### goals
 
-### Goals
+• reduce styling friction for operators who want white-label or dark-mode dashboards.
+• provide a single-file export/import format so themes are portable across environments.
+• ship with two built-in themes: light (default) and dark.
+• community gallery backed by the existing api (themes stored as json blobs).
 
-1. Reduce styling friction for operators who want white-label or dark-mode
-   dashboards.
-2. Provide a single-file export/import format so themes are portable across
-   environments.
-3. Ship with two built-in themes: *Light* (default) and *Dark*.
-4. Community gallery backed by the existing API (themes stored as JSON blobs).
-
----
-
-## 2. Architecture & Component Map
+## architecture & component map
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -68,68 +58,56 @@ community gallery allows sharing and discovering themes.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## 3. Implementation Plan
+### phase 1 — theme engine (1-2 pt)
 
-### Phase 1 — Theme Engine (1–2 PT)
+• define the themeconfig json schema (see §5).
+• build the `ThemeEngine` class:
+  - accepts a `ThemeConfig` object.
+  - generates a flat map of css custom properties.
+  - applies properties to `document.documentElement.style`.
+  - validates colour-contrast ratios (reuse f43 helpers).
+• write unit tests for serialisation, application, and contrast validation.
 
-1. Define the **ThemeConfig** JSON schema (see §5).
-2. Build the `ThemeEngine` class:
-   - Accepts a `ThemeConfig` object.
-   - Generates a flat map of CSS custom properties.
-   - Applies properties to `document.documentElement.style`.
-   - Validates colour-contrast ratios (reuse F43 helpers).
-3. Write unit tests for serialisation, application, and contrast validation.
+### phase 2 — editor ui (2 pt)
 
-### Phase 2 — Editor UI (2 PT)
+• build the `ThemeEditor` panel:
+  - colour picker — grouped by token role (primary, surface, text, border, danger, success, warning).
+  - font selector — system fonts + google fonts dropdown (optional).
+  - spacing / radius / shadow sliders — adjust base unit (4 px grid).
+• build the `LivePreview` pane:
+  - renders a miniature dashboard (sidebar, cards, table, button, input).
+  - can be an iframe pointing at a stripped-down preview route or a same-frame styled wrapper.
+• connect editor changes to `ThemeEngine` → live preview updates in real-time (debounced 100 ms).
 
-1. Build the **ThemeEditor** panel:
-   - **Colour Picker** — grouped by token role (primary, surface, text, border,
-     danger, success, warning).
-   - **Font Selector** — system fonts + Google Fonts dropdown (optional).
-   - **Spacing / Radius / Shadow sliders** — adjust base unit (4 px grid).
-2. Build the **LivePreview** pane:
-   - Renders a miniature dashboard (sidebar, cards, table, button, input).
-   - Can be an iframe pointing at a stripped-down preview route or a
-     same-frame styled wrapper.
-3. Connect editor changes to `ThemeEngine` → live preview updates
-   in real-time (debounced 100 ms).
+### phase 3 — persistence & portability (1 pt)
 
-### Phase 3 — Persistence & Portability (1 PT)
+• export — serialize current `ThemeConfig` to json and trigger a file download (`theme-name.json`).
+• import — file-upload input that validates against the json schema and applies the theme.
+• save to profile — persist chosen theme per user via `PUT /api/v2/users/me/preferences { theme: { ... } }`.
 
-1. **Export** — serialize current `ThemeConfig` to JSON and trigger a file
-   download (`theme-name.json`).
-2. **Import** — file-upload input that validates against the JSON schema
-   and applies the theme.
-3. **Save to profile** — persist chosen theme per user via
-   `PUT /api/v2/users/me/preferences { theme: { ... } }`.
+### phase 4 — community gallery (1-2 pt)
 
-### Phase 4 — Community Gallery (1–2 PT)
+• list endpoint `GET /api/v2/themes?page=&per_page=` — returns publicly shared themes.
+• publish flow — user fills in name, description, tags; hits "publish"; theme is upserted to `POST /api/v2/themes`.
+• gallery ui — grid of theme cards (thumbnail, name, author, usage count).
+• "install" button — applies the theme locally and saves to preferences.
 
-1. List endpoint `GET /api/v2/themes?page=&per_page=` — returns
-   publicly shared themes.
-2. Publish flow — user fills in name, description, tags; hits "Publish";
-   theme is upserted to `POST /api/v2/themes`.
-3. Gallery UI — grid of theme cards (thumbnail, name, author, usage count).
-4. "Install" button — applies the theme locally and saves to preferences.
+## api design
 
----
+### endpoints
 
-## 4. API Design
+| method | path | description |
+|---|---|---|
+| `GET` | `/api/v2/themes` | list public themes (paginated) |
+| `POST` | `/api/v2/themes` | publish a new theme |
+| `GET` | `/api/v2/themes/:id` | get a single theme by id |
+| `PUT` | `/api/v2/themes/:id` | update a published theme (owner) |
+| `DELETE` | `/api/v2/themes/:id` | delete a theme (owner / admin) |
+| `PUT` | `/api/v2/users/me/preferences` | save active theme as user pref |
 
-### Endpoints
-
-| Method   | Path                            | Description                        |
-|----------|---------------------------------|------------------------------------|
-| `GET`    | `/api/v2/themes`                | List public themes (paginated)     |
-| `POST`   | `/api/v2/themes`                | Publish a new theme                |
-| `GET`    | `/api/v2/themes/:id`            | Get a single theme by ID           |
-| `PUT`    | `/api/v2/themes/:id`            | Update a published theme (owner)   |
-| `DELETE` | `/api/v2/themes/:id`            | Delete a theme (owner / admin)     |
-| `PUT`    | `/api/v2/users/me/preferences`  | Save active theme as user pref     |
-
-### Request / Response Example
+### request / response example
 
 ```json
 POST /api/v2/themes
@@ -187,11 +165,9 @@ Response 201
 }
 ```
 
----
+## data model
 
-## 5. Data Model
-
-### ThemeConfig (JSON Schema)
+### themeconfig (json schema)
 
 ```typescript
 interface ThemeConfig {
@@ -237,7 +213,7 @@ interface ThemeConfig {
 }
 ```
 
-### Database (PostgreSQL)
+### database (postgresql)
 
 ```sql
 CREATE TABLE themes (
@@ -257,40 +233,32 @@ CREATE INDEX idx_themes_public ON themes (is_public, install_count DESC)
   WHERE is_public = true;
 ```
 
----
+## service assignments
 
-## 6. Service Assignments
+| service | role |
+|---|---|
+| management panel | themeengine library, editor ui, live preview, gallery ui |
+| api gateway | theme crud endpoints, user-preference proxy |
+| database | `themes` table |
+| cdn / storage | optional: theme thumbnail images stored in s3-compatible bucket |
 
-| Service           | Role                                                              |
-|-------------------|-------------------------------------------------------------------|
-| Management Panel  | ThemeEngine library, editor UI, live preview, gallery UI          |
-| API Gateway       | Theme CRUD endpoints, user-preference proxy                       |
-| Database          | `themes` table                                                    |
-| CDN / Storage     | Optional: theme thumbnail images stored in S3-compatible bucket   |
+## effort estimate
 
----
+| phase | person-days |
+|---|---|
+| theme engine + validation | 1-2 |
+| editor ui + live preview | 2 |
+| persistence / portability | 1 |
+| community gallery | 1-2 |
+| total | **4-6** |
 
-## 7. Effort Estimate
+## acceptance criteria
 
-| Phase                    | Person-days |
-|--------------------------|-------------|
-| Theme Engine + validation | 1–2        |
-| Editor UI + live preview  | 2          |
-| Persistence / portability | 1          |
-| Community gallery         | 1–2        |
-| **Total**                 | **4–6**    |
-
----
-
-## 8. Acceptance Criteria
-
-1. [ ] Users can edit every colour, font, radius, spacing, and shadow token
-       via the visual editor.
-2. [ ] Live preview reflects changes in ≤ 150 ms.
-3. [ ] Export produces a valid `ThemeConfig` JSON file.
-4. [ ] Import accepts the same JSON and applies the theme immediately.
-5. [ ] Built-in Light and Dark themes are available on first load.
-6. [ ] Community gallery lists public themes, supports search by tag.
-7. [ ] "Install" applies the gallery theme and persists to user preferences.
-8. [ ] All custom themes are validated against the contrast-ratio rules from
-       Feature 43.
+• users can edit every colour, font, radius, spacing, and shadow token via the visual editor.
+• live preview reflects changes in ≤ 150 ms.
+• export produces a valid `ThemeConfig` json file.
+• import accepts the same json and applies the theme immediately.
+• built-in light and dark themes are available on first load.
+• community gallery lists public themes, supports search by tag.
+• "install" applies the gallery theme and persists to user preferences.
+• all custom themes are validated against the contrast-ratio rules from feature 43.

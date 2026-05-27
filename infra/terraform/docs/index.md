@@ -1,15 +1,15 @@
-# Terraform Provider for Infra Pilot
+# terraform provider for infra pilot
 
-The Infra Pilot Terraform provider allows you to manage infrastructure resources
-such as servers, databases, and DNS records through the Infra Pilot API.
+the infra pilot terraform provider allows you to manage infrastructure resources
+such as servers, databases, and dns records through the infra pilot api.
 
-## Requirements
+## requirements
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.0
-- [Go](https://golang.org/doc/install) >= 1.21 (to build the provider)
-- Infra Pilot API access
+• [terraform](https://www.terraform.io/downloads) >= 1.0
+• [go](https://golang.org/doc/install) >= 1.21 (to build the provider)
+• infra pilot api access
 
-## Usage
+## usage
 
 ```hcl
 terraform {
@@ -26,17 +26,17 @@ provider "infrapilot" {
 }
 ```
 
-## Resources
+## resources
 
-- `infrapilot_server` - Manage game and application servers
-- `infrapilot_database` - Manage MySQL/PostgreSQL databases
-- `infrapilot_dns` - Manage DNS records
+• `infrapilot_server` - manage game and application servers
+• `infrapilot_database` - manage mysql/postgresql databases
+• `infrapilot_dns` - manage dns records
 
-## Data Sources
+## data sources
 
-- `infrapilot_server` - Query existing server information
+• `infrapilot_server` - query existing server information
 
-## Authentication
+## authentication
 
-Authentication is handled via API key, which can be provided through the
-`api_key` provider argument or the `IPILOT_API_KEY` environment variable.
+authentication is handled via api key, which can be provided through the
+`api_key` provider argument or the `ipilot_api_key` environment variable.

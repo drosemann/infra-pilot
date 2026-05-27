@@ -1,30 +1,26 @@
-# AI Backup Validator
+# ai backup validator
 
-> **Feature ID:** 5  
-> **Category:** AI & Intelligence  
-> **Primary Service:** Integration Service  
-> **Effort Estimate:** Medium (4-6 PT)  
-> **Status:** Planned
+feature id: 5
+category: ai & intelligence
+primary service: integration service
+effort estimate: medium (4-6 pt)
+status: planned
 
----
+## overview
 
-## Overview
+restore backups to ephemeral containers and run automated integrity checks to validate backup quality. the validator ensures backups are not just present but usable -- databases have consistent schemas, file hashes match expected values, and applications start correctly in the restored environment.
 
-Restore backups to ephemeral containers and run automated integrity checks to validate backup quality. The validator ensures backups are not just present but *usable* — databases have consistent schemas, file hashes match expected values, and applications start correctly in the restored environment.
+a validation score is calculated for each backup, and detailed reports are surfaced in the management panel.
 
-A validation score is calculated for each backup, and detailed reports are surfaced in the Management Panel.
+### goals
 
-### Goals
+- ensure all backups are actually restorable before the data is needed
+- detect silent backup corruption immediately rather than at recovery time
+- provide a quantifiable validation score for each backup
+- support db consistency checks (postgresql, mysql, mongodb), file integrity verification, and application health probes
+- schedule validation automatically after each backup completes
 
-- Ensure all backups are actually restorable before the data is needed
-- Detect silent backup corruption immediately rather than at recovery time
-- Provide a quantifiable validation score for each backup
-- Support DB consistency checks (PostgreSQL, MySQL, MongoDB), file integrity verification, and application health probes
-- Schedule validation automatically after each backup completes
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -90,20 +86,18 @@ A validation score is calculated for each backup, and detailed reports are surfa
 └──────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: ephemeral restore engine (1.5-2 pt)
 
-### Phase 1: Ephemeral Restore Engine (1.5-2 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Target backup selection logic | Latest, specific backup ID, or random sampling |
-| 1.2 | Ephemeral container provisioning | Docker API / K8s Job creation with restore volume |
-| 1.3 | Restore executor | Download backup, extract, apply to ephemeral environment |
-| 1.4 | Resource limits & cleanup | CPU/RAM limits, TTL-based container cleanup, timeout handling |
+| 1.1 | target backup selection logic | latest, specific backup id, or random sampling |
+| 1.2 | ephemeral container provisioning | docker api / k8s job creation with restore volume |
+| 1.3 | restore executor | download backup, extract, apply to ephemeral environment |
+| 1.4 | resource limits & cleanup | cpu/ram limits, ttl-based container cleanup, timeout handling |
 
-**Restore workflow:**
+**restore workflow:**
 
 ```yaml
 # config/restore_templates.yaml
@@ -149,17 +143,17 @@ restore_templates:
     timeout_seconds: 600
 ```
 
-### Phase 2: Integrity Checks (1.5-2 PT)
+### phase 2: integrity checks (1.5-2 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | DB consistency checks | `pg_checksums`, `mysqlcheck`, `mongodb validate` |
-| 2.2 | Schema integrity verification | Compare restored schema to expected baseline |
-| 2.3 | Table row counts & data sampling | Validate record counts match backup manifest |
-| 2.4 | File hash verification | SHA-256 checksum comparison against backup manifest |
-| 2.5 | Application health probes | HTTP/S start check, port binding verification |
+| 2.1 | db consistency checks | `pg_checksums`, `mysqlcheck`, `mongodb validate` |
+| 2.2 | schema integrity verification | compare restored schema to expected baseline |
+| 2.3 | table row counts & data sampling | validate record counts match backup manifest |
+| 2.4 | file hash verification | sha-256 checksum comparison against backup manifest |
+| 2.5 | application health probes | http/s start check, port binding verification |
 
-**Integrity check scripts:**
+**integrity check scripts:**
 
 ```python
 # pseudocode: integrity_checks.py
@@ -212,16 +206,16 @@ class IntegrityChecker:
         return CheckResult(checks=checks, score=verified / (verified + failed) if (verified + failed) > 0 else 0)
 ```
 
-### Phase 3: Scoring & Reporting (1 PT)
+### phase 3: scoring & reporting (1 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Validation score calculation | Weighted combination of individual checks |
-| 3.2 | Report generation | Structured JSON report + human-readable summary |
-| 3.3 | Trend tracking over time | Per-backup, per-server validation history |
-| 3.4 | Notification on failure | Critical alert if score < threshold |
+| 3.1 | validation score calculation | weighted combination of individual checks |
+| 3.2 | report generation | structured json report + human-readable summary |
+| 3.3 | trend tracking over time | per-backup, per-server validation history |
+| 3.4 | notification on failure | critical alert if score < threshold |
 
-**Scoring formula:**
+**scoring formula:**
 
 ```
 Validation Score = 0.0 - 1.0
@@ -238,7 +232,7 @@ Thresholds:
   Fail:   < 0.70
 ```
 
-**Validation report:**
+**validation report:**
 
 ```json
 {
@@ -300,28 +294,26 @@ Thresholds:
 }
 ```
 
-### Phase 4: Scheduling & Automation (1 PT)
+### phase 4: scheduling & automation (1 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 4.1 | Post-backup trigger | Webhook or event subscription: on backup complete → validate |
-| 4.2 | Scheduled validation | Cron-based periodic re-validation of critical backups |
-| 4.3 | Random sampling | Validate random N% of backups even without explicit trigger |
-| 4.4 | Retention of validation results | Store last N validation reports, purge old artifacts |
+| 4.1 | post-backup trigger | webhook or event subscription: on backup complete → validate |
+| 4.2 | scheduled validation | cron-based periodic re-validation of critical backups |
+| 4.3 | random sampling | validate random n% of backups even without explicit trigger |
+| 4.4 | retention of validation results | store last n validation reports, purge old artifacts |
 
----
+## api design
 
-## API Design
+### rest api
 
-### REST API
-
-#### Trigger Validation
+#### trigger validation
 
 ```
 POST /api/v1/validations
 ```
 
-Request:
+request:
 ```json
 {
   "backup_id": "bkp-20260527-003",
@@ -332,7 +324,7 @@ Request:
 }
 ```
 
-Response:
+response:
 ```json
 {
   "validation_id": "val-20260527-001",
@@ -341,15 +333,15 @@ Response:
 }
 ```
 
-#### Get Validation Result
+#### get validation result
 
 ```
 GET /api/v1/validations/{id}
 ```
 
-Response: (full report JSON as shown above)
+response: (full report json as shown above)
 
-#### List Validations
+#### list validations
 
 ```
 GET /api/v1/validations
@@ -361,7 +353,7 @@ GET /api/v1/validations
   &limit=50
 ```
 
-#### Get Validation Summary (Dashboard)
+#### get validation summary (dashboard)
 
 ```
 GET /api/v1/validations/summary
@@ -369,7 +361,7 @@ GET /api/v1/validations/summary
   &days=30
 ```
 
-Response:
+response:
 ```json
 {
   "total_validations": 45,
@@ -395,13 +387,13 @@ Response:
 }
 ```
 
-#### Schedule Validation Policy
+#### schedule validation policy
 
 ```
 PUT /api/v1/validations/policies/{server_id}
 ```
 
-Request:
+request:
 ```json
 {
   "enabled": true,
@@ -415,9 +407,7 @@ Request:
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/backup_validator.py
@@ -473,7 +463,7 @@ class ValidationPolicy:
     retention_days: int
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- Validation results
@@ -527,19 +517,15 @@ CREATE TABLE backup_manifests (
 );
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | Ephemeral restore orchestration, integrity check engine, validation scorer, reporting, scheduling engine, policy management |
-| **Orchestrator Agent** | Backup event hooks, ephemeral container provisioning on compute nodes, network isolation for validation containers |
-| **Management Panel** | Validation dashboard, report viewer (pass/warning/fail), policy configuration UI, trend chart, failure drill-down |
+| integration service | ephemeral restore orchestration, integrity check engine, validation scorer, reporting, scheduling engine, policy management |
+| orchestrator agent | backup event hooks, ephemeral container provisioning on compute nodes, network isolation for validation containers |
+| management panel | validation dashboard, report viewer (pass/warning/fail), policy configuration ui, trend chart, failure drill-down |
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/backup_validator.yaml
@@ -609,7 +595,7 @@ notifications:
   channels: ["panel", "discord"]
 ```
 
-**Docker compose for ephemeral validator container:**
+**docker compose for ephemeral validator container:**
 
 ```yaml
 # docker/validator-compose.yaml
@@ -642,52 +628,46 @@ networks:
     internal: true
 ```
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Backup selection logic | 0.5 | Backup catalog |
-| 1.2 | Ephemeral container provisioning | 1 | Docker/K8s access |
-| 1.3 | Restore executor | 0.5 | Container runtime |
-| 1.4 | Resource limits & cleanup | 0.5 | Container runtime |
-| 2.1 | DB consistency checks | 1 | Database tools |
-| 2.2 | Schema integrity verification | 0.5 | Baseline schema store |
-| 2.3 | Row count validation | 0.25 | DB access |
-| 2.4 | File hash verification | 0.5 | Hash computation |
-| 2.5 | Application health probes | 0.5 | HTTP client |
-| 3.1 | Score calculation | 0.25 | Check results |
-| 3.2 | Report generation | 0.5 | Score output |
-| 3.3 | Trend tracking | 0.25 | Time-series storage |
-| 3.4 | Failure notification | 0.25 | Notifier service |
-| 4.1 | Post-backup trigger | 0.25 | Event bus |
-| 4.2 | Scheduled validation | 0.25 | Cron scheduler |
-| 4.3 | Random sampling | 0.25 | Sampling logic |
-| 4.4 | Retention & cleanup | 0.25 | Scheduler |
-| | **Total** | **6.25** | |
+| 1.1 | backup selection logic | 0.5 | backup catalog |
+| 1.2 | ephemeral container provisioning | 1 | docker/k8s access |
+| 1.3 | restore executor | 0.5 | container runtime |
+| 1.4 | resource limits & cleanup | 0.5 | container runtime |
+| 2.1 | db consistency checks | 1 | database tools |
+| 2.2 | schema integrity verification | 0.5 | baseline schema store |
+| 2.3 | row count validation | 0.25 | db access |
+| 2.4 | file hash verification | 0.5 | hash computation |
+| 2.5 | application health probes | 0.5 | http client |
+| 3.1 | score calculation | 0.25 | check results |
+| 3.2 | report generation | 0.5 | score output |
+| 3.3 | trend tracking | 0.25 | time-series storage |
+| 3.4 | failure notification | 0.25 | notifier service |
+| 4.1 | post-backup trigger | 0.25 | event bus |
+| 4.2 | scheduled validation | 0.25 | cron scheduler |
+| 4.3 | random sampling | 0.25 | sampling logic |
+| 4.4 | retention & cleanup | 0.25 | scheduler |
+| | total | 6.25 | |
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Ephemeral restore impacts production | Resource contention | Strict resource limits, dedicated node pool for validation, throttle concurrent validations |
-| Restore takes too long | Validation delays | Configurable timeout, incremental restore for large backups, streaming validation |
-| False positive (valid backup flagged bad) | Unnecessary re-backup | Configurable thresholds, manual review option, multiple check types with redundancy |
-| False negative (corrupted backup passes) | Data loss at recovery | Multi-layered checks (hashes + DB consistency + health), checksum verification against backup manifest |
-| Validation container security | Attack surface | Network isolation, no persistent storage, temp credentials, automatic cleanup |
+| ephemeral restore impacts production | resource contention | strict resource limits, dedicated node pool for validation, throttle concurrent validations |
+| restore takes too long | validation delays | configurable timeout, incremental restore for large backups, streaming validation |
+| false positive (valid backup flagged bad) | unnecessary re-backup | configurable thresholds, manual review option, multiple check types with redundancy |
+| false negative (corrupted backup passes) | data loss at recovery | multi-layered checks (hashes + db consistency + health), checksum verification against backup manifest |
+| validation container security | attack surface | network isolation, no persistent storage, temp credentials, automatic cleanup |
 
----
+## metrics & kpis
 
-## Metrics & KPIs
-
-| Metric | Target | Measurement |
+| metric | target | measurement |
 |--------|--------|-------------|
-| Backup validation coverage | > 90% of all backups | Validated backups / total backups |
-| Mean validation time | < 10 min | Duration per validation |
-| Recovery confidence score | > 0.95 | Average score across all validations |
-| Undetected corruption rate | < 0.1% | Corrupt backups missed / total corrupt |
-| Validation failure rate | < 5% | Failed validations / total validations |
-| Time from backup to validation | < 30 min | Time from backup completion to validation start |
+| backup validation coverage | > 90% of all backups | validated backups / total backups |
+| mean validation time | < 10 min | duration per validation |
+| recovery confidence score | > 0.95 | average score across all validations |
+| undetected corruption rate | < 0.1% | corrupt backups missed / total corrupt |
+| validation failure rate | < 5% | failed validations / total validations |
+| time from backup to validation | < 30 min | time from backup completion to validation start |

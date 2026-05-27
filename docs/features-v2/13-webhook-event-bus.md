@@ -1,36 +1,32 @@
-# Feature 13: Webhook Event Bus
+# webhook event bus
 
-- **Feature ID:** 13
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Integration Service
-- **Effort Estimate:** Medium (4-6 PT)
-- **Dependencies:** Internal event system (existing), REST API (v1)
-- **Phase:** Phase 2 (Weeks 5-8)
+- feature #: 13
+- category: developer ecosystem & api
+- primary service: integration service
+- effort: medium (4-6 pt)
+- dependencies: internal event system (existing), rest api (v1)
+- phase: phase 2 (weeks 5-8)
 
----
+## overview
 
-## Overview
+the **webhook event bus** provides a reliable, configurable outgoing webhook system for every infrastructure event in infra pilot. when a server starts/stops, a backup completes, an alert triggers, or any other domain event occurs, the bus delivers a structured http payload to registered subscriber endpoints. the system supports payload templating, hmac signing for authenticity, configurable retry with exponential backoff, and delivery logging.
 
-The **Webhook Event Bus** provides a reliable, configurable outgoing webhook system for every infrastructure event in Infra Pilot. When a server starts/stops, a backup completes, an alert triggers, or any other domain event occurs, the bus delivers a structured HTTP payload to registered subscriber endpoints. The system supports payload templating, HMAC signing for authenticity, configurable retry with exponential backoff, and delivery logging.
+### goals
 
-### Goals
+- fire webhooks for every significant domain event (server lifecycle, backup, alert, deployment, dns change)
+- support configurable payload templates (go templates or jsonpath) per subscriber
+- implement retry with exponential backoff + jitter (max 5 retries, 24h delivery window)
+- hmac-sha256 signing of payloads with configurable secrets per subscriber
+- delivery logs with status, latency, response code, and failure reason
+- admin ui in the management panel to manage webhook subscriptions and view delivery history
 
-- Fire webhooks for every significant domain event (server lifecycle, backup, alert, deployment, DNS change)
-- Support configurable payload templates (Go templates or JSONPath) per subscriber
-- Implement retry with exponential backoff + jitter (max 5 retries, 24h delivery window)
-- HMAC-SHA256 signing of payloads with configurable secrets per subscriber
-- Delivery logs with status, latency, response code, and failure reason
-- Admin UI in the Management Panel to manage webhook subscriptions and view delivery history
+### non-goals
 
-### Non-Goals
+- replace the internal event bus or message queue
+- provide webhook event filtering on the publisher side (filtering is per-subscriber)
+- support webhook event replay from persistent store (future enhancement)
 
-- Replace the internal event bus or message queue
-- Provide webhook event filtering on the publisher side (filtering is per-subscriber)
-- Support webhook event replay from persistent store (future enhancement)
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -86,7 +82,7 @@ The **Webhook Event Bus** provides a reliable, configurable outgoing webhook sys
                     └───────────────────────┘
 ```
 
-### Component Flow
+### component flow
 
 ```
 1. Event Producer emits event to Redis Pub/Sub
@@ -98,46 +94,42 @@ The **Webhook Event Bus** provides a reliable, configurable outgoing webhook sys
 7. Delivery Log records success/failure with metadata
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase a: event registry & subscriber model (1.5 pt)
 
-### Phase A: Event Registry & Subscriber Model (1.5 PT)
+1. define the canonical event schema in the integration service
+2. implement event type registry with metadata (event name, version, schema)
+3. build subscriber model: url, events filter, template, secret, retry config
+4. create postgresql schema for subscribers and delivery logs
+5. build crud api for managing webhook subscriptions
 
-1. Define the canonical event schema in the Integration Service
-2. Implement event type registry with metadata (event name, version, schema)
-3. Build subscriber model: URL, events filter, template, secret, retry config
-4. Create PostgreSQL schema for subscribers and delivery logs
-5. Build CRUD API for managing webhook subscriptions
+### phase b: payload templating & signing (1.5 pt)
 
-### Phase B: Payload Templating & Signing (1.5 PT)
+1. implement go template rendering engine with event data injection
+2. support default templates per event type (overridable per subscriber)
+3. implement hmac-sha256 signing with subscriber secret
+4. add timestamp-based nonce (`x-infrapilot-timestamp` header)
+5. add optional payload body (`x-infrapilot-signature-256` header)
 
-1. Implement Go template rendering engine with event data injection
-2. Support default templates per event type (overridable per subscriber)
-3. Implement HMAC-SHA256 signing with subscriber secret
-4. Add timestamp-based nonce (`X-Infrapilot-Timestamp` header)
-5. Add optional payload body (`X-Infrapilot-Signature-256` header)
+### phase c: delivery engine & retry (1.5 pt)
 
-### Phase C: Delivery Engine & Retry (1.5 PT)
+1. build http delivery worker pool with configurable concurrency
+2. implement retry with exponential backoff + jitter (0s, 10s, 30s, 2m, 10m, 1h)
+3. add circuit breaker: disable subscriber after n consecutive failures
+4. implement dead-letter queue after max retries exhausted
+5. build delivery log persistence with async batch writes
 
-1. Build HTTP delivery worker pool with configurable concurrency
-2. Implement retry with exponential backoff + jitter (0s, 10s, 30s, 2m, 10m, 1h)
-3. Add circuit breaker: disable subscriber after N consecutive failures
-4. Implement dead-letter queue after max retries exhausted
-5. Build delivery log persistence with async batch writes
+### phase d: admin ui & monitoring (1 pt)
 
-### Phase D: Admin UI & Monitoring (1 PT)
+1. add management panel pages: webhook list, create/edit form, delivery log viewer
+2. add webhook test button (send sample event)
+3. add metrics: delivery count, success rate, p50/p95/p99 latency
+4. add alerting: subscriber disabled alert, high failure rate alert
 
-1. Add Management Panel pages: Webhook list, create/edit form, delivery log viewer
-2. Add webhook test button (send sample event)
-3. Add metrics: delivery count, success rate, P50/P95/P99 latency
-4. Add alerting: subscriber disabled alert, high failure rate alert
+## api design
 
----
-
-## API Design
-
-### Webhook Subscription CRUD
+### webhook subscription crud
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -148,7 +140,7 @@ The **Webhook Event Bus** provides a reliable, configurable outgoing webhook sys
 | `DELETE` | `/api/v1/webhook-subscriptions/:id` | Delete subscription |
 | `POST` | `/api/v1/webhook-subscriptions/:id/test` | Send test event |
 
-### Delivery Logs
+### delivery logs
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -156,15 +148,15 @@ The **Webhook Event Bus** provides a reliable, configurable outgoing webhook sys
 | `GET` | `/api/v1/webhook-deliveries/:id` | Get delivery detail |
 | `POST` | `/api/v1/webhook-deliveries/:id/retry` | Manually retry delivery |
 
-### Event Types Registry
+### event types registry
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/v1/events/types` | List all available event types |
 
-### Payload Schema
+### payload schema
 
-**Delivery Request (outgoing to subscriber):**
+**delivery request (outgoing to subscriber):**
 
 ```
 POST /webhook HTTP/1.1
@@ -202,16 +194,14 @@ X-Infrapilot-Signature-256: sha256=abcdef1234567890...
 }
 ```
 
----
+## data model
 
-## Data Model
-
-### Subscriber Configuration
+### subscriber configuration
 
 ```json
 {
   "id": "sub_abc123",
-  "name": "Slack Ops Channel",
+  "name": "slack ops channel",
   "url": "https://hooks.slack.com/services/T00/B00/xxx",
   "enabled": true,
   "event_types": ["server.*", "backup.*", "alert.*"],
@@ -232,7 +222,7 @@ X-Infrapilot-Signature-256: sha256=abcdef1234567890...
 }
 ```
 
-### Delivery Log
+### delivery log
 
 ```json
 {
@@ -263,7 +253,7 @@ X-Infrapilot-Signature-256: sha256=abcdef1234567890...
 }
 ```
 
-### PostgreSQL Schema
+### postgresql schema
 
 ```sql
 CREATE TABLE webhook_subscribers (
@@ -302,9 +292,7 @@ CREATE INDEX idx_deliveries_subscriber ON webhook_deliveries(subscriber_id, crea
 CREATE INDEX idx_deliveries_status ON webhook_deliveries(status) WHERE status = 'pending';
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
@@ -317,9 +305,7 @@ CREATE INDEX idx_deliveries_status ON webhook_deliveries(status) WHERE status = 
 | Admin UI (Panel) | Frontend Team | Webhook management pages |
 | Metrics & monitoring | DevOps Team | Prometheus metrics, Grafana dashboard |
 
----
-
-## Effort Estimate Breakdown
+## effort estimate breakdown
 
 | Task | PT | Dependencies |
 |------|----|-------------|
@@ -333,13 +319,11 @@ CREATE INDEX idx_deliveries_status ON webhook_deliveries(status) WHERE status = 
 | Admin UI (list, create, detail) | 1.0 | API endpoints |
 | Test button & sample events | 0.5 | Delivery engine |
 | Metrics & alerting | 0.5 | Prometheus |
-| **Total** | **6.5** | |
+| total | 6.5 | |
 
----
+## usage examples
 
-## Usage Examples
-
-### Create Webhook Subscription
+### create webhook subscription
 
 ```bash
 curl -X POST https://api.infrapanel.io/v1/webhook-subscriptions \
@@ -354,7 +338,7 @@ curl -X POST https://api.infrapanel.io/v1/webhook-subscriptions \
   }'
 ```
 
-### Test Webhook
+### test webhook
 
 ```bash
 curl -X POST https://api.infrapanel.io/v1/webhook-subscriptions/sub_abc123/test \
@@ -369,7 +353,7 @@ curl -X POST https://api.infrapanel.io/v1/webhook-subscriptions/sub_abc123/test 
   }'
 ```
 
-### HMAC Verification (Subscriber Side)
+### hmac verification (subscriber side)
 
 ```python
 import hmac
@@ -387,7 +371,7 @@ def verify_webhook(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, received)
 ```
 
-### Subscriber Configuration (Management Panel YAML)
+### subscriber configuration (management panel yaml)
 
 ```yaml
 name: PagerDuty Incidents
@@ -414,9 +398,7 @@ retry_config:
   initial_backoff_ms: 5000
 ```
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -426,18 +408,16 @@ retry_config:
 | Template injection | Server-side template execution | Sandboxed template engine, limit available functions |
 | Event volume spike | Delivery backlog | Bounded worker pool, priority queuing for critical events |
 
----
+## acceptance criteria
 
-## Acceptance Criteria
-
-- [ ] All 20+ event types defined in registry with versioned schemas
-- [ ] Webhook subscriptions can filter by glob pattern (e.g., `server.*`)
-- [ ] Payload template renders all event fields and supports `toJson`, `now`, `upper`, `lower`
-- [ ] HMAC-SHA256 signature header is present on every delivery
-- [ ] Retry executes at least 5 attempts with increasing backoff (verified by test)
-- [ ] Circuit breaker disables subscriber after N consecutive failures and auto-recovers
-- [ ] Delivery logs store full request/response metadata for 30 days
-- [ ] Admin UI can create, edit, enable/disable, delete subscriptions
-- [ ] Test button sends real webhook with sample event data
-- [ ] P50 delivery latency < 500ms, P99 < 5s (excluding retries)
-- [ ] Dead-letter queue captures all failed deliveries after max retries
+- [ ] all 20+ event types defined in registry with versioned schemas
+- [ ] webhook subscriptions can filter by glob pattern (e.g., `server.*`)
+- [ ] payload template renders all event fields and supports `tojson`, `now`, `upper`, `lower`
+- [ ] hmac-sha256 signature header is present on every delivery
+- [ ] retry executes at least 5 attempts with increasing backoff (verified by test)
+- [ ] circuit breaker disables subscriber after n consecutive failures and auto-recovers
+- [ ] delivery logs store full request/response metadata for 30 days
+- [ ] admin ui can create, edit, enable/disable, delete subscriptions
+- [ ] test button sends real webhook with sample event data
+- [ ] p50 delivery latency < 500ms, p99 < 5s (excluding retries)
+- [ ] dead-letter queue captures all failed deliveries after max retries

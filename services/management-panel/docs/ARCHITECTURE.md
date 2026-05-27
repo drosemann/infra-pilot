@@ -1,6 +1,6 @@
-# Docker Panel Architecture
+# docker panel architecture
 
-## System Diagram
+## system diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -62,35 +62,34 @@
         │  ┌─────────────────────────────────────────────┐ │
         │  │  Express Routes                            │ │
         │  │  ├─ /api/setup/* - Setup endpoints         │ │
-         │  │  ├─ /api/setup/* - Setup endpoints         │ │
-         │  │  ├─ /api/apps/* - CRUD operations          │ │
-         │  │  ├─ /api/apps/:id/[start|stop|restart]    │ │
-         │  │  ├─ /api/apps/:id/logs - Log streaming     │ │
-         │  │  ├─ /api/user - User profile              │ │
-         │  │  ├─ /api/config/* - Configuration         │ │
-         │  │  ├─ /api/audit-log - Audit trail           │ │
-         │  │  ├─ /api/search - Global search            │ │
-         │  │  ├─ /api/notification-channels/* - Notifs  │ │
-         │  │  ├─ /api/openapi.json - OpenAPI spec       │ │
-         │  │  ├─ /api/docs - Swagger UI                 │ │
-         │  │  └─ /health - Health check                │ │
-         │  └─────────────────────────────────────────────┘ │
-         │                                                   │
-         │  ┌─────────────────────────────────────────────┐ │
-         │  │  WebSocket Server (ws://)                   │ │
-         │  │  ├─ subscribe → docker logs -f streaming   │ │
-         │  │  └─ subscribe:metrics → docker stats 2s    │ │
-         │  └─────────────────────────────────────────────┘ │
-         │                                                   │
-         │  ┌─────────────────────────────────────────────┐ │
-         │  │  Middleware                                │ │
-         │  │  ├─ CORS                                   │ │
-         │  │  ├─ JSON Parser                            │ │
-         │  │  ├─ Rate Limiter (login: 10 req/15min)    │ │
-         │  │  ├─ Auth (verifyAuth middleware)           │ │
-         │  │  ├─ Audit Logger (logAudit on mutations)  │ │
-         │  │  └─ Error Handling                         │ │
-         │  └─────────────────────────────────────────────┘ │
+        │  │  ├─ /api/apps/* - CRUD operations          │ │
+        │  │  ├─ /api/apps/:id/[start|stop|restart]    │ │
+        │  │  ├─ /api/apps/:id/logs - Log streaming     │ │
+        │  │  ├─ /api/user - User profile              │ │
+        │  │  ├─ /api/config/* - Configuration         │ │
+        │  │  ├─ /api/audit-log - Audit trail           │ │
+        │  │  ├─ /api/search - Global search            │ │
+        │  │  ├─ /api/notification-channels/* - Notifs  │ │
+        │  │  ├─ /api/openapi.json - OpenAPI spec       │ │
+        │  │  ├─ /api/docs - Swagger UI                 │ │
+        │  │  └─ /health - Health check                │ │
+        │  └─────────────────────────────────────────────┘ │
+        │                                                   │
+        │  ┌─────────────────────────────────────────────┐ │
+        │  │  WebSocket Server (ws://)                   │ │
+        │  │  ├─ subscribe → docker logs -f streaming   │ │
+        │  │  └─ subscribe:metrics → docker stats 2s    │ │
+        │  └─────────────────────────────────────────────┘ │
+        │                                                   │
+        │  ┌─────────────────────────────────────────────┐ │
+        │  │  Middleware                                │ │
+        │  │  ├─ CORS                                   │ │
+        │  │  ├─ JSON Parser                            │ │
+        │  │  ├─ Rate Limiter (login: 10 req/15min)    │ │
+        │  │  ├─ Auth (verifyAuth middleware)           │ │
+        │  │  ├─ Audit Logger (logAudit on mutations)  │ │
+        │  │  └─ Error Handling                         │ │
+        │  └─────────────────────────────────────────────┘ │
         │                                                   │
         └────────────┬──────────────────┬──────────────────┘
                      │                  │
@@ -110,22 +109,22 @@
         │                                                   │
         │  ┌─────────────────────────────────────────────┐ │
         │  │  Tables                                     │ │
-         │  │  ├─ auth.users (Supabase managed)          │ │
-         │  │  ├─ user_profiles (with RLS)               │ │
-         │  │  ├─ setup_config (mode, initialized)        │ │
-         │  │  ├─ docker_apps (container configs)        │ │
-         │  │  ├─ app_logs (application logs)            │ │
-         │  │  ├─ audit_log (append-only mutations)      │ │
-         │  │  ├─ notification_channels (email/webhook/telegram) │ │
-         │  │  ├─ backup_jobs with backup_status        │ │
-         │  │  ├─ alert_configs with alert_history       │ │
-         │  │  ├─ maintenance_windows                    │ │
-         │  │  ├─ config_versions                        │ │
-         │  │  ├─ health_checks                          │ │
-         │  │  ├─ server_metrics                         │ │
-         │  │  ├─ access_logs                            │ │
-         │  │  ├─ pterodactyl_config (optional)          │ │
-         │  │  └─ shared_config (key-value store)         │ │
+        │  │  ├─ auth.users (Supabase managed)          │ │
+        │  │  ├─ user_profiles (with RLS)               │ │
+        │  │  ├─ setup_config (mode, initialized)        │ │
+        │  │  ├─ docker_apps (container configs)        │ │
+        │  │  ├─ app_logs (application logs)            │ │
+        │  │  ├─ audit_log (append-only mutations)      │ │
+        │  │  ├─ notification_channels (email/webhook/telegram) │ │
+        │  │  ├─ backup_jobs with backup_status        │ │
+        │  │  ├─ alert_configs with alert_history       │ │
+        │  │  ├─ maintenance_windows                    │ │
+        │  │  ├─ config_versions                        │ │
+        │  │  ├─ health_checks                          │ │
+        │  │  ├─ server_metrics                         │ │
+        │  │  ├─ access_logs                            │ │
+        │  │  ├─ pterodactyl_config (optional)          │ │
+        │  │  └─ shared_config (key-value store)         │ │
         │  └─────────────────────────────────────────────┘ │
         │                                                   │
         │  ┌─────────────────────────────────────────────┐ │
@@ -138,11 +137,9 @@
         └──────────────────────────────────────────────────┘
 ```
 
----
+## native desktop entry (zero-native)
 
-## Native Desktop Entry (zero-native)
-
-The management panel has an optional zero-native shell alongside the browser-hosted Vite app:
+the management panel has an optional zero-native shell alongside the browser-hosted vite app:
 
 ```
 ┌───────────────────────────┐
@@ -163,9 +160,9 @@ The management panel has an optional zero-native shell alongside the browser-hos
 └───────────────────────────┘
 ```
 
-The shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the Vite dev server when launched through `zero-native dev`. The backend stays as an Express service so Docker control, Supabase/PostgreSQL access, and integration tests keep the same boundaries as the web deployment.
+the shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the vite dev server when launched through `zero-native dev`. the backend stays as an express service so docker control, supabase/postgresql access, and integration tests keep the same boundaries as the web deployment.
 
-## Data Flow: Setup & Authentication
+## data flow: setup & authentication
 
 ```
 ┌─────────┐
@@ -244,9 +241,7 @@ The shell is configured by `app.zon`, loads `dist/index.html` for packaged build
 └────────────────────────────────┘
 ```
 
----
-
-## Data Flow: Docker App CRUD
+## data flow: docker app crud
 
 ```
 User clicks "New App"
@@ -318,9 +313,7 @@ User clicks "New App"
 └──────────────────────────┘
 ```
 
----
-
-## Feature Gate Checking
+## feature gate checking
 
 ```
 Component wants to render business feature
@@ -340,10 +333,10 @@ Component wants to render business feature
 └────────┬───────────────────────────┘
          │
       ┌──┴──────────────────────────────┐
-         │                                    │
+      │                                    │
     mode == 'personal'              mode == 'business'
-         │                                    │
-         ▼                                    ▼
+      │                                    │
+      ▼                                    ▼
 ┌──────────────────────┐      ┌──────────────────────┐
 │ Feature hidden       │      │ Feature visible      │
 │ Show helpful message │      │ Full functionality   │
@@ -352,9 +345,7 @@ Component wants to render business feature
 └──────────────────────┘      └──────────────────────┘
 ```
 
----
-
-## Mode Decision Tree
+## mode decision tree
 
 ```
 Setup Wizard
@@ -388,9 +379,7 @@ Setup Wizard
             └─ Billing hooks
 ```
 
----
-
-## Deployment Architecture (Production)
+## deployment architecture (production)
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -432,15 +421,13 @@ Setup Wizard
                           └─────────────────────┘
 ```
 
----
+## summary
 
-## Summary
+- **frontend**: react spa with client-side routing and jwt auth
+- **backend**: express.js rest api with route-level auth & rls
+- **database**: postgresql with row-level security
+- **auth**: supabase auth (jwt tokens)
+- **feature gates**: configured at setup, checked everywhere
+- **scaling**: easy to add business mode tables/routes later
 
-- **Frontend**: React SPA with client-side routing and JWT auth
-- **Backend**: Express.js REST API with route-level auth & RLS
-- **Database**: PostgreSQL with row-level security
-- **Auth**: Supabase Auth (JWT tokens)
-- **Feature Gates**: Configured at setup, checked everywhere
-- **Scaling**: Easy to add Business Mode tables/routes later
-
-The architecture is **modular, secure, and extensible**.
+the architecture is **modular, secure, and extensible**.

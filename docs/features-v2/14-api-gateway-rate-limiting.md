@@ -1,37 +1,33 @@
-# Feature 14: API Gateway & Rate Limiting
+# api gateway & rate limiting
 
-- **Feature ID:** 14
-- **Category:** Developer Ecosystem & API
-- **Primary Service:** Integration Service
-- **Effort Estimate:** Medium (4-6 PT)
-- **Dependencies:** Existing REST API (v1), Authentication Service
-- **Phase:** Phase 2 (Weeks 5-8)
+- feature #: 14
+- category: developer ecosystem & api
+- primary service: integration service
+- effort: medium (4-6 pt)
+- dependencies: existing rest api (v1), authentication service
+- phase: phase 2 (weeks 5-8)
 
----
+## overview
 
-## Overview
+the **api gateway & rate limiting** system provides a centralized gateway layer for all infra pilot api traffic. it enforces per-key rate limiting, usage quotas, and request logging while managing the full lifecycle of api keys. this enables secure, observable, and fair multi-tenant api access suitable for both human operators and automated systems.
 
-The **API Gateway & Rate Limiting** system provides a centralized gateway layer for all Infra Pilot API traffic. It enforces per-key rate limiting, usage quotas, and request logging while managing the full lifecycle of API keys. This enables secure, observable, and fair multi-tenant API access suitable for both human operators and automated systems.
+### goals
 
-### Goals
+- central api gateway routing all `/api/v1/*` traffic through a unified entry point
+- per-key rate limiting using token bucket algorithm (configurable burst and sustained rates)
+- usage quotas (daily/monthly request caps) with configurable overage behavior
+- full request/response logging for audit and debugging
+- api key management with creation, rotation, revocation, and scoping
+- usage analytics and quota alerts
 
-- Central API gateway routing all `/api/v1/*` traffic through a unified entry point
-- Per-key rate limiting using token bucket algorithm (configurable burst and sustained rates)
-- Usage quotas (daily/monthly request caps) with configurable overage behavior
-- Full request/response logging for audit and debugging
-- API key management with creation, rotation, revocation, and scoping
-- Usage analytics and quota alerts
+### non-goals
 
-### Non-Goals
+- service-to-service internal routing (handled by existing service mesh)
+- ddos protection at the network level (handled by cdn/waf, feature 23)
+- authentication or identity management (delegated to auth service)
+- caching layer or cdn integration
 
-- Service-to-service internal routing (handled by existing service mesh)
-- DDoS protection at the network level (handled by CDN/WAF, Feature 23)
-- Authentication or identity management (delegated to Auth Service)
-- Caching layer or CDN integration
-
----
-
-## Architecture
+## architecture
 
 ```
                          ┌─────────────────────────┐
@@ -107,7 +103,7 @@ The **API Gateway & Rate Limiting** system provides a centralized gateway layer 
                     └─────────────────────────┘
 ```
 
-### Request Flow
+### request flow
 
 ```
 1. Client sends request with X-API-Key header
@@ -124,56 +120,52 @@ The **API Gateway & Rate Limiting** system provides a centralized gateway layer 
 8. Response logged with status, latency, and remaining quota headers
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase a: gateway proxy & key validation (1.5 pt)
 
-### Phase A: Gateway Proxy & Key Validation (1.5 PT)
+1. implement http reverse proxy layer (go `httputil.reverseproxy` or node.js `http-proxy`)
+2. add api key extraction from `x-api-key` header and `?api_key=` query parameter
+3. implement key validation: lookup in redis cache (with postgresql fallback)
+4. add key status checks (active, revoked, expired)
+5. implement key-to-tier resolution (free, pro, enterprise)
 
-1. Implement HTTP reverse proxy layer (Go `httputil.ReverseProxy` or Node.js `http-proxy`)
-2. Add API key extraction from `X-API-Key` header and `?api_key=` query parameter
-3. Implement key validation: lookup in Redis cache (with PostgreSQL fallback)
-4. Add key status checks (active, revoked, expired)
-5. Implement key-to-tier resolution (free, pro, enterprise)
+### phase b: rate limiting engine (1.5 pt)
 
-### Phase B: Rate Limiting Engine (1.5 PT)
+1. implement token bucket algorithm in go/python with redis backend
+2. support configurable: `max_burst`, `refill_rate` (per second), `refill_interval`
+3. build multi-level rate limiter: per-key -> per-ip -> per-endpoint -> global
+4. implement atomic redis operations (eval/lua scripts for correctness)
+5. add `retry-after` header computation and 429 response formatting
 
-1. Implement token bucket algorithm in Go/Python with Redis backend
-2. Support configurable: `max_burst`, `refill_rate` (per second), `refill_interval`
-3. Build multi-level rate limiter: per-key → per-IP → per-endpoint → global
-4. Implement atomic Redis operations (EVAL/Lua scripts for correctness)
-5. Add `Retry-After` header computation and 429 response formatting
+### phase c: quota management (1 pt)
 
-### Phase C: Quota Management (1 PT)
+1. implement daily/monthly usage counters in redis with postgresql persistence
+2. add quota configuration per key: `daily_limit`, `monthly_limit`, `overage_strategy`
+3. implement overage strategies: `block`, `warn` (header only), `bill` (meter)
+4. add quota reset cron jobs (daily at midnight utc, monthly on 1st)
+5. return usage headers: `x-ratelimit-remaining`, `x-ratelimit-reset`
 
-1. Implement daily/monthly usage counters in Redis with PostgreSQL persistence
-2. Add quota configuration per key: `daily_limit`, `monthly_limit`, `overage_strategy`
-3. Implement overage strategies: `block`, `warn` (header only), `bill` (meter)
-4. Add quota reset cron jobs (daily at midnight UTC, monthly on 1st)
-5. Return usage headers: `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+### phase d: api key management & admin api (1.5 pt)
 
-### Phase D: API Key Management & Admin API (1.5 PT)
+1. build crud api for api keys: create, list, get, update, revoke, rotate
+2. add key scoping: `read_only`, `write`, `admin` permission sets
+3. implement key rotation with overlapping grace period (old key works for 24h)
+4. build admin ui pages in management panel for key management
+5. add usage analytics: top keys, top endpoints, error rates, latency
 
-1. Build CRUD API for API keys: create, list, get, update, revoke, rotate
-2. Add key scoping: `read_only`, `write`, `admin` permission sets
-3. Implement key rotation with overlapping grace period (old key works for 24h)
-4. Build admin UI pages in Management Panel for key management
-5. Add usage analytics: top keys, top endpoints, error rates, latency
+### phase e: request logging & observability (0.5 pt)
 
-### Phase E: Request Logging & Observability (0.5 PT)
+1. implement structured request/response logging (json, async writer)
+2. add log enrichment: key id, tier, rate limit decisions, upstream latency
+3. expose prometheus metrics: requests total, requests by status, rate limit hits, latency
+4. build grafana dashboard: gateway overview, top keys, rate limit events
 
-1. Implement structured request/response logging (JSON, async writer)
-2. Add log enrichment: key ID, tier, rate limit decisions, upstream latency
-3. Expose Prometheus metrics: requests total, requests by status, rate limit hits, latency
-4. Build Grafana dashboard: gateway overview, top keys, rate limit events
+## api design
 
----
+### rate limiting headers (response)
 
-## API Design
-
-### Rate Limiting Headers (Response)
-
-Every API response includes rate limit headers:
+every api response includes rate limit headers:
 
 ```
 X-RateLimit-Limit: 100
@@ -184,7 +176,7 @@ X-RateLimit-Tier: pro
 X-Key-ID: key_abc123
 ```
 
-When rate limited:
+when rate limited:
 
 ```
 HTTP/1.1 429 Too Many Requests
@@ -206,7 +198,7 @@ Content-Type: application/json
 }
 ```
 
-### API Key Management Endpoints
+### api key management endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -218,7 +210,7 @@ Content-Type: application/json
 | `POST` | `/api/v1/api-keys/:id/rotate` | Rotate key (new secret, old expires) |
 | `GET` | `/api/v1/api-keys/:id/usage` | Get usage statistics |
 
-### Usage Analytics Endpoints
+### usage analytics endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -228,11 +220,9 @@ Content-Type: application/json
 | `GET` | `/api/v1/analytics/errors` | Error rate analytics |
 | `GET` | `/api/v1/analytics/latency` | P50/P95/P99 latency stats |
 
----
+## data model
 
-## Data Model
-
-### API Key Record
+### api key record
 
 ```json
 {
@@ -264,7 +254,7 @@ Content-Type: application/json
 }
 ```
 
-### Rate Limit Bucket (Redis)
+### rate limit bucket (redis)
 
 ```json
 {
@@ -276,7 +266,7 @@ Content-Type: application/json
 }
 ```
 
-### Usage Counter (Redis)
+### usage counter (redis)
 
 ```json
 {
@@ -286,7 +276,7 @@ Content-Type: application/json
 }
 ```
 
-### PostgreSQL Schema
+### postgresql schema
 
 ```sql
 CREATE TABLE api_keys (
@@ -344,11 +334,9 @@ CREATE TABLE api_usage_monthly (
 );
 ```
 
----
+## rate limiting algorithms
 
-## Rate Limiting Algorithms
-
-### Token Bucket (Primary)
+### token bucket (primary)
 
 ```
 Rate:       10 requests/second
@@ -365,7 +353,7 @@ T+200ms Refill (+1 token)   18 remaining
 ...
 ```
 
-**Redis Lua Implementation:**
+**redis lua implementation:**
 
 ```lua
 -- rate_limit.lua
@@ -399,7 +387,7 @@ else
 end
 ```
 
-### Rate Limit Hierarchy
+### rate limit hierarchy
 
 ```
 1. Global Rate Limit       (cluster-wide: 10000 req/s)
@@ -411,9 +399,7 @@ end
 4. Per-Endpoint Rate Limit (specific endpoints: 5 req/s for DELETE /servers)
 ```
 
----
-
-## Service Assignments
+## service assignments
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
@@ -426,9 +412,7 @@ end
 | Usage analytics | Frontend Team | Charts, top-N queries |
 | Prometheus metrics | DevOps Team | Metric exposition, Grafana |
 
----
-
-## Effort Estimate Breakdown
+## effort estimate breakdown
 
 | Task | PT | Dependencies |
 |------|----|-------------|
@@ -442,13 +426,11 @@ end
 | Admin UI (key management) | 1.0 | Frontend components |
 | Usage analytics + charts | 0.5 | Usage data pipeline |
 | Metrics + Grafana dashboard | 0.5 | Prometheus |
-| **Total** | **7.0** | |
+| total | 7.0 | |
 
----
+## usage examples
 
-## Usage Examples
-
-### Create API Key
+### create api key
 
 ```bash
 curl -X POST https://api.infrapanel.io/v1/api-keys \
@@ -473,7 +455,7 @@ curl -X POST https://api.infrapanel.io/v1/api-keys \
 # }
 ```
 
-### Rotate API Key
+### rotate api key
 
 ```bash
 curl -X POST https://api.infrapanel.io/v1/api-keys/key_abc123/rotate \
@@ -486,7 +468,7 @@ curl -X POST https://api.infrapanel.io/v1/api-keys/key_abc123/rotate \
 # }
 ```
 
-### Use API Key
+### use api key
 
 ```bash
 # Via header (recommended)
@@ -497,7 +479,7 @@ curl -H "X-API-Key: ip_api_abc123def456..." \
 curl "https://api.infrapanel.io/v1/servers?api_key=ip_api_abc123def456..."
 ```
 
-### Rate Limiting Configuration
+### rate limiting configuration
 
 ```yaml
 # Rate limit config for enterprise tier
@@ -551,9 +533,7 @@ quotas:
     overage_strategy: bill
 ```
 
----
-
-## Risks & Mitigations
+## risks & mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
@@ -563,19 +543,17 @@ quotas:
 | Key hash collision | Unauthorized access | Use bcrypt with unique per-key salt, collision check on creation |
 | Distributed rate limiting inconsistency | Over-limit or under-limit in multi-node | Redis atomic Lua scripts, consistent hashing of keys to Redis nodes |
 
----
+## acceptance criteria
 
-## Acceptance Criteria
-
-- [ ] Gateway proxies all `/api/v1/*` requests to correct upstream services
-- [ ] API key validation rejects inactive/revoked/expired keys with 401
-- [ ] Token bucket rate limiter enforces burst and sustained rates within 5% tolerance
-- [ ] `Retry-After` header present and accurate on 429 responses
-- [ ] Multi-level rate limits evaluate in correct order (global → IP → key → endpoint)
-- [ ] Quota counters track daily and monthly usage correctly across service restarts
-- [ ] Quota overage strategies work: `block` returns 429, `warn` adds header, `bill` logs metering data
-- [ ] API key rotation creates new key and expires old key after grace period
-- [ ] Request logs persist with all required fields and < 50ms overhead
-- [ ] Usage analytics queries return correct aggregate data
-- [ ] P99 gateway latency overhead < 10ms (vs direct-to-service)
-- [ ] All endpoints return rate limit headers
+- [ ] gateway proxies all `/api/v1/*` requests to correct upstream services
+- [ ] api key validation rejects inactive/revoked/expired keys with 401
+- [ ] token bucket rate limiter enforces burst and sustained rates within 5% tolerance
+- [ ] `retry-after` header present and accurate on 429 responses
+- [ ] multi-level rate limits evaluate in correct order (global -> ip -> key -> endpoint)
+- [ ] quota counters track daily and monthly usage correctly across service restarts
+- [ ] quota overage strategies work: `block` returns 429, `warn` adds header, `bill` logs metering data
+- [ ] api key rotation creates new key and expires old key after grace period
+- [ ] request logs persist with all required fields and < 50ms overhead
+- [ ] usage analytics queries return correct aggregate data
+- [ ] p99 gateway latency overhead < 10ms (vs direct-to-service)
+- [ ] all endpoints return rate limit headers

@@ -1,25 +1,23 @@
-# System Architecture Overview
+# system architecture overview
 
-## 📐 Design Philosophy
+## design philosophy
 
-Infra Pilot follows a **distributed microservices architecture** with clear separation of concerns, enabling independent scaling, deployment, and development of services.
+infra pilot follows a distributed microservices architecture with clear separation of concerns, enabling independent scaling, deployment, and development of services.
 
-### Core Principles
+### core principles
 
-1. **Modularity** - Each service has a single responsibility
-2. **Autonomy** - Services can be deployed independently
-3. **Scalability** - Horizontal scaling of individual components
-4. **Resilience** - Graceful degradation and fault tolerance
-5. **Observability** - Comprehensive logging, metrics, and tracing
+• modularity - each service has a single responsibility
+• autonomy - services can be deployed independently
+• scalability - horizontal scaling of individual components
+• resilience - graceful degradation and fault tolerance
+• observability - comprehensive logging, metrics, and tracing
 
----
+## system components
 
-## 🏛️ System Components
-
-### 1. Management Dashboard
-**Language:** TypeScript/React  
-**Framework:** Vite, Tailwind CSS, Convex  
-**Purpose:** Web-based operations interface
+### 1. management dashboard
+language: typescript/react
+framework: vite, tailwind css, convex
+purpose: web-based operations interface
 
 ```
 ┌─────────────────────────┐
@@ -39,18 +37,16 @@ Infra Pilot follows a **distributed microservices architecture** with clear sepa
     Orchestrator Agent API
 ```
 
-**Responsibilities:**
-- User interface for infrastructure operations
-- Real-time status updates via WebSocket
-- User authentication and RBAC
-- Audit logging of all operations
+responsibilities:
+• user interface for infrastructure operations
+• real-time status updates via websocket
+• user authentication and rbac
+• audit logging of all operations
 
----
-
-### 2. Orchestrator Agent
-**Language:** Python 3.9+  
-**Frameworks:** aiohttp, Discord.py  
-**Purpose:** Core provisioning and orchestration engine
+### 2. orchestrator agent
+language: python 3.9+
+frameworks: aiohttp, discord.py
+purpose: core provisioning and orchestration engine
 
 ```
 ┌──────────────────────────┐
@@ -78,19 +74,17 @@ Infra Pilot follows a **distributed microservices architecture** with clear sepa
 └──────────────────────────┘
 ```
 
-**Responsibilities:**
-- Handle provisioning requests
-- Orchestrate service interactions
-- Manage resource allocation
-- Execute automation workflows
-- Integrate with external APIs
+responsibilities:
+• handle provisioning requests
+• orchestrate service interactions
+• manage resource allocation
+• execute automation workflows
+• integrate with external apis
 
----
-
-### 3. Discord Service
-**Language:** Node.js (JavaScript)  
-**Framework:** Discord.js  
-**Purpose:** Discord bot interface for operations
+### 3. discord service
+language: node.js (javascript)
+framework: discord.js
+purpose: discord bot interface for operations
 
 ```
 ┌─────────────────────────┐
@@ -110,19 +104,17 @@ Infra Pilot follows a **distributed microservices architecture** with clear sepa
    Orchestrator Agent API
 ```
 
-**Responsibilities:**
-- Parse Discord commands
-- Execute infrastructure operations
-- Post status updates
-- Handle user interactions
-- Webhook integration
+responsibilities:
+• parse discord commands
+• execute infrastructure operations
+• post status updates
+• handle user interactions
+• webhook integration
 
----
-
-### 4. Service Core
-**Language:** Java 8+  
-**Build Tool:** Maven  
-**Purpose:** Game server lifecycle management
+### 4. service core
+language: java 8+
+build tool: maven
+purpose: game server lifecycle management
 
 ```
 ┌────────────────────────┐
@@ -150,18 +142,16 @@ Infra Pilot follows a **distributed microservices architecture** with clear sepa
 └────────────────────────┘
 ```
 
-**Responsibilities:**
-- Manage server resources
-- Handle lifecycle events
-- Generate configurations
-- Report status and metrics
-- Coordinate with orchestrator
+responsibilities:
+• manage server resources
+• handle lifecycle events
+• generate configurations
+• report status and metrics
+• coordinate with orchestrator
 
----
+## data flow patterns
 
-## 🔄 Data Flow Patterns
-
-### Provisioning Flow
+### provisioning flow
 ```
 User (Discord/Dashboard) 
     ▼
@@ -178,7 +168,7 @@ Webhook → Discord Service
 Notification to User
 ```
 
-### Status Update Flow
+### status update flow
 ```
 Service Core (emits metric)
     ▼
@@ -191,7 +181,7 @@ Real-time UI Update
 User Sees Status
 ```
 
-### Event-Driven Flow
+### event-driven flow
 ```
 External System (Pterodactyl)
     ▼
@@ -204,32 +194,28 @@ Update State
 Broadcast to Dashboard
 ```
 
----
+## api boundaries
 
-## 🔌 API Boundaries
+### service-to-service communication
 
-### Service-to-Service Communication
-
-| From | To | Protocol | Format |
+| from | to | protocol | format |
 |------|-----|----------|--------|
-| Dashboard | Orchestrator | REST/gRPC | JSON |
-| Orchestrator | Service Core | REST | JSON |
-| Discord Service | Orchestrator | REST | JSON |
-| Dashboard | Service Core | REST | JSON |
-| External Systems | Orchestrator | Webhook | JSON |
+| dashboard | orchestrator | rest/grpc | json |
+| orchestrator | service core | rest | json |
+| discord service | orchestrator | rest | json |
+| dashboard | service core | rest | json |
+| external systems | orchestrator | webhook | json |
 
-### External Integrations
+### external integrations
 
-- **Pterodactyl:** Game server hosting (REST API)
-- **Cloud APIs:** AWS, GCP, Azure (REST/SDK)
-- **Discord:** Bot webhooks and events (REST)
-- **Monitoring:** Prometheus scrape endpoints (HTTP)
+• pterodactyl: game server hosting (rest api)
+• cloud apis: aws, gcp, azure (rest/sdk)
+• discord: bot webhooks and events (rest)
+• monitoring: prometheus scrape endpoints (http)
 
----
+## data model
 
-## 📊 Data Model
-
-### Core Entities
+### core entities
 
 ```
 ┌─────────────────┐
@@ -263,11 +249,9 @@ Broadcast to Dashboard
 └─────────────────┘
 ```
 
----
+## security architecture
 
-## 🔐 Security Architecture
-
-### Authentication & Authorization
+### authentication & authorization
 
 ```
 User Login
@@ -285,19 +269,17 @@ RBAC Rules Applied
 Operation Allowed/Denied
 ```
 
-### Layers
+### layers
 
-1. **Transport Layer:** TLS/SSL for all connections
-2. **Authentication:** JWT tokens, OAuth2 support
-3. **Authorization:** RBAC with granular permissions
-4. **Audit Logging:** All operations logged
-5. **Secrets Management:** Encrypted config storage
+• transport layer: tls/ssl for all connections
+• authentication: jwt tokens, oauth2 support
+• authorization: rbac with granular permissions
+• audit logging: all operations logged
+• secrets management: encrypted config storage
 
----
+## deployment architecture
 
-## 🚀 Deployment Architecture
-
-### Development
+### development
 ```
 Docker Compose
 ├── Management Dashboard (5173)
@@ -308,7 +290,7 @@ Docker Compose
 └── Redis
 ```
 
-### Production
+### production
 ```
 Kubernetes Cluster
 ├── Deployment: dashboard
@@ -321,22 +303,20 @@ Kubernetes Cluster
 └── PVC: persistent storage
 ```
 
----
+## scalability considerations
 
-## 📈 Scalability Considerations
+### horizontal scaling
 
-### Horizontal Scaling
+stateless services (can scale freely)
+• management dashboard
+• orchestrator agent
+• discord service
 
-**Stateless Services** (can scale freely)
-- Management Dashboard
-- Orchestrator Agent
-- Discord Service
+stateful services (require special handling)
+• service core (may cache state)
+• databases (replication/clustering)
 
-**Stateful Services** (require special handling)
-- Service Core (may cache state)
-- Databases (replication/clustering)
-
-### Load Distribution
+### load distribution
 
 ```
 Ingress/LB
@@ -350,55 +330,47 @@ Database Layer (Primary + Replicas)
 Cache Layer (Cluster)
 ```
 
----
+## monitoring & observability
 
-## 🔍 Monitoring & Observability
+### metrics exposed
 
-### Metrics Exposed
+• application metrics (prometheus format)
+• business metrics (deployments, resources used)
+• infrastructure metrics (cpu, memory, network)
 
-- Application metrics (Prometheus format)
-- Business metrics (deployments, resources used)
-- Infrastructure metrics (CPU, memory, network)
+### logging strategy
 
-### Logging Strategy
+• service logs → centralized logging (elk/loki)
+• audit logs → secure storage
+• error tracking → sentry integration
 
-- Service logs → Centralized logging (ELK/Loki)
-- Audit logs → Secure storage
-- Error tracking → Sentry integration
+### tracing
 
-### Tracing
+• distributed tracing via opentelemetry
+• service-to-service correlation ids
+• performance analysis and bottleneck identification
 
-- Distributed tracing via OpenTelemetry
-- Service-to-service correlation IDs
-- Performance analysis and bottleneck identification
+## high availability
 
----
+### resilience patterns
 
-## 🔄 High Availability
+• circuit breaker - fail fast on external failures
+• retry logic - exponential backoff
+• health checks - readiness/liveness probes
+• graceful degradation - partial functionality on component failure
 
-### Resilience Patterns
+### recovery
 
-1. **Circuit Breaker** - Fail fast on external failures
-2. **Retry Logic** - Exponential backoff
-3. **Health Checks** - Readiness/liveness probes
-4. **Graceful Degradation** - Partial functionality on component failure
+• automatic pod restart (kubernetes)
+• database replication
+• state recovery from logs
+• backup and restore procedures
 
-### Recovery
+## related documentation
 
-- Automatic pod restart (Kubernetes)
-- Database replication
-- State recovery from logs
-- Backup and restore procedures
+• [service specifications](architecture/)
+• [data flow details](architecture/data-flow.md)
+• [integration patterns](architecture/integration-patterns.md)
+• [deployment guide](../operations/deployment-guide.md)
 
----
-
-## 📚 Related Documentation
-
-- [Service Specifications](architecture/)
-- [Data Flow Details](architecture/data-flow.md)
-- [Integration Patterns](architecture/integration-patterns.md)
-- [Deployment Guide](../operations/deployment-guide.md)
-
----
-
-**Last Updated:** April 2026
+last updated: april 2026

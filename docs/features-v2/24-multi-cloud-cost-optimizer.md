@@ -1,30 +1,26 @@
-# Feature 24: Multi-Cloud Cost Optimizer
+# feature 24: multi-cloud cost optimizer
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 24 |
-| Feature Name | Multi-Cloud Cost Optimizer |
-| Primary Service | Orchestrator Agent |
-| Effort Estimate | Medium (4–6 PT) |
-| Status | Planned |
+| feature id | 24 |
+| feature name | multi-cloud cost optimizer |
+| primary service | orchestrator agent |
+| effort estimate | medium (4-6 pt) |
+| status | planned |
 
----
+## 1. overview
 
-## 1. Overview
+a cost intelligence engine that continuously profiles infrastructure workloads and compares pricing across aws, gcp, azure, and hetzner. it delivers actionable migration recommendations -- which region, which provider, and which reserved/pay-as-you-go mix minimizes spend -- and tracks realized savings over time.
 
-A cost intelligence engine that continuously profiles infrastructure workloads and compares pricing across AWS, GCP, Azure, and Hetzner. It delivers actionable migration recommendations — which region, which provider, and which reserved/pay-as-you-go mix minimizes spend — and tracks realized savings over time.
+### goals
 
-### Goals
+- reduce cloud spend by 15-40% via intelligent cross-provider arbitration
+- provide a single pane of glass for multi-cloud pricing comparison
+- automate workload right-sizing recommendations
+- track savings with auditable before/after reports
+- support spot/preemptible instance recommendations where applicable
 
-- Reduce cloud spend by 15–40% via intelligent cross-provider arbitration
-- Provide a single pane of glass for multi-cloud pricing comparison
-- Automate workload right-sizing recommendations
-- Track savings with auditable before/after reports
-- Support spot/preemptible instance recommendations where applicable
-
----
-
-## 2. Architecture
+## 2. architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -66,119 +62,115 @@ A cost intelligence engine that continuously profiles infrastructure workloads a
 └───────────┘ └───────────┘ └───────────┘ └────────────┘
 ```
 
-### Component Responsibilities
+### component responsibilities
 
-| Component | Role |
+| component | role |
 |-----------|------|
-| Orchestrator Agent (Core) | Workload profiling, price comparison, recommendation engine |
-| Inventory Collector | Pulls running resources from each cloud provider via their APIs |
-| Usage Analyzer | Reads CloudWatch/Stackdriver/Azure Monitor metrics for CPU, RAM, network |
-| Price Scraper | Fetches on-demand, reserved, and spot pricing from provider APIs |
-| Instance Matcher | Maps cross-provider instance families by vCPU, RAM, network, GPU |
-| Cost Comparison Engine | Computes total monthly cost per provider for a given workload |
-| Savings Tracker | Stores baseline costs and compares after migration |
+| orchestrator agent (core) | workload profiling, price comparison, recommendation engine |
+| inventory collector | pulls running resources from each cloud provider via their apis |
+| usage analyzer | reads cloudwatch/stackdriver/azure monitor metrics for cpu, ram, network |
+| price scraper | fetches on-demand, reserved, and spot pricing from provider apis |
+| instance matcher | maps cross-provider instance families by vcpu, ram, network, gpu |
+| cost comparison engine | computes total monthly cost per provider for a given workload |
+| savings tracker | stores baseline costs and compares after migration |
 
----
-
-## 3. Data Model
+## 3. data model
 
 ### `cloud_providers`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| name | VARCHAR | e.g. "aws", "gcp", "azure", "hetzner" |
-| display_name | VARCHAR | |
-| enabled | BOOLEAN | |
-| pricing_api_config | JSONB | Endpoint URLs, API keys (encrypted) |
+| id | uuid | primary key |
+| name | varchar | e.g. "aws", "gcp", "azure", "hetzner" |
+| display_name | varchar | |
+| enabled | boolean | |
+| pricing_api_config | jsonb | endpoint urls, api keys (encrypted) |
 
 ### `inventory_resources`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| provider_id | UUID | FK → cloud_providers.id |
-| environment_id | UUID | FK → environments.id |
-| resource_type | VARCHAR | "compute", "storage", "database", "network" |
-| provider_resource_id | VARCHAR | Original resource ID from provider |
-| region | VARCHAR | |
-| instance_type | VARCHAR | e.g. "t3.medium", "e2-standard-2" |
-| specs | JSONB | vCPU, RAM GB, GPU, network throughput |
-| tags | JSONB | User-defined tags |
-| status | VARCHAR | running, stopped, terminated |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| provider_id | uuid | fk to cloud_providers.id |
+| environment_id | uuid | fk to environments.id |
+| resource_type | varchar | "compute", "storage", "database", "network" |
+| provider_resource_id | varchar | original resource id from provider |
+| region | varchar | |
+| instance_type | varchar | e.g. "t3.medium", "e2-standard-2" |
+| specs | jsonb | vcpu, ram gb, gpu, network throughput |
+| tags | jsonb | user-defined tags |
+| status | varchar | running, stopped, terminated |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `usage_metrics`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| resource_id | UUID | FK → inventory_resources.id |
-| timestamp | TIMESTAMPTZ | |
-| cpu_avg_pct | FLOAT | |
-| cpu_max_pct | FLOAT | |
-| memory_avg_pct | FLOAT | |
-| memory_max_pct | FLOAT | |
-| network_in_bytes | BIGINT | |
-| network_out_bytes | BIGINT | |
-| disk_read_bytes | BIGINT | |
-| disk_write_bytes | BIGINT | |
+| id | uuid | primary key |
+| resource_id | uuid | fk to inventory_resources.id |
+| timestamp | timestamptz | |
+| cpu_avg_pct | float | |
+| cpu_max_pct | float | |
+| memory_avg_pct | float | |
+| memory_max_pct | float | |
+| network_in_bytes | bigint | |
+| network_out_bytes | bigint | |
+| disk_read_bytes | bigint | |
+| disk_write_bytes | bigint | |
 
 ### `price_catalog`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| provider | VARCHAR | |
-| region | VARCHAR | |
-| instance_type | VARCHAR | |
-| pricing_model | ENUM | on_demand, reserved_1y, reserved_3y, spot |
-| unit | VARCHAR | "hour", "month" |
-| price | DECIMAL(10,6) | |
-| effective_date | DATE | |
-| created_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| provider | varchar | |
+| region | varchar | |
+| instance_type | varchar | |
+| pricing_model | enum | on_demand, reserved_1y, reserved_3y, spot |
+| unit | varchar | "hour", "month" |
+| price | decimal(10,6) | |
+| effective_date | date | |
+| created_at | timestamptz | |
 
 ### `cost_recommendations`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| environment_id | UUID | FK → environments.id |
-| resource_id | UUID | FK → inventory_resources.id |
-| current_provider | VARCHAR | |
-| current_cost_monthly | DECIMAL(10,2) | |
-| target_provider | VARCHAR | |
-| target_region | VARCHAR | |
-| target_instance_type | VARCHAR | |
-| target_cost_monthly | DECIMAL(10,2) | |
-| estimated_savings_pct | FLOAT | |
-| savings_monthly | DECIMAL(10,2) | |
-| migration_effort | ENUM | low, medium, high |
-| confidence | FLOAT | 0.0 – 1.0 |
-| status | ENUM | pending, applied, dismissed, expired |
-| created_at | TIMESTAMPTZ | |
-| applied_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| environment_id | uuid | fk to environments.id |
+| resource_id | uuid | fk to inventory_resources.id |
+| current_provider | varchar | |
+| current_cost_monthly | decimal(10,2) | |
+| target_provider | varchar | |
+| target_region | varchar | |
+| target_instance_type | varchar | |
+| target_cost_monthly | decimal(10,2) | |
+| estimated_savings_pct | float | |
+| savings_monthly | decimal(10,2) | |
+| migration_effort | enum | low, medium, high |
+| confidence | float | 0.0 - 1.0 |
+| status | enum | pending, applied, dismissed, expired |
+| created_at | timestamptz | |
+| applied_at | timestamptz | |
 
 ### `savings_reports`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| environment_id | UUID | FK → environments.id |
-| report_month | DATE | First day of the month |
-| baseline_cost | DECIMAL(10,2) | Cost before any recommendations |
-| actual_cost | DECIMAL(10,2) | Cost after applying recommendations |
-| savings_amount | DECIMAL(10,2) | |
-| savings_pct | FLOAT | |
-| details | JSONB | Breakdown by resource / provider |
-| created_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| environment_id | uuid | fk to environments.id |
+| report_month | date | first day of the month |
+| baseline_cost | decimal(10,2) | cost before any recommendations |
+| actual_cost | decimal(10,2) | cost after applying recommendations |
+| savings_amount | decimal(10,2) | |
+| savings_pct | float | |
+| details | jsonb | breakdown by resource / provider |
+| created_at | timestamptz | |
 
----
+## 4. api design
 
-## 4. API Design
-
-### Workload Inventory
+### workload inventory
 
 ```
 GET    /api/v2/cost/inventory                    — List all inventoried resources
@@ -187,7 +179,7 @@ PUT    /api/v2/cost/inventory/:id/tags           — Update resource tags
 POST   /api/v2/cost/inventory/refresh            — Trigger full inventory resync
 ```
 
-### Pricing & Comparison
+### pricing & comparison
 
 ```
 GET    /api/v2/cost/prices                       — List price catalog (filterable by provider/region/type)
@@ -195,18 +187,18 @@ GET    /api/v2/cost/compare                      — Compare pricing for a given
 POST   /api/v2/cost/compare/batch                — Batch comparison for multiple resources
 ```
 
-Query parameters for `GET /api/v2/cost/compare`:
+query parameters for `GET /api/v2/cost/compare`:
 
-| Param | Type | Description |
+| param | type | description |
 |-------|------|-------------|
-| vcpu | int | Number of vCPUs |
-| memory_gb | int | RAM in GB |
-| gpu | string | GPU type (optional) |
-| region | string | Current region (optional, for filtering) |
-| providers | string | Comma-separated list of providers to compare |
+| vcpu | int | number of vcpus |
+| memory_gb | int | ram in gb |
+| gpu | string | gpu type (optional) |
+| region | string | current region (optional, for filtering) |
+| providers | string | comma-separated list of providers to compare |
 | pricing_model | string | on_demand, reserved, spot |
 
-### Recommendations
+### recommendations
 
 ```
 GET    /api/v2/cost/recommendations              — List all recommendations
@@ -216,63 +208,59 @@ POST   /api/v2/cost/recommendations/:id/dismiss  — Dismiss recommendation
 POST   /api/v2/cost/recommendations/generate     — Run full recommendation engine
 ```
 
-### Savings Tracking
+### savings tracking
 
 ```
 GET    /api/v2/cost/savings                      — Monthly savings summary
 GET    /api/v2/cost/savings/:year/:month         — Detailed report for a specific month
-GET    /api/v2/cost/savings/trend                 — Savings over time (JSON time-series)
+GET    /api/v2/cost/savings/trend                 — Savings over time (json time-series)
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
+### phase 1 -- provider pricing integration (1.5 pt)
 
-### Phase 1 — Provider Pricing Integration (1.5 PT)
+• implement `pricescraper` with adapters for each provider's pricing api:
+   - **aws**: `pricing.<region>.amazonaws.com` -- sku-based, sax-parsed
+   - **gcp**: cloud billing catalog api
+   - **azure**: retail prices api
+   - **hetzner**: json pricing endpoint
+• build `price_catalog` table and periodic sync job (daily)
+• implement `instancematcher` -- normalizes instance families across providers
 
-1. Implement `PriceScraper` with adapters for each provider's pricing API:
-   - **AWS**: `pricing.<region>.amazonaws.com` — SKU-based, SAX-parsed
-   - **GCP**: Cloud Billing Catalog API
-   - **Azure**: Retail Prices API
-   - **Hetzner**: JSON pricing endpoint
-2. Build `price_catalog` table and periodic sync job (daily)
-3. Implement `InstanceMatcher` — normalizes instance families across providers
+### phase 2 -- workload profiling (1.5 pt)
 
-### Phase 2 — Workload Profiling (1.5 PT)
+• `inventorycollector` -- pulls running resources from each provider's compute api
+• `usageanalyzer` -- fetches metrics (cpu, ram, network) from monitoring apis
+• build `usage_metrics` aggregation pipeline (hourly to daily to monthly rollup)
+• profile tagging and right-sizing analysis (over-provisioned detection)
 
-1. `InventoryCollector` — pulls running resources from each provider's compute API
-2. `UsageAnalyzer` — fetches metrics (CPU, RAM, network) from monitoring APIs
-3. Build `usage_metrics` aggregation pipeline (hourly → daily → monthly rollup)
-4. Profile tagging and right-sizing analysis (over-provisioned detection)
+### phase 3 -- cost comparison engine (1 pt)
 
-### Phase 3 — Cost Comparison Engine (1 PT)
+• implement comparison algorithm:
+   - match workload profile to candidate instances per provider
+   - compute total cost: compute + storage + data transfer + license
+   - apply discount factors (reserved, committed use, spot)
+   - score by cost, region proximity, and migration effort
+• build `/cost/compare` and `/cost/compare/batch` endpoints
 
-1. Implement comparison algorithm:
-   - Match workload profile → candidate instances per provider
-   - Compute total cost: compute + storage + data transfer + license
-   - Apply discount factors (reserved, committed use, spot)
-   - Score by cost, region proximity, and migration effort
-2. Build `/cost/compare` and `/cost/compare/batch` endpoints
+### phase 4 -- recommendations & savings tracking (1 pt)
 
-### Phase 4 — Recommendations & Savings Tracking (1 PT)
+• build recommendation generator -- scheduled + on-demand
+• implement confidence scoring based on usage stability
+• build savings reports -- monthly baseline vs. actual
+• email/digest notifications for new high-savings opportunities
 
-1. Build recommendation generator — scheduled + on-demand
-2. Implement confidence scoring based on usage stability
-3. Build savings reports — monthly baseline vs. actual
-4. Email/digest notifications for new high-savings opportunities
+### phase 5 -- ui & polish (0.5-1 pt)
 
-### Phase 5 — UI & Polish (0.5–1 PT)
+• cost dashboard with provider breakdown
+• recommendation explorer with apply/dismiss workflow
+• savings tracker with trend chart
+• export to csv/pdf for procurement reviews
 
-1. Cost dashboard with provider breakdown
-2. Recommendation explorer with apply/dismiss workflow
-3. Savings tracker with trend chart
-4. Export to CSV/PDF for procurement reviews
+## 6. configuration examples
 
----
-
-## 6. Configuration Examples
-
-### Workload Spec for Comparison (POST /api/v2/cost/compare/batch)
+### workload spec for comparison (post /api/v2/cost/compare/batch)
 
 ```json
 {
@@ -297,7 +285,7 @@ GET    /api/v2/cost/savings/trend                 — Savings over time (JSON ti
 }
 ```
 
-### Response Excerpt
+### response excerpt
 
 ```json
 {
@@ -333,7 +321,7 @@ GET    /api/v2/cost/savings/trend                 — Savings over time (JSON ti
 }
 ```
 
-### Recommendation Generation (POST /api/v2/cost/recommendations/generate)
+### recommendation generation (post /api/v2/cost/recommendations/generate)
 
 ```json
 {
@@ -345,54 +333,46 @@ GET    /api/v2/cost/savings/trend                 — Savings over time (JSON ti
 }
 ```
 
----
+## 7. service assignments
 
-## 7. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|------------------|
-| **Orchestrator Agent** | Core: workload profiler, price scraper, instance matcher, comparison engine, recommendation generator, savings tracker |
-| **Integration Service** | Provider-specific pricing API clients, inventory collectors |
-| **Panel** | Cost dashboard, recommendation explorer, savings reports |
-| **Database** | `price_catalog`, `usage_metrics`, `cost_recommendations`, `savings_reports` |
-| **Scheduler** | Daily price sync, hourly usage collection, weekly recommendation generation |
+| **orchestrator agent** | core: workload profiler, price scraper, instance matcher, comparison engine, recommendation generator, savings tracker |
+| **integration service** | provider-specific pricing api clients, inventory collectors |
+| **panel** | cost dashboard, recommendation explorer, savings reports |
+| **database** | `price_catalog`, `usage_metrics`, `cost_recommendations`, `savings_reports` |
+| **scheduler** | daily price sync, hourly usage collection, weekly recommendation generation |
 
----
+## 8. effort breakdown
 
-## 8. Effort Breakdown
-
-| Task | PT | Dependencies |
+| task | pt | dependencies |
 |------|----|-------------|
-| `PriceScraper` base + AWS adapter | 0.5 | — |
-| `PriceScraper` GCP adapter | 0.25 | Base scraper |
-| `PriceScraper` Azure adapter | 0.25 | Base scraper |
-| `PriceScraper` Hetzner adapter | 0.25 | Base scraper |
-| `InstanceMatcher` + normalization table | 0.5 | — |
-| `InventoryCollector` + `UsageAnalyzer` | 1.0 | Provider read APIs |
-| Cost comparison algorithm | 1.0 | Matcher + prices |
-| Recommendation generator | 0.5 | Comparison engine |
-| Savings tracker + monthly reports | 0.5 | Recommendations |
-| UI (dashboard, explorer, savings) | 1.0 | All APIs |
-| Documentation & tests | 0.5 | — |
+| `pricescraper` base + aws adapter | 0.5 | -- |
+| `pricescraper` gcp adapter | 0.25 | base scraper |
+| `pricescraper` azure adapter | 0.25 | base scraper |
+| `pricescraper` hetzner adapter | 0.25 | base scraper |
+| `instancematcher` + normalization table | 0.5 | -- |
+| `inventorycollector` + `usageanalyzer` | 1.0 | provider read apis |
+| cost comparison algorithm | 1.0 | matcher + prices |
+| recommendation generator | 0.5 | comparison engine |
+| savings tracker + monthly reports | 0.5 | recommendations |
+| ui (dashboard, explorer, savings) | 1.0 | all apis |
+| documentation & tests | 0.5 | -- |
 
----
+## 9. instance matching table (normalization)
 
-## 9. Instance Matching Table (Normalization)
-
-| Category | AWS | GCP | Azure | Hetzner |
+| category | aws | gcp | azure | hetzner |
 |----------|-----|-----|-------|---------|
-| 2 vCPU / 8 GB | t3.large | e2-standard-2 | D2s v3 | CX42 |
-| 4 vCPU / 16 GB | t3.xlarge | e2-standard-4 | D4s v3 | CX52 |
-| 8 vCPU / 32 GB | t3.2xlarge | e2-standard-8 | D8s v3 | CX62 |
-| 16 vCPU / 64 GB | m5.4xlarge | e2-standard-16 | D16s v3 | — |
+| 2 vcpu / 8 gb | t3.large | e2-standard-2 | d2s v3 | cx42 |
+| 4 vcpu / 16 gb | t3.xlarge | e2-standard-4 | d4s v3 | cx52 |
+| 8 vcpu / 32 gb | t3.2xlarge | e2-standard-8 | d8s v3 | cx62 |
+| 16 vcpu / 64 gb | m5.4xlarge | e2-standard-16 | d16s v3 | -- |
 
----
+## 10. risks & mitigations
 
-## 10. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Pricing API becomes stale | Stale recommendations, over/under-estimated savings | Daily sync + freshness indicator on price records |
-| Reserved instance math is complex | Inaccurate comparisons for RIs | Model RI as upfront + hourly; use provider SDKs for accurate amortization |
-| Data transfer costs vary wildly | Wrong total cost estimation | Include egress pricing in comparison; flag when egress > 50% of total |
-| Hetzner lacks equivalent GPU instances | Gaps in recommendation for ML workloads | Graceful degradation — exclude providers without matching SKUs |
+| pricing api becomes stale | stale recommendations, over/under-estimated savings | daily sync + freshness indicator on price records |
+| reserved instance math is complex | inaccurate comparisons for ris | model ri as upfront + hourly; use provider sdks for accurate amortization |
+| data transfer costs vary wildly | wrong total cost estimation | include egress pricing in comparison; flag when egress > 50% of total |
+| hetzner lacks equivalent gpu instances | gaps in recommendation for ml workloads | graceful degradation -- exclude providers without matching skus |

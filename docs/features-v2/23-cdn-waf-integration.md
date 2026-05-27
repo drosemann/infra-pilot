@@ -1,30 +1,26 @@
-# Feature 23: CDN & WAF Integration
+# feature 23: cdn & waf integration
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 23 |
-| Feature Name | CDN & WAF Integration |
-| Primary Service | Integration Service |
-| Effort Estimate | Medium (4–6 PT) |
-| Status | Planned |
+| feature id | 23 |
+| feature name | cdn & waf integration |
+| primary service | integration service |
+| effort estimate | medium (4-6 pt) |
+| status | planned |
 
----
+## 1. overview
 
-## 1. Overview
+one-click cloudflare / bunny cdn provisioning and waf management directly from the panel. users select a provider, choose a plan, and the system automatically provisions the cdn, configures caching rules, applies waf security policies, enables ddos mitigation, and manages ssl/tls certificates.
 
-One-click Cloudflare / Bunny CDN provisioning and WAF management directly from the Panel. Users select a provider, choose a plan, and the system automatically provisions the CDN, configures caching rules, applies WAF security policies, enables DDoS mitigation, and manages SSL/TLS certificates.
+### goals
 
-### Goals
+- eliminate manual cdn setup friction with a fully automated workflow
+- provide a unified interface across multiple cdn providers
+- enforce security baseline via waf rules and ddos protection
+- enable per-environment cache rule management (dev / staging / prod)
+- support ssl/tls certificate provisioning and renewal
 
-- Eliminate manual CDN setup friction with a fully automated workflow
-- Provide a unified interface across multiple CDN providers
-- Enforce security baseline via WAF rules and DDoS protection
-- Enable per-environment cache rule management (dev / staging / prod)
-- Support SSL/TLS certificate provisioning and renewal
-
----
-
-## 2. Architecture
+## 2. architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -62,98 +58,94 @@ One-click Cloudflare / Bunny CDN provisioning and WAF management directly from t
 └──────────┘        └──────────┘        └──────────────┘
 ```
 
-### Component Responsibilities
+### component responsibilities
 
-| Component | Role |
+| component | role |
 |-----------|------|
-| Panel | UI forms, wizards, dashboards for CDN/WAF management |
-| Integration Service | Provider abstraction, orchestration, rule management |
-| CDN Provider Adapter | Type-safe API client for each provider |
-| Rule Engine | Compiles panel config into provider-specific API calls |
-| ACME Client | Automatic SSL/TLS certificate issuance and renewal |
+| panel | ui forms, wizards, dashboards for cdn/waf management |
+| integration service | provider abstraction, orchestration, rule management |
+| cdn provider adapter | type-safe api client for each provider |
+| rule engine | compiles panel config into provider-specific api calls |
+| acme client | automatic ssl/tls certificate issuance and renewal |
 
----
-
-## 3. Data Model
+## 3. data model
 
 ### `cdn_providers`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| name | VARCHAR | e.g. "cloudflare", "bunny" |
-| display_name | VARCHAR | e.g. "Cloudflare" |
-| enabled | BOOLEAN | Whether the provider is available |
-| config_schema | JSONB | JSON Schema for provider-specific config |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| name | varchar | e.g. "cloudflare", "bunny" |
+| display_name | varchar | e.g. "cloudflare" |
+| enabled | boolean | whether the provider is available |
+| config_schema | jsonb | json schema for provider-specific config |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `cdn_zones`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| environment_id | UUID | FK → environments.id |
-| provider_id | UUID | FK → cdn_providers.id |
-| provider_zone_id | VARCHAR | ID returned by the provider |
-| domain | VARCHAR | The domain being proxied |
-| plan | VARCHAR | e.g. "free", "pro", "business" |
-| status | ENUM | provisioning, active, failed, suspended |
-| config | JSONB | Provider-specific zone config |
-| ssl_status | ENUM | pending, active, expired |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| environment_id | uuid | fk → environments.id |
+| provider_id | uuid | fk → cdn_providers.id |
+| provider_zone_id | varchar | id returned by the provider |
+| domain | varchar | the domain being proxied |
+| plan | varchar | e.g. "free", "pro", "business" |
+| status | enum | provisioning, active, failed, suspended |
+| config | jsonb | provider-specific zone config |
+| ssl_status | enum | pending, active, expired |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `cache_rules`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| zone_id | UUID | FK → cdn_zones.id |
-| name | VARCHAR | Human-readable rule name |
-| description | TEXT | |
-| priority | INT | Rule evaluation order |
-| criteria | JSONB | Match conditions (path, query, header, cookie) |
-| actions | JSONB | TTL, cache-key, bypass, edge-cache |
-| enabled | BOOLEAN | |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| zone_id | uuid | fk → cdn_zones.id |
+| name | varchar | human-readable rule name |
+| description | text | |
+| priority | int | rule evaluation order |
+| criteria | jsonb | match conditions (path, query, header, cookie) |
+| actions | jsonb | ttl, cache-key, bypass, edge-cache |
+| enabled | boolean | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `waf_rules`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| zone_id | UUID | FK → cdn_zones.id |
-| name | VARCHAR | |
-| description | TEXT | |
-| severity | ENUM | critical, high, medium, low |
-| action | ENUM | block, challenge, js_challenge, log, allow |
-| filter | JSONB | Filter expression (IP, UA, path, rate) |
-| enabled | BOOLEAN | |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| zone_id | uuid | fk → cdn_zones.id |
+| name | varchar | |
+| description | text | |
+| severity | enum | critical, high, medium, low |
+| action | enum | block, challenge, js_challenge, log, allow |
+| filter | jsonb | filter expression (ip, ua, path, rate) |
+| enabled | boolean | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
 ### `security_profiles`
 
-| Field | Type | Description |
+| field | type | description |
 |-------|------|-------------|
-| id | UUID | Primary key |
-| zone_id | UUID | FK → cdn_zones.id |
-| name | VARCHAR | e.g. "strict", "moderate", "custom" |
-| ddos_protection | BOOLEAN | |
-| rate_limiting | JSONB | Requests per second / IP |
-| bot_management | JSONB | Bot fight mode settings |
-| tls_min_version | VARCHAR | e.g. "1.2", "1.3" |
-| always_use_https | BOOLEAN | |
-| created_at | TIMESTAMPTZ | |
-| updated_at | TIMESTAMPTZ | |
+| id | uuid | primary key |
+| zone_id | uuid | fk → cdn_zones.id |
+| name | varchar | e.g. "strict", "moderate", "custom" |
+| ddos_protection | boolean | |
+| rate_limiting | jsonb | requests per second / ip |
+| bot_management | jsonb | bot fight mode settings |
+| tls_min_version | varchar | e.g. "1.2", "1.3" |
+| always_use_https | boolean | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
 
----
+## 4. api design
 
-## 4. API Design
-
-### CDN Zone Management
+### cdn zone management
 
 ```
 POST   /api/v2/cdn/zones                     — Provision a new CDN zone
@@ -165,7 +157,7 @@ POST   /api/v2/cdn/zones/:id/purge            — Purge cache (by URL, tag, or a
 POST   /api/v2/cdn/zones/:id/ssl             — Trigger SSL certificate issuance
 ```
 
-### Cache Rules
+### cache rules
 
 ```
 GET    /api/v2/cdn/zones/:id/cache-rules       — List cache rules
@@ -175,7 +167,7 @@ DELETE /api/v2/cdn/zones/:id/cache-rules/:rid  — Delete cache rule
 PATCH  /api/v2/cdn/zones/:id/cache-rules/reorder — Reorder rule priority
 ```
 
-### WAF Rules
+### waf rules
 
 ```
 GET    /api/v2/cdn/zones/:id/waf-rules         — List WAF rules
@@ -185,7 +177,7 @@ DELETE /api/v2/cdn/zones/:id/waf-rules/:rid    — Delete WAF rule
 POST   /api/v2/cdn/zones/:id/waf-rules/simulate — Test a rule against sample traffic
 ```
 
-### Security Profiles
+### security profiles
 
 ```
 GET    /api/v2/cdn/zones/:id/security-profile  — Get current security profile
@@ -193,43 +185,39 @@ PUT    /api/v2/cdn/zones/:id/security-profile  — Update security profile
 POST   /api/v2/cdn/zones/:id/security-profile/apply — Apply profile to zone
 ```
 
----
+## 5. implementation plan
 
-## 5. Implementation Plan
+### phase 1 -- provider abstraction & one-click provisioning (2 pt)
 
-### Phase 1 — Provider Abstraction & One-Click Provisioning (2 PT)
+• define `cdnprovideradapter` interface (go interface or typescript abstract class)
+• implement cloudflare adapter (zones, dns, ssl via cloudflare api v4)
+• implement bunny cdn adapter (pull zones, ssl via bunny api)
+• build provisioning workflow in integration service (create zone → configure dns → issue ssl)
+• add `cdn_zones` crud endpoints
 
-1. Define `CDNProviderAdapter` interface (Go interface or TypeScript abstract class)
-2. Implement Cloudflare adapter (zones, DNS, SSL via Cloudflare API v4)
-3. Implement Bunny CDN adapter (pull zones, SSL via Bunny API)
-4. Build provisioning workflow in Integration Service (create zone → configure DNS → issue SSL)
-5. Add `cdn_zones` CRUD endpoints
+### phase 2 -- cache rules engine (1 pt)
 
-### Phase 2 — Cache Rules Engine (1 PT)
+• implement `cacherulemanager` -- normalizes rules across providers
+• build cache rule crud api
+• add cache purge endpoint with tag / url / wildcard support
+• ui for drag-and-drop rule reordering
 
-1. Implement `CacheRuleManager` — normalizes rules across providers
-2. Build cache rule CRUD API
-3. Add cache purge endpoint with tag / URL / wildcard support
-4. UI for drag-and-drop rule reordering
+### phase 3 -- waf & security (1.5 pt)
 
-### Phase 3 — WAF & Security (1.5 PT)
+• implement `wafrulemanager` -- translates panel waf rules to provider-specific format
+• build waf rule crud api
+• implement `securityprofilemanager` -- presets and custom profiles
+• add ddos protection toggle and rate-limiting config
+• build waf simulation / dry-run endpoint
 
-1. Implement `WafRuleManager` — translates panel WAF rules to provider-specific format
-2. Build WAF rule CRUD API
-3. Implement `SecurityProfileManager` — presets and custom profiles
-4. Add DDoS protection toggle and rate-limiting config
-5. Build WAF simulation / dry-run endpoint
+### phase 4 -- ssl/tls & polish (0.5-1 pt)
 
-### Phase 4 — SSL/TLS & Polish (0.5–1 PT)
+• acme / let's encrypt integration for custom certificate management
+• ssl status monitoring and autorenewal alerts
+• dashboard widgets: cache hit ratio, threats blocked, bandwidth saved
+• audit logging for all cdn/waf configuration changes
 
-1. ACME / Let's Encrypt integration for custom certificate management
-2. SSL status monitoring and autorenewal alerts
-3. Dashboard widgets: cache hit ratio, threats blocked, bandwidth saved
-4. Audit logging for all CDN/WAF configuration changes
-
----
-
-## 6. Provider Adapter Interface (Pseudo-Code)
+## 6. provider adapter interface (pseudo-code)
 
 ```typescript
 interface CDNProviderAdapter {
@@ -262,11 +250,9 @@ interface CDNProviderAdapter {
 }
 ```
 
----
+## 7. configuration examples
 
-## 7. Configuration Examples
-
-### One-Click Cloudflare Setup (POST /api/v2/cdn/zones)
+### one-click cloudflare setup (post /api/v2/cdn/zones)
 
 ```json
 {
@@ -286,7 +272,7 @@ interface CDNProviderAdapter {
 }
 ```
 
-### Cache Rule Example
+### cache rule example
 
 ```json
 {
@@ -310,7 +296,7 @@ interface CDNProviderAdapter {
 }
 ```
 
-### WAF Rule Example
+### waf rule example
 
 ```json
 {
@@ -326,43 +312,37 @@ interface CDNProviderAdapter {
 }
 ```
 
----
+## 8. service assignments
 
-## 8. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|------------------|
-| **Panel** | CDN setup wizard, cache rule form, WAF rule editor, security dashboard, SSL status |
-| **Integration Service** | Provider abstraction layer, rule engine, SSL management, audit logging |
-| **Orchestrator Agent** | Cross-service coordination (if multi-region CDN) |
-| **Database** | Stores zones, rules, profiles, audit logs |
+| **panel** | cdn setup wizard, cache rule form, waf rule editor, security dashboard, ssl status |
+| **integration service** | provider abstraction layer, rule engine, ssl management, audit logging |
+| **orchestrator agent** | cross-service coordination (if multi-region cdn) |
+| **database** | stores zones, rules, profiles, audit logs |
 
----
+## 9. effort breakdown
 
-## 9. Effort Breakdown
-
-| Task | PT | Dependencies |
+| task | pt | dependencies |
 |------|----|-------------|
-| Provider adapter interface & Cloudflare adapter | 1.0 | — |
-| Bunny CDN adapter | 0.5 | — |
-| Zone provisioning workflow | 0.5 | Adapters |
-| Cache rules CRUD + engine | 1.0 | Zone endpoints |
-| Cache purge logic | 0.5 | Cache engine |
-| WAF rules CRUD + engine | 1.0 | Zone endpoints |
-| Security profile manager | 0.5 | — |
-| DDoS mitigation toggle | 0.25 | — |
-| SSL/TLS ACME integration | 0.5 | — |
-| Dashboard widgets & monitoring | 0.5 | All endpoints |
-| UI screens (wizard, editor, dashboard) | 1.0 | All APIs |
-| Documentation & tests | 0.5 | — |
+| provider adapter interface & cloudflare adapter | 1.0 | -- |
+| bunny cdn adapter | 0.5 | -- |
+| zone provisioning workflow | 0.5 | adapters |
+| cache rules crud + engine | 1.0 | zone endpoints |
+| cache purge logic | 0.5 | cache engine |
+| waf rules crud + engine | 1.0 | zone endpoints |
+| security profile manager | 0.5 | -- |
+| ddos mitigation toggle | 0.25 | -- |
+| ssl/tls acme integration | 0.5 | -- |
+| dashboard widgets & monitoring | 0.5 | all endpoints |
+| ui screens (wizard, editor, dashboard) | 1.0 | all apis |
+| documentation & tests | 0.5 | -- |
 
----
+## 10. risks & mitigations
 
-## 10. Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Provider API rate limits | Delayed provisioning | Implement queue with exponential backoff |
-| Provider API breaking changes | Integration failure | Version-pin adapters, integration tests run nightly |
-| SSL certificate race conditions | Partial downtime | Use ACME with retry logic + status polling |
-| WAF rule conflicts across providers | Inconsistent behavior | Normalize rules via abstract syntax tree before translation |
+| provider api rate limits | delayed provisioning | implement queue with exponential backoff |
+| provider api breaking changes | integration failure | version-pin adapters, integration tests run nightly |
+| ssl certificate race conditions | partial downtime | use acme with retry logic + status polling |
+| waf rule conflicts across providers | inconsistent behavior | normalize rules via abstract syntax tree before translation |

@@ -1,40 +1,36 @@
-# Feature 27: Collaborative Terminal
+# feature 27: collaborative terminal
 
-| Metadata | Value |
+| metadata | value |
 |----------|-------|
-| Feature ID | 27 |
-| Feature Name | Collaborative Terminal |
-| Primary Service | Management Panel |
-| Effort Estimate | Large (7–10 PT) |
-| Dependencies | WebSocket Gateway, tmux, Auth Service |
-| Priority | High |
+| feature id | 27 |
+| feature name | collaborative terminal |
+| primary service | management panel |
+| effort estimate | large (7-10 pt) |
+| dependencies | websocket gateway, tmux, auth service |
+| priority | high |
 
----
+## 1. overview
 
-## 1. Overview
+the collaborative terminal enables multiple users to share a single terminal session in real time. users can invite peers via a shareable url, observe peer cursors, and communicate via an embedded chat panel -- all within a tmux-backed session managed by the management panel.
 
-The Collaborative Terminal enables multiple users to share a single terminal session in real time. Users can invite peers via a shareable URL, observe peer cursors, and communicate via an embedded chat panel — all within a tmux-backed session managed by the Management Panel.
+### 1.1 goals
 
-### 1.1 Goals
+- allow ad-hoc pair debugging and collaborative troubleshooting
+- provide shared terminal access without granting ssh credentials
+- support read-only and read-write participation modes
+- include in-session chat to reduce context-switching
+- persist session history for post-session review
 
-- Allow ad-hoc pair debugging and collaborative troubleshooting
-- Provide shared terminal access without granting SSH credentials
-- Support read-only and read-write participation modes
-- Include in-session chat to reduce context-switching
-- Persist session history for post-session review
+### 1.2 non-goals
 
-### 1.2 Non-Goals
+- replace ssh or full remote desktop solutions
+- support concurrent shell job isolation (all participants share one tmux session)
+- file transfer (handled by separate feature)
+- recording/playback of keystrokes (future enhancement)
 
-- Replace SSH or full remote desktop solutions
-- Support concurrent shell job isolation (all participants share one tmux session)
-- File transfer (handled by separate feature)
-- Recording/playback of keystrokes (future enhancement)
+## 2. architecture
 
----
-
-## 2. Architecture
-
-### 2.1 High-Level Diagram
+### 2.1 high-level diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -80,65 +76,61 @@ The Collaborative Terminal enables multiple users to share a single terminal ses
               └─────────────────────────────┘
 ```
 
-### 2.2 Component Descriptions
+### 2.2 component descriptions
 
-| Component | Role | Technology |
+| component | role | technology |
 |-----------|------|------------|
-| Terminal UI | Renders terminal emulator in browser | xterm.js |
-| Peer Cursor Overlay | Shows other users' cursor positions | Canvas overlay |
-| Chat Panel | Real-time chat alongside terminal | React + WebSocket |
-| WebSocket Multiplexer | Routes messages between clients and tmux | Go / Node.js |
-| Session Manager | CRUD for collaborative sessions | Management Panel |
-| tmux | Terminal multiplexer on target host | tmux 3.x |
+| terminal ui | renders terminal emulator in browser | xterm.js |
+| peer cursor overlay | shows other users' cursor positions | canvas overlay |
+| chat panel | real-time chat alongside terminal | react + websocket |
+| websocket multiplexer | routes messages between clients and tmux | go / node.js |
+| session manager | crud for collaborative sessions | management panel |
+| tmux | terminal multiplexer on target host | tmux 3.x |
 
-### 2.3 Data Flow
+### 2.3 data flow
 
-1. **Host** clicks "Share Terminal" → Management Panel creates a tmux session on the target host
-2. Panel generates a shareable URL: `https://panel.example.com/collab/<session-id>?token=<jwt>`
-3. **Guest** opens URL → WebSocket connection established to `/ws/term/<session-id>`
-4. All keystrokes are forwarded to the tmux session via its control mode (`-CC`)
-5. tmux output is broadcast to all connected clients
-6. Cursor positions are synchronized via separate WebSocket channel
-7. Chat messages are brokered through the Chat Broker and persisted to DB
+• **host** clicks "share terminal" to management panel creates a tmux session on the target host
+• panel generates a shareable url: `https://panel.example.com/collab/<session-id>?token=<jwt>`
+• **guest** opens url to websocket connection established to `/ws/term/<session-id>`
+• all keystrokes are forwarded to the tmux session via its control mode (`-cc`)
+• tmux output is broadcast to all connected clients
+• cursor positions are synchronized via separate websocket channel
+• chat messages are brokered through the chat broker and persisted to db
 
----
+## 3. implementation plan
 
-## 3. Implementation Plan
+### phase 1: foundation (pt 2-3)
 
-### Phase 1: Foundation (PT 2–3)
-
-| Task | Description |
+| task | description |
 |------|-------------|
-| 1.1 | Implement tmux control-mode wrapper: spawn, attach, pipe I/O |
-| 1.2 | Build WebSocket endpoint `/ws/term/:sessionId` with JWT auth |
-| 1.3 | Integrate xterm.js with WebSocket feed (single-user test) |
-| 1.4 | Session CRUD API (create, get, delete) |
+| 1.1 | implement tmux control-mode wrapper: spawn, attach, pipe i/o |
+| 1.2 | build websocket endpoint `/ws/term/:sessionId` with jwt auth |
+| 1.3 | integrate xterm.js with websocket feed (single-user test) |
+| 1.4 | session crud api (create, get, delete) |
 
-### Phase 2: Multi-User (PT 3–4)
+### phase 2: multi-user (pt 3-4)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 2.1 | Implement message fan-out: broadcast output to all peers |
-| 2.2 | Input locking: only one writer at a time (request/grant model) |
-| 2.3 | Peer cursor synchronization over WebSocket |
-| 2.4 | Share link generation with expiring JWT tokens |
-| 2.5 | Read-only vs. read-write permission enforcement |
+| 2.1 | implement message fan-out: broadcast output to all peers |
+| 2.2 | input locking: only one writer at a time (request/grant model) |
+| 2.3 | peer cursor synchronization over websocket |
+| 2.4 | share link generation with expiring jwt tokens |
+| 2.5 | read-only vs. read-write permission enforcement |
 
-### Phase 3: Chat & Polish (PT 2–3)
+### phase 3: chat & polish (pt 2-3)
 
-| Task | Description |
+| task | description |
 |------|-------------|
-| 3.1 | In-terminal chat panel UI + WebSocket broker |
-| 3.2 | Session history recording (log all output to DB) |
-| 3.3 | Session replay viewer (read-only playback of history) |
-| 3.4 | Disconnect handling, reconnection, session heartbeat |
-| 3.5 | Admin controls: force-remove participant, terminate session |
+| 3.1 | in-terminal chat panel ui + websocket broker |
+| 3.2 | session history recording (log all output to db) |
+| 3.3 | session replay viewer (read-only playback of history) |
+| 3.4 | disconnect handling, reconnection, session heartbeat |
+| 3.5 | admin controls: force-remove participant, terminate session |
 
----
+## 4. api design
 
-## 4. API Design
-
-### 4.1 REST Endpoints
+### 4.1 rest endpoints
 
 ```
 POST   /api/v2/collab/sessions                Create session
@@ -149,7 +141,7 @@ POST   /api/v2/collab/sessions/:id/invite     Generate share link
 GET    /api/v2/collab/sessions/:id/history    Get session log
 ```
 
-### 4.2 WebSocket Endpoints
+### 4.2 websocket endpoints
 
 ```
 /ws/v2/collab/term/:sessionId       Terminal I/O stream
@@ -157,9 +149,9 @@ GET    /api/v2/collab/sessions/:id/history    Get session log
 /ws/v2/collab/chat/:sessionId       Chat message broker
 ```
 
-### 4.3 Request/Response Examples
+### 4.3 request/response examples
 
-**Create Session:**
+**create session:**
 ```json
 POST /api/v2/collab/sessions
 {
@@ -180,7 +172,7 @@ Response 201:
 }
 ```
 
-**Invite:**
+**invite:**
 ```json
 POST /api/v2/collab/sessions/cs_abc123/invite
 {
@@ -195,7 +187,7 @@ Response 200:
 }
 ```
 
-**WebSocket Message (Terminal I/O):**
+**websocket message (terminal i/o):**
 ```json
 // Client → Server (keystroke)
 { "type": "input", "data": "ls -la\r", "seq": 42 }
@@ -207,7 +199,7 @@ Response 200:
 { "type": "participant_join", "user_id": "u_456", "cursor": {"row": 12, "col": 5} }
 ```
 
-**WebSocket Message (Cursor):**
+**websocket message (cursor):**
 ```json
 // Client → Server
 { "type": "cursor_move", "row": 24, "col": 15 }
@@ -216,7 +208,7 @@ Response 200:
 { "type": "cursor_update", "user_id": "u_456", "display_name": "Alice", "row": 24, "col": 15 }
 ```
 
-**WebSocket Message (Chat):**
+**websocket message (chat):**
 ```json
 // Client → Server
 { "type": "chat_message", "text": "Run apt-get update first" }
@@ -225,98 +217,88 @@ Response 200:
 { "type": "chat_message", "user_id": "u_456", "display_name": "Alice", "text": "Run apt-get update first", "ts": "2026-05-27T12:05:00Z" }
 ```
 
----
-
-## 5. Data Model
+## 5. data model
 
 ### 5.1 `collab_sessions`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Unique session identifier |
-| host_id | VARCHAR(64) | Target server/VM identifier |
-| ssh_user | VARCHAR(64) | SSH user on target |
-| initial_command | TEXT | Default shell/command |
-| tmux_session_name | VARCHAR(128) | tmux session identifier on host |
-| status | ENUM | `active`, `terminated`, `expired` |
-| created_by | UUID (FK → users) | Session creator |
-| created_at | TIMESTAMPTZ | Creation timestamp |
-| terminated_at | TIMESTAMPTZ | When session ended |
-| max_participants | INT | Default: 10 |
+| id | uuid (pk) | unique session identifier |
+| host_id | varchar(64) | target server/vm identifier |
+| ssh_user | varchar(64) | ssh user on target |
+| initial_command | text | default shell/command |
+| tmux_session_name | varchar(128) | tmux session identifier on host |
+| status | enum | `active`, `terminated`, `expired` |
+| created_by | uuid (fk to users) | session creator |
+| created_at | timestamptz | creation timestamp |
+| terminated_at | timestamptz | when session ended |
+| max_participants | int | default: 10 |
 
 ### 5.2 `collab_participants`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | UUID (PK) | Unique participant ID |
-| session_id | UUID (FK) | Associated session |
-| user_id | UUID (FK → users) | Participant |
-| permission | ENUM | `read_only`, `read_write` |
-| connected_at | TIMESTAMPTZ | Join timestamp |
-| disconnected_at | TIMESTAMPTZ | Leave timestamp (nullable) |
-| is_currently_connected | BOOLEAN | Live presence flag |
+| id | uuid (pk) | unique participant id |
+| session_id | uuid (fk) | associated session |
+| user_id | uuid (fk to users) | participant |
+| permission | enum | `read_only`, `read_write` |
+| connected_at | timestamptz | join timestamp |
+| disconnected_at | timestamptz | leave timestamp (nullable) |
+| is_currently_connected | boolean | live presence flag |
 
 ### 5.3 `collab_chat_messages`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | BIGSERIAL (PK) | Auto-increment |
-| session_id | UUID (FK) | Associated session |
-| user_id | UUID (FK → users) | Sender |
-| message | TEXT | Message content |
-| created_at | TIMESTAMPTZ | Timestamp |
+| id | bigserial (pk) | auto-increment |
+| session_id | uuid (fk) | associated session |
+| user_id | uuid (fk to users) | sender |
+| message | text | message content |
+| created_at | timestamptz | timestamp |
 
 ### 5.4 `collab_session_logs`
 
-| Column | Type | Description |
+| column | type | description |
 |--------|------|-------------|
-| id | BIGSERIAL (PK) | Auto-increment |
-| session_id | UUID (FK) | Associated session |
-| log_entry | TEXT | Raw terminal output at interval |
-| offset_bytes | BIGINT | Byte offset in stream |
-| captured_at | TIMESTAMPTZ | Timestamp |
+| id | bigserial (pk) | auto-increment |
+| session_id | uuid (fk) | associated session |
+| log_entry | text | raw terminal output at interval |
+| offset_bytes | bigint | byte offset in stream |
+| captured_at | timestamptz | timestamp |
 
----
+## 6. service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibilities |
+| service | responsibilities |
 |---------|-----------------|
-| **Management Panel** (primary) | WebSocket multiplexer, session CRUD, tmux wrapper, chat broker, history storage |
-| **Auth Service** | JWT generation for share links, permission validation |
-| **Target Host** | tmux installation, SSH access, session isolation |
-| **Database** | Session metadata, participant tracking, chat history, logs |
+| **management panel** (primary) | websocket multiplexer, session crud, tmux wrapper, chat broker, history storage |
+| **auth service** | jwt generation for share links, permission validation |
+| **target host** | tmux installation, ssh access, session isolation |
+| **database** | session metadata, participant tracking, chat history, logs |
 
----
+## 7. security & permissions
 
-## 7. Security & Permissions
-
-| Aspect | Implementation |
+| aspect | implementation |
 |--------|---------------|
-| Share link expiry | JWT with `exp` claim, default 60 min |
-| Session isolation | Each session runs in its own tmux instance |
-| Read-only enforcement | Server refuses `input` messages from read-only participants |
-| Host access control | Only users with `server:ssh` permission can create sessions |
-| Invite control | Only session host can generate share links |
-| Rate limiting | Max 5 concurrent sessions per user |
+| share link expiry | jwt with `exp` claim, default 60 min |
+| session isolation | each session runs in its own tmux instance |
+| read-only enforcement | server refuses `input` messages from read-only participants |
+| host access control | only users with `server:ssh` permission can create sessions |
+| invite control | only session host can generate share links |
+| rate limiting | max 5 concurrent sessions per user |
 
----
+## 8. effort estimate
 
-## 8. Effort Estimate
-
-| Phase | Person-Days |
+| phase | person-days |
 |-------|-------------|
-| Phase 1: Foundation | 2–3 PT |
-| Phase 2: Multi-User | 3–4 PT |
-| Phase 3: Chat & Polish | 2–3 PT |
-| **Total** | **7–10 PT** |
+| phase 1: foundation | 2-3 pt |
+| phase 2: multi-user | 3-4 pt |
+| phase 3: chat & polish | 2-3 pt |
+| **total** | **7-10 pt** |
 
----
+## 9. future enhancements
 
-## 9. Future Enhancements
-
-- Session recording with playback scrubber
-- Encrypted terminal I/O (E2EE)
-- Multi-tab sessions (multiple tmux windows)
-- File drag-and-drop into terminal
-- Integration with runbook automation
+- session recording with playback scrubber
+- encrypted terminal i/o (e2ee)
+- multi-tab sessions (multiple tmux windows)
+- file drag-and-drop into terminal
+- integration with runbook automation

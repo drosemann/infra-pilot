@@ -1,27 +1,23 @@
-# AI Resource Optimizer
+# ai resource optimizer
 
-> **Feature ID:** 2  
-> **Category:** AI & Intelligence  
-> **Primary Service:** Orchestrator Agent  
-> **Effort Estimate:** Medium (4-6 PT)  
-> **Status:** Planned
+feature id: 2
+category: ai & intelligence
+primary service: orchestrator agent
+effort estimate: medium (4-6 pt)
+status: planned
 
----
+## overview
 
-## Overview
+analyze historical cpu, ram, and disk usage trends per vps to generate actionable right-sizing recommendations. the optimizer detects idle and underutilized resources, estimates cost savings, and supports an approval workflow for automated downsizing with a configurable grace period before changes are applied.
 
-Analyze historical CPU, RAM, and disk usage trends per VPS to generate actionable right-sizing recommendations. The optimizer detects idle and underutilized resources, estimates cost savings, and supports an approval workflow for automated downsizing with a configurable grace period before changes are applied.
+### goals
 
-### Goals
+- reduce infrastructure costs by identifying and right-sizing over-provisioned servers
+- surface idle resources (zombie servers running without meaningful load)
+- provide clear, data-driven recommendations with estimated monthly savings
+- enable safe auto-apply with approval windows and rollback capability
 
-- Reduce infrastructure costs by identifying and right-sizing over-provisioned servers
-- Surface idle resources (zombie servers running without meaningful load)
-- Provide clear, data-driven recommendations with estimated monthly savings
-- Enable safe auto-apply with approval windows and rollback capability
-
----
-
-## Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -80,20 +76,18 @@ Analyze historical CPU, RAM, and disk usage trends per VPS to generate actionabl
 └──────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## Implementation Plan
+### phase 1: metrics collection & trend analysis (2 pt)
 
-### Phase 1: Metrics Collection & Trend Analysis (2 PT)
-
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 1.1 | Deploy node-level metric exporters | Node Exporter + cAdvisor for Docker hosts |
-| 1.2 | Implement scrape engine with configurable interval | Prometheus-style scrape config, 30s default |
-| 1.3 | Rolling window aggregation (1h, 24h, 7d, 30d) | TimescaleDB continuous aggregates |
-| 1.4 | Trend analysis service | Linear regression slope, seasonal decomposition |
+| 1.1 | deploy node-level metric exporters | node exporter + cadvisor for docker hosts |
+| 1.2 | implement scrape engine with configurable interval | prometheus-style scrape config, 30s default |
+| 1.3 | rolling window aggregation (1h, 24h, 7d, 30d) | timescaledb continuous aggregates |
+| 1.4 | trend analysis service | linear regression slope, seasonal decomposition |
 
-**Scrape configuration:**
+**scrape configuration:**
 
 ```yaml
 # config/metrics_scrape.yaml
@@ -126,17 +120,17 @@ aggregation:
       retain_days: 365
 ```
 
-### Phase 2: Recommendation Engine (1.5 PT)
+### phase 2: recommendation engine (1.5 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 2.1 | Resource profiling algorithm | Profile per server: `{p50, p95, max, trend}` |
-| 2.2 | Right-sizing recommendation logic | Target plan calculation based on headroom policy |
-| 2.3 | Idle resource detection heuristic | No significant traffic for 14d + low CPU/RAM |
-| 2.4 | Cost savings estimator | Price book lookup from current vs. recommended plan |
-| 2.5 | Recommendation persistence | `recommendations` table in PostgreSQL |
+| 2.1 | resource profiling algorithm | profile per server: `{p50, p95, max, trend}` |
+| 2.2 | right-sizing recommendation logic | target plan calculation based on headroom policy |
+| 2.3 | idle resource detection heuristic | no significant traffic for 14d + low cpu/ram |
+| 2.4 | cost savings estimator | price book lookup from current vs. recommended plan |
+| 2.5 | recommendation persistence | `recommendations` table in postgresql |
 
-**Recommendation logic (pseudocode):**
+**recommendation logic (pseudocode):**
 
 ```python
 def generate_recommendation(server_id, metrics, plans):
@@ -180,17 +174,17 @@ def generate_recommendation(server_id, metrics, plans):
     return Recommendation(type="optimal", action="no_change")
 ```
 
-### Phase 3: Approval Workflow & Auto-Apply (1.5 PT)
+### phase 3: approval workflow & auto-apply (1.5 pt)
 
-| Step | Description | Artifacts |
+| step | description | artifacts |
 |------|-------------|-----------|
-| 3.1 | Approval workflow state machine | `pending → approved → applying → applied / rolled_back` |
-| 3.2 | Grace period timer (configurable: 24h-72h) | Scheduled job, cancellation support |
-| 3.3 | Plan change executor | Cloud provider API call with pre/post health check |
-| 3.4 | Rollback procedure | Snapshot before change, revert on failure |
-| 3.5 | Notification on each state transition | Discord, Slack, email, Panel toast |
+| 3.1 | approval workflow state machine | `pending → approved → applying → applied / rolled_back` |
+| 3.2 | grace period timer (configurable: 24h-72h) | scheduled job, cancellation support |
+| 3.3 | plan change executor | cloud provider api call with pre/post health check |
+| 3.4 | rollback procedure | snapshot before change, revert on failure |
+| 3.5 | notification on each state transition | discord, slack, email, panel toast |
 
-**Approflow state machine:**
+**approflow state machine:**
 
 ```
 ┌─────────┐     approve     ┌──────────┐   timer expires   ┌──────────┐
@@ -203,16 +197,14 @@ def generate_recommendation(server_id, metrics, plans):
 ┌─────────┐               ┌──────────┐                  ┌──────────────┐
 │Dismissed│               │ Cancelled│                  │ Applied /    │
 └─────────┘               └──────────┘                  │ Rolled Back  │
-                                                         └──────────────┘
+                                                          └──────────────┘
 ```
 
----
+## api design
 
-## API Design
+### rest api
 
-### REST API
-
-#### List Recommendations
+#### list recommendations
 
 ```
 GET /api/v1/recommendations
@@ -223,7 +215,7 @@ GET /api/v1/recommendations
   &limit=50
 ```
 
-Response:
+response:
 ```json
 {
   "recommendations": [
@@ -266,13 +258,13 @@ Response:
 }
 ```
 
-#### Approve Recommendation
+#### approve recommendation
 
 ```
 POST /api/v1/recommendations/{id}/approve
 ```
 
-Request:
+request:
 ```json
 {
   "approved_by": "admin@example.com",
@@ -281,13 +273,13 @@ Request:
 }
 ```
 
-#### Dismiss Recommendation
+#### dismiss recommendation
 
 ```
 POST /api/v1/recommendations/{id}/dismiss
 ```
 
-Request:
+request:
 ```json
 {
   "reason": "expected_traffic_increase",
@@ -295,13 +287,13 @@ Request:
 }
 ```
 
-#### Get Savings Summary
+#### get savings summary
 
 ```
 GET /api/v1/recommendations/savings-summary
 ```
 
-Response:
+response:
 ```json
 {
   "total_current_monthly": 4520.00,
@@ -331,9 +323,7 @@ Response:
 }
 ```
 
----
-
-## Data Model
+## data model
 
 ```python
 # models/resource_optimizer.py
@@ -391,7 +381,7 @@ class Recommendation:
     rollback_initiated: bool
 ```
 
-**Database Schema:**
+**database schema:**
 
 ```sql
 -- Aggregated resource profiles
@@ -439,19 +429,15 @@ CREATE INDEX idx_rec_status ON recommendations(status);
 CREATE INDEX idx_rec_type ON recommendations(type);
 ```
 
----
+## service assignments
 
-## Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Orchestrator Agent** | Metrics scrape engine, aggregation, trend analysis, recommendation engine, approval workflow, plan change executor |
-| **Integration Service** | Cloud provider price book API, notification dispatch (Discord/Slack) |
-| **Management Panel** | Recommendation dashboard, savings calculator, approve/dismiss UI, history view |
+| orchestrator agent | metrics scrape engine, aggregation, trend analysis, recommendation engine, approval workflow, plan change executor |
+| integration service | cloud provider price book api, notification dispatch (discord/slack) |
+| management panel | recommendation dashboard, savings calculator, approve/dismiss ui, history view |
 
----
-
-## Configuration Reference
+## configuration reference
 
 ```yaml
 # config/resource_optimizer.yaml
@@ -493,46 +479,40 @@ notifications:
   channels: ["panel", "discord"]
 ```
 
----
+## effort breakdown
 
-## Effort Breakdown
-
-| Phase | Task | PT | Dependencies |
+| phase | task | pt | dependencies |
 |-------|------|----|-------------|
-| 1.1 | Metric exporter deployment | 0.5 | Node access |
-| 1.2 | Scrape engine | 0.5 | Metrics pipeline |
-| 1.3 | Window aggregation | 0.5 | Time-series storage |
-| 1.4 | Trend analysis | 0.5 | Aggregation data |
-| 2.1 | Resource profiling | 0.5 | Trend analysis |
-| 2.2 | Right-sizing logic | 0.5 | Plan catalog |
-| 2.3 | Idle detection | 0.25 | Profiling output |
-| 2.4 | Savings estimator | 0.25 | Price book |
-| 2.5 | Persistence layer | 0.25 | DB schema |
-| 3.1 | Approval state machine | 0.5 | Workflow engine |
-| 3.2 | Grace period timer | 0.25 | Scheduled jobs |
-| 3.3 | Plan change executor | 0.5 | Cloud API |
-| 3.4 | Rollback procedure | 0.25 | Snapshot infra |
-| 3.5 | Notifications | 0.25 | Notifier service |
-| | **Total** | **5.75** | |
+| 1.1 | metric exporter deployment | 0.5 | node access |
+| 1.2 | scrape engine | 0.5 | metrics pipeline |
+| 1.3 | window aggregation | 0.5 | time-series storage |
+| 1.4 | trend analysis | 0.5 | aggregation data |
+| 2.1 | resource profiling | 0.5 | trend analysis |
+| 2.2 | right-sizing logic | 0.5 | plan catalog |
+| 2.3 | idle detection | 0.25 | profiling output |
+| 2.4 | savings estimator | 0.25 | price book |
+| 2.5 | persistence layer | 0.25 | db schema |
+| 3.1 | approval state machine | 0.5 | workflow engine |
+| 3.2 | grace period timer | 0.25 | scheduled jobs |
+| 3.3 | plan change executor | 0.5 | cloud api |
+| 3.4 | rollback procedure | 0.25 | snapshot infra |
+| 3.5 | notifications | 0.25 | notifier service |
+| | total | 5.75 | |
 
----
+## risks & mitigations
 
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
+| risk | impact | mitigation |
 |------|--------|------------|
-| Downsize during traffic spike | Performance degradation | Trend analysis prevents downsizing on upward trends; health check pre/post apply |
-| Idle server is actually standby | Service disruption | Allow exclusion tags (`infrapilot/optimizer=exclude`), require approval for idle actions |
-| Price book out of date | Incorrect savings estimates | Sync price book daily from cloud provider APIs |
-| Insufficient metrics history | Cold start, no recommendations | Collect 7 days of metrics before generating first recommendation |
+| downsize during traffic spike | performance degradation | trend analysis prevents downsizing on upward trends; health check pre/post apply |
+| idle server is actually standby | service disruption | allow exclusion tags (`infrapilot/optimizer=exclude`), require approval for idle actions |
+| price book out of date | incorrect savings estimates | sync price book daily from cloud provider apis |
+| insufficient metrics history | cold start, no recommendations | collect 7 days of metrics before generating first recommendation |
 
----
+## metrics & kpis
 
-## Metrics & KPIs
-
-| Metric | Target | Measurement |
+| metric | target | measurement |
 |--------|--------|-------------|
-| Cost savings realized | > 15% of total compute spend | Monthly savings / total monthly cost |
-| Recommendation accuracy | > 90% no regression after apply | Compare post-apply performance to pre-apply |
-| Time to apply (auto) | < 5 minutes | From grace expiry to plan change complete |
-| User adoption | > 60% of servers with recommendations reviewed | Reviewed count / total recommendations |
+| cost savings realized | > 15% of total compute spend | monthly savings / total monthly cost |
+| recommendation accuracy | > 90% no regression after apply | compare post-apply performance to pre-apply |
+| time to apply (auto) | < 5 minutes | from grace expiry to plan change complete |
+| user adoption | > 60% of servers with recommendations reviewed | reviewed count / total recommendations |

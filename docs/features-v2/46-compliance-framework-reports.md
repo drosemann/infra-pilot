@@ -1,22 +1,18 @@
-# Feature 46: Compliance Framework Reports
+﻿# feature 46: compliance framework reports
 
-- **Feature ID:** 46
-- **Status:** Planned
-- **Priority:** High
-- **Primary Service:** Integration Service
-- **Supporting Services:** Orchestrator Agent, API Gateway, Auth Service
-- **Effort:** Large (7–10 PT)
-- **Dependencies:** Feature 47 (Secrets Management), Feature 48 (Container Image Scanner)
+- feature id: 46
+- status: planned
+- priority: high
+- primary service: integration service
+- supporting services: orchestrator agent, api gateway, auth service
+- effort: large (7-10 pt)
+- dependencies: feature 47 (secrets management), feature 48 (container image scanner)
 
----
+## overview
 
-## 1. Overview
+generate auditor-ready compliance reports for soc 2, hipaa, and pci-dss frameworks. the system continuously collects evidence from infrastructure, maps controls to framework requirements, and produces exportable reports (pdf, html, json) suitable for external auditors.
 
-Generate auditor-ready compliance reports for SOC 2, HIPAA, and PCI-DSS frameworks. The system continuously collects evidence from infrastructure, maps controls to framework requirements, and produces exportable reports (PDF, HTML, JSON) suitable for external auditors.
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -44,54 +40,50 @@ Generate auditor-ready compliance reports for SOC 2, HIPAA, and PCI-DSS framewor
 └───────────────────┘  └───────────────────┘  └────────────────────┘
 ```
 
-**Data Flow:**
+**data flow:**
 
-1. **Evidence Collection** — Collectors run on a schedule (cron / event-driven) and gather evidence from cloud APIs, Kubernetes audit logs, container scan results, IAM policies, network configurations, and backup logs.
-2. **Control Mapping** — The Control Mapper matches collected evidence against framework control requirements. Each control is linked to one or more evidence items.
-3. **Gap Analysis** — Unmapped or failing controls are flagged. Remediation tickets can be auto-created.
-4. **Report Generation** — Templates are hydrated with evidence and control status. Reports are timestamped, hashed, and signed.
-5. **Export** — Reports are made available for download in PDF, HTML, and JSON formats.
+• evidence collection — collectors run on a schedule (cron / event-driven) and gather evidence from cloud apis, kubernetes audit logs, container scan results, iam policies, network configurations, and backup logs.
+• control mapping — the control mapper matches collected evidence against framework control requirements. each control is linked to one or more evidence items.
+• gap analysis — unmapped or failing controls are flagged. remediation tickets can be auto-created.
+• report generation — templates are hydrated with evidence and control status. reports are timestamped, hashed, and signed.
+• export — reports are made available for download in pdf, html, and json formats.
 
----
+## implementation plan
 
-## 3. Implementation Plan
-
-### Phase 1 — Foundation (3 PT)
-| Step | Description |
+### phase 1 — foundation (3 pt)
+| step | description |
 |------|-------------|
-| 1.1  | Define framework data models (controls, evidence items, mappings) |
-| 1.2  | Implement evidence store with append-only log semantics |
-| 1.3  | Implement Control Mapper with pluggable framework definitions |
-| 1.4  | Add evidence collection framework with cron trigger support |
+| 1.1  | define framework data models (controls, evidence items, mappings) |
+| 1.2  | implement evidence store with append-only log semantics |
+| 1.3  | implement control mapper with pluggable framework definitions |
+| 1.4  | add evidence collection framework with cron trigger support |
 
-### Phase 2 — Framework Coverage (2 PT)
-| Step | Description |
+### phase 2 — framework coverage (2 pt)
+| step | description |
 |------|-------------|
-| 2.1  | SOC 2 control definitions (security, availability, confidentiality) |
-| 2.2  | HIPAA control definitions (administrative, physical, technical safeguards) |
-| 2.3  | PCI-DSS control definitions (12 requirements mapped to evidence) |
+| 2.1  | soc 2 control definitions (security, availability, confidentiality) |
+| 2.2  | hipaa control definitions (administrative, physical, technical safeguards) |
+| 2.3  | pci-dss control definitions (12 requirements mapped to evidence) |
 
-### Phase 3 — Reporting & Export (2 PT)
-| Step | Description |
+### phase 3 — reporting & export (2 pt)
+| step | description |
 |------|-------------|
-| 3.1  | Report Builder with templating engine (Handlebars/Liquid) |
-| 3.2  | PDF generation (wkhtmltopdf / Puppeteer) |
-| 3.3  | JSON export for SIEM integration |
-| 3.4  | Report digital signing and integrity verification |
+| 3.1  | report builder with templating engine (handlebars/liquid) |
+| 3.2  | pdf generation (wkhtmltopdf / puppeteer) |
+| 3.3  | json export for siem integration |
+| 3.4  | report digital signing and integrity verification |
 
-### Phase 4 — Continuous Monitoring (2 PT)
-| Step | Description |
+### phase 4 — continuous monitoring (2 pt)
+| step | description |
 |------|-------------|
-| 4.1  | Real-time evidence stream (Kafka / NATS) |
-| 4.2  | Automated gap detection alerts |
-| 4.3  | Compliance dashboard API |
-| 4.4  | Remediation workflow integration |
+| 4.1  | real-time evidence stream (kafka / nats) |
+| 4.2  | automated gap detection alerts |
+| 4.3  | compliance dashboard api |
+| 4.4  | remediation workflow integration |
 
----
+## api design
 
-## 4. API Design
-
-### 4.1 Frameworks
+### frameworks
 
 ```
 GET    /api/v1/compliance/frameworks              → List all frameworks
@@ -99,7 +91,7 @@ GET    /api/v1/compliance/frameworks/{id}         → Framework details + contro
 POST   /api/v1/compliance/frameworks              → Register custom framework
 ```
 
-### 4.2 Evidence
+### evidence
 
 ```
 GET    /api/v1/compliance/evidence                → List evidence items
@@ -108,7 +100,7 @@ POST   /api/v1/compliance/evidence                → Submit evidence (from coll
 DELETE /api/v1/compliance/evidence/{id}           → Soft-delete (admin only)
 ```
 
-### 4.3 Reports
+### reports
 
 ```
 POST   /api/v1/compliance/reports                 → Generate report
@@ -120,14 +112,14 @@ GET    /api/v1/compliance/reports/{id}/download   → Download report file
 DELETE /api/v1/compliance/reports/{id}            → Archive report
 ```
 
-### 4.4 Dashboard / Monitoring
+### dashboard / monitoring
 
 ```
 GET    /api/v1/compliance/dashboard               → Compliance scores per framework
 GET    /api/v1/compliance/gaps                    → Current control gaps
 ```
 
-### 4.5 Example: Generate Report
+### example: generate report
 
 ```json
 POST /api/v1/compliance/reports
@@ -150,11 +142,9 @@ Response 201:
 }
 ```
 
----
+## data model
 
-## 5. Data Model
-
-### 5.1 Framework
+### framework
 
 ```yaml
 Framework:
@@ -167,7 +157,7 @@ Framework:
   updated_at: timestamp
 ```
 
-### 5.2 Control
+### control
 
 ```yaml
 Control:
@@ -181,7 +171,7 @@ Control:
   evidence_requirements: list<string>   # Evidence types that satisfy this control
 ```
 
-### 5.3 Evidence
+### evidence
 
 ```yaml
 Evidence:
@@ -194,7 +184,7 @@ Evidence:
   retained_until: timestamp             # 7-year retention for PCI-DSS
 ```
 
-### 5.4 Report
+### report
 
 ```yaml
 Report:
@@ -216,36 +206,30 @@ Report:
   expires_at: timestamp
 ```
 
----
+## service assignments
 
-## 6. Service Assignments
-
-| Service | Responsibility |
+| service | responsibility |
 |---------|---------------|
-| **Integration Service** | Framework engine, evidence collection orchestration, control mapper, report builder |
-| **Orchestrator Agent** | Collect infrastructure-level evidence (K8s audit logs, container scan results, network policies) |
-| **API Gateway** | Route /api/v1/compliance/*, enforce auth, rate-limit report generation |
-| **Auth Service** | Validate access tokens, enforce RBAC (compliance_viewer, compliance_admin roles) |
-| **Secrets (Feature 47)** | Store evidence collector API keys, signing certificates |
+| **integration service** | framework engine, evidence collection orchestration, control mapper, report builder |
+| **orchestrator agent** | collect infrastructure-level evidence (k8s audit logs, container scan results, network policies) |
+| **api gateway** | route /api/v1/compliance/*, enforce auth, rate-limit report generation |
+| **auth service** | validate access tokens, enforce rbac (compliance_viewer, compliance_admin roles) |
+| **secrets (feature 47)** | store evidence collector api keys, signing certificates |
 
----
+## effort estimate
 
-## 7. Effort Estimate
-
-| Phase | PT | Dependencies |
+| phase | pt | dependencies |
 |-------|----|--------------|
-| Foundation | 3 | Data models, evidence store, collector framework |
-| Framework Coverage | 2 | SOC 2, HIPAA, PCI-DSS control definitions |
-| Reporting & Export | 2 | PDF/HTML/JSON generation, digital signing |
-| Continuous Monitoring | 2 | Real-time streams, gap alerts, dashboard API |
-| **Total** | **9** | Ranges 7–10 depending on framework depth |
+| foundation | 3 | data models, evidence store, collector framework |
+| framework coverage | 2 | soc 2, hipaa, pci-dss control definitions |
+| reporting & export | 2 | pdf/html/json generation, digital signing |
+| continuous monitoring | 2 | real-time streams, gap alerts, dashboard api |
+| **total** | **9** | ranges 7-10 depending on framework depth |
 
----
+## open questions
 
-## 8. Open Questions
-
-- Should evidence be stored in immutable object storage (S3/GCS) or a database?
-- What is the retention policy for intermediate evidence vs. final reports?
-- Do we need support for custom (user-defined) frameworks beyond SOC 2 / HIPAA / PCI-DSS?
-- Should report signing use an internal CA or integrate with external KMS?
-- What is the acceptable latency for report generation (synchronous vs. async)?
+• should evidence be stored in immutable object storage (s3/gcs) or a database?
+• what is the retention policy for intermediate evidence vs. final reports?
+• do we need support for custom (user-defined) frameworks beyond soc 2 / hipaa / pci-dss?
+• should report signing use an internal ca or integrate with external kms?
+• what is the acceptable latency for report generation (synchronous vs. async)?

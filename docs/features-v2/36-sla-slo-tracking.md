@@ -1,28 +1,24 @@
-# Feature 36: SLA / SLO Tracking
+# feature 36: sla / slo tracking
 
-- **Feature ID:** 36
-- **Category:** Advanced Observability
-- **Primary Service:** Integration Service
-- **Effort:** Medium (4-6 PT)
-- **Dependencies:** Feature 34 (Distributed Tracing), Feature 17 (OpenTelemetry Export)
+- feature id: 36
+- category: advanced observability
+- primary service: integration service
+- effort: medium (4-6 pt)
+- dependencies: feature 34 (distributed tracing), feature 17 (opentelemetry export)
 
----
+## overview
 
-## 1. Overview
+define, measure, and report service level agreements (slas) and service level objectives (slos) for infrastructure resources. track uptime, response time, backup success rate, and other custom slis. compute error budgets in real time, fire burn rate alerts when budgets deplete faster than planned, and generate compliance reports for internal or external auditing.
 
-Define, measure, and report Service Level Agreements (SLAs) and Service Level Objectives (SLOs) for infrastructure resources. Track uptime, response time, backup success rate, and other custom SLIs. Compute error budgets in real time, fire burn rate alerts when budgets deplete faster than planned, and generate compliance reports for internal or external auditing.
+### goals
 
-### Goals
+- allow operators to define slos per server, service, or team workspace
+- collect sli measurements from existing monitoring pipelines (prometheus, opentelemetry)
+- compute real-time error budgets with configurable burn rate thresholds
+- alert when error budget consumption exceeds safe limits
+- generate monthly compliance reports (pdf/csv) for auditor review
 
-- Allow operators to define SLOs per server, service, or team workspace
-- Collect SLI measurements from existing monitoring pipelines (Prometheus, OpenTelemetry)
-- Compute real-time error budgets with configurable burn rate thresholds
-- Alert when error budget consumption exceeds safe limits
-- Generate monthly compliance reports (PDF/CSV) for auditor review
-
----
-
-## 2. Architecture
+## architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -58,21 +54,19 @@ Define, measure, and report Service Level Agreements (SLAs) and Service Level Ob
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+### component responsibilities
 
-| Component | Service | Role |
-|-----------|---------|------|
-| SLO Definition Manager | Integration Service | CRUD for SLO targets, windows, alert thresholds |
-| SLI Collector Engine | Integration Service | Pull metrics from data sources, compute SLI ratios |
-| Error Budget Calculator | Integration Service | Track remaining budget, burn rate, days to depletion |
-| Compliance Report Generator | Integration Service | Monthly PDF/CSV reports, audit trail |
-| Alert Manager | Integration Service | Route burn rate alerts to notification channels |
+| component | service | role |
+|---|---|---|
+| slo definition manager | integration service | crud for slo targets, windows, alert thresholds |
+| sli collector engine | integration service | pull metrics from data sources, compute sli ratios |
+| error budget calculator | integration service | track remaining budget, burn rate, days to depletion |
+| compliance report generator | integration service | monthly pdf/csv reports, audit trail |
+| alert manager | integration service | route burn rate alerts to notification channels |
 
----
+## data model
 
-## 3. Data Model
-
-### SLO Definition
+### slo definition
 
 ```yaml
 slo:
@@ -105,7 +99,7 @@ slo:
     service: "web"
 ```
 
-### SLI Measurement
+### sli measurement
 
 ```yaml
 sli_measurement:
@@ -121,7 +115,7 @@ sli_measurement:
   source_query: "up{job='web-prod',env='production'}"
 ```
 
-### Error Budget Snapshot
+### error budget snapshot
 
 ```yaml
 error_budget:
@@ -137,7 +131,7 @@ error_budget:
   status: "healthy"                    # healthy | warning | critical | exhausted
 ```
 
-### Compliance Report
+### compliance report
 
 ```yaml
 compliance_report:
@@ -164,13 +158,11 @@ compliance_report:
       error_budget_remaining: 67.8
 ```
 
----
+## api design
 
-## 4. API Design
+### slo definitions
 
-### SLO Definitions
-
-#### List SLOs
+#### list slos
 
 ```
 GET /api/v2/slos
@@ -181,7 +173,7 @@ GET /api/v2/slos
   &per_page=50
 ```
 
-Response:
+response:
 ```json
 {
   "slos": [
@@ -199,7 +191,7 @@ Response:
 }
 ```
 
-#### Create SLO
+#### create slo
 
 ```
 POST /api/v2/slos
@@ -230,7 +222,7 @@ POST /api/v2/slos
 }
 ```
 
-Response `201`:
+response `201`:
 ```json
 {
   "id": "slo-uptime-web-prod",
@@ -239,27 +231,27 @@ Response `201`:
 }
 ```
 
-#### Get SLO Details
+#### get slo details
 
 ```
 GET /api/v2/slos/{slo_id}
 ```
 
-#### Update SLO
+#### update slo
 
 ```
 PATCH /api/v2/slos/{slo_id}
 ```
 
-#### Delete SLO
+#### delete slo
 
 ```
 DELETE /api/v2/slos/{slo_id}
 ```
 
-### Error Budget
+### error budget
 
-#### Get Error Budget
+#### get error budget
 
 ```
 GET /api/v2/slos/{slo_id}/error-budget
@@ -279,7 +271,7 @@ GET /api/v2/slos/{slo_id}/error-budget
 }
 ```
 
-#### Get Burn Rate History
+#### get burn rate history
 
 ```
 GET /api/v2/slos/{slo_id}/burn-rate
@@ -287,9 +279,9 @@ GET /api/v2/slos/{slo_id}/burn-rate
   &granularity=1h
 ```
 
-### Compliance Reports
+### compliance reports
 
-#### List Reports
+#### list reports
 
 ```
 GET /api/v2/compliance-reports
@@ -297,7 +289,7 @@ GET /api/v2/compliance-reports
   &format=json
 ```
 
-#### Generate Report
+#### generate report
 
 ```
 POST /api/v2/compliance-reports/generate
@@ -312,7 +304,7 @@ POST /api/v2/compliance-reports/generate
 }
 ```
 
-Response `202`:
+response `202`:
 ```json
 {
   "report_id": "cr-2026-05",
@@ -321,16 +313,16 @@ Response `202`:
 }
 ```
 
-#### Download Report
+#### download report
 
 ```
 GET /api/v2/compliance-reports/{report_id}/download
   ?format=pdf
 ```
 
-### SLI Data
+### sli data
 
-#### Query SLI Raw Data
+#### query sli raw data
 
 ```
 GET /api/v2/slos/{slo_id}/sli-data
@@ -339,78 +331,70 @@ GET /api/v2/slos/{slo_id}/sli-data
   &granularity=1h
 ```
 
----
+## implementation plan
 
-## 5. Implementation Plan
+### phase 1: core slo engine (pt 1-2)
 
-### Phase 1: Core SLO Engine (PT 1-2)
+| step | description | artifacts |
+|---|---|---|
+| 1.1 | slo crud endpoints and database schema | `models/slo.py`, `routes/slos.py` |
+| 1.2 | sli collector: prometheus query adapter | `services/sli_collector.py` |
+| 1.3 | error budget calculator with multi-window evaluation | `services/error_budget.py` |
+| 1.4 | unit tests for budget math and burn rate detection | `tests/test_error_budget.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 1.1 | SLO CRUD endpoints and database schema | `models/slo.py`, `routes/slos.py` |
-| 1.2 | SLI collector: Prometheus query adapter | `services/sli_collector.py` |
-| 1.3 | Error budget calculator with multi-window evaluation | `services/error_budget.py` |
-| 1.4 | Unit tests for budget math and burn rate detection | `tests/test_error_budget.py` |
+### phase 2: alerting & reporting (pt 3-4)
 
-### Phase 2: Alerting & Reporting (PT 3-4)
+| step | description | artifacts |
+|---|---|---|
+| 2.1 | burn rate alert evaluator + notification dispatch | `services/burn_rate_detector.py` |
+| 2.2 | compliance report generation (pdf via weasyprint, csv) | `services/report_generator.py` |
+| 2.3 | rest api endpoints for reports and sli queries | `routes/compliance.py` |
+| 2.4 | integration tests with mock prometheus data | `tests/test_compliance.py` |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 2.1 | Burn rate alert evaluator + notification dispatch | `services/burn_rate_detector.py` |
-| 2.2 | Compliance report generation (PDF via WeasyPrint, CSV) | `services/report_generator.py` |
-| 2.3 | REST API endpoints for reports and SLI queries | `routes/compliance.py` |
-| 2.4 | Integration tests with mock Prometheus data | `tests/test_compliance.py` |
+### phase 3: panel ui & polish (pt 5-6)
 
-### Phase 3: Panel UI & Polish (PT 5-6)
+| step | description | artifacts |
+|---|---|---|
+| 3.1 | slo dashboard panel: list, detail, burn rate chart | panel components |
+| 3.2 | slo creation/edit form with sli query builder | panel components |
+| 3.3 | compliance report viewer/download page | panel components |
+| 3.4 | websocket live updates for error budget changes | event stream |
 
-| Step | Description | Artifacts |
-|------|-------------|-----------|
-| 3.1 | SLO dashboard panel: list, detail, burn rate chart | Panel components |
-| 3.2 | SLO creation/edit form with SLI query builder | Panel components |
-| 3.3 | Compliance report viewer/download page | Panel components |
-| 3.4 | WebSocket live updates for error budget changes | Event stream |
+## service assignments
 
----
+| service | responsibility |
+|---|---|
+| integration service (primary) | slo crud, sli collection, error budget calculation, burn rate detection, compliance report generation, rest api |
+| management panel | slo dashboard, creation forms, burn rate charts, report viewer/download |
+| discord service | burn rate alert notifications via discord embed |
+| orchestrator agent | provide sli source data (uptime stats, response time metrics) |
 
-## 6. Service Assignments
+## effort estimate: medium (4-6 pt)
 
-| Service | Responsibility |
-|---------|---------------|
-| **Integration Service** (primary) | SLO CRUD, SLI collection, error budget calculation, burn rate detection, compliance report generation, REST API |
-| **Management Panel** | SLO dashboard, creation forms, burn rate charts, report viewer/download |
-| **Discord Service** | Burn rate alert notifications via Discord embed |
-| **Orchestrator Agent** | Provide SLI source data (uptime stats, response time metrics) |
+| area | pt estimate |
+|---|---|
+| slo definition crud + db schema | 1.0 |
+| sli collector engine + prometheus adapter | 1.0 |
+| error budget calculator + burn rate detection | 1.5 |
+| compliance report generator | 1.0 |
+| rest api endpoints | 0.5 |
+| panel ui (dashboard, forms, reports) | 1.0 |
+| integration + e2e tests | 0.5 |
+| documentation | 0.5 |
+| total | **6.0 pt** |
 
----
+### risk factors
 
-## 7. Effort Estimate: Medium (4-6 PT)
+- prometheus query language complexity for custom slis may require additional iteration
+- burn rate alert tuning (threshold calibration) needs production data feedback loop
+- pdf generation for compliance reports may require extra effort for branded templates
 
-| Area | PT Estimate |
-|------|-------------|
-| SLO definition CRUD + DB schema | 1.0 |
-| SLI collector engine + Prometheus adapter | 1.0 |
-| Error budget calculator + burn rate detection | 1.5 |
-| Compliance report generator | 1.0 |
-| REST API endpoints | 0.5 |
-| Panel UI (dashboard, forms, reports) | 1.0 |
-| Integration + E2E tests | 0.5 |
-| Documentation | 0.5 |
-| **Total** | **6.0 PT** |
+## key metrics
 
-### Risk Factors
-
-- Prometheus query language complexity for custom SLIs may require additional iteration
-- Burn rate alert tuning (threshold calibration) needs production data feedback loop
-- PDF generation for compliance reports may require extra effort for branded templates
-
----
-
-## 8. Key Metrics
-
-| Metric | Target |
-|--------|--------|
-| SLI evaluation latency | < 30s from metric ingestion |
-| Error budget calculation interval | Every 60s |
-| Compliance report generation | < 30s per report |
-| Supported SLOs per organization | Unlimited (paginated API) |
-| API throughput | 100 req/s per SLO endpoint |
+| metric | target |
+|---|---|
+| sli evaluation latency | < 30s from metric ingestion |
+| error budget calculation interval | every 60s |
+| compliance report generation | < 30s per report |
+| supported slos per organization | unlimited (paginated api) |
+| api throughput | 100 req/s per slo endpoint |

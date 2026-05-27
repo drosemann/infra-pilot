@@ -1,31 +1,24 @@
-# Feature 45: Bulk Operations Manager
+﻿# feature 45: bulk operations manager
 
-- **Feature ID:** 45
-- **Status:** Planned
-- **Priority:** High
-- **Primary Service:** Management Panel
-- **Effort Estimate:** Medium (4–6 PT)
-- **Dependencies:** Feature 43 (keyboard navigation for multi-select)
+- feature id: 45
+- status: planned
+- priority: high
+- primary service: management panel
+- effort estimate: medium (4-6 pt)
+- dependencies: feature 43 (keyboard navigation for multi-select)
 
----
+## overview
 
-## 1. Overview
+provide a guided workflow that lets operators select multiple servers (or other resources) and apply a batch action — start, stop, reboot, backup, tag, change plan, or decommission. the feature includes a persistent progress tracker, per-item status reporting, undo/rollback capability, and a full audit trail.
 
-Provide a guided workflow that lets operators select multiple servers (or other
-resources) and apply a batch action — start, stop, reboot, backup, tag, change
-plan, or decommission. The feature includes a persistent progress tracker,
-per-item status reporting, undo/rollback capability, and a full audit trail.
+### goals
 
-### Goals
+• support batch actions on up to 500 servers in a single operation.
+• real-time progress (server-sent events or websocket push).
+• rollback of failed/cancelled operations where the target action supports it.
+• full action history visible in the management panel.
 
-1. Support batch actions on up to 500 servers in a single operation.
-2. Real-time progress (Server-Sent Events or WebSocket push).
-3. Rollback of failed/cancelled operations where the target action supports it.
-4. Full action history visible in the Management Panel.
-
----
-
-## 2. Architecture & Component Map
+## architecture & component map
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -33,7 +26,7 @@ per-item status reporting, undo/rollback capability, and a full audit trail.
 │                                                                     │
 │  ┌──────────────────────┐   ┌──────────────────────────────────┐   │
 │  │  ServerTable          │   │  BulkActionBar                   │   │
-│  │  (multi-select rows)  │   │  [Start] [Stop] [Backup] […]    │   │
+│  │  (multi-select rows)  │   │  [Start] [Stop] [Backup] [...]  │   │
 │  │  checkbox per row     │   │  Shows "N selected"              │   │
 │  └──────────┬───────────┘   └────────────┬─────────────────────┘   │
 │             │                            │                          │
@@ -48,7 +41,7 @@ per-item status reporting, undo/rollback capability, and a full audit trail.
 │  │  ProgressPanel (persistent drawer / page)                     │  │
 │  │  • SSE / WS connection → live per-server status               │  │
 │  │  • progress bar (completed / failed / total)                  │  │
-│  │  • expandable row list: ✓ serverA, ✗ serverB (error), …      │  │
+│  │  • expandable row list: ✓ serverA, ✗ serverB (error), ...    │  │
 │  │  • "Rollback" button for reversible actions                   │  │
 │  └──────────────────────────┬────────────────────────────────────┘  │
 │                             │                                        │
@@ -69,80 +62,66 @@ per-item status reporting, undo/rollback capability, and a full audit trail.
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
----
+## implementation plan
 
-## 3. Implementation Plan
+### phase 1 — backend api & worker (2 pt)
 
-### Phase 1 — Backend API & Worker (2 PT)
+• bulk operation model & table (see §5).
+• `POST /api/v2/bulk/actions`
+  - accepts `{ action, resourceType, resourceIds, params }`.
+  - validates that all resources exist and are in a valid state for the action (e.g., cannot "start" an already-running server).
+  - creates a `bulk_operations` row with status `pending`.
+  - enqueues an async job (redis queue / in-process goroutine).
+• worker
+  - pulls job, iterates over `resourceIds`.
+  - for each item: calls the relevant service (e.g., `compute.start(serverId)`, `backup.create(serverId, params)`) and records result.
+  - updates progress counters in db every n items.
+  - on failure: continues remaining items (no fail-fast unless `failFast: true` flag is set).
+  - on completion: sets `completed_at` and final status.
+• get endpoint returns current progress, per-item results array.
+• websocket endpoint pushes `BulkProgressEvent` to connected clients.
 
-1. **Bulk Operation model & table** (see §5).
-2. **POST `/api/v2/bulk/actions`**
-   - Accepts `{ action, resourceType, resourceIds, params }`.
-   - Validates that all resources exist and are in a valid state for the
-     action (e.g., cannot "start" an already-running server).
-   - Creates a `bulk_operations` row with status `pending`.
-   - Enqueues an async job (Redis queue / in-process goroutine).
-3. **Worker**
-   - Pulls job, iterates over `resourceIds`.
-   - For each item: calls the relevant service (e.g., `compute.start(serverId)`,
-     `backup.create(serverId, params)`) and records result.
-   - Updates progress counters in DB every N items.
-   - On failure: continues remaining items (no fail-fast unless
-     `failFast: true` flag is set).
-   - On completion: sets `completed_at` and final status.
-4. **GET endpoint** returns current progress, per-item results array.
-5. **WebSocket** endpoint pushes `BulkProgressEvent` to connected clients.
+### phase 2 — multi-select ui & action bar (1-1.5 pt)
 
-### Phase 2 — Multi-Select UI & Action Bar (1–1.5 PT)
+• extend `ServerTable` with per-row `<input type="checkbox">`.
+• add a "select all" checkbox in the header (toggles current page; option "select all n items across all pages").
+• `BulkActionBar` — a sticky bar that appears when ≥ 1 item is selected.
+  - shows count ("3 servers selected").
+  - dropdown of applicable actions (filtered by resource state).
+  - "select all matching" button for cross-page selection.
+• `ConfirmationDialog` — shows summary of the action; allows optional parameters (e.g., backup retention days). provides a "dry-run" toggle that lists items that would fail validation.
 
-1. Extend `ServerTable` with per-row `<input type="checkbox">`.
-2. Add a "Select all" checkbox in the header (toggles current page; option
-   "Select all N items across all pages").
-3. **BulkActionBar** — a sticky bar that appears when ≥ 1 item is selected.
-   - Shows count ("3 servers selected").
-   - Dropdown of applicable actions (filtered by resource state).
-   - "Select all matching" button for cross-page selection.
-4. **ConfirmationDialog** — shows summary of the action; allows optional
-   parameters (e.g., backup retention days). Provides a "dry-run" toggle
-   that lists items that would fail validation.
+### phase 3 — progress & rollback (1 pt)
 
-### Phase 3 — Progress & Rollback (1 PT)
+• `ProgressPanel` — a right-side drawer (or full-page route) opened automatically after confirmation.
+  - overall progress bar: `(completed + failed) / total`.
+  - per-item table: server name, status (pending / running / success / failed), error message.
+  - status colours with aria labels (f43 compliance).
+• rollback
+  - post to `/rollback` triggers a new bulk operation that reverses the original actions (e.g., stop → start, tag-add → tag-remove).
+  - rollback operation is linked to the original via `rolled_back_from`.
+  - only available for actions that define a `revert` handler.
 
-1. **ProgressPanel** — a right-side drawer (or full-page route) opened
-   automatically after confirmation.
-   - Overall progress bar: `(completed + failed) / total`.
-   - Per-item table: server name, status (pending / running / success /
-     failed), error message.
-   - Status colours with ARIA labels (F43 compliance).
-2. **Rollback**
-   - POST to `/rollback` triggers a new bulk operation that reverses the
-     original actions (e.g., stop → start, tag-add → tag-remove).
-   - Rollback operation is linked to the original via `rolled_back_from`.
-   - Only available for actions that define a `revert` handler.
+### phase 4 — action history (0.5 pt)
 
-### Phase 4 — Action History (0.5 PT)
+• history page/panel — paginated table of past bulk operations.
+• columns: date, action name, resource count, status (success / partial / failed), duration, rollback link.
+• allows re-execution of the same action on the same resource set.
 
-1. **History page/panel** — paginated table of past bulk operations.
-2. Columns: date, action name, resource count, status (success / partial /
-   failed), duration, rollback link.
-3. Allows re-execution of the same action on the same resource set.
+## api design
 
----
+### endpoints
 
-## 4. API Design
+| method | path | description |
+|---|---|---|
+| `POST` | `/api/v2/bulk/actions` | start a new bulk operation |
+| `GET` | `/api/v2/bulk/actions/:id` | get operation status + results |
+| `POST` | `/api/v2/bulk/actions/:id/cancel` | cancel a running operation |
+| `POST` | `/api/v2/bulk/actions/:id/rollback` | rollback a completed/failed op |
+| `GET` | `/api/v2/bulk/actions/history` | list past operations (paginated) |
+| `WS` | `/api/v2/bulk/actions/:id/stream` | live progress events |
 
-### Endpoints
-
-| Method   | Path                                       | Description                         |
-|----------|--------------------------------------------|-------------------------------------|
-| `POST`   | `/api/v2/bulk/actions`                     | Start a new bulk operation          |
-| `GET`    | `/api/v2/bulk/actions/:id`                 | Get operation status + results      |
-| `POST`   | `/api/v2/bulk/actions/:id/cancel`          | Cancel a running operation          |
-| `POST`   | `/api/v2/bulk/actions/:id/rollback`        | Rollback a completed/failed op      |
-| `GET`    | `/api/v2/bulk/actions/history`             | List past operations (paginated)    |
-| `WS`     | `/api/v2/bulk/actions/:id/stream`          | Live progress events                |
-
-### Start Operation — Request
+### start operation — request
 
 ```json
 POST /api/v2/bulk/actions
@@ -155,7 +134,7 @@ POST /api/v2/bulk/actions
 }
 ```
 
-### Start Operation — Response
+### start operation — response
 
 ```json
 HTTP 202
@@ -169,7 +148,7 @@ HTTP 202
 }
 ```
 
-### Progress Stream (WebSocket Event)
+### progress stream (websocket event)
 
 ```json
 {
@@ -184,11 +163,9 @@ HTTP 202
 }
 ```
 
----
+## data model
 
-## 5. Data Model
-
-### PostgreSQL
+### postgresql
 
 ```sql
 CREATE TYPE bulk_action AS ENUM (
@@ -221,7 +198,7 @@ CREATE TABLE bulk_operations (
 CREATE INDEX idx_bulk_ops_created_by ON bulk_operations (created_by, created_at DESC);
 ```
 
-### Per-Item Result (embedded in `progress.items`)
+### per-item result (embedded in `progress.items`)
 
 ```typescript
 interface BulkItemResult {
@@ -234,42 +211,34 @@ interface BulkItemResult {
 }
 ```
 
----
+## service assignments
 
-## 6. Service Assignments
+| service | role |
+|---|---|
+| management panel | multi-select ui, confirmation dialog, progress panel, history |
+| api gateway | bulk action crud endpoints, websocket upgrade |
+| worker (async) | processes bulk operations sequentially per item |
+| database | `bulk_operations` table |
+| compute / backup | target services that execute individual actions (called by worker) |
 
-| Service           | Role                                                              |
-|-------------------|-------------------------------------------------------------------|
-| Management Panel  | Multi-select UI, confirmation dialog, progress panel, history     |
-| API Gateway       | Bulk action CRUD endpoints, WebSocket upgrade                     |
-| Worker (async)    | Processes bulk operations sequentially per item                   |
-| Database          | `bulk_operations` table                                           |
-| Compute / Backup  | Target services that execute individual actions (called by worker)|
+## effort estimate
 
----
+| phase | person-days |
+|---|---|
+| backend api & worker | 2 |
+| multi-select ui & action bar | 1-1.5 |
+| progress panel & rollback | 1 |
+| action history | 0.5 |
+| total | **4-6** |
 
-## 7. Effort Estimate
+## acceptance criteria
 
-| Phase                         | Person-days |
-|-------------------------------|-------------|
-| Backend API & worker           | 2          |
-| Multi-select UI & action bar   | 1–1.5      |
-| Progress panel & rollback      | 1          |
-| Action history                 | 0.5        |
-| **Total**                      | **4–6**    |
-
----
-
-## 8. Acceptance Criteria
-
-1. [ ] User can select multiple servers via checkboxes (including "select all
-       across pages").
-2. [ ] Bulk action bar appears when ≥ 1 item is selected with valid actions.
-3. [ ] Confirmation dialog shows action summary and accepts/rejects.
-4. [ ] Progress panel updates in real-time via WebSocket.
-5. [ ] Per-item success/failure is displayed.
-6. [ ] Rollback is available for supported actions and creates a linked
-       inverse operation.
-7. [ ] Action history page lists all past operations with filtering.
-8. [ ] Bulk operations can be cancelled while running.
-9. [ ] Maximum tested scale: 500 servers per operation.
+• user can select multiple servers via checkboxes (including "select all across pages").
+• bulk action bar appears when ≥ 1 item is selected with valid actions.
+• confirmation dialog shows action summary and accepts/rejects.
+• progress panel updates in real-time via websocket.
+• per-item success/failure is displayed.
+• rollback is available for supported actions and creates a linked inverse operation.
+• action history page lists all past operations with filtering.
+• bulk operations can be cancelled while running.
+• maximum tested scale: 500 servers per operation.

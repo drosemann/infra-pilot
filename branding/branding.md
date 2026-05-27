@@ -1,25 +1,25 @@
-# Infra Pilot Branding
+# infra pilot branding
 
-Branding for the Cosmic Infra identity.
+branding for the cosmic infra identity.
 
-Color Tokens (CSS custom properties would map to these colors):
-- Primary: #6C5CE7
-- Secondary: #EC4899
-- Accent: #22D3EE
-- Background: #0B0720
-- Text: #F6F3FF
+color tokens (css custom properties would map to these colors):
+• primary: #6c5ce7
+• secondary: #ec4899
+• accent: #22d3ee
+• background: #0b0720
+• text: #f6f3ff
 
-Logo: branding/assets/logo.svg (IP monogram with orbit ring)
+logo: branding/assets/logo.svg (ip monogram with orbit ring)
 
-Usage Guidelines:
-- Use brand.primary for primary buttons, headers, and highlights.
-- Use brand.secondary for emphasis and accents.
-- Ensure good contrast on both dark and light surfaces.
-- The orbit ring should appear around the logo in branding contexts.
+usage guidelines:
+• use brand.primary for primary buttons, headers, and highlights.
+• use brand.secondary for emphasis and accents.
+• ensure good contrast on both dark and light surfaces.
+• the orbit ring should appear around the logo in branding contexts.
 
-UI Components Notes:
-- Typography: Inter or similar, scale tokens (h1, h2, body).
-- Spacing: 8px grid with 4px increments for micro-alignment.
-- Accessibility: WCAG AA contrast for foreground/background.
+ui components notes:
+• typography: inter or similar, scale tokens (h1, h2, body).
+• spacing: 8px grid with 4px increments for micro-alignment.
+• accessibility: wcag aa contrast for foreground/background.
 
-Version: 1.0
+version: 1.0

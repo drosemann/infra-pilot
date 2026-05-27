@@ -10,6 +10,34 @@ import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
+
+function runCommand(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { shell: false });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('error', (err) => {
+      reject(err);
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ stdout, stderr });
+      } else {
+        reject(new Error(stderr || `${command} exited with code ${code}`));
+      }
+    });
+  });
+}
 import os from 'os';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -768,6 +796,9 @@ app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res
   const file = req.query.file as string;
 
   if (!file) return res.status(400).json({ error: 'file query parameter is required' });
+  if (!/^[a-zA-Z0-9._/-]+$/.test(file) || file.includes('..') || file.startsWith('/')) {
+    return res.status(400).json({ error: 'Invalid file path' });
+  }
 
   try {
     const { data: app, error } = await supabase
@@ -780,7 +811,7 @@ app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res
     if (error || !app) return res.status(404).json({ error: 'App not found' });
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
-    const { stdout } = await execAsync(`docker exec ${app.container_id} cat ${file}`).catch((err: any) => {
+    const { stdout } = await runCommand('docker', ['exec', app.container_id, 'cat', file]).catch((err: any) => {
       throw new Error(`Failed to read file: ${err.message}`);
     });
 

@@ -47,8 +47,57 @@ Infra Pilot bündelt mehrere Services und Hilfsbibliotheken, um Container-/Game-
 - ✅ **Real-time Resource Graphs** — Live CPU/memory/disk gauges + sparklines, Netdata/Grafana integration (Management Panel component + backend metrics)
 - ✅ **Log Search** — Full-text log search with filters, pagination, highlighting (Management Panel LiveLogs upgrade, Integration Service search API)
 - ✅ **Prepaid Billing** — Pay-as-you-go balance system with top-ups, cost calculator, transaction history (Orchestrator cog, Management Panel page + API)
+- ✅ **AI Log Anomaly Detector** — ML-based anomaly detection on container logs (Integration Service module)
+- ✅ **AI Resource Optimizer** — Trend analysis, right-sizing recommendations, idle detection (Orchestrator cog)
+- ✅ **AI Assistant Chatbot** — Natural-language server management interface (Integration Service)
+- ✅ **AI Threat Detection** — Behavioral analysis of processes, logins, network traffic (Orchestrator cog)
+- ✅ **AI Backup Validator** — Ephemeral restore + integrity checks + validation scoring (Integration Service)
+- ✅ **AI Config Advisor** — Config analysis against 50+ best-practice rules (Management Panel component)
+- ✅ **AI Code Review Bot** — GitHub PR review with security scanning, Discord summary (Discord Service module)
+- ✅ **AI Performance Profiler** — Minecraft tick profiling, lag source identification (Service Core)
+- ✅ **AI Ticket Triage** — Ticket classification, urgency scoring, auto-routing (Integration Service)
+- ✅ **AI Capacity Forecaster** — 30/60/90 day resource prediction (Orchestrator cog)
+- ✅ **Infra Pilot CLI** — `ipilot` CLI tool with server management, logs, deploy (new `cli/` directory)
+- ✅ **Terraform Provider** — `terraform-provider-infrapilot` for IaC (new `infra/terraform/` directory)
+- ✅ **Webhook Event Bus** — Outgoing webhooks with retry, signing, templating (Integration Service)
+- ✅ **API Gateway & Rate Limiting** — Central gateway with token bucket rate limiting (Integration Service)
+- ✅ **Plugin Marketplace** — Community plugin ecosystem with one-click install (Management Panel)
+- ✅ **GitOps Sync** — Two-way Git config sync with drift detection (Orchestrator cog)
+- ✅ **OpenTelemetry Export** — OTLP trace/metric/log export (Integration Service)
+- ✅ **GraphQL API** — GraphQL layer alongside REST with subscriptions (Integration Service)
+- ✅ **Kubernetes Cluster Manager** — K3s/K8s cluster deploy + Helm management (Orchestrator cog)
+- ✅ **Multi-Region Failover** — Active-passive regions with DNS failover (Integration Service)
+- ✅ **Edge Compute Nodes** — Edge function/container deployment (Orchestrator cog)
+- ✅ **Serverless Functions (FaaS)** — Knative/OpenFaaS integration with auto-scaling (Orchestrator cog)
+- ✅ **CDN & WAF Integration** — One-click Cloudflare/Bunny CDN + WAF rules (Integration Service)
+- ✅ **Multi-Cloud Cost Optimizer** — Cross-provider pricing comparison (Orchestrator cog)
+- ✅ **Disaster Recovery Orchestrator** — DR plans, drills, RTO/RPO tracking (Orchestrator cog)
+- ✅ **Service Mesh Integration** — Istio/Linkerd mTLS + canary deployments (Integration Service)
+- ✅ **Collaborative Terminal** — Multi-user terminal sessions via WebSocket (Management Panel)
+- ✅ **Team Workspaces** — Isolated workspaces with quotas + sharing (Integration Service)
+- ✅ **Change Approval Workflow** — 2nd-person approval for destructive actions (Management Panel)
+- ✅ **Incident Management** — On-call schedules, escalation, post-mortems (Integration Service)
+- ✅ **Runbook Automation** — YAML-based executable runbooks with rollback (Orchestrator cog)
+- ✅ **Internal Knowledge Base** — Markdown wiki linked to resources (Management Panel)
+- ✅ **Team Activity Feed** — Unified chronological event stream (Management Panel)
+- ✅ **Distributed Tracing** — Jaeger/Zipkin span collection + flamegraphs (Integration Service)
+- ✅ **Custom Dashboard Builder** — Drag-and-drop Grafana-like dashboards (Management Panel)
+- ✅ **SLA / SLO Tracking** — SLO definitions, error budgets, burn rate alerts (Integration Service)
+- ✅ **Synthetic Monitoring** — Global probes: HTTP, TCP, ping, SSL, DNS (Orchestrator cog)
+- ✅ **Cost Allocation & Chargeback** — Resource tagging + per-team cost breakdown (Integration Service)
+- ✅ **Alert Fatigue Reduction** — Dedup, correlation, suppression, digest mode (Integration Service)
+- ✅ **Mobile App** — React Native/Expo app with server mgmt, push notifications (new `mobile/` directory)
+- ✅ **Desktop App** — Tauri native shell with system tray, offline mode, auto-updater (new `src-tauri/`)
+- ✅ **i18n / l10n** — 11 locales, RTL support, Crowdin integration (Management Panel)
+- ✅ **WCAG 2.1 AA Compliance** — ARIA, keyboard nav, screen reader support (Management Panel)
+- ✅ **Theme Studio** — Visual theme builder with live preview + gallery (Management Panel)
+- ✅ **Bulk Operations Manager** — Multi-select batch actions with rollback (Management Panel)
+- ✅ **Compliance Framework Reports** — SOC 2, HIPAA, PCI-DSS report generation (Integration Service)
+- ✅ **Secrets Management** — HashiCorp Vault + Fernet encryption + rotation (Integration Service)
+- ✅ **Container Image Scanner** — Trivy/Grype CVE scanning with policy enforcement (Orchestrator cog)
+- ✅ **SIEM Export** — Audit log streaming to Splunk/ELK/Datadog/syslog (Integration Service)
+- ✅ **GDPR & Data Retention** — Data lifecycle, right-to-erasure, consent management (Integration Service)
 - ⚠️ **Docker Compose:** `docker-compose.yml` ist als Stack-Scaffold vorhanden. Aktuell besitzt nur `services/orchestrator-agent/` ein Dockerfile; die Compose-Definitionen für Management Panel, Discord Service, Service Core und Monitoring benötigen vor einem vollständigen Stack-Start noch Dockerfiles bzw. Infrastrukturdateien.
-- ⚠️ **Kubernetes/Terraform:** Die README verweist nicht mehr auf produktionsfertige K8s-/Terraform-Manifeste, weil entsprechende `infrastructure/`-Dateien derzeit nicht im Repository enthalten sind.
 
 ## Quick Start
 
@@ -140,7 +189,7 @@ Modernes Docker-Management-Panel für Self-Hoster und Hosting-Workflows.
 - **Stack:** React 19, TypeScript, Vite, Tailwind CSS, Express.js, Supabase/PostgreSQL, WebSocket (ws).
 - **Modi:** Personal Mode als Standard, Business Mode für Kunden-, Plan- und Demo-Datenflüsse.
 - **Features:** App-/Container-CRUD, Logs, Ressourcenlimits, Setup-Flow, Seed Demo Feature Gate, optionale zero-native Desktop-Shell.
-- **Dashboards/Seiten:** Dashboard, AppDetail, AppForm, Monitoring, AccessLogs, Backups, Reports, Settings, **AuditLog**, Customers, **Billing**, **ConfigEditor**, **CronJobManager**, **DatabaseManager**, **GitDeployManager**, **RealtimeMetrics**, **ModpackBrowser**, **TwoFactorSetup**.
+- **Dashboards/Seiten:** Dashboard, AppDetail, AppForm, Monitoring, AccessLogs, Backups, Reports, Settings, **AuditLog**, Customers, **Billing**, **ConfigEditor**, **CronJobManager**, **DatabaseManager**, **GitDeployManager**, **RealtimeMetrics**, **ModpackBrowser**, **TwoFactorSetup**, **Marketplace**, **DashboardBuilder**, **KnowledgeBase**, **ThemeStudio**, **CollaborativeTerminal**.
 - **Real-Time:** WebSocket-Server für Live-Container-Logs (`docker logs -f`) und Metrik-Streaming (`docker stats`, 2s-Intervall). Live-CPU/Memory/Disk-Gauges mit Sparklines und Netdata/Grafana-Integration.
 - **Globale Suche:** Cmd+K-Palette mit Echtzeit-Suche über Apps, Backups und Audit-Logs.
 - **Audit Trail:** Append-Only-Log aller Mutationen mit Timeline-Viewer und Filterung.
@@ -161,6 +210,18 @@ Modernes Docker-Management-Panel für Self-Hoster und Hosting-Workflows.
 - **Discord Token Validation:** Bot-Token-Validierung vor Container-Start.
 - **Modpack-Installer:** Ein-Klick-Modpack-Installation von CurseForge/Modrinth.
 - **2FA (TOTP):** Zwei-Faktor-Authentifizierung über TOTP mit Setup-UI und Backup-Codes.
+- **AI Config Advisor:** Server-Konfigurationsanalyse mit 50+ Best-Practice-Regeln und Ein-Klick-Fix.
+- **Plugin Marketplace:** Community-Plugin-Ökosystem mit Suchen, Installieren und Veröffentlichen.
+- **Collaborative Terminal:** Multi-User-Terminal-Sessions via WebSocket mit Chat und Cursor-Sharing.
+- **Change Approval Workflow:** Genehmigungspflicht für destruktive Aktionen mit Break-Glass-Notfallmodus.
+- **Knowledge Base:** Markdown-basiertes Wiki mit ressourcenverknüpften Artikeln und Volltextsuche.
+- **Activity Feed:** Chronologischer, filterbarer Event-Stream aller Team-Aktionen.
+- **Dashboard Builder:** Drag-and-Drop-Grafana-ähnlicher Dashboard-Editor mit multiplen Panel-Typen.
+- **i18n / l10n:** Vollständige Internationalisierung mit 11 Sprachen, RTL-Support und Crowdin-Integration.
+- **WCAG 2.1 AA:** Screenreader-Support, Tastaturnavigation, Focus-Management und ARIA-Labels.
+- **Theme Studio:** Visueller Theme-Builder mit Live-Vorschau, Export/Import und Community-Galerie.
+- **Bulk Operations Manager:** Batch-Aktionen mit Mehrfachauswahl, Fortschrittsanzeige und Rollback.
+- **Desktop App:** Tauri-basierte native Desktop-App mit System Tray, Offline-Modus und Auto-Updater.
 - **Wichtige Skripte:**
   - `npm run dev` startet Frontend und Backend parallel.
   - `npm run dev:frontend` startet nur Vite.
@@ -173,9 +234,9 @@ Modernes Docker-Management-Panel für Self-Hoster und Hosting-Workflows.
 Python-basierte Provisioning- und Orchestrierungslogik.
 
 - **Stack:** Python 3.9+, Discord.py/aiohttp-Umfeld laut Requirements.
-- **Features:** VPS-Management, Billing-/Pricing-Cogs, Ressourcenmonitoring, Integration Hooks.
-- **Cogs (35):** alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, cost_optimizer, cost_prediction, **cron_scheduler**, **database_manager**, dns_manager, **git_deploy**, health_checks, load_balancer, **modpack_installer**, monitoring, network_monitor, performance_optimizer, **prepaid_billing**, quota_manager, recovery, resource_manager, security_audit, server_migration, snapshot_system, ssl_manager, template_manager, traffic_analysis, troubleshoot, update_manager, vps_billing, vps_commands, vps_pricing.
-- **Einstiegspunkt:** `main.py` lädt alle 35 Cogs. `bot.py` und `b2.py` sind Legacy-Dateien (deprecated), die nur noch als Referenz dienen.
+- **Features:** VPS-Management, Billing-/Pricing-Cogs, Ressourcenmonitoring, Integration Hooks, AI/ML-Optimierung, GitOps, Container-Scanning, Synthetisches Monitoring.
+- **Cogs (47):** **ai_capacity_forecaster**, **ai_resource_optimizer**, **ai_threat_detection**, alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, **container_scanner**, cost_optimizer, cost_prediction, **cron_scheduler**, **database_manager**, **disaster_recovery**, dns_manager, **edge_compute**, **faas_manager**, **git_deploy**, **gitops_sync**, health_checks, **kubernetes_manager**, load_balancer, **modpack_installer**, monitoring, **multi_cloud_cost**, network_monitor, performance_optimizer, **prepaid_billing**, quota_manager, recovery, resource_manager, **runbook_automation**, security_audit, server_migration, snapshot_system, ssl_manager, **synthetic_monitoring**, template_manager, traffic_analysis, troubleshoot, update_manager, vps_billing, vps_commands, vps_pricing.
+- **Einstiegspunkt:** `main.py` lädt alle 47 Cogs. `bot.py` und `b2.py` sind Legacy-Dateien (deprecated), die nur noch als Referenz dienen.
 - **Docker:** Enthält aktuell ein Dockerfile und ist damit der einzige Service, der im Repository direkt als Image gebaut werden kann.
 
 ### Discord Service (`services/discord-service/`)
@@ -184,7 +245,7 @@ Discord.js-Service für Pterodactyl-nahe Server-Erstellungsflüsse.
 
 - **Stack:** Node.js 18+, CommonJS, Discord.js/Axios/Dotenv (package.json jetzt vorhanden).
 - **Features:** `/server create`-Flow, Pterodactyl-User-/Server-Erstellung, Rollen-/Limit-Konfiguration.
-- **Module (28, alle verdrahtet):** activityTracker, advancedTicketSystem, categoryManager, channelCleanup, customCommands, dashboard, economyCommands, eventScheduler, messageArchive, messageFilter, messageLogger, messageScheduler, pollCreator, prefixSettings, roleHierarchy, roleManager, serverStatus, statsCommands, statsGraphs, tempVoiceChannels, ticketCommands, ticketSystem, topicRotation, verificationLevels, verificationSystem, voiceManager, warningSystem, welcomeMessages.
+- **Module (29, alle verdrahtet):** activityTracker, advancedTicketSystem, categoryManager, channelCleanup, **codeReviewBot**, customCommands, dashboard, economyCommands, eventScheduler, messageArchive, messageFilter, messageLogger, messageScheduler, pollCreator, prefixSettings, roleHierarchy, roleManager, serverStatus, statsCommands, statsGraphs, tempVoiceChannels, ticketCommands, ticketSystem, topicRotation, verificationLevels, verificationSystem, voiceManager, warningSystem, welcomeMessages.
 - **Token Validation:** Bot-Token-Validierungs-Utility prüft `DISCORD_TOKEN` vor Service-Start.
 - **Git Deployment Notification:** Empfängt und leitet Git-Deployment-Benachrichtigungen vom Orchestrator weiter.
 - **Konfiguration:** siehe `services/discord-service/.env.example`.
@@ -194,7 +255,7 @@ Discord.js-Service für Pterodactyl-nahe Server-Erstellungsflüsse.
 Python-basierter Cross-Plattform-Hub für serviceübergreifende Kommunikation.
 
 - **Stack:** Python 3.9+, aiohttp.
-- **Module:** alerts, announcements, api, auth, **auth_2fa**, backup, commands, events, integration, logging, messaging, **modpacks**, **notification_providers**, permissions, resource_tracker, users.
+- **Module (36):** alerts, **alert_fatigue**, announcements, api, **api_gateway**, auth, **auth_2fa**, backup, **backup_validator**, **cdn_waf**, commands, **compliance_reports**, **cost_allocation**, **distributed_tracing**, events, **gdpr_manager**, **graphql_api**, **incident_manager**, integration, **log_analyzer**, logging, messaging, **multi_region**, **opentelemetry_exporter**, permissions, resource_tracker, **secrets_manager**, **service_mesh**, **siem_exporter**, **slo_tracker**, **ticket_triage**, **webhook_bus**, **workspaces**
 - **2FA/TOTP:** Vollständiger TOTP-Authentifizierungs-Flow (Setup, Verify, Disable, Backup-Codes).
 - **Modpack Search:** CurseForge/Modrinth-Suche und -Details über einheitliche API.
 - **Log Search:** Erweiterte Volltext-Logsuche mit Paginierung und Filterung.
@@ -338,6 +399,9 @@ Der zentrale Dokumentationsindex liegt unter [docs/README.md](docs/README.md).
 - [Design System](docs/design-system.md)
 - [Design Tokens](docs/design-tokens.md)
 - [Feature Implementation Plan v2](docs/feature-implementation-plan-v2.md) (50 neue Features: AI, Developer Ecosystem, Advanced Infra, Collaboration, Observability, UX, Compliance)
+- [CLI README](cli/README.md) (Infra Pilot CLI - `ipilot`)
+- [Terraform Provider Docs](infra/terraform/docs/index.md) (Terraform Provider for Infra Pilot)
+- [Mobile App](mobile/app.json) (React Native/Expo mobile app)
 
 ## Security
 

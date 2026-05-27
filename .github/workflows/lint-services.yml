@@ -3,8 +3,12 @@ name: Lint Services
 on:
   push:
     branches: [ main, master, main-renovate ]
+    paths:
+      - 'services/**'
   pull_request:
     branches: [ '**' ]
+    paths:
+      - 'services/**'
 
 permissions:
   contents: read
@@ -21,11 +25,19 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install dependencies for root (optional)
         run: |
           if [ -f package.json ]; then
             npm ci --silent || true
           fi
+
+      - name: Install Python lint tools
+        run: pip install flake8 black isort
 
       - name: Lint all services
         run: |

@@ -25,6 +25,8 @@ jobs:
             path: services/discord-service
           - name: service-core
             path: services/service-core
+          - name: integration-service
+            path: services/integration-service
     
     permissions:
       contents: read

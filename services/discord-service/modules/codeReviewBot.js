@@ -174,10 +174,14 @@ class CodeReviewBot {
     }
 
     async reviewPullRequest(repo, pr) {
+        if (!this.isValidGithubRepoFullName(repo)) return;
+        const normalizedPrNumber = this.normalizePrNumber(pr && pr.number);
+        if (normalizedPrNumber === null) return;
+
         const config = this.getConfig(pr.base.repo.owner.id.toString());
         if (!config || !config.enabled) return;
 
-        const changedFiles = await this.fetchPRFiles(repo, pr.number);
+        const changedFiles = await this.fetchPRFiles(repo, normalizedPrNumber);
         if (changedFiles.length < config.minReviewSize) return;
 
         const securityIssues = this.scanForSecrets(changedFiles);
@@ -209,14 +213,30 @@ class CodeReviewBot {
 
     async fetchPRFiles(repo, prNumber) {
         try {
+            if (!this.isValidGithubRepoFullName(repo)) return [];
+            const normalizedPrNumber = this.normalizePrNumber(prNumber);
+            if (normalizedPrNumber === null) return [];
+
+            const [owner, repoName] = repo.split('/');
             const token = process.env.GITHUB_TOKEN;
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
-            const res = await axios.get(`https://api.github.com/repos/${repo}/pulls/${prNumber}/files`, { headers });
+            const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}/pulls/${normalizedPrNumber}/files`;
+            const res = await axios.get(url, { headers });
             return res.data;
         } catch (e) {
             console.error('Failed to fetch PR files:', e.message);
             return [];
         }
+    }
+
+    isValidGithubRepoFullName(repo) {
+        return typeof repo === 'string' && /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo);
+    }
+
+    normalizePrNumber(prNumber) {
+        const n = Number(prNumber);
+        if (!Number.isInteger(n) || n <= 0) return null;
+        return n;
     }
 
     scanForSecrets(files) {

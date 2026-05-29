@@ -793,9 +793,13 @@ app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: 
 app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
-  const file = req.query.file as string;
+  const rawFile = req.query.file;
 
-  if (!file) return res.status(400).json({ error: 'file query parameter is required' });
+  if (typeof rawFile !== 'string' || !rawFile) {
+    return res.status(400).json({ error: 'file query parameter is required' });
+  }
+
+  const file = rawFile;
   if (!/^[a-zA-Z0-9._/-]+$/.test(file) || file.includes('..') || file.startsWith('/')) {
     return res.status(400).json({ error: 'Invalid file path' });
   }

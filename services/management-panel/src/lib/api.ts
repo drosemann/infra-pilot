@@ -607,7 +607,845 @@ class APIClient {
     const res = await this.api.get('/health');
     return res.data;
   }
+
+  // Custom Report Builder API
+  async listReportDesigns(): Promise<import('./types').ReportDesign[]> {
+    const res = await this.api.get('/api/v3/reports/designs');
+    return res.data;
+  }
+
+  async getReportDesign(id: string): Promise<import('./types').ReportDesign> {
+    const res = await this.api.get(`/api/v3/reports/designs/${id}`);
+    return res.data;
+  }
+
+  async createReportDesign(data: Partial<import('./types').ReportDesign>): Promise<import('./types').ReportDesign> {
+    const res = await this.api.post('/api/v3/reports/designs', data);
+    return res.data;
+  }
+
+  async updateReportDesign(id: string, data: Partial<import('./types').ReportDesign>): Promise<import('./types').ReportDesign> {
+    const res = await this.api.put(`/api/v3/reports/designs/${id}`, data);
+    return res.data;
+  }
+
+  async deleteReportDesign(id: string): Promise<void> {
+    await this.api.delete(`/api/v3/reports/designs/${id}`);
+  }
+
+  async generateReportNow(designId: string, channels?: import('./types').DeliveryChannel[], format?: string): Promise<any> {
+    const res = await this.api.post('/api/v3/reports/generate', { design_id: designId, channels, format });
+    return res.data;
+  }
+
+  async listReportSchedules(): Promise<import('./types').ReportSchedule[]> {
+    const res = await this.api.get('/api/v3/reports/schedules');
+    return res.data;
+  }
+
+  async createReportSchedule(data: Partial<import('./types').ReportSchedule>): Promise<import('./types').ReportSchedule> {
+    const res = await this.api.post('/api/v3/reports/schedules', data);
+    return res.data;
+  }
+
+  async deleteReportSchedule(id: string): Promise<void> {
+    await this.api.delete(`/api/v3/reports/schedules/${id}`);
+  }
+
+  async listReportDeliveries(designId?: string): Promise<import('./types').ReportDelivery[]> {
+    const params: any = {};
+    if (designId) params.design_id = designId;
+    const res = await this.api.get('/api/v3/reports/deliveries', { params });
+    return res.data;
+  }
+
+  async getReportTemplates(): Promise<import('./types').ReportTemplate[]> {
+    const res = await this.api.get('/api/v3/reports/templates');
+    return res.data;
+  }
+
+  // BI Dashboard API
+  async getKpiSummary(): Promise<import('./types').KPISummary> {
+    const res = await this.api.get('/api/v3/bi/kpi-summary');
+    return res.data;
+  }
+
+  async getMRR(): Promise<import('./types').MRRPoint[]> {
+    const res = await this.api.get('/api/v3/bi/mrr');
+    return res.data;
+  }
+
+  async getARR(): Promise<import('./types').ARRBreakdown> {
+    const res = await this.api.get('/api/v3/bi/arr');
+    return res.data;
+  }
+
+  async getChurnAnalysis(): Promise<import('./types').ChurnAnalysis> {
+    const res = await this.api.get('/api/v3/bi/churn');
+    return res.data;
+  }
+
+  async getLTVSegments(): Promise<import('./types').LTVSegment[]> {
+    const res = await this.api.get('/api/v3/bi/ltv');
+    return res.data;
+  }
+
+  async getCACMetrics(): Promise<import('./types').CACMetrics> {
+    const res = await this.api.get('/api/v3/bi/cac');
+    return res.data;
+  }
+
+  async getAcquisitionChannels(): Promise<import('./types').AcquisitionChannel[]> {
+    const res = await this.api.get('/api/v3/bi/acquisition');
+    return res.data;
+  }
+
+  async getRevenueBreakdown(): Promise<import('./types').RevenueBreakdown> {
+    const res = await this.api.get('/api/v3/bi/revenue-breakdown');
+    return res.data;
+  }
+
+  async getRevenueForecasts(): Promise<import('./types').RevenueForecast> {
+    const res = await this.api.get('/api/v3/bi/forecasts');
+    return res.data;
+  }
+
+  async getCohortData(): Promise<import('./types').CohortRow[]> {
+    const res = await this.api.get('/api/v3/bi/cohorts');
+    return res.data;
+  }
+
+  // Dependency Graph API
+  async getDependencyGraph(): Promise<import('./types').DependencyGraph> {
+    const res = await this.api.get('/api/v3/dependencies/graph');
+    return res.data;
+  }
+
+  async getServiceDependencies(serviceId: string): Promise<import('./types').DependencyGraph> {
+    const res = await this.api.get(`/api/v3/dependencies/service/${serviceId}`);
+    return res.data;
+  }
+
+  async getImpactAnalysis(serviceId: string): Promise<import('./types').ImpactAnalysis> {
+    const res = await this.api.get(`/api/v3/dependencies/impact?service_id=${serviceId}`);
+    return res.data;
+  }
+
+  async discoverDependencies(): Promise<import('./types').DependencyGraph> {
+    const res = await this.api.post('/api/v3/dependencies/discover');
+    return res.data;
+  }
+
+  async getDependencyChanges(): Promise<any[]> {
+    const res = await this.api.get('/api/v3/dependencies/changes');
+    return res.data;
+  }
+
+  // Cost & Usage Analytics API
+  async getCostBreakdown(): Promise<import('./types').CostBreakdown> {
+    const res = await this.api.get('/api/v3/cost/breakdown');
+    return res.data;
+  }
+
+  async getCostTrends(): Promise<import('./types').CostTrendPoint[]> {
+    const res = await this.api.get('/api/v3/cost/trends');
+    return res.data;
+  }
+
+  async getUnitEconomics(): Promise<import('./types').UnitEconomics> {
+    const res = await this.api.get('/api/v3/cost/unit-economics');
+    return res.data;
+  }
+
+  async getBudgets(): Promise<import('./types').Budget[]> {
+    const res = await this.api.get('/api/v3/cost/budgets');
+    return res.data;
+  }
+
+  async createBudget(data: Partial<import('./types').Budget>): Promise<import('./types').Budget> {
+    const res = await this.api.post('/api/v3/cost/budgets', data);
+    return res.data;
+  }
+
+  async getSavingsRecommendations(): Promise<import('./types').SavingsRecommendation[]> {
+    const res = await this.api.get('/api/v3/cost/recommendations');
+    return res.data;
+  }
+
+  async getCostForecast(): Promise<import('./types').CostForecast> {
+    const res = await this.api.get('/api/v3/cost/forecast');
+    return res.data;
+  }
+
+  // Geolocation Heatmap API
+  async ingestGeoEvent(event: Partial<import('./types').GeoEvent>): Promise<any> {
+    const res = await this.api.post('/api/v3/geo/ingest', event);
+    return res.data;
+  }
+
+  async getHeatmapData(params?: { from?: string; to?: string; service?: string; country?: string }): Promise<import('./types').HeatmapDataPoint[]> {
+    const res = await this.api.get('/api/v3/geo/heatmap', { params });
+    return res.data;
+  }
+
+  async getGeoRegions(params?: { from?: string; to?: string; service?: string }): Promise<import('./types').RegionAggregation[]> {
+    const res = await this.api.get('/api/v3/geo/regions', { params });
+    return res.data;
+  }
+
+  async getTopCities(params?: { from?: string; to?: string; service?: string; limit?: number }): Promise<import('./types').TopCity[]> {
+    const res = await this.api.get('/api/v3/geo/top-cities', { params });
+    return res.data;
+  }
+
+  async getGeoTimelapse(params?: { from?: string; to?: string; interval?: string; service?: string }): Promise<import('./types').TimelapseFrame[]> {
+    const res = await this.api.get('/api/v3/geo/timelapse', { params });
+    return res.data;
+  }
+
+  async getGeoFilterOptions(): Promise<import('./types').GeoFilterOptions> {
+    const res = await this.api.get('/api/v3/geo/filter-options');
+    return res.data;
+  }
 }
+
+  // === v3 Networking API Methods ===
+
+  // SD-WAN Controller
+  async getSDWANStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/sdwan/status');
+    return res.data;
+  }
+  async listSDWANApps(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/sdwan/apps');
+    return res.data;
+  }
+  async createSDWANApp(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/sdwan/apps', data);
+    return res.data;
+  }
+  async updateSDWANApp(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/networking/sdwan/apps/${id}`, data);
+    return res.data;
+  }
+  async deleteSDWANApp(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/sdwan/apps/${id}`);
+  }
+  async toggleSDWANApp(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/sdwan/apps/${id}/toggle`);
+    return res.data;
+  }
+  async getSDWANMetrics(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/sdwan/metrics');
+    return res.data;
+  }
+
+  // VPN as a Service
+  async listVPNConfigs(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/vpn/configs');
+    return res.data;
+  }
+  async createVPNConfig(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/vpn/configs', data);
+    return res.data;
+  }
+  async updateVPNConfig(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/networking/vpn/configs/${id}`, data);
+    return res.data;
+  }
+  async deleteVPNConfig(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/vpn/configs/${id}`);
+  }
+  async getVPNStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/vpn/status');
+    return res.data;
+  }
+  async getVPNLogs(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/vpn/logs');
+    return res.data;
+  }
+
+  // DNS Management
+  async listDNSZones(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/dns/zones');
+    return res.data;
+  }
+  async createDNSZone(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/dns/zones', data);
+    return res.data;
+  }
+  async deleteDNSZone(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/dns/zones/${id}`);
+  }
+  async listDNSRecords(zoneId: string): Promise<any[]> {
+    const res = await this.api.get(`/api/v1/networking/dns/zones/${zoneId}/records`);
+    return res.data;
+  }
+  async createDNSRecord(zoneId: string, data: any): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/dns/zones/${zoneId}/records`, data);
+    return res.data;
+  }
+  async updateDNSRecord(zoneId: string, recordId: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/networking/dns/zones/${zoneId}/records/${recordId}`, data);
+    return res.data;
+  }
+  async deleteDNSRecord(zoneId: string, recordId: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/dns/zones/${zoneId}/records/${recordId}`);
+  }
+
+  // BGP Route Manager
+  async listBGPSessions(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/bgp/sessions');
+    return res.data;
+  }
+  async createBGPSession(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/bgp/sessions', data);
+    return res.data;
+  }
+  async deleteBGPSession(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/bgp/sessions/${id}`);
+  }
+  async getBGPRoutes(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/bgp/routes');
+    return res.data;
+  }
+  async getBGPStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/bgp/status');
+    return res.data;
+  }
+
+  // Reverse Proxy Catalog
+  async listProxyRules(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/proxy/rules');
+    return res.data;
+  }
+  async createProxyRule(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/proxy/rules', data);
+    return res.data;
+  }
+  async updateProxyRule(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/networking/proxy/rules/${id}`, data);
+    return res.data;
+  }
+  async deleteProxyRule(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/proxy/rules/${id}`);
+  }
+  async toggleProxyRule(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/proxy/rules/${id}/toggle`);
+    return res.data;
+  }
+
+  // Network Segmentation
+  async listSegments(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/segments');
+    return res.data;
+  }
+  async createSegment(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/segments', data);
+    return res.data;
+  }
+  async updateSegment(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/networking/segments/${id}`, data);
+    return res.data;
+  }
+  async deleteSegment(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/segments/${id}`);
+  }
+  async listSegmentPolicies(segmentId: string): Promise<any[]> {
+    const res = await this.api.get(`/api/v1/networking/segments/${segmentId}/policies`);
+    return res.data;
+  }
+  async createSegmentPolicy(segmentId: string, data: any): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/segments/${segmentId}/policies`, data);
+    return res.data;
+  }
+
+  // Packet Capture Studio
+  async listCaptures(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/captures');
+    return res.data;
+  }
+  async startCapture(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/captures', data);
+    return res.data;
+  }
+  async stopCapture(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/captures/${id}/stop`);
+    return res.data;
+  }
+  async getCaptureStatus(id: string): Promise<any> {
+    const res = await this.api.get(`/api/v1/networking/captures/${id}`);
+    return res.data;
+  }
+  async getCapturePackets(id: string, offset?: number, limit?: number): Promise<any> {
+    const params: any = {};
+    if (offset !== undefined) params.offset = offset;
+    if (limit !== undefined) params.limit = limit;
+    const res = await this.api.get(`/api/v1/networking/captures/${id}/packets`, { params });
+    return res.data;
+  }
+
+  // DNS Filtering & DHCP
+  async getDNSFilterStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/dnsfilter/status');
+    return res.data;
+  }
+  async listDNSFilters(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/dnsfilter/rules');
+    return res.data;
+  }
+  async createDNSFilter(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/dnsfilter/rules', data);
+    return res.data;
+  }
+  async deleteDNSFilter(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/dnsfilter/rules/${id}`);
+  }
+  async toggleDNSFilter(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/dnsfilter/rules/${id}/toggle`);
+    return res.data;
+  }
+  async getDHCPLeases(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/dhcp/leases');
+    return res.data;
+  }
+
+  // Network Cost Analyzer
+  async getNetworkCosts(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/costs');
+    return res.data;
+  }
+  async getNetworkCostTrends(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/costs/trends');
+    return res.data;
+  }
+  async getBandwidthUsage(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/costs/bandwidth');
+    return res.data;
+  }
+  async getCostSavings(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/costs/savings');
+    return res.data;
+  }
+  async setCostBudget(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/costs/budget', data);
+    return res.data;
+  }
+
+  // 5G/LTE Cellular Integration
+  async listCellularNetworks(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/cellular/networks');
+    return res.data;
+  }
+  async registerCellularNetwork(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/networking/cellular/networks', data);
+    return res.data;
+  }
+  async deleteCellularNetwork(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/networking/cellular/networks/${id}`);
+  }
+  async getCellularStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/cellular/status');
+    return res.data;
+  }
+  async getCellularMetrics(): Promise<any> {
+    const res = await this.api.get('/api/v1/networking/cellular/metrics');
+    return res.data;
+  }
+  async getCellularSIMs(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/networking/cellular/sims');
+    return res.data;
+  }
+  async activateSIM(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/cellular/sims/${id}/activate`);
+    return res.data;
+  }
+  async deactivateSIM(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/networking/cellular/sims/${id}/deactivate`);
+    return res.data;
+  }
+
+  // Generic HTTP helpers for v3 features
+  async get(url: string, params?: any): Promise<any> {
+    const res = await this.api.get(url, { params });
+    return res.data;
+  }
+  async post(url: string, data?: any): Promise<any> {
+    const res = await this.api.post(url, data);
+    return res.data;
+  }
+  async put(url: string, data?: any): Promise<any> {
+    const res = await this.api.put(url, data);
+    return res.data;
+  }
+  async delete(url: string): Promise<void> {
+    await this.api.delete(url);
+  }
+
+  // === v3 Frontend Feature API Methods ===
+
+  // Topology 3D
+  async getTopologyNodes(): Promise<any[]> {
+    return this.get('/api/v3/topology/nodes');
+  }
+  async getTopologyEdges(): Promise<any[]> {
+    return this.get('/api/v3/topology/edges');
+  }
+
+  // Geolocation Heatmap
+  async getHeatmapData(params?: any): Promise<any> {
+    return this.get('/api/v3/geo/heatmap', params);
+  }
+  async getGeoRegions(params?: any): Promise<any[]> {
+    return this.get('/api/v3/geo/regions', params);
+  }
+  async getTopCities(params?: any): Promise<any[]> {
+    return this.get('/api/v3/geo/cities', params);
+  }
+  async getGeoFilterOptions(): Promise<any> {
+    return this.get('/api/v3/geo/filters');
+  }
+  async getGeoTimelapse(params?: any): Promise<any[]> {
+    return this.get('/api/v3/geo/timelapse', params);
+  }
+
+  // Cost Analytics
+  async getCostBreakdown(): Promise<any> {
+    return this.get('/api/v3/costs/breakdown');
+  }
+  async getCostTrends(): Promise<any[]> {
+    return this.get('/api/v3/costs/trends');
+  }
+  async getUnitEconomics(): Promise<any> {
+    return this.get('/api/v3/costs/unit-economics');
+  }
+  async getBudgets(): Promise<any[]> {
+    return this.get('/api/v3/costs/budgets');
+  }
+  async getSavingsRecommendations(): Promise<any[]> {
+    return this.get('/api/v3/costs/savings');
+  }
+  async getCostForecast(): Promise<any[]> {
+    return this.get('/api/v3/costs/forecast');
+  }
+  async createBudget(data: any): Promise<any> {
+    return this.post('/api/v3/costs/budgets', data);
+  }
+
+  // BI Dashboard
+  async getKpiSummary(): Promise<any> {
+    return this.get('/api/v3/bi/kpi-summary');
+  }
+  async getMRR(): Promise<any[]> {
+    return this.get('/api/v3/bi/mrr');
+  }
+  async getARR(): Promise<any> {
+    return this.get('/api/v3/bi/arr');
+  }
+  async getChurnAnalysis(): Promise<any> {
+    return this.get('/api/v3/bi/churn');
+  }
+  async getLTVSegments(): Promise<any[]> {
+    return this.get('/api/v3/bi/ltv');
+  }
+  async getCACMetrics(): Promise<any> {
+    return this.get('/api/v3/bi/cac');
+  }
+  async getAcquisitionChannels(): Promise<any[]> {
+    return this.get('/api/v3/bi/acquisition');
+  }
+  async getRevenueBreakdown(): Promise<any[]> {
+    return this.get('/api/v3/bi/revenue');
+  }
+  async getRevenueForecasts(): Promise<any[]> {
+    return this.get('/api/v3/bi/forecasts');
+  }
+  async getCohortData(): Promise<any[]> {
+    return this.get('/api/v3/bi/cohorts');
+  }
+
+  // Dependency Graph
+  async getDependencyGraph(): Promise<any> {
+    return this.get('/api/v3/dependencies/graph');
+  }
+  async getImpactAnalysis(nodeId: string): Promise<any[]> {
+    return this.get(`/api/v3/dependencies/impact/${nodeId}`);
+  }
+  async discoverDependencies(): Promise<any> {
+    return this.post('/api/v3/dependencies/discover');
+  }
+
+  // Custom Report Builder
+  async listReportDesigns(): Promise<any[]> {
+    return this.get('/api/v3/reports/designs');
+  }
+  async createReportDesign(data: any): Promise<any> {
+    return this.post('/api/v3/reports/designs', data);
+  }
+  async updateReportDesign(id: string, data: any): Promise<any> {
+    return this.put(`/api/v3/reports/designs/${id}`, data);
+  }
+  async deleteReportDesign(id: string): Promise<void> {
+    return this.delete(`/api/v3/reports/designs/${id}`);
+  }
+  async generateReportNow(designId: string, channels?: string[]): Promise<any> {
+    return this.post(`/api/v3/reports/designs/${designId}/generate`, { channels });
+  }
+  async listReportSchedules(): Promise<any[]> {
+    return this.get('/api/v3/reports/schedules');
+  }
+  async createReportSchedule(data: any): Promise<any> {
+    return this.post('/api/v3/reports/schedules', data);
+  }
+  async deleteReportSchedule(id: string): Promise<void> {
+    return this.delete(`/api/v3/reports/schedules/${id}`);
+  }
+  async listReportDeliveries(): Promise<any[]> {
+    return this.get('/api/v3/reports/deliveries');
+  }
+  async getReportTemplates(): Promise<any[]> {
+    return this.get('/api/v3/reports/templates');
+  }
+
+  // === v3 Marketplace API Methods ===
+
+  // Resource Trading Platform
+  async getResourceTrades(filters?: any): Promise<any[]> {
+    const params: any = {};
+    if (filters) Object.assign(params, filters);
+    const res = await this.api.get('/api/v1/marketplace/trades', { params });
+    return res.data;
+  }
+  async createResourceTrade(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/trades', data);
+    return res.data;
+  }
+  async acceptResourceTrade(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/marketplace/trades/${id}/accept`);
+    return res.data;
+  }
+  async cancelResourceTrade(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/marketplace/trades/${id}`);
+  }
+  async getResourceTradeHistory(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/trades/history');
+    return res.data;
+  }
+
+  // One-Click App Marketplace
+  async listMarketplaceApps(category?: string): Promise<any[]> {
+    const params: any = {};
+    if (category) params.category = category;
+    const res = await this.api.get('/api/v1/marketplace/apps', { params });
+    return res.data;
+  }
+  async getMarketplaceApp(id: string): Promise<any> {
+    const res = await this.api.get(`/api/v1/marketplace/apps/${id}`);
+    return res.data;
+  }
+  async installMarketplaceApp(id: string, targetServerId?: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/marketplace/apps/${id}/install`, { target_server_id: targetServerId });
+    return res.data;
+  }
+  async uninstallMarketplaceApp(installationId: string): Promise<void> {
+    await this.api.delete(`/api/v1/marketplace/apps/installations/${installationId}`);
+  }
+  async listInstallations(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/apps/installations');
+    return res.data;
+  }
+  async getAppCategories(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/apps/categories');
+    return res.data;
+  }
+
+  // Pay-Per-Use Billing
+  async getPPUMetrics(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/ppu/metrics');
+    return res.data;
+  }
+  async getPPUUsage(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/ppu/usage');
+    return res.data;
+  }
+  async setPPUBudget(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/ppu/budget', data);
+    return res.data;
+  }
+  async listPPUPlans(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/ppu/plans');
+    return res.data;
+  }
+
+  // Reseller / White-Label
+  async listResellers(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/resellers');
+    return res.data;
+  }
+  async createReseller(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/resellers', data);
+    return res.data;
+  }
+  async updateReseller(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/marketplace/resellers/${id}`, data);
+    return res.data;
+  }
+  async deleteReseller(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/marketplace/resellers/${id}`);
+  }
+  async getResellerAnalytics(id: string): Promise<any> {
+    const res = await this.api.get(`/api/v1/marketplace/resellers/${id}/analytics`);
+    return res.data;
+  }
+  async getWhiteLabelSettings(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/whitelabel');
+    return res.data;
+  }
+  async updateWhiteLabelSettings(data: any): Promise<any> {
+    const res = await this.api.put('/api/v1/marketplace/whitelabel', data);
+    return res.data;
+  }
+
+  // SLA Management & Credits
+  async listSLAs(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/slas');
+    return res.data;
+  }
+  async createSLA(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/slas', data);
+    return res.data;
+  }
+  async updateSLA(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/marketplace/slas/${id}`, data);
+    return res.data;
+  }
+  async deleteSLA(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/marketplace/slas/${id}`);
+  }
+  async getSLAStatus(id: string): Promise<any> {
+    const res = await this.api.get(`/api/v1/marketplace/slas/${id}/status`);
+    return res.data;
+  }
+  async listCredits(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/credits');
+    return res.data;
+  }
+  async issueCredit(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/credits', data);
+    return res.data;
+  }
+
+  // Crypto Payment Gateway
+  async getCryptoWallets(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/crypto/wallets');
+    return res.data;
+  }
+  async createCryptoWallet(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/crypto/wallets', data);
+    return res.data;
+  }
+  async getCryptoTransactions(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/crypto/transactions');
+    return res.data;
+  }
+  async createCryptoPayment(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/crypto/payments', data);
+    return res.data;
+  }
+  async getCryptoRates(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/crypto/rates');
+    return res.data;
+  }
+
+  // Subscription Plan Builder
+  async listSubscriptionPlans(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/plans');
+    return res.data;
+  }
+  async createSubscriptionPlan(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/plans', data);
+    return res.data;
+  }
+  async updateSubscriptionPlan(id: string, data: any): Promise<any> {
+    const res = await this.api.put(`/api/v1/marketplace/plans/${id}`, data);
+    return res.data;
+  }
+  async deleteSubscriptionPlan(id: string): Promise<void> {
+    await this.api.delete(`/api/v1/marketplace/plans/${id}`);
+  }
+  async getActiveSubscriptions(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/plans/subscriptions');
+    return res.data;
+  }
+
+  // Usage-Based Recommendations
+  async getRecommendations(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/recommendations');
+    return res.data;
+  }
+  async getRecommendationSummary(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/recommendations/summary');
+    return res.data;
+  }
+  async implementRecommendation(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/marketplace/recommendations/${id}/implement`);
+    return res.data;
+  }
+  async dismissRecommendation(id: string): Promise<void> {
+    await this.api.post(`/api/v1/marketplace/recommendations/${id}/dismiss`);
+  }
+
+  // Invoice & Tax Automation
+  async getTaxRates(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/tax/rates');
+    return res.data;
+  }
+  async addTaxRate(data: any): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/tax/rates', data);
+    return res.data;
+  }
+  async getTaxInvoices(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/tax/invoices');
+    return res.data;
+  }
+  async generateTaxInvoice(): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/tax/invoices/generate');
+    return res.data;
+  }
+  async markInvoicePaid(id: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/marketplace/tax/invoices/${id}/pay`);
+    return res.data;
+  }
+  async getTaxSummary(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/tax/summary');
+    return res.data;
+  }
+  async fileTaxReport(): Promise<any> {
+    const res = await this.api.post('/api/v1/marketplace/tax/file');
+    return res.data;
+  }
+
+  // Loyalty & Reward System
+  async getLoyaltyStatus(): Promise<any> {
+    const res = await this.api.get('/api/v1/marketplace/loyalty/status');
+    return res.data;
+  }
+  async getLoyaltyBadges(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/loyalty/badges');
+    return res.data;
+  }
+  async getLoyaltyRewards(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/loyalty/rewards');
+    return res.data;
+  }
+  async redeemReward(rewardId: string): Promise<any> {
+    const res = await this.api.post(`/api/v1/marketplace/loyalty/rewards/${rewardId}/redeem`);
+    return res.data;
+  }
+  async getLeaderboard(): Promise<any[]> {
+    const res = await this.api.get('/api/v1/marketplace/loyalty/leaderboard');
+    return res.data;
+  }
 
   // i18n endpoints
   async getTranslations(): Promise<any> {

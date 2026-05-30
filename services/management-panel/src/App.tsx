@@ -21,6 +21,32 @@ import { ThemeStudio } from './pages/ThemeStudio';
 import { KnowledgeBase } from './pages/KnowledgeBase';
 import { DashboardBuilder } from './pages/DashboardBuilder';
 import { Marketplace } from './pages/Marketplace';
+import { SDWANPage } from './pages/networking/SDWANPage';
+import { VPNPage } from './pages/networking/VPNPage';
+import { DNSManagementPage } from './pages/networking/DNSManagementPage';
+import { BGPPage } from './pages/networking/BGPPage';
+import { ReverseProxyPage } from './pages/networking/ReverseProxyPage';
+import { SegmentationPage } from './pages/networking/SegmentationPage';
+import { PacketCapturePage } from './pages/networking/PacketCapturePage';
+import { DNSFilteringPage } from './pages/networking/DNSFilteringPage';
+import { CostAnalyzerPage } from './pages/networking/CostAnalyzerPage';
+import { CellularPage } from './pages/networking/CellularPage';
+import { ResourceTradingPage } from './pages/marketplace/ResourceTradingPage';
+import { AppMarketplacePage } from './pages/marketplace/AppMarketplacePage';
+import { PayPerUsePage } from './pages/marketplace/PayPerUsePage';
+import { ResellerPage } from './pages/marketplace/ResellerPage';
+import { SLAPage } from './pages/marketplace/SLAPage';
+import { CryptoPaymentPage } from './pages/marketplace/CryptoPaymentPage';
+import { SubscriptionPlansPage } from './pages/marketplace/SubscriptionPlansPage';
+import { UsageRecommendationsPage } from './pages/marketplace/UsageRecommendationsPage';
+import { TaxAutomationPage } from './pages/marketplace/TaxAutomationPage';
+import { LoyaltyPage } from './pages/marketplace/LoyaltyPage';
+import GeolocationHeatmap from './pages/GeolocationHeatmap';
+import CustomReportBuilder from './pages/CustomReportBuilder';
+import BIDashboard from './pages/BIDashboard';
+import DependencyGraphViewer from './pages/DependencyGraphViewer';
+import CostAnalytics from './pages/CostAnalytics';
+import Topology3D from './pages/Topology3D';
 import { ActivityFeed } from './components/ActivityFeed';
 import { MainLayout } from './components/MainLayout';
 import { OnboardingWizard } from './components/OnboardingWizard';
@@ -159,6 +185,32 @@ export default function App() {
                   <Route path="/billing" element={<BillingPage />} />
                 )}
                 <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/networking/sdwan" element={<SDWANPage />} />
+                <Route path="/networking/vpn" element={<VPNPage />} />
+                <Route path="/networking/dns" element={<DNSManagementPage />} />
+                <Route path="/networking/bgp" element={<BGPPage />} />
+                <Route path="/networking/proxy" element={<ReverseProxyPage />} />
+                <Route path="/networking/segments" element={<SegmentationPage />} />
+                <Route path="/networking/capture" element={<PacketCapturePage />} />
+                <Route path="/networking/dnsfilter" element={<DNSFilteringPage />} />
+                <Route path="/networking/cost" element={<CostAnalyzerPage />} />
+                <Route path="/networking/cellular" element={<CellularPage />} />
+                <Route path="/marketplace/trading" element={<ResourceTradingPage />} />
+                <Route path="/marketplace/apps" element={<AppMarketplacePage />} />
+                <Route path="/marketplace/ppu" element={<PayPerUsePage />} />
+                <Route path="/marketplace/reseller" element={<ResellerPage />} />
+                <Route path="/marketplace/sla" element={<SLAPage />} />
+                <Route path="/marketplace/crypto" element={<CryptoPaymentPage />} />
+                <Route path="/marketplace/plans" element={<SubscriptionPlansPage />} />
+                <Route path="/marketplace/recommendations" element={<UsageRecommendationsPage />} />
+                <Route path="/marketplace/tax" element={<TaxAutomationPage />} />
+                <Route path="/marketplace/loyalty" element={<LoyaltyPage />} />
+                <Route path="/geo-heatmap" element={<GeolocationHeatmap />} />
+                <Route path="/reports/builder" element={<CustomReportBuilder />} />
+                <Route path="/bi-dashboard" element={<BIDashboard />} />
+                <Route path="/dependencies" element={<DependencyGraphViewer />} />
+                <Route path="/cost-analytics" element={<CostAnalytics />} />
+                <Route path="/topology" element={<Topology3D />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
                     </Route>
                   )}

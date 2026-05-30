@@ -527,3 +527,330 @@ export interface ChangeRequestInput {
   details: string;
   isBreakGlass?: boolean;
 }
+
+// ============================================================================
+// Custom Report Builder Types
+// ============================================================================
+
+export type ReportWidgetType = 'line-chart' | 'bar-chart' | 'pie-chart' | 'area-chart' | 'data-table' | 'metric-card' | 'text-block' | 'image-block' | 'status-indicator';
+
+export type DeliveryChannel = 'email' | 'slack' | 'discord' | 'webhook' | 'pdf';
+
+export type ReportScheduleFrequency = 'one-time' | 'daily' | 'weekly' | 'monthly' | 'custom';
+
+export interface ReportWidgetConfig {
+  type: ReportWidgetType;
+  title: string;
+  dataSource: { type: string; query?: string; metric?: string; aggregation?: string; period?: string };
+  position: { x: number; y: number; w: number; h: number };
+  config: Record<string, any>;
+}
+
+export interface ReportDesign {
+  id: string;
+  name: string;
+  description: string;
+  widgets: ReportWidgetConfig[];
+  layout: { columns: number; rowHeight: number };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportSchedule {
+  id: string;
+  design_id: string;
+  frequency: ReportScheduleFrequency;
+  cron_expression?: string;
+  day_of_week?: number;
+  day_of_month?: number;
+  time: string;
+  timezone: string;
+  channels: DeliveryChannel[];
+  recipients: string[];
+  webhook_url?: string;
+  format: 'csv' | 'excel' | 'pdf';
+  enabled: boolean;
+  last_run?: string;
+  next_run?: string;
+  created_at: string;
+}
+
+export interface ReportDelivery {
+  id: string;
+  schedule_id: string;
+  design_id: string;
+  channels: DeliveryChannel[];
+  status: 'pending' | 'sent' | 'failed';
+  error_message?: string;
+  delivered_at: string;
+  recipient_count: number;
+}
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  widgets: ReportWidgetConfig[];
+  layout: { columns: number; rowHeight: number };
+}
+
+// ============================================================================
+// BI Dashboard Types
+// ============================================================================
+
+export interface MRRPoint {
+  month: string;
+  mrr: number;
+  new_business: number;
+  expansion: number;
+  contraction: number;
+  churn: number;
+}
+
+export interface ARRBreakdown {
+  current_arr: number;
+  segments: Array<{ name: string; value: number; percentage: number }>;
+  growth_rate: number;
+  projected_arr: number;
+}
+
+export interface ChurnAnalysis {
+  monthly_rate: number;
+  quarterly_rate: number;
+  annual_rate: number;
+  nrr: number;
+  grr: number;
+  trends: Array<{ month: string; rate: number; lost_revenue: number }>;
+  reasons: Array<{ reason: string; count: number; revenue_impact: number }>;
+}
+
+export interface LTVSegment {
+  segment: string;
+  customers: number;
+  avg_ltv: number;
+  avg_lifetime_months: number;
+  avg_revenue_per_month: number;
+}
+
+export interface CACMetrics {
+  overall_cac: number;
+  by_channel: Array<{ channel: string; cac: number; conversions: number; spend: number }>;
+  ltv_cac_ratio: number;
+  payback_months: number;
+}
+
+export interface AcquisitionChannel {
+  channel: string;
+  customers: number;
+  percentage: number;
+  cost: number;
+  conversion_rate: number;
+}
+
+export interface CohortRow {
+  cohort: string;
+  periods: number[];
+  size: number;
+}
+
+export interface RevenueBreakdown {
+  categories: Array<{ name: string; revenue: number; percentage: number; growth: number }>;
+  total_revenue: number;
+  month_over_month: number;
+}
+
+export interface RevenueForecast {
+  historical: Array<{ month: string; revenue: number }>;
+  forecast: Array<{ month: string; revenue: number; lower_bound: number; upper_bound: number }>;
+  confidence: number;
+}
+
+export interface KPISummary {
+  mrr: number;
+  mrr_growth: number;
+  arr: number;
+  ltv: number;
+  cac: number;
+  ltv_cac_ratio: number;
+  churn_rate: number;
+  nrr: number;
+  grr: number;
+  active_customers: number;
+  new_customers_this_month: number;
+  expansion_revenue: number;
+  contraction_revenue: number;
+}
+
+// ============================================================================
+// Dependency Graph Types
+// ============================================================================
+
+export type EdgeType = 'http' | 'grpc' | 'database' | 'message_queue' | 'file_system';
+
+export interface DependencyNode {
+  id: string;
+  name: string;
+  type: 'service' | 'database' | 'queue' | 'cache' | 'storage' | 'external';
+  status: 'healthy' | 'degraded' | 'down' | 'unknown';
+  metrics: {
+    latency_ms: number;
+    error_rate: number;
+    requests_per_min: number;
+  };
+  tags: string[];
+  version: string;
+}
+
+export interface DependencyEdge {
+  source: string;
+  target: string;
+  type: EdgeType;
+  weight: number;
+  latency_ms: number;
+  label: string;
+}
+
+export interface DependencyGraph {
+  nodes: DependencyNode[];
+  edges: DependencyEdge[];
+  generated_at: string;
+}
+
+export interface ImpactAnalysis {
+  service_id: string;
+  service_name: string;
+  downstream_services: string[];
+  downstream_count: number;
+  critical_paths: Array<{ path: string[]; total_latency: number }>;
+  blast_radius: number;
+}
+
+// ============================================================================
+// Cost & Usage Analytics Types
+// ============================================================================
+
+export interface CostBreakdown {
+  total_cost: number;
+  month_over_month: number;
+  by_service: Array<{ service: string; cost: number; percentage: number }>;
+  by_environment: Array<{ environment: string; cost: number; percentage: number }>;
+  by_team: Array<{ team: string; cost: number; percentage: number }>;
+  by_provider: Array<{ provider: string; cost: number; percentage: number }>;
+  by_region: Array<{ region: string; cost: number; percentage: number }>;
+}
+
+export interface CostTrendPoint {
+  date: string;
+  cost: number;
+  compute: number;
+  storage: number;
+  network: number;
+  database: number;
+  other: number;
+}
+
+export interface UnitEconomics {
+  cost_per_request: number;
+  cost_per_gb_storage: number;
+  cost_per_active_user: number;
+  cost_per_api_call: number;
+  by_service: Array<{ service: string; cost_per_request: number; cost_per_user: number }>;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  scope: string;
+  amount: number;
+  spent: number;
+  period: 'monthly' | 'quarterly' | 'annual';
+  start_date: string;
+  end_date?: string;
+  alert_threshold: number;
+  status: 'active' | 'exceeded' | 'at_risk' | 'archived';
+}
+
+export interface SavingsRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  potential_savings: number;
+  effort: 'low' | 'medium' | 'high';
+  category: string;
+  action: string;
+}
+
+export interface CostForecast {
+  historical: Array<{ month: string; actual: number }>;
+  projected: Array<{ month: string; forecast: number; lower: number; upper: number }>;
+  next_month_estimate: number;
+  confidence: number;
+}
+
+// ============================================================================
+// Geolocation Heatmap Types
+// ============================================================================
+
+export interface GeoEvent {
+  id: string;
+  latitude: number;
+  longitude: number;
+  city: string;
+  region: string;
+  country: string;
+  country_code: string;
+  service: string;
+  response_time_ms: number;
+  error: boolean;
+  user_agent: string;
+  user_id?: string;
+  timestamp: string;
+}
+
+export interface HeatmapDataPoint {
+  latitude: number;
+  longitude: number;
+  weight: number;
+  count: number;
+  avg_response_time: number;
+  error_rate: number;
+}
+
+export interface RegionAggregation {
+  region: string;
+  country: string;
+  country_code: string;
+  total_requests: number;
+  active_users: number;
+  avg_response_time: number;
+  error_rate: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface TopCity {
+  city: string;
+  region: string;
+  country: string;
+  country_code: string;
+  total_requests: number;
+  active_users: number;
+  avg_response_time: number;
+  error_rate: number;
+  latitude: number;
+  longitude: number;
+}
+
+export interface TimelapseFrame {
+  timestamp: string;
+  points: HeatmapDataPoint[];
+}
+
+export interface GeoFilterOptions {
+  countries: Array<{ code: string; name: string }>;
+  services: string[];
+  date_range: { min: string; max: string };
+  response_time_range: { min: number; max: number };
+  error_rates: Array<{ value: number; label: string }>;
+}

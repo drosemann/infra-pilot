@@ -81,6 +81,7 @@ const TopicRotation = require('./modules/topicRotation');
 const StatsGraphs = require('./modules/statsGraphs');
 const VerificationLevels = require('./modules/verificationLevels');
 const CodeReviewBot = require('./modules/codeReviewBot');
+const ReportBot = require('./modules/reportBot');
 
 // --- Utility Functions ---
 function loadServerLimits() {
@@ -202,6 +203,7 @@ const topicRotation = new TopicRotation(client);
 const statsGraphs = new StatsGraphs(client);
 const verificationLevels = new VerificationLevels(client);
 const codeReviewBot = new CodeReviewBot(client);
+const reportBot = new ReportBot(client);
 
 // --- Helper Functions for Message Handling ---
 async function handleEmailInput(message, userState) {
@@ -875,6 +877,69 @@ async function registerCommands() {
         { name: 'enable', description: 'Enable code review for this server', type: 1 },
         { name: 'disable', description: 'Disable code review for this server', type: 1 }
       ]
+    },
+    {
+      name: 'report',
+      description: 'Report bot commands',
+      type: 1,
+      options: [
+        { name: 'send', description: 'Send a report to this channel', type: 1,
+          options: [
+            { name: 'type', description: 'Report type', type: 3, required: false,
+              choices: [
+                { name: 'Executive Summary', value: 'executive-summary' },
+                { name: 'Cost Report', value: 'cost' },
+                { name: 'Performance Report', value: 'performance' },
+                { name: 'Incident Report', value: 'incidents' },
+                { name: 'Anomaly Digest', value: 'anomaly-digest' },
+                { name: 'Capacity Forecast', value: 'capacity-forecast' }
+              ]
+            },
+            { name: 'period', description: 'Time period', type: 3, required: false,
+              choices: [
+                { name: '1 hour', value: '1h' },
+                { name: '24 hours', value: '24h' },
+                { name: '7 days', value: '7d' },
+                { name: '30 days', value: '30d' }
+              ]
+            }
+          ]
+        },
+        { name: 'digest', description: 'Send infrastructure digest', type: 1,
+          options: [
+            { name: 'mode', description: 'Digest mode', type: 3, required: false,
+              choices: [
+                { name: 'Daily', value: 'daily' },
+                { name: 'Weekly', value: 'weekly' },
+                { name: 'Monthly', value: 'monthly' }
+              ]
+            }
+          ]
+        },
+        { name: 'schedule', description: 'Schedule a recurring report', type: 1,
+          options: [
+            { name: 'name', description: 'Schedule name', type: 3, required: true },
+            { name: 'type', description: 'Report type', type: 3, required: false,
+              choices: [
+                { name: 'Executive Summary', value: 'executive-summary' },
+                { name: 'Cost Report', value: 'cost' },
+                { name: 'Performance Report', value: 'performance' },
+                { name: 'Incident Report', value: 'incidents' },
+                { name: 'Anomaly Digest', value: 'anomaly-digest' },
+                { name: 'Capacity Forecast', value: 'capacity-forecast' }
+              ]
+            },
+            { name: 'cron', description: 'Cron expression', type: 3, required: false },
+            { name: 'channel', description: 'Target channel', type: 7, required: false }
+          ]
+        },
+        { name: 'list', description: 'List report schedules', type: 1 },
+        { name: 'delete', description: 'Delete a report schedule', type: 1,
+          options: [
+            { name: 'id', description: 'Schedule ID', type: 3, required: true }
+          ]
+        }
+      ]
     }
   ];
 
@@ -902,6 +967,7 @@ client.once('ready', async () => {
   verificationSystem.initialize(client);
   serverStatus.initialize(client);
   eventScheduler.initialize(client);
+  reportBot.initialize(client);
 });
 
 client.on('guildMemberAdd', async (member) => {
@@ -978,6 +1044,7 @@ client.on('interactionCreate', async (interaction) => {
     verificationLevels.handleCommand(interaction);
     statsGraphs.handleCommand(interaction);
     codeReviewBot.handleCommand(interaction);
+    reportBot.handleCommand(interaction);
 
     if (interaction.commandName === 'dashboard') {
       dashboard.handleDashboardCommand(interaction);
@@ -1024,6 +1091,7 @@ client.on('interactionCreate', async (interaction) => {
     verificationSystem.handleButton(interaction);
     serverStatus.handleButton(interaction);
     codeReviewBot.handleButton(interaction);
+    reportBot.handleButton(interaction);
 
     return;
   }

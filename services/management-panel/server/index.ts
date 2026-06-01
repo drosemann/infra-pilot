@@ -3279,6 +3279,224 @@ app.post('/api/change-requests/:id/reject', verifyAuth, async (req: Request, res
 });
 
 // ============================================================================
+// V3 FEATURE ROUTES
+// ============================================================================
+
+const v3DataDir = path.join(__dirname, '..', 'data');
+fs.mkdir(v3DataDir, { recursive: true }).catch(() => {});
+
+// Helper: read/write JSON files for v3 in-memory DB
+async function v3Read<T>(name: string, fallback: T): Promise<T> {
+  try {
+    const raw = await fs.readFile(path.join(v3DataDir, `${name}.json`), 'utf-8');
+    return JSON.parse(raw);
+  } catch { return fallback; }
+}
+async function v3Write(name: string, data: any): Promise<void> {
+  await fs.writeFile(path.join(v3DataDir, `${name}.json`), JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// --- Topology 3D ---
+app.get('/api/v3/topology/nodes', async (_req: Request, res: Response) => {
+  const nodes = await v3Read<any[]>('topology_nodes', []);
+  res.json(nodes);
+});
+app.get('/api/v3/topology/edges', async (_req: Request, res: Response) => {
+  const edges = await v3Read<any[]>('topology_edges', []);
+  res.json(edges);
+});
+
+// --- Geo Heatmap ---
+app.get('/api/v3/geo/heatmap', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('geo_heatmap', []);
+  let filtered = data;
+  if (req.query.region) filtered = filtered.filter((d: any) => d.region === req.query.region);
+  if (req.query.startDate) filtered = filtered.filter((d: any) => new Date(d.date) >= new Date(req.query.startDate as string));
+  if (req.query.endDate) filtered = filtered.filter((d: any) => new Date(d.date) <= new Date(req.query.endDate as string));
+  res.json(filtered);
+});
+app.get('/api/v3/geo/regions', async (req: Request, res: Response) => {
+  const regions = await v3Read<any[]>('geo_regions', []);
+  let filtered = regions;
+  if (req.query.region) filtered = filtered.filter((r: any) => r.id === req.query.region);
+  res.json(filtered);
+});
+app.get('/api/v3/geo/cities', async (req: Request, res: Response) => {
+  const cities = await v3Read<any[]>('geo_cities', []);
+  let filtered = cities;
+  if (req.query.region) filtered = filtered.filter((c: any) => c.region === req.query.region);
+  if (req.query.limit) filtered = filtered.slice(0, parseInt(req.query.limit as string, 10));
+  res.json(filtered);
+});
+app.get('/api/v3/geo/filters', async (_req: Request, res: Response) => {
+  const filters = await v3Read<any>('geo_filters', { regions: [], providers: [], statuses: [] });
+  res.json(filters);
+});
+app.get('/api/v3/geo/timelapse', async (req: Request, res: Response) => {
+  const frames = await v3Read<any[]>('geo_timelapse', []);
+  let filtered = frames;
+  if (req.query.region) filtered = filtered.filter((f: any) => f.region === req.query.region);
+  res.json(filtered);
+});
+
+// --- Cost Analytics ---
+app.get('/api/v3/costs/breakdown', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('costs_breakdown', { categories: [], total: 0 });
+  res.json(data);
+});
+app.get('/api/v3/costs/trends', async (req: Request, res: Response) => {
+  const trends = await v3Read<any[]>('costs_trends', []);
+  let filtered = trends;
+  if (req.query.period) filtered = filtered.filter((t: any) => t.period === req.query.period);
+  res.json(filtered);
+});
+app.get('/api/v3/costs/unit-economics', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('costs_unit_economics', { cpu: 0, memory: 0, storage: 0, bandwidth: 0 });
+  res.json(data);
+});
+app.get('/api/v3/costs/budgets', async (_req: Request, res: Response) => {
+  const budgets = await v3Read<any[]>('costs_budgets', []);
+  res.json(budgets);
+});
+app.post('/api/v3/costs/budgets', async (req: Request, res: Response) => {
+  const budgets = await v3Read<any[]>('costs_budgets', []);
+  const newBudget = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString() };
+  budgets.push(newBudget);
+  await v3Write('costs_budgets', budgets);
+  res.status(201).json(newBudget);
+});
+app.get('/api/v3/costs/savings', async (_req: Request, res: Response) => {
+  const savings = await v3Read<any[]>('costs_savings', []);
+  res.json(savings);
+});
+app.get('/api/v3/costs/forecast', async (_req: Request, res: Response) => {
+  const forecast = await v3Read<any[]>('costs_forecast', []);
+  res.json(forecast);
+});
+
+// --- BI Dashboard ---
+app.get('/api/v3/bi/kpi-summary', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_kpi_summary', { mrr: 0, arr: 0, ltv: 0, cac: 0, churn: 0, activeCustomers: 0 });
+  res.json(data);
+});
+app.get('/api/v3/bi/mrr', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_mrr', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/arr', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_arr', { current: 0, growth: 0, breakdown: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/churn', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_churn', { rate: 0, trends: [], reasons: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/ltv', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_ltv', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/cac', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_cac', { total: 0, byChannel: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/acquisition', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_acquisition', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/revenue', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_revenue', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/forecasts', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_forecasts', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/cohorts', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_cohorts', []);
+  res.json(data);
+});
+
+// --- Dependency Graph ---
+app.get('/api/v3/dependencies/graph', async (_req: Request, res: Response) => {
+  const graph = await v3Read<any>('dependency_graph', { nodes: [], edges: [] });
+  res.json(graph);
+});
+app.get('/api/v3/dependencies/impact/:nodeId', async (req: Request, res: Response) => {
+  const impact = await v3Read<any[]>('dependency_impact', []);
+  const filtered = impact.filter((i: any) => i.sourceId === req.params.nodeId || i.targetId === req.params.nodeId);
+  res.json(filtered);
+});
+app.post('/api/v3/dependencies/discover', async (_req: Request, res: Response) => {
+  const graph = await v3Read<any>('dependency_graph', { nodes: [], edges: [] });
+  res.json({ discovered: graph.nodes.length + graph.edges.length });
+});
+
+// --- Custom Report Builder ---
+app.get('/api/v3/reports/designs', async (_req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  res.json(designs);
+});
+app.post('/api/v3/reports/designs', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const newDesign = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  designs.push(newDesign);
+  await v3Write('report_designs', designs);
+  res.status(201).json(newDesign);
+});
+app.put('/api/v3/reports/designs/:id', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const idx = designs.findIndex((d: any) => d.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Design not found' });
+  designs[idx] = { ...designs[idx], ...req.body, updatedAt: new Date().toISOString() };
+  await v3Write('report_designs', designs);
+  res.json(designs[idx]);
+});
+app.delete('/api/v3/reports/designs/:id', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const filtered = designs.filter((d: any) => d.id !== req.params.id);
+  await v3Write('report_designs', filtered);
+  res.status(204).end();
+});
+app.post('/api/v3/reports/designs/:id/generate', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const design = designs.find((d: any) => d.id === req.params.id);
+  if (!design) return res.status(404).json({ error: 'Design not found' });
+  res.json({ id: crypto.randomUUID(), designId: req.params.id, status: 'generated', channels: req.body.channels || [], generatedAt: new Date().toISOString() });
+});
+app.get('/api/v3/reports/schedules', async (_req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  res.json(schedules);
+});
+app.post('/api/v3/reports/schedules', async (req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  const newSchedule = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString() };
+  schedules.push(newSchedule);
+  await v3Write('report_schedules', schedules);
+  res.status(201).json(newSchedule);
+});
+app.delete('/api/v3/reports/schedules/:id', async (req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  const filtered = schedules.filter((s: any) => s.id !== req.params.id);
+  await v3Write('report_schedules', filtered);
+  res.status(204).end();
+});
+app.get('/api/v3/reports/deliveries', async (_req: Request, res: Response) => {
+  const deliveries = await v3Read<any[]>('report_deliveries', []);
+  res.json(deliveries);
+});
+app.get('/api/v3/reports/templates', async (_req: Request, res: Response) => {
+  const templates = await v3Read<any[]>('report_templates', [
+    { id: 'executive-summary', name: 'Executive Summary', category: 'business' },
+    { id: 'cost-report', name: 'Cost Report', category: 'finance' },
+    { id: 'performance', name: 'Performance Report', category: 'ops' },
+    { id: 'incidents', name: 'Incident Report', category: 'ops' },
+    { id: 'anomaly-digest', name: 'Anomaly Digest', category: 'security' },
+    { id: 'capacity-forecast', name: 'Capacity Forecast', category: 'ops' },
+  ]);
+  res.json(templates);
+});
+
+// ============================================================================
 // START SERVER
 // ============================================================================
 

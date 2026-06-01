@@ -1,0 +1,10 @@
+export { default as DistributedStorageCluster } from './DistributedStorageCluster';
+export { default as ObjectStorageGateway } from './ObjectStorageGateway';
+export { default as BackupChainViewer } from './BackupChainViewer';
+export { default as StorageTiering } from './StorageTiering';
+export { default as FileSharing } from './FileSharing';
+export { default as DatabaseReplication } from './DatabaseReplication';
+export { default as DataMigrationWizard } from './DataMigrationWizard';
+export { default as DedupCompression } from './DedupCompression';
+export { default as ImmutableVault } from './ImmutableVault';
+export { default as DataCatalog } from './DataCatalog';

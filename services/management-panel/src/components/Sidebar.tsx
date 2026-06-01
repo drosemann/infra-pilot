@@ -43,6 +43,18 @@ export const Sidebar = ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolea
       route: '/dashboard',
     },
     {
+      id: 'bi-dashboard',
+      label: 'BI Dashboard',
+      icon: '📈',
+      route: '/bi-dashboard',
+    },
+    {
+      id: 'topology',
+      label: '3D Topology',
+      icon: '🌐',
+      route: '/topology',
+    },
+    {
       id: 'monitoring',
       label: 'Monitoring',
       icon: '📈',
@@ -80,10 +92,16 @@ export const Sidebar = ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolea
             route: '/customers',
           },
           {
-            id: 'billing',
-            label: 'Billing',
-            icon: '💳',
-            route: '/billing',
+      id: 'billing',
+      label: 'Billing',
+      icon: '💳',
+      route: '/billing',
+    },
+    {
+      id: 'cost-analytics',
+      label: 'Cost Analytics',
+      icon: '💰',
+      route: '/cost-analytics',
           },
           {
             id: 'teams',
@@ -93,6 +111,12 @@ export const Sidebar = ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolea
           },
         ]
       : []),
+    {
+      id: 'dependencies',
+      label: 'Dependencies',
+      icon: '🔗',
+      route: '/dependencies',
+    },
     {
       id: 'backups',
       label: 'Backups',
@@ -104,7 +128,10 @@ export const Sidebar = ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolea
       id: 'reports',
       label: 'Reports',
       icon: '📄',
-      route: '/reports',
+      children: [
+        { id: 'report-viewer', label: 'Report Viewer', icon: '📋', route: '/reports' },
+        { id: 'report-builder', label: 'Report Builder', icon: '🛠️', route: '/reports/builder' },
+      ],
     },
     {
       id: 'theme-studio',
@@ -135,6 +162,12 @@ export const Sidebar = ({ isMobileOpen, onMobileClose }: { isMobileOpen?: boolea
       label: 'Marketplace',
       icon: '🧩',
       route: '/marketplace',
+    },
+    {
+      id: 'geo-heatmap',
+      label: 'Geo Heatmap',
+      icon: '🗺️',
+      route: '/geo-heatmap',
     },
     {
       id: 'settings',

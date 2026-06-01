@@ -16,6 +16,7 @@ willkommen in der infra-pilot-dokumentation. dieser index listet bewusst nur dok
 - [orchestrator agent](architecture/orchestrator-agent.md)
 - [implementation plan](implementation-plan.md)
 - [feature implementation plan v2](feature-implementation-plan-v2.md) (50 neue features: ai, developer ecosystem, advanced infra, collaboration, observability, ux, compliance)
+- [feature implementation plan v3](feature-implementation-plan-v3.md) (100 neue features: edge/iot, green computing, networking, marketplace, storage, gaming, identity, automation, visualization/bi, integration ecosystem)
 
 ## development & ci
 
@@ -63,9 +64,137 @@ hinweis: `docker-compose.yml` ist der reference path für kleine deployments. de
 - [service core](../services/service-core/README.md) (minecraft-plugin mit feature-modulen: economy, worlds, statistics, gameplay, items, server, community)
 - [implementation plan](implementation-plan.md) (phasenplan für ~120 features)
 
+## feature plan v3 — 100 neue features (edge, green, networking, marketplace, storage, gaming, identity, automation, visualization, integration)
+
+alle 100 features sind implementiert (224.553+ zeilen, 1.106+ dateien).
+
+vollständiger plan: [feature-implementation-plan-v3.md](feature-implementation-plan-v3.md)
+
+feature-spezifikationen in `features-v3/`:
+
+### edge & iot computing (features 1-10)
+- [01 — edge device manager](features-v3/edge-iot/01-edge-device-manager.md)
+- [02 — iot data pipeline](features-v3/edge-iot/02-iot-data-pipeline.md)
+- [03 — edge function runtime](features-v3/edge-iot/03-edge-function-runtime.md)
+- [04 — mesh network manager](features-v3/edge-iot/04-mesh-network-manager.md)
+- [05 — edge ml inference](features-v3/edge-iot/05-edge-ml-inference.md)
+- [06 — iot device provisioning](features-v3/edge-iot/06-iot-device-provisioning.md)
+- [07 — lorawan gateway](features-v3/edge-iot/07-lorawan-gateway.md)
+- [08 — edge cdn](features-v3/edge-iot/08-edge-cdn.md)
+- [09 — digital twin viewer](features-v3/edge-iot/09-digital-twin-viewer.md)
+- [10 — edge backup & restore](features-v3/edge-iot/10-edge-backup-restore.md)
+
+### green computing (features 11-20)
+- [11 — energy consumption tracker](features-v3/green-computing/11-energy-consumption-tracker.md)
+- [12 — carbon footprint dashboard](features-v3/green-computing/12-carbon-footprint-dashboard.md)
+- [13 — green scheduling](features-v3/green-computing/13-green-scheduling.md)
+- [14 — idle resource reclamation](features-v3/green-computing/14-idle-resource-reclamation.md)
+- [15 — efficiency scorecards](features-v3/green-computing/15-efficiency-scorecards.md)
+- [16 — auto-shutdown policies](features-v3/green-computing/16-auto-shutdown-policies.md)
+- [17 — hardware lifecycle tracker](features-v3/green-computing/17-hardware-lifecycle-tracker.md)
+- [18 — pue/dcim integration](features-v3/green-computing/18-pue-dcim-integration.md)
+- [19 — sustainable provider ranking](features-v3/green-computing/19-sustainable-provider-ranking.md)
+- [20 — co2 offset integration](features-v3/green-computing/20-co2-offset-integration.md)
+
+### networking (features 21-30)
+- [21 — sd-wan controller](features-v3/networking/21-sd-wan-controller.md)
+- [22 — vpn as a service](features-v3/networking/22-vpn-as-a-service.md)
+- [23 — dns management console](features-v3/networking/23-dns-management-console.md)
+- [24 — bgp route manager](features-v3/networking/24-bgp-route-manager.md)
+- [25 — reverse proxy catalog](features-v3/networking/25-reverse-proxy-catalog.md)
+- [26 — network segmentation designer](features-v3/networking/26-network-segmentation-designer.md)
+- [27 — packet capture studio](features-v3/networking/27-packet-capture-studio.md)
+- [28 — dns filtering / dhcp server](features-v3/networking/28-dns-filtering-dhcp-server.md)
+- [29 — network cost analyzer](features-v3/networking/29-network-cost-analyzer.md)
+- [30 — 5g/lte integration](features-v3/networking/30-5g-lte-integration.md)
+
+### marketplace (features 31-40)
+- [31 — resource trading platform](features-v3/marketplace/31-resource-trading-platform.md)
+- [32 — one-click app marketplace](features-v3/marketplace/32-one-click-app-marketplace.md)
+- [33 — pay-per-use billing](features-v3/marketplace/33-pay-per-use-billing.md)
+- [34 — reseller / white-label](features-v3/marketplace/34-reseller-white-label.md)
+- [35 — sla management & credits](features-v3/marketplace/35-sla-management-credits.md)
+- [36 — crypto payment gateway](features-v3/marketplace/36-crypto-payment-gateway.md)
+- [37 — subscription plan builder](features-v3/marketplace/37-subscription-plan-builder.md)
+- [38 — usage-based recommendations](features-v3/marketplace/38-usage-based-recommendations.md)
+- [39 — invoice & tax automation](features-v3/marketplace/39-invoice-tax-automation.md)
+- [40 — loyalty & reward system](features-v3/marketplace/40-loyalty-reward-system.md)
+
+### advanced storage (features 41-50)
+- [41 — distributed storage cluster](features-v3/advanced-storage/41-distributed-storage-cluster.md)
+- [42 — object storage gateway](features-v3/advanced-storage/42-object-storage-gateway.md)
+- [43 — backup chain visualizer](features-v3/advanced-storage/43-backup-chain-visualizer.md)
+- [44 — storage tiering policies](features-v3/advanced-storage/44-storage-tiering-policies.md)
+- [45 — file sharing & sync](features-v3/advanced-storage/45-file-sharing-sync.md)
+- [46 — database replication manager](features-v3/advanced-storage/46-database-replication-manager.md)
+- [47 — data migration wizard](features-v3/advanced-storage/47-data-migration-wizard.md)
+- [48 — dedup & compression](features-v3/advanced-storage/48-dedup-compression.md)
+- [49 — immutable backup vault](features-v3/advanced-storage/49-immutable-backup-vault.md)
+- [50 — data catalog & lineage](features-v3/advanced-storage/50-data-catalog-lineage.md)
+
+### gaming & esports (features 51-60)
+- [51 — anti-cheat integration](features-v3/gaming-esports/51-anti-cheat-integration.md)
+- [52 — tournament manager](features-v3/gaming-esports/52-tournament-manager.md)
+- [53 — matchmaking service](features-v3/gaming-esports/53-matchmaking-service.md)
+- [54 — voice server provisioning](features-v3/gaming-esports/54-voice-server-provisioning.md)
+- [55 — live spectate / obs](features-v3/gaming-esports/55-live-spectate-obs.md)
+- [56 — game analytics dashboard](features-v3/gaming-esports/56-game-analytics-dashboard.md)
+- [57 — mod/modpack publishing](features-v3/gaming-esports/57-mod-modpack-publishing.md)
+- [58 — server rental marketplace](features-v3/gaming-esports/58-server-rental-marketplace.md)
+- [59 — cross-play proxy](features-v3/gaming-esports/59-cross-play-proxy.md)
+- [60 — game server dashboard](features-v3/gaming-esports/60-game-server-dashboard.md)
+
+### identity, auth & compliance (features 61-70)
+- [61 — sso/oidc provider](features-v3/61-sso-oidc-provider.md)
+- [62 — passkey/webauthn](features-v3/62-passkey-webauthn.md)
+- [63 — session manager](features-v3/63-session-manager.md)
+- [64 — privileged access management](features-v3/64-privileged-access-management.md)
+- [65 — policy as code](features-v3/65-policy-as-code.md)
+- [66 — compliance scanner](features-v3/66-compliance-scanner.md)
+- [67 — audit trail analytics](features-v3/67-audit-trail-analytics.md)
+- [68 — data classification engine](features-v3/68-data-classification-engine.md)
+- [69 — vendor risk assessment](features-v3/69-vendor-risk-assessment.md)
+- [70 — breach notification](features-v3/70-breach-notification.md)
+
+### automation & orchestration (features 71-80)
+- [71 — workflow studio](features-v3/71-workflow-studio.md)
+- [72 — ansible/salt integration](features-v3/72-ansible-salt-integration.md)
+- [73 — infrastructure pipelines](features-v3/73-infrastructure-pipelines.md)
+- [74 — config drift detector](features-v3/74-configuration-drift-detector.md)
+- [75 — resource quota management](features-v3/75-resource-quota-management.md)
+- [76 — event-driven auto-remediation](features-v3/76-event-driven-auto-remediation.md)
+- [77 — maintenance planner](features-v3/77-scheduled-maintenance-planner.md)
+- [78 — runbook template library](features-v3/78-runbook-templates-library.md)
+- [79 — chaos engineering toolkit](features-v3/79-chaos-engineering-toolkit.md)
+- [80 — self-healing infrastructure](features-v3/80-self-healing-infrastructure.md)
+
+### visualization, reporting & bi (features 81-90)
+- [81 — 3d infrastructure topology](features-v3/81-3d-topology.md)
+- [82 — custom report builder](features-v3/82-custom-report-builder.md)
+- [83 — bi dashboard](features-v3/83-bi-dashboard.md)
+- [84 — anomaly detection](features-v3/84-anomaly-detection.md)
+- [85 — resource forecasting](features-v3/85-resource-forecasting.md)
+- [86 — dependency graph](features-v3/86-dependency-graph.md)
+- [87 — cost analytics](features-v3/87-cost-analytics.md)
+- [88 — executive summary](features-v3/88-executive-summary.md)
+- [89 — geolocation heatmap](features-v3/89-geolocation-heatmap.md)
+- [90 — report bot](features-v3/90-report-bot.md)
+
+### integration ecosystem (features 91-100)
+- [91 — pub/sub event bus](features-v3/91-pubsub-event-bus.md)
+- [92 — integration marketplace](features-v3/92-integration-marketplace.md)
+- [93 — low-code connectors](features-v3/93-low-code-connectors.md)
+- [94 — email infrastructure](features-v3/94-email-infrastructure.md)
+- [95 — sms/voice notification](features-v3/95-sms-voice.md)
+- [96 — calendar sync](features-v3/96-calendar-sync.md)
+- [97 — vcs integration](features-v3/97-vcs-integration.md)
+- [98 — jira/linear sync](features-v3/98-jira-linear-sync.md)
+- [99 — identity federation](features-v3/99-identity-federation.md)
+- [100 — ipaas integration](features-v3/100-ipaas-integration.md)
+
 ## feature plans v2
 
-50 neue features in 7 kategorien — vollständig dokumentiert in `features-v2/`:
+50 features in 7 kategorien — vollständig dokumentiert in `features-v2/`:
 
 ### ai & intelligence
 - [01 - ai log anomaly detector](features-v2/01-ai-log-anomaly-detector.md)
@@ -142,4 +271,4 @@ hinweis: `docker-compose.yml` ist der reference path für kleine deployments. de
 
 infra pilot ist unter der [mit license](../LICENSE) lizenziert.
 
-last updated: may 2026 (v2 feature plans added)
+last updated: may 2026 (v2 + v3 feature plans added)

@@ -103,6 +103,37 @@ services:
     # volumes:
     #   - ./services/orchestrator-agent:/app
 
+
+  # ============================================
+  # Integration Service (Python)
+  # ============================================
+  integration-service:
+    build:
+      context: ./services/integration-service
+      dockerfile: Dockerfile
+    container_name: infra-pilot-integration
+    environment:
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://management-panel:5173}
+      DISCORD_API_URL: ${DISCORD_API_URL:-http://discord-service:3001}
+      SERVICE_CORE_URL: ${SERVICE_CORE_URL:-http://service-core:8080}
+      ORCHESTRATOR_URL: ${ORCHESTRATOR_URL:-http://orchestrator-agent:8000}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      REDIS_URL: redis://redis:6379
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "9000:9000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestrator-agent:
+        condition: service_started
+      service-core:
+        condition: service_started
+    networks:
+      - infra-pilot-net
+
   # ============================================
   # Discord Service (Node.js)
   # ============================================

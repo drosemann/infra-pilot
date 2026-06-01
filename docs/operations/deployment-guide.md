@@ -1,433 +1,407 @@
-# production deployment guide
+# how to deploy infra pilot
 
-deploy infra pilot to production environments with confidence.
+simple, beautiful, repeatable: so deployest du alle infra pilot services auf einem host.
 
-## deployment options
+diese anleitung nutzt docker compose als standardweg. sie startet den kompletten stack, hält daten in named volumes und erklärt einen ruhigen update- und rollback-flow.
 
-### option 1: docker compose (suitable for small-to-medium deployments)
+## was deployed wird
 
-pros: simple, all-in-one
-cons: single point of failure, harder to scale
+| service | port | aufgabe |
+|---------|------|---------|
+| management panel | `5173` | web ui, live logs, config, backups, alerts |
+| orchestrator agent | `8000` | provisioning, docker/vps automation, discord cogs |
+| integration service | `9000` | auth, users, notifications, metrics, modpacks, shared api |
+| service core | `8080` | java core service und player-server-logik |
+| discord service | intern | discord bot und pterodactyl/provisioning bridge |
+| postgres | `5432` | persistente app-daten |
+| redis | `6379` | cache, sessions, coordination |
+| prometheus | `9090` | optionale metrics |
+| grafana | `3000` | optionale dashboards |
 
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
+## bevor du startest
 
-### option 2: kubernetes (recommended for production)
+nimm zuerst einen kleinen linux host. keep it boring.
 
-pros: high availability, auto-scaling, self-healing
-cons: higher complexity
+empfohlenes minimum:
 
-```bash
-kubectl apply -f infrastructure/kubernetes/namespace.yaml
-kubectl apply -f infrastructure/kubernetes/deployments/
-kubectl apply -f infrastructure/kubernetes/services/
-kubectl apply -f infrastructure/kubernetes/ingress.yaml
-```
+• ubuntu 22.04 oder neuer
+• 2 cpu cores
+• 4 gb ram
+• 30 gb disk
+• docker + docker compose plugin
+• eine domain mit dns auf den host
+• ssh zugang
 
-### option 3: terraform + cloud provider
+öffne nur, was wirklich öffentlich sein muss:
 
-pros: infrastructure as code, repeatable, multi-region
-cons: cloud provider knowledge required
+• `80` und `443` für app / reverse proxy
+• `22` für ssh, am besten eingeschränkt
+• interne service ports nur beim debugging
 
-```bash
-cd infrastructure/terraform/aws
-terraform init
-terraform plan
-terraform apply
-```
-
-## pre-deployment checklist
-
-• [ ] all tests passing in ci/cd
-• [ ] code reviewed and approved
-• [ ] secrets configured (api keys, tokens)
-• [ ] database backed up
-• [ ] ssl/tls certificates configured
-• [ ] monitoring and alerting set up
-• [ ] rollback plan documented
-• [ ] change logged and approved
-
-## docker compose production deployment
-
-### prerequisites
+## 1. server vorbereiten
 
 ```bash
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Install Docker Compose
-sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+ssh user@your-server
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl git openssl
 ```
 
-### deployment steps
-
-#### prepare server
+docker installieren:
 
 ```bash
-# SSH into production server
-ssh user@production-server.com
-
-# Create project directory
-mkdir -p /opt/gemini
-cd /opt/gemini
-
-# Clone repository
-git clone https://github.com/DaaanielTV/infra-pilot.git .
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+newgrp docker
 ```
 
-#### configure environment
+runtime prüfen:
 
 ```bash
-# Copy and edit production environment
-cp .env.example .env.prod
-
-# Edit configuration
-nano .env.prod
+docker --version
+docker compose version
 ```
 
-production `.env.prod` example:
+## 2. infra pilot klonen
+
+```bash
+sudo mkdir -p /opt/infra-pilot
+sudo chown "$USER":"$USER" /opt/infra-pilot
+git clone https://github.com/DaaanielTV/infra-pilot.git /opt/infra-pilot
+cd /opt/infra-pilot
+```
+
+wenn das repo schon existiert:
+
+```bash
+cd /opt/infra-pilot
+git fetch origin
+git status
+```
+
+## 3. environment konfigurieren
+
+runtime env aus dem template erstellen:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+minimum values, die du ändern solltest:
+
 ```env
 NODE_ENV=production
-DEBUG=false
-
-# Services
-DASHBOARD_URL=https://your-domain.com
-ORCHESTRATOR_URL=https://api.your-domain.com
-SERVICE_CORE_URL=https://core.your-domain.com
-
-# Database (use managed service if possible)
-DATABASE_URL=postgresql://user:password@db.your-domain.com:5432/gemini
-DATABASE_POOL_SIZE=20
-DATABASE_SSL=true
-
-# Redis cluster
-REDIS_URL=redis://redis-cluster.your-domain.com:6379
-
-# Secrets
-JWT_SECRET=generate-strong-random-key
-CONVEX_DEPLOYMENT=production
-
-# External Services
-PTERODACTYL_API_KEY=your-key
-DISCORD_BOT_TOKEN=your-token
-SENTRY_DSN=https://your-sentry-dsn
-
-# Security
-ALLOWED_ORIGINS=https://your-domain.com,https://app.your-domain.com
-SSL_CERT_PATH=/etc/ssl/certs/your-cert.crt
-SSL_KEY_PATH=/etc/ssl/private/your-key.key
+POSTGRES_PASSWORD=replace-with-a-long-secret
+JWT_SECRET=replace-with-a-long-secret
+DISCORD_TOKEN=your-discord-bot-token
+PTERODACTYL_API_URL=https://your-panel.example.com/api
+PTERODACTYL_API_KEY=your-pterodactyl-api-key
+VITE_API_URL=https://api.your-domain.example
+DASHBOARD_URL=https://your-domain.example
+ORCHESTRATOR_URL=http://orchestrator-agent:8000
+SERVICE_CORE_URL=http://service-core:8080
+INTEGRATION_API_URL=http://integration-service:9000
 ```
 
-#### start services
+starke secrets generieren:
 
 ```bash
-# Pull latest images
-docker-compose -f docker-compose.prod.yml pull
-
-# Start services
-docker-compose -f docker-compose.prod.yml up -d
-
-# Verify services
-docker-compose -f docker-compose.prod.yml ps
+openssl rand -base64 32
 ```
 
-#### verify deployment
+`.env` bleibt privat. niemals committen.
+
+## 4. alles bauen und starten
+
+core stack starten:
 
 ```bash
-# Check service health
-curl https://your-domain.com/health
-curl https://api.your-domain.com/health
-
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f
-
-# Check resource usage
-docker stats
+docker compose up -d --build
 ```
 
-## kubernetes deployment
-
-### prerequisites
+mit monitoring starten:
 
 ```bash
-# Install kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-# Access to Kubernetes cluster (AWS EKS, GCP GKE, Azure AKS, etc)
+docker compose --profile monitoring up -d --build
 ```
 
-### deployment steps
-
-#### create namespace
+rollout beobachten:
 
 ```bash
-kubectl create namespace gemini
-kubectl label namespace gemini environment=production
+docker compose ps
+docker compose logs -f --tail=100
 ```
 
-#### create secrets
+## 5. deployment verifizieren
+
+container prüfen:
 
 ```bash
-# Database credentials
-kubectl create secret generic db-credentials \
-  --from-literal=username=gemini \
-  --from-literal=password=$(openssl rand -base64 32) \
-  -n gemini
-
-# API keys and tokens
-kubectl create secret generic api-keys \
-  --from-literal=jwt-secret=$(openssl rand -base64 32) \
-  --from-literal=discord-token=your-token \
-  --from-literal=pterodactyl-key=your-key \
-  -n gemini
-
-# TLS certificates (if not using cert-manager)
-kubectl create secret tls tls-secret \
-  --cert=path/to/cert.crt \
-  --key=path/to/key.key \
-  -n gemini
+docker compose ps
 ```
 
-#### deploy services
+service endpoints prüfen:
 
 ```bash
-# Apply all manifests
-kubectl apply -f infrastructure/kubernetes/
-
-# Wait for deployments
-kubectl rollout status deployment -n gemini
-
-# Check pod status
-kubectl get pods -n gemini
+curl -f http://localhost:9000/health
+curl -f http://localhost:5173
 ```
 
-#### set up ingress
+data services prüfen:
 
 ```bash
-# If using Nginx Ingress
-kubectl apply -f infrastructure/kubernetes/ingress.yaml
-
-# Get LoadBalancer IP
-kubectl get svc -n gemini
+docker compose exec postgres pg_isready -U "${POSTGRES_USER:-infra_pilot}"
+docker compose exec redis redis-cli ping
 ```
 
-## multi-region deployment
-
-### strategy
-
-```
-┌─────────────────┐     ┌─────────────────┐
-│   Region 1      │     │   Region 2      │
-│  (us-east-1)    │     │  (eu-west-1)    │
-│   Cluster 1     │     │   Cluster 2     │
-└────────┬────────┘     └────────┬────────┘
-         │                       │
-         └───────────┬───────────┘
-                     ▼
-           ┌─────────────────┐
-           │  Global LB      │
-           │  (DNS failover) │
-           └─────────────────┘
-```
-
-### implementation
+optional monitoring:
 
 ```bash
-# Deploy to region 1
-export KUBECONFIG=~/.kube/config-region1
-kubectl apply -f infrastructure/kubernetes/
-
-# Deploy to region 2
-export KUBECONFIG=~/.kube/config-region2
-kubectl apply -f infrastructure/kubernetes/
-
-# Configure global load balancer (AWS Route53, Azure Traffic Manager, etc)
-# Set up DNS failover policies
+curl -f http://localhost:9090/-/healthy
+curl -f http://localhost:3000/api/health
 ```
 
-## monitoring deployment
+wenn diese checks grün sind, läuft infra pilot.
 
-### prometheus
+## 6. reverse proxy davor setzen
+
+in production nicht jeden container-port öffentlich exposen. nutze nginx, caddy, traefik oder einen cloud load balancer.
+
+einfaches routing model:
+
+| public url | target |
+|------------|--------|
+| `https://your-domain.example` | `management-panel:5173` |
+| `https://api.your-domain.example` | `integration-service:9000` |
+| `https://orchestrator.your-domain.example` | `orchestrator-agent:8000` nur wenn nötig |
+
+postgres, redis, service core und discord service bleiben privat.
+
+## update flow
+
+updates sollen ruhig sein: backup, pull, build, rollout, verify.
+
+### 1. backup zuerst
 
 ```bash
-# Check metrics
-kubectl port-forward -n gemini svc/prometheus 9090:9090
-# Navigate to http://localhost:9090
+cd /opt/infra-pilot
+mkdir -p backups
+docker compose exec -T postgres pg_dump \
+  -U "${POSTGRES_USER:-infra_pilot}" \
+  "${POSTGRES_DB:-infra_pilot}" > "backups/infra-pilot-$(date +%Y%m%d-%H%M%S).sql"
 ```
 
-### grafana
+optionaler volume snapshot:
 
 ```bash
-# Access Grafana
-kubectl port-forward -n gemini svc/grafana 3000:3000
-# Navigate to http://localhost:3000
-# Default credentials: admin/admin
+docker run --rm \
+  -v infra-pilot_postgres_data:/data:ro \
+  -v "$PWD/backups:/backup" \
+  alpine tar czf /backup/postgres-volume-$(date +%Y%m%d-%H%M%S).tgz -C /data .
 ```
 
-### logs
+### 2. neue version holen
 
 ```bash
-# View service logs
-kubectl logs -n gemini deployment/orchestrator-agent -f
-
-# View all logs
-kubectl logs -n gemini --all-containers=true -f
+git fetch origin
+git pull --ff-only
 ```
 
-## updates & rollbacks
-
-### rolling update
+wenn du tagged releases deployest:
 
 ```bash
-# Update image
-kubectl set image deployment/orchestrator-agent \
-  orchestrator-agent=your-registry/orchestrator:v1.1.0 \
-  -n gemini
-
-# Monitor rollout
-kubectl rollout status deployment/orchestrator-agent -n gemini
-
-# View history
-kubectl rollout history deployment/orchestrator-agent -n gemini
+git fetch --tags
+git checkout vX.Y.Z
 ```
 
-### rollback
+### 3. rebuild und rollout
 
 ```bash
-# Rollback to previous version
-kubectl rollout undo deployment/orchestrator-agent -n gemini
-
-# Rollback to specific revision
-kubectl rollout undo deployment/orchestrator-agent --to-revision=3 -n gemini
+docker compose up -d --build
 ```
 
-### zero-downtime deployment
-
-set in deployment manifest:
-```yaml
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 1
-    maxUnavailable: 0
-```
-
-## security hardening
-
-### network policies
+mit monitoring:
 
 ```bash
-kubectl apply -f infrastructure/kubernetes/network-policies/
+docker compose --profile monitoring up -d --build
 ```
 
-### pod security policies
+compose ersetzt geänderte container und behält named volumes.
 
-```yaml
-apiVersion: policy/v1beta1
-kind: PodSecurityPolicy
-metadata:
-  name: restricted
-spec:
-  privileged: false
-  allowPrivilegeEscalation: false
-  requiredDropCapabilities:
-    - ALL
-  volumes:
-    - 'configMap'
-    - 'emptyDir'
-    - 'projected'
-    - 'secret'
-    - 'downwardAPI'
-    - 'persistentVolumeClaim'
-  hostNetwork: false
-  hostIPC: false
-  hostPID: false
-  runAsUser:
-    rule: 'MustRunAsNonRoot'
-  seLinux:
-    rule: 'MustRunAs'
-  fsGroup:
-    rule: 'MustRunAs'
-  readOnlyRootFilesystem: false
-```
-
-### resource limits
-
-```yaml
-resources:
-  requests:
-    cpu: 500m
-    memory: 512Mi
-  limits:
-    cpu: 1000m
-    memory: 1Gi
-```
-
-## troubleshooting deployment
-
-### service won't start
+### 4. nach dem update prüfen
 
 ```bash
-# Check pod status
-kubectl describe pod <pod-name> -n gemini
-
-# Check logs
-kubectl logs <pod-name> -n gemini
-
-# Check events
-kubectl get events -n gemini --sort-by='.lastTimestamp'
+docker compose ps
+curl -f http://localhost:9000/health
+curl -f http://localhost:5173
+docker compose logs --tail=100 integration-service management-panel orchestrator-agent
 ```
 
-### connectivity issues
+## rollback flow
+
+rollback ist auch nur ein deploy, aber auf die letzte gute revision.
+
+### 1. letzte gute revision finden
 
 ```bash
-# Test DNS
-kubectl run -it --image=busybox:1.28 --restart=Never --rm debug -- nslookup kubernetes.default
-
-# Test network policies
-kubectl port-forward service/orchestrator-agent 8000:8000 -n gemini
+git log --oneline -10
 ```
 
-### database connectivity
+### 2. zurück wechseln
 
 ```bash
-# Test connection from pod
-kubectl run -it --image=postgres:15 --restart=Never --rm -- \
-  psql postgresql://user:password@db-host:5432/gemini -c "SELECT 1;"
+git checkout <good-commit-or-tag>
+docker compose up -d --build
 ```
 
-## performance tuning
+### 3. datenbank nur bei bedarf zurückspielen
 
-### database connection pooling
+restore nur machen, wenn eine migration oder ein fehlerhaftes release production daten verändert hat.
+
+```bash
+cat backups/infra-pilot-YYYYMMDD-HHMMSS.sql | \
+  docker compose exec -T postgres psql \
+  -U "${POSTGRES_USER:-infra_pilot}" \
+  "${POSTGRES_DB:-infra_pilot}"
+```
+
+## service operations
+
+### einen service neu starten
+
+```bash
+docker compose restart integration-service
+```
+
+beispiele:
+
+```bash
+docker compose restart management-panel
+docker compose restart orchestrator-agent
+docker compose restart discord-service
+```
+
+### einen service rebuilden
+
+```bash
+docker compose up -d --build management-panel
+```
+
+### logs ansehen
+
+```bash
+docker compose logs -f integration-service
+```
+
+alle services:
+
+```bash
+docker compose logs -f --tail=200
+```
+
+### alles stoppen
+
+```bash
+docker compose down
+```
+
+stoppen und lokale daten-volumes löschen, nur wenn du es wirklich meinst:
+
+```bash
+docker compose down -v
+```
+
+## production checklist
+
+• `.env` nutzt production secrets
+• `POSTGRES_PASSWORD` und `JWT_SECRET` sind unique und lang
+• discord und pterodactyl tokens sind gültig
+• reverse proxy terminiert tls
+• nur public routes sind exposed
+• postgres und redis sind privat
+• backups sind getestet, nicht nur erstellt
+• monitoring ist für long-running hosts aktiv
+• update- und rollback-kommandos sind im team bekannt
+
+## troubleshooting
+
+### container wird nicht healthy
+
+```bash
+docker compose ps
+docker compose logs --tail=200 <service-name>
+```
+
+### datenbank ist nicht ready
+
+```bash
+docker compose logs postgres
+docker compose exec postgres pg_isready -U "${POSTGRES_USER:-infra_pilot}"
+```
+
+### redis ist nicht ready
+
+```bash
+docker compose logs redis
+docker compose exec redis redis-cli ping
+```
+
+### frontend erreicht die api nicht
+
+prüfe diese werte in `.env`:
 
 ```env
-DATABASE_POOL_SIZE=20
-DATABASE_POOL_IDLE_TIMEOUT=300
-DATABASE_MAX_LIFETIME=1800
+VITE_API_URL=https://api.your-domain.example
+DASHBOARD_URL=https://your-domain.example
+INTEGRATION_API_URL=http://integration-service:9000
 ```
 
-### cache configuration
+danach panel neu bauen:
 
-```env
-REDIS_POOL_SIZE=10
-REDIS_TIMEOUT=5000
+```bash
+docker compose up -d --build management-panel
 ```
 
-### service replicas
+### discord bot startet nicht
 
-```yaml
-replicas: 3  # Increase for higher load
+```bash
+docker compose logs -f discord-service
 ```
 
-## related documentation
+prüfe:
 
-• [kubernetes setup](../setup/kubernetes-deploy.md)
-• [monitoring & observability](monitoring-observability.md)
-• [scaling strategy](scaling-strategy.md)
-• [troubleshooting](troubleshooting.md)
+• `DISCORD_TOKEN`
+• bot intents im discord developer portal
+• `PTERODACTYL_API_URL`
+• `PTERODACTYL_API_KEY`
 
-last updated: april 2026
+## kubernetes path
+
+nutze kubernetes, wenn ein host nicht mehr reicht.
+
+das deployment model bleibt gleich:
+
+• ein deployment pro service
+• postgres und redis wenn möglich als managed services
+• secrets über kubernetes secrets oder external secrets
+• ingress für public routes
+• rolling updates mit `maxUnavailable: 0`
+
+basic rollout shape:
+
+```bash
+kubectl create namespace infra-pilot
+kubectl apply -n infra-pilot -f infrastructure/kubernetes/
+kubectl rollout status -n infra-pilot deployment/management-panel
+```
+
+für jetzt ist docker compose die reference deployment path. kubernetes manifests sollten mit der service-liste oben aligned bleiben.
+
+## related docs
+
+• [local development](../setup/local-development.md)
+• [ci architecture](../development/ci-architecture.md)
+• [testing](../testing/running_tests.md)
+• [security review](../security/security-review-2026-05-04.md)
+
+last updated: may 2026

@@ -95,7 +95,7 @@ orchestrate. automate. scale.
 • container image scanner — trivy/grype cve scanning with policy enforcement (orchestrator cog)
 • siem export — audit log streaming to splunk/elk/datadog/syslog (integration service)
 • gdpr & data retention — data lifecycle, right-to-erasure, consent management (integration service)
-• docker compose: `docker-compose.yml` ist als stack-scaffold vorhanden. aktuell besitzt nur `services/orchestrator-agent/` ein dockerfile; die compose-definitionen für management panel, discord service, service core und monitoring benötigen vor einem vollständigen stack-start noch dockerfiles bzw. infrastrukturdateien.
+• docker compose: `docker-compose.yml` startet den stack mit postgres, redis, service core, orchestrator, integration service, discord service, management panel und optionalem monitoring.
 
 ## quick start
 
@@ -165,7 +165,7 @@ weitere details: [discord service readme](services/discord-service/README.md).
 .
 ├── README.md                         # Hauptdokumentation
 ├── LICENSE                           # MIT License
-├── docker-compose.yml                # Compose-Scaffold für den späteren Stack-Ausbau
+├── docker-compose.yml                # Compose-Stack für alle lokalen/kleinen Deployments
 ├── infra/naming/                     # Provider-neutrale Token-Auflösung
 ├── scripts/                          # Setup-, Test-, Coverage- und Build-Hilfen
 ├── services/
@@ -235,7 +235,7 @@ python-basierte provisioning- und orchestrierungslogik.
 • features: vps-management, billing-/pricing-cogs, ressourcenmonitoring, integration hooks, ai/ml-optimierung, gitops, container-scanning, synthetisches monitoring.
 • cogs (47): ai_capacity_forecaster, ai_resource_optimizer, ai_threat_detection, alert_manager, auto_scaling, backup_manager, benchmark, bot_commands, cleanup, clone_system, container_scanner, cost_optimizer, cost_prediction, cron_scheduler, database_manager, disaster_recovery, dns_manager, edge_compute, faas_manager, git_deploy, gitops_sync, health_checks, kubernetes_manager, load_balancer, modpack_installer, monitoring, multi_cloud_cost, network_monitor, performance_optimizer, prepaid_billing, quota_manager, recovery, resource_manager, runbook_automation, security_audit, server_migration, snapshot_system, ssl_manager, synthetic_monitoring, template_manager, traffic_analysis, troubleshoot, update_manager, vps_billing, vps_commands, vps_pricing.
 • einstiegspunkt: `main.py` lädt alle 47 cogs. `bot.py` und `b2.py` sind legacy-dateien (deprecated), die nur noch als referenz dienen.
-• docker: enthält aktuell ein dockerfile und ist damit der einzige service, der im repository direkt als image gebaut werden kann.
+• docker: besitzt ein eigenes dockerfile und wird im compose-stack als orchestrator-service gebaut.
 
 ### discord service (`services/discord-service/`)
 
@@ -362,17 +362,21 @@ pytest tests/
 
 ### aktueller stand
 
-• `scripts/docker-build.sh` überspringt services ohne dockerfile automatisch.
-• aktuell besitzt `services/orchestrator-agent/` ein dockerfile.
-• `docker-compose.yml` beschreibt den ziel-stack mit postgresql, redis, service core, orchestrator, discord service, management panel und optionalem monitoring, ist aber ohne zusätzliche dockerfiles/monitoring-konfiguration noch nicht als vollständiger ein-befehl-stack nutzbar.
+• `docker-compose.yml` beschreibt den stack mit postgresql, redis, service core, orchestrator, integration service, discord service, management panel und optionalem monitoring.
+• alle compose-services besitzen dockerfiles oder fertige upstream images.
+• prometheus und grafana laufen über das optionale `monitoring` profile.
 
-### aktuell sinnvoller docker-befehl
+### stack starten
 
 ```bash
-./scripts/docker-build.sh
+docker compose up -d --build
 ```
 
-der befehl baut vorhandene service-images und meldet fehlende dockerfiles als warnung.
+mit monitoring:
+
+```bash
+docker compose --profile monitoring up -d --build
+```
 
 ### deployment-dokumentation
 

@@ -41,7 +41,7 @@ willkommen in der infra-pilot-dokumentation. dieser index listet bewusst nur dok
 - [deployment guide](operations/deployment-guide.md)
 - [workflow optimization audit](operations/workflow-optimization-audit.md)
 
-hinweis: `docker-compose.yml` ist aktuell ein stack-scaffold. für einen vollständigen compose-start fehlen derzeit noch mehrere service-dockerfiles und monitoring-konfigurationsdateien.
+hinweis: `docker-compose.yml` ist der reference path für kleine deployments. der stack enthält alle services; prometheus und grafana laufen optional über das `monitoring` profile.
 
 ## branding & design
 

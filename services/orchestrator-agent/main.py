@@ -121,6 +121,11 @@ async def start_webhook_server(bot):
     from aiohttp import web
     app = web.Application()
 
+    async def health(request):
+        return web.json_response({"status": "ok", "service": "orchestrator-agent"})
+
+    app.router.add_get('/health', health)
+
     cog = bot.get_cog('GitDeployer')
     if cog:
         app.router.add_post('/webhook/github/{deploy_id}', cog.handle_webhook)
@@ -132,15 +137,24 @@ async def start_webhook_server(bot):
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8500)
+    port = int(os.getenv('GITOPS_WEBHOOK_PORT', '8500'))
+    site = web.TCPSite(runner, '0.0.0.0', port)
     await site.start()
-    logger.info('Webhook server listening on port 8500')
+    logger.info(f'Webhook server listening on port {port}')
 
 
 if __name__ == "__main__":
-    if not config.DISCORD_BOT_TOKEN:
-        logger.error("DISCORD_BOT_TOKEN not set")
-        sys.exit(1)
+    token_missing = not config.DISCORD_BOT_TOKEN or config.DISCORD_BOT_TOKEN == 'your_discord_bot_token_here'
+    disabled = os.getenv('ORCHESTRATOR_AGENT_DISABLED', 'true').lower() == 'true'
+    if token_missing or disabled:
+        logger.warning('Discord bot disabled; starting health/webhook server only')
+
+        async def run_health_only():
+            await start_webhook_server(bot)
+            await asyncio.Event().wait()
+
+        asyncio.run(run_health_only())
+        sys.exit(0)
 
     asyncio_loop = None
     try:

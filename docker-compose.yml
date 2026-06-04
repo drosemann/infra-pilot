@@ -1,97 +1,66 @@
-version: '3.8'
-
-# Infra Pilot - Docker Compose Configuration
-# 
-# Usage:
-#   docker-compose up -d              # Start all services
-#   docker-compose down               # Stop and remove containers
-#   docker-compose logs -f            # View logs
-#   docker-compose ps                 # List running services
+name: infra-pilot
 
 services:
-  # ============================================
-  # PostgreSQL Database
-  # ============================================
   postgres:
-    image: postgres:15-alpine
-    container_name: infra-pilot-db
+    image: postgres:16-alpine
+    container_name: infra-pilot-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-infra_pilot}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-infra_pilot}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-infra_pilot}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
     networks:
       - infra-pilot-net
+    restart: unless-stopped
 
-  # ============================================
-  # Redis Cache
-  # ============================================
   redis:
     image: redis:7-alpine
-    container_name: infra-pilot-cache
+    container_name: infra-pilot-redis
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    volumes:
-      - redis_data:/data
+      retries: 10
+      start_period: 5s
     networks:
       - infra-pilot-net
+    restart: unless-stopped
 
-  # ============================================
-  # Service Core (Java)
-  # ============================================
-  service-core:
-    build:
-      context: ./services/service-core
-      dockerfile: Dockerfile
-    container_name: infra-pilot-core
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-infra_pilot}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-infra_pilot}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      SPRING_PROFILES_ACTIVE: docker
-      JAVA_OPTS: -Xmx512m -Xms256m
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - infra-pilot-net
-    # Uncomment to rebuild on each start
-    # build:
-    #   context: ./services/service-core
-    #   dockerfile: Dockerfile
-    #   cache_from:
-    #     - service-core:latest
-
-  # ============================================
-  # Orchestrator Agent (Python)
-  # ============================================
   orchestrator-agent:
     build:
       context: ./services/orchestrator-agent
       dockerfile: Dockerfile
+      target: production
     container_name: infra-pilot-orchestrator
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-infra_pilot}
-      REDIS_URL: redis://redis:6379
+      ORCHESTRATOR_AGENT_DISABLED: ${ORCHESTRATOR_AGENT_DISABLED:-true}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      REDIS_URL: redis://redis:6379/0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-infra_pilot}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
+      DB_NAME: ${POSTGRES_DB:-infra_pilot}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      GITOPS_WEBHOOK_PORT: 8500
       PYTHONUNBUFFERED: "1"
     ports:
-      - "8000:8000"
+      - "${ORCHESTRATOR_WEBHOOK_PORT:-8500}:8500"
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,29 +68,25 @@ services:
         condition: service_healthy
     networks:
       - infra-pilot-net
-    # Uncomment to mount source for development
-    # volumes:
-    #   - ./services/orchestrator-agent:/app
+    restart: unless-stopped
 
-
-  # ============================================
-  # Integration Service (Python)
-  # ============================================
   integration-service:
     build:
       context: ./services/integration-service
       dockerfile: Dockerfile
+      target: production
     container_name: infra-pilot-integration
     environment:
-      DASHBOARD_URL: ${DASHBOARD_URL:-http://management-panel:5173}
-      DISCORD_API_URL: ${DISCORD_API_URL:-http://discord-service:3001}
-      SERVICE_CORE_URL: ${SERVICE_CORE_URL:-http://service-core:8080}
-      ORCHESTRATOR_URL: ${ORCHESTRATOR_URL:-http://orchestrator-agent:8000}
-      JWT_SECRET: ${JWT_SECRET:-change-me}
-      REDIS_URL: redis://redis:6379
+      DASHBOARD_URL: http://management-panel:5173
+      DISCORD_API_URL: http://discord-service:3000
+      SERVICE_CORE_URL: http://service-core:8080
+      ORCHESTRATOR_URL: http://orchestrator-agent:8500
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
       PYTHONUNBUFFERED: "1"
     ports:
-      - "9000:9000"
+      - "${INTEGRATION_API_PORT:-9000}:9000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,109 +94,107 @@ services:
         condition: service_healthy
       orchestrator-agent:
         condition: service_started
-      service-core:
-        condition: service_started
     networks:
       - infra-pilot-net
+    restart: unless-stopped
 
-  # ============================================
-  # Discord Service (Node.js)
-  # ============================================
   discord-service:
     build:
       context: ./services/discord-service
       dockerfile: Dockerfile
+      target: production
     container_name: infra-pilot-discord
     environment:
-      DISCORD_TOKEN: ${DISCORD_TOKEN}
-      PTERODACTYL_API_URL: ${PTERODACTYL_API_URL}
-      PTERODACTYL_API_KEY: ${PTERODACTYL_API_KEY}
-      ORCHESTRATOR_URL: http://orchestrator-agent:8000
+      DISCORD_SERVICE_DISABLED: ${DISCORD_SERVICE_DISABLED:-true}
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      PTERODACTYL_API_URL: ${PTERODACTYL_API_URL:-http://localhost:8080/api}
+      PTERODACTYL_API_KEY: ${PTERODACTYL_API_KEY:-local-dev-key}
+      SERVER_CREATION_CHANNEL_ID: ${SERVER_CREATION_CHANNEL_ID:-}
+      SERVER_CREATOR_ROLE_ID: ${SERVER_CREATOR_ROLE_ID:-}
+      LOCATION_ID: ${LOCATION_ID:-1}
+      MAX_SERVERS_PER_USER: ${MAX_SERVERS_PER_USER:-1}
+      CODE_REVIEW_WEBHOOK_PORT: 3000
+      ORCHESTRATOR_URL: http://orchestrator-agent:8500
+      INTEGRATION_API_URL: http://integration-service:9000
       SERVICE_CORE_URL: http://service-core:8080
-      NODE_ENV: ${NODE_ENV:-production}
+      API_BASE_URL: http://management-panel:3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-infra_pilot}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
+      DB_NAME: ${POSTGRES_DB:-infra_pilot}
+      NODE_ENV: ${NODE_ENV:-development}
+    ports:
+      - "${DISCORD_WEBHOOK_PORT:-3002}:3000"
     depends_on:
-      - orchestrator-agent
-      - service-core
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      orchestrator-agent:
+        condition: service_started
+      integration-service:
+        condition: service_started
     networks:
       - infra-pilot-net
-    # Uncomment to mount source for development
-    # volumes:
-    #   - ./services/discord-service:/app
-    #   - /app/node_modules
+    restart: unless-stopped
 
-  # ============================================
-  # Management Panel (React)
-  # ============================================
   management-panel:
     build:
       context: ./services/management-panel
       dockerfile: Dockerfile
-    container_name: infra-pilot-panel
+      target: development
+    container_name: infra-pilot-management-panel
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
-      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-production}
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
+      INTEGRATION_SERVICE_URL: http://integration-service:9000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
     ports:
-      - "5173:80"
+      - "${MANAGEMENT_FRONTEND_PORT:-5173}:5173"
+      - "${MANAGEMENT_BACKEND_PORT:-3001}:3001"
     depends_on:
-      - orchestrator-agent
-      - service-core
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      integration-service:
+        condition: service_started
     networks:
       - infra-pilot-net
+    restart: unless-stopped
 
-  # ============================================
-  # Monitoring - Prometheus (Optional)
-  # ============================================
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: infra-pilot-prometheus
+  service-core:
+    build:
+      context: ./services/service-core
+      dockerfile: Dockerfile
+    container_name: infra-pilot-service-core
     environment:
-      - PROMETHEUS_RETENTION=30d
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+      JAVA_OPTS: ${JAVA_OPTS:-}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-infra_pilot}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
+      DB_NAME: ${POSTGRES_DB:-infra_pilot}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - infra-pilot-net
     profiles:
-      - monitoring
+      - minecraft
+    restart: "no"
 
-  # ============================================
-  # Monitoring - Grafana (Optional)
-  # ============================================
-  grafana:
-    image: grafana/grafana:latest
-    container_name: infra-pilot-grafana
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on:
-      - prometheus
-    networks:
-      - infra-pilot-net
-    profiles:
-      - monitoring
-
-# ============================================
-# Volumes
-# ============================================
 volumes:
   postgres_data:
   redis_data:
-  prometheus_data:
-  grafana_data:
 
-# ============================================
-# Networks
-# ============================================
 networks:
   infra-pilot-net:
     driver: bridge

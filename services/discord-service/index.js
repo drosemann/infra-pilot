@@ -15,6 +15,7 @@ const SERVER_CREATION_CHANNEL_ID = process.env.SERVER_CREATION_CHANNEL_ID;
 const SERVER_CREATOR_ROLE_ID = process.env.SERVER_CREATOR_ROLE_ID;
 const LOCATION_ID = process.env.LOCATION_ID;
 const MAX_SERVERS_PER_USER = parseInt(process.env.MAX_SERVERS_PER_USER) || 1;
+const DISCORD_SERVICE_DISABLED = String(process.env.DISCORD_SERVICE_DISABLED || '').toLowerCase() === 'true';
 
 // --- Server Types Configuration ---
 const SERVER_TYPES = {
@@ -1172,7 +1173,14 @@ client.on('messageCreate', async (message) => {
 const http = require('http');
 const WEBHOOK_PORT = parseInt(process.env.CODE_REVIEW_WEBHOOK_PORT) || 3000;
 const webhookServer = http.createServer(async (req, res) => {
-  if (req.method === 'POST' && req.url === '/webhook/github') {
+  if (req.method === 'GET' && req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      service: 'discord-service',
+      discord: DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN ? 'disabled' : 'enabled'
+    }));
+  } else if (req.method === 'POST' && req.url === '/webhook/github') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', async () => {
@@ -1195,4 +1203,11 @@ webhookServer.listen(WEBHOOK_PORT, () => {
 });
 
 // --- Discord Bot Login ---
-client.login(DISCORD_TOKEN);
+if (DISCORD_SERVICE_DISABLED || !DISCORD_TOKEN || DISCORD_TOKEN === 'your_discord_bot_token_here') {
+  console.log('[Discord] Bot login disabled; webhook and health endpoints remain available.');
+} else {
+  client.login(DISCORD_TOKEN).catch((error) => {
+    console.error('[Discord] Login failed:', error.message);
+    process.exitCode = 1;
+  });
+}

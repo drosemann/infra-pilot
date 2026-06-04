@@ -29,7 +29,10 @@ router.get('/api/compliance/summary', (req, res) => {
 router.get('/api/compliance/alerts', (req, res) => res.json({ alerts }));
 router.post('/api/compliance/scan', (req, res) => {
   const { framework } = req.body;
-  const safeFramework = (typeof framework === 'string' && Object.prototype.hasOwnProperty.call(postures, framework))
+  if (framework) {
+    if (typeof framework !== 'string' || !Object.prototype.hasOwnProperty.call(postures, framework)) {
+      return res.status(400).json({ error: 'Invalid framework' });
+    }
     ? framework
     : null;
 

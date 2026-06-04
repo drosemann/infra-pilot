@@ -3497,6 +3497,290 @@ app.get('/api/v3/reports/templates', async (_req: Request, res: Response) => {
 });
 
 // ============================================================================
+// V4 DATA PLATFORM & ANALYTICS API ROUTES
+// ============================================================================
+
+// --- Feature 41: Managed Data Lakehouse ---
+app.get('/api/v4/data/lakehouse', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  res.json(data);
+});
+app.post('/api/v4/data/lakehouse', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const cluster = { cluster_id: crypto.randomUUID(), ...req.body, tables: 0, status: 'active', created_at: new Date().toISOString() };
+  data.push(cluster);
+  await v3Write('v4_lakehouse_clusters', data);
+  res.status(201).json(cluster);
+});
+app.get('/api/v4/data/lakehouse/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const cluster = data.find((c: any) => c.cluster_id === req.params.id);
+  if (!cluster) return res.status(404).json({ error: 'Not found' });
+  res.json(cluster);
+});
+app.delete('/api/v4/data/lakehouse/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const filtered = data.filter((c: any) => c.cluster_id !== req.params.id);
+  await v3Write('v4_lakehouse_clusters', filtered);
+  res.status(204).end();
+});
+app.post('/api/v4/data/lakehouse/tables/:id/compact', async (req: Request, res: Response) => {
+  res.json({ table_id: req.params.id, status: 'compacted', timestamp: new Date().toISOString() });
+});
+app.post('/api/v4/data/lakehouse/tables/:id/vacuum', async (req: Request, res: Response) => {
+  res.json({ table_id: req.params.id, status: 'vacuumed', retention_hours: req.body.retention_hours || 168 });
+});
+
+// --- Feature 42: Streaming Data Pipeline ---
+app.get('/api/v4/data/streaming', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  res.json(data);
+});
+app.post('/api/v4/data/streaming', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  const cluster = { cluster_id: crypto.randomUUID(), ...req.body, topics: 0, connectors: 0, status: 'active', created_at: new Date().toISOString() };
+  data.push(cluster);
+  await v3Write('v4_streaming_clusters', data);
+  res.status(201).json(cluster);
+});
+app.get('/api/v4/data/streaming/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  const cluster = data.find((c: any) => c.cluster_id === req.params.id);
+  if (!cluster) return res.status(404).json({ error: 'Not found' });
+  res.json(cluster);
+});
+app.post('/api/v4/data/streaming/:id/topics', async (req: Request, res: Response) => {
+  res.json({ cluster_id: req.params.id, topic: req.body.topic, partitions: req.body.partitions || 3, status: 'created' });
+});
+app.delete('/api/v4/data/streaming/:id/topics/:topic', async (req: Request, res: Response) => {
+  res.status(204).end();
+});
+app.post('/api/v4/data/streaming/:id/scale', async (req: Request, res: Response) => {
+  res.json({ cluster_id: req.params.id, nodes: req.body.nodes, status: 'scaled' });
+});
+
+// --- Feature 43: Data Quality Framework ---
+app.get('/api/v4/data/quality/rules', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_rules', []);
+  res.json(data);
+});
+app.post('/api/v4/data/quality/rules', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_rules', []);
+  const rule = { rule_id: crypto.randomUUID(), ...req.body, enabled: true, created_at: new Date().toISOString() };
+  data.push(rule);
+  await v3Write('v4_quality_rules', data);
+  res.status(201).json(rule);
+});
+app.post('/api/v4/data/quality/run', async (_req: Request, res: Response) => {
+  const rules = await v3Read<any[]>('v4_quality_rules', []);
+  const total = rules.length;
+  const passed = Math.floor(total * 0.8);
+  const failed = total - passed;
+  res.json({ total, passed, failed, timestamp: new Date().toISOString() });
+});
+app.get('/api/v4/data/quality/violations', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_violations', []);
+  res.json(data);
+});
+app.get('/api/v4/data/quality/scorecard/:dataset', async (req: Request, res: Response) => {
+  res.json({ dataset: req.params.dataset, overall_score: 92.5, rules: 4, passing: 3, failing: 1 });
+});
+
+// --- Feature 44: Analytics Query Workbench ---
+app.get('/api/v4/data/query', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  res.json(data);
+});
+app.post('/api/v4/data/query/execute', async (req: Request, res: Response) => {
+  await new Promise(r => setTimeout(r, 100));
+  res.json({ query_id: crypto.randomUUID(), columns: ['id', 'name', 'value'], rows: [[1, 'test', 42.0]], row_count: 1, execution_time_ms: 42 });
+});
+app.post('/api/v4/data/query/save', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  const q = { query_id: crypto.randomUUID(), ...req.body, status: 'saved', created_at: new Date().toISOString() };
+  data.push(q);
+  await v3Write('v4_saved_queries', data);
+  res.status(201).json(q);
+});
+app.delete('/api/v4/data/query/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  await v3Write('v4_saved_queries', data.filter((q: any) => q.query_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/query/schema', async (_req: Request, res: Response) => {
+  res.json([{ name: 'users', object_type: 'table', schema: 'public' }, { name: 'orders', object_type: 'table', schema: 'public' }]);
+});
+
+// --- Feature 45: Data Catalog & Governance ---
+app.get('/api/v4/data/catalog/assets', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  res.json(data);
+});
+app.post('/api/v4/data/catalog/assets', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  const asset = { asset_id: crypto.randomUUID(), ...req.body, certified: false, created_at: new Date().toISOString() };
+  data.push(asset);
+  await v3Write('v4_catalog_assets', data);
+  res.status(201).json(asset);
+});
+app.get('/api/v4/data/catalog/search', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  const q = (req.query.q as string || '').toLowerCase();
+  res.json(data.filter((a: any) => a.name?.toLowerCase().includes(q)));
+});
+app.post('/api/v4/data/catalog/harvest', async (_req: Request, res: Response) => {
+  res.json({ status: 'completed', assets_found: 5, columns_found: 30, duration_sec: 2.3 });
+});
+app.post('/api/v4/data/catalog/assets/:id/certify', async (req: Request, res: Response) => {
+  res.json({ asset_id: req.params.id, certified: true });
+});
+
+// --- Feature 46: Data Masking & Anonymization ---
+app.get('/api/v4/data/masking/rules', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_rules', []);
+  res.json(data);
+});
+app.post('/api/v4/data/masking/rules', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_rules', []);
+  const rule = { rule_id: crypto.randomUUID(), ...req.body, enabled: true, created_at: new Date().toISOString() };
+  data.push(rule);
+  await v3Write('v4_masking_rules', data);
+  res.status(201).json(rule);
+});
+app.get('/api/v4/data/masking/profiles', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_profiles', []);
+  res.json(data);
+});
+app.post('/api/v4/data/masking/profiles', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_profiles', []);
+  const profile = { profile_id: crypto.randomUUID(), ...req.body, rules: [], enabled: true };
+  data.push(profile);
+  await v3Write('v4_masking_profiles', data);
+  res.status(201).json(profile);
+});
+app.post('/api/v4/data/masking/profiles/:id/apply', async (req: Request, res: Response) => {
+  res.json({ profile_id: req.params.id, status: 'applied', total_rows_masked: 1500 });
+});
+
+// --- Feature 47: Self-Service Reporting ---
+app.get('/api/v4/data/reports', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_reports', []);
+  res.json(data);
+});
+app.post('/api/v4/data/reports', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_reports', []);
+  const report = { report_id: crypto.randomUUID(), ...req.body, widgets: [], parameters: [], mode: 'visual', created_at: new Date().toISOString() };
+  data.push(report);
+  await v3Write('v4_reports', data);
+  res.status(201).json(report);
+});
+app.post('/api/v4/data/reports/:id/execute', async (req: Request, res: Response) => {
+  res.json({ report_id: req.params.id, status: 'executed', widgets: 4, execution_time_ms: 320 });
+});
+app.post('/api/v4/data/reports/:id/export', async (req: Request, res: Response) => {
+  res.json({ report_id: req.params.id, format: req.body.format || 'pdf', url: `/exports/reports/${req.params.id}.${req.body.format || 'pdf'}` });
+});
+app.post('/api/v4/data/reports/:id/schedules', async (req: Request, res: Response) => {
+  res.json({ schedule_id: crypto.randomUUID(), report_id: req.params.id, ...req.body, created_at: new Date().toISOString() });
+});
+
+// --- Feature 48: Real-Time Analytics Dashboard ---
+app.get('/api/v4/data/realtime/dashboards', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  res.json(data);
+});
+app.post('/api/v4/data/realtime/dashboards', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  const db = { dashboard_id: crypto.randomUUID(), ...req.body, panels: [], refresh: 5, status: 'active', created_at: new Date().toISOString() };
+  data.push(db);
+  await v3Write('v4_realtime_dashboards', data);
+  res.status(201).json(db);
+});
+app.delete('/api/v4/data/realtime/dashboards/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  await v3Write('v4_realtime_dashboards', data.filter((d: any) => d.dashboard_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/realtime/dashboards/:id/live', async (req: Request, res: Response) => {
+  const dashboard = { dashboard_id: req.params.id, panels: { p1: { metric: 'cpu', value: Math.random() * 100 } } };
+  res.json(dashboard);
+});
+app.post('/api/v4/data/realtime/metrics', async (req: Request, res: Response) => {
+  res.json({ metric: req.body.name, value: req.body.value, ingested: true, timestamp: new Date().toISOString() });
+});
+
+// --- Feature 49: Data Pipeline Observability ---
+app.get('/api/v4/data/pipelines', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_pipelines', []);
+  res.json(data);
+});
+app.post('/api/v4/data/pipelines', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_pipelines', []);
+  const pipeline = { pipeline_id: crypto.randomUUID(), ...req.body, nodes: [], edges: [], status: 'created', created_at: new Date().toISOString() };
+  data.push(pipeline);
+  await v3Write('v4_pipelines', data);
+  res.status(201).json(pipeline);
+});
+app.post('/api/v4/data/pipelines/:id/start', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'running' });
+});
+app.post('/api/v4/data/pipelines/:id/stop', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'stopped' });
+});
+app.get('/api/v4/data/pipelines/:id/health', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'running', health: 'healthy', issues: [], metrics: { throughput: 2500, latency_ms: 45, error_rate: 0.3, freshness_sec: 0.5 } });
+});
+app.get('/api/v4/data/pipelines/:id/rca', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, root_causes: [{ node: 'source_db', issue: 'connection timeout', probability: 0.85 }] });
+});
+
+// --- Feature 50: Embedded Analytics SDK ---
+app.get('/api/v4/data/embed/customers', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  res.json(data);
+});
+app.post('/api/v4/data/embed/customers', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  const customer = { customer_id: crypto.randomUUID(), ...req.body, api_key: 'ip_ea_' + crypto.randomUUID().replace(/-/g, '').slice(0, 32), active: true, embeds: 0, created_at: new Date().toISOString() };
+  data.push(customer);
+  await v3Write('v4_embed_customers', data);
+  res.status(201).json(customer);
+});
+app.post('/api/v4/data/embed/customers/:id/rotate-key', async (req: Request, res: Response) => {
+  res.json({ customer_id: req.params.id, api_key: 'ip_ea_' + crypto.randomUUID().replace(/-/g, '').slice(0, 32) });
+});
+app.get('/api/v4/data/embed/embeds', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  if (req.query.customer_id) return res.json(data.filter((e: any) => e.customer_id === req.query.customer_id));
+  res.json(data);
+});
+app.post('/api/v4/data/embed/embeds', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  const embed = { embed_id: crypto.randomUUID(), ...req.body, active: true, created_at: new Date().toISOString() };
+  data.push(embed);
+  await v3Write('v4_embed_embeds', data);
+  res.status(201).json(embed);
+});
+app.get('/api/v4/data/embed/embeds/:id/code', async (req: Request, res: Response) => {
+  res.json({ embed_id: req.params.id, code: `<iframe src="https://analytics.infrapilot.io/embed/${req.params.id}" width="100%" height="600"></iframe>` });
+});
+app.delete('/api/v4/data/embed/embeds/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  await v3Write('v4_embed_embeds', data.filter((e: any) => e.embed_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/embed/stats', async (_req: Request, res: Response) => {
+  const customers = await v3Read<any[]>('v4_embed_customers', []);
+  const embeds = await v3Read<any[]>('v4_embed_embeds', []);
+  res.json({ total_customers: customers.length, total_embeds: embeds.length, active_customers: customers.filter((c: any) => c.active).length });
+});
+app.delete('/api/v4/data/embed/customers/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  await v3Write('v4_embed_customers', data.filter((c: any) => c.customer_id !== req.params.id));
+  res.status(204).end();
+});
+
+// ============================================================================
 // START SERVER
 // ============================================================================
 

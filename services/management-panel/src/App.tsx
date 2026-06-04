@@ -31,6 +31,11 @@ import { PacketCapturePage } from './pages/networking/PacketCapturePage';
 import { DNSFilteringPage } from './pages/networking/DNSFilteringPage';
 import { CostAnalyzerPage } from './pages/networking/CostAnalyzerPage';
 import { CellularPage } from './pages/networking/CellularPage';
+import { PolicyAsCodePage, AuditAnalyticsPage, DataClassificationPage, VendorRiskPage, BreachNotificationPage } from './pages/compliance/CompliancePages';
+import BudgetForecast from './pages/finops/BudgetForecast';
+import CostAnomalyDetection from './pages/finops/CostAnomalyDetection';
+import CommitmentOptimizer from './pages/finops/CommitmentOptimizer';
+import SpotManager from './pages/finops/SpotManager';
 import { ResourceTradingPage } from './pages/marketplace/ResourceTradingPage';
 import { AppMarketplacePage } from './pages/marketplace/AppMarketplacePage';
 import { PayPerUsePage } from './pages/marketplace/PayPerUsePage';
@@ -184,6 +189,15 @@ export default function App() {
                 {featureGates.canViewBilling(mode) && (
                   <Route path="/billing" element={<BillingPage />} />
                 )}
+                <Route path="/finops/budget" element={<BudgetForecast />} />
+                <Route path="/finops/anomalies" element={<CostAnomalyDetection />} />
+                <Route path="/finops/commitments" element={<CommitmentOptimizer />} />
+                <Route path="/finops/spot" element={<SpotManager />} />
+                <Route path="/compliance/policy" element={<PolicyAsCodePage />} />
+                <Route path="/compliance/audit-analytics" element={<AuditAnalyticsPage />} />
+                <Route path="/compliance/data-classification" element={<DataClassificationPage />} />
+                <Route path="/compliance/vendor-risk" element={<VendorRiskPage />} />
+                <Route path="/compliance/breach-notification" element={<BreachNotificationPage />} />
                 <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="/networking/sdwan" element={<SDWANPage />} />
                 <Route path="/networking/vpn" element={<VPNPage />} />

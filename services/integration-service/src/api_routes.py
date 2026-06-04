@@ -597,3 +597,386 @@ class GreenAPIRouter:
                 {"id": "alt-003", "severity": "critical", "message": "CO2 emissions exceeded daily threshold", "timestamp": "2026-05-27T23:59:00Z"},
             ]
         })
+
+
+class AIOpsAPIRouter:
+    """REST API router for AIOps & Autonomous Operations features."""
+
+    def __init__(self, config):
+        self.config = config
+        from .aiops.root_cause_analysis import RootCauseAnalyzer
+        from .aiops.incident_remediation import IncidentRemediationEngine
+        from .aiops.digital_experience import DigitalExperienceMonitor
+        from .aiops.alert_correlation import AlertCorrelationEngine
+        from .aiops.predictive_scaling import PredictiveScalingEngine
+        from .aiops.health_forecasting import ServiceHealthForecaster
+        from .aiops.conversational_ops import ConversationalOpsAssistant
+        from .aiops.change_risk import ChangeRiskAnalyzer
+        from .aiops.capacity_planning import CapacityPlanner
+        from .aiops.ops_chatbot import OpsChatbot
+        self.rca = RootCauseAnalyzer(config)
+        self.remediation = IncidentRemediationEngine(config)
+        self.dem = DigitalExperienceMonitor(config)
+        self.alert_corr = AlertCorrelationEngine(config)
+        self.scaling = PredictiveScalingEngine(config)
+        self.health = ServiceHealthForecaster(config)
+        self.assistant = ConversationalOpsAssistant(config)
+        self.change = ChangeRiskAnalyzer(config)
+        self.capacity = CapacityPlanner(config)
+        self.chatbot = OpsChatbot(config)
+
+    def register_routes(self, app):
+        # RCA
+        app.router.add_post("/api/v1/aiops/rca/analyze", self.rca_analyze)
+        app.router.add_post("/api/v1/aiops/rca/events", self.rca_ingest_event)
+        app.router.add_get("/api/v1/aiops/rca/incidents", self.rca_incidents)
+        app.router.add_get("/api/v1/aiops/rca/events", self.rca_events)
+        app.router.add_get("/api/v1/aiops/rca/dependencies", self.rca_dependencies)
+
+        # Remediation
+        app.router.add_post("/api/v1/aiops/remediate/suggest", self.remediate_suggest)
+        app.router.add_post("/api/v1/aiops/remediate/create", self.remediate_create)
+        app.router.add_get("/api/v1/aiops/remediate", self.remediate_list)
+        app.router.add_get("/api/v1/aiops/remediate/stats", self.remediate_stats)
+        app.router.add_get("/api/v1/aiops/remediate/patterns", self.remediate_patterns)
+        app.router.add_post("/api/v1/aiops/remediate/{remediation_id}/approve", self.remediate_approve)
+        app.router.add_post("/api/v1/aiops/remediate/{remediation_id}/reject", self.remediate_reject)
+        app.router.add_post("/api/v1/aiops/remediate/{remediation_id}/execute", self.remediate_execute)
+
+        # DEM
+        app.router.add_get("/api/v1/aiops/dem/monitors", self.dem_list)
+        app.router.add_post("/api/v1/aiops/dem/monitors", self.dem_create)
+        app.router.add_get("/api/v1/aiops/dem/monitors/{monitor_id}", self.dem_get)
+        app.router.add_patch("/api/v1/aiops/dem/monitors/{monitor_id}", self.dem_update)
+        app.router.add_delete("/api/v1/aiops/dem/monitors/{monitor_id}", self.dem_delete)
+        app.router.add_post("/api/v1/aiops/dem/monitors/{monitor_id}/check", self.dem_run_check)
+        app.router.add_get("/api/v1/aiops/dem/monitors/{monitor_id}/stats", self.dem_stats)
+        app.router.add_get("/api/v1/aiops/dem/monitors/{monitor_id}/vitals", self.dem_vitals)
+        app.router.add_get("/api/v1/aiops/dem/summary", self.dem_summary)
+
+        # Alerts
+        app.router.add_post("/api/v1/aiops/alerts", self.alert_ingest)
+        app.router.add_post("/api/v1/aiops/alerts/{alert_id}/acknowledge", self.alert_ack)
+        app.router.add_post("/api/v1/aiops/alerts/{alert_id}/resolve", self.alert_resolve)
+        app.router.add_post("/api/v1/aiops/alerts/suppression", self.alert_suppression)
+        app.router.add_get("/api/v1/aiops/alerts/incidents", self.alert_incidents)
+        app.router.add_post("/api/v1/aiops/alerts/incidents/{incident_id}/resolve", self.alert_resolve_incident)
+        app.router.add_get("/api/v1/aiops/alerts/stats", self.alert_stats)
+
+        # Predictive Scaling
+        app.router.add_post("/api/v1/aiops/scaling/metrics", self.scaling_record_metric)
+        app.router.add_get("/api/v1/aiops/scaling/predict/{resource_id}/{metric}", self.scaling_predict)
+        app.router.add_post("/api/v1/aiops/scaling/policy", self.scaling_policy)
+        app.router.add_get("/api/v1/aiops/scaling/metrics/{resource_id}/{metric}", self.scaling_metrics)
+        app.router.add_get("/api/v1/aiops/scaling/summary", self.scaling_summary)
+
+        # Health
+        app.router.add_post("/api/v1/aiops/health/services", self.health_register)
+        app.router.add_get("/api/v1/aiops/health/services", self.health_services)
+        app.router.add_get("/api/v1/aiops/health/services/{service_id}", self.health_get)
+        app.router.add_delete("/api/v1/aiops/health/services/{service_id}", self.health_delete)
+        app.router.add_post("/api/v1/aiops/health/snapshots", self.health_snapshot)
+        app.router.add_get("/api/v1/aiops/health/forecast/{service_id}", self.health_forecast)
+        app.router.add_get("/api/v1/aiops/health/dashboard", self.health_dashboard)
+
+        # Assistant
+        app.router.add_post("/api/v1/aiops/assistant/message", self.assistant_message)
+        app.router.add_get("/api/v1/aiops/assistant/session/{session_id}", self.assistant_session)
+        app.router.add_get("/api/v1/aiops/assistant/stats", self.assistant_stats)
+
+        # Change Risk
+        app.router.add_post("/api/v1/aiops/changes", self.change_plan)
+        app.router.add_post("/api/v1/aiops/changes/{change_id}/approve", self.change_approve)
+        app.router.add_post("/api/v1/aiops/changes/{change_id}/reject", self.change_reject)
+        app.router.add_post("/api/v1/aiops/changes/{change_id}/outcome", self.change_outcome)
+        app.router.add_get("/api/v1/aiops/changes/stats", self.change_stats)
+
+        # Capacity
+        app.router.add_post("/api/v1/aiops/capacity/usage", self.capacity_record_usage)
+        app.router.add_get("/api/v1/aiops/capacity/usage/{resource_id}/{metric}", self.capacity_usage)
+        app.router.add_get("/api/v1/aiops/capacity/recommend/{resource_id}/{metric}", self.capacity_recommend)
+        app.router.add_post("/api/v1/aiops/capacity/simulate", self.capacity_simulate)
+        app.router.add_get("/api/v1/aiops/capacity/summary", self.capacity_summary)
+
+        # Chatbot
+        app.router.add_post("/api/v1/aiops/chatbot/message", self.chatbot_message)
+        app.router.add_get("/api/v1/aiops/chatbot/conversation/{conversation_id}", self.chatbot_conversation)
+        app.router.add_get("/api/v1/aiops/chatbot/tasks/{user_id}", self.chatbot_tasks)
+        app.router.add_get("/api/v1/aiops/chatbot/analytics", self.chatbot_analytics)
+
+    async def rca_analyze(self, request):
+        data = await request.json()
+        result = self.rca.analyze(incident_title=data.get("incident_title", ""), incident_description=data.get("incident_description", ""))
+        return web.json_response(result)
+
+    async def rca_ingest_event(self, request):
+        data = await request.json()
+        event = self.rca.ingest_event(data.get("event_type", "metric"), data.get("source", "unknown"), data.get("title", ""), data.get("description", ""), data.get("metadata", {}), data.get("severity", "info"))
+        return web.json_response(event, status=201)
+
+    async def rca_incidents(self, request):
+        return web.json_response({"incidents": self.rca.list_incidents()})
+
+    async def rca_events(self, request):
+        source = request.query.get("source")
+        events = self.rca.get_events(source=source)
+        return web.json_response({"events": events, "total": len(events)})
+
+    async def rca_dependencies(self, request):
+        return web.json_response(self.rca.get_dependency_graph())
+
+    async def remediate_suggest(self, request):
+        data = await request.json()
+        suggestions = self.remediation.suggest_remediation(data)
+        return web.json_response({"suggestions": suggestions})
+
+    async def remediate_create(self, request):
+        data = await request.json()
+        rem = self.remediation.create_remediation(data.get("incident_id"), data.get("action"), data.get("params", {}), data.get("confidence", 0.0), data.get("pattern", "generic"))
+        return web.json_response(rem, status=201)
+
+    async def remediate_list(self, request):
+        return web.json_response({"remediations": self.remediation.list_remediations()})
+
+    async def remediate_stats(self, request):
+        return web.json_response(self.remediation.get_statistics())
+
+    async def remediate_patterns(self, request):
+        return web.json_response({"patterns": self.remediation.get_patterns()})
+
+    async def remediate_approve(self, request):
+        rem_id = request.match_info["remediation_id"]
+        data = await request.json()
+        result = self.remediation.approve_remediation(rem_id, data.get("approver", "system"))
+        return web.json_response(result)
+
+    async def remediate_reject(self, request):
+        rem_id = request.match_info["remediation_id"]
+        data = await request.json()
+        result = self.remediation.reject_remediation(rem_id, data.get("reason", ""))
+        return web.json_response(result)
+
+    async def remediate_execute(self, request):
+        rem_id = request.match_info["remediation_id"]
+        result = self.remediation.execute_remediation(rem_id)
+        return web.json_response(result)
+
+    async def dem_list(self, request):
+        status = request.query.get("status")
+        monitors = self.dem.list_monitors(status=status)
+        return web.json_response({"monitors": monitors, "total": len(monitors)})
+
+    async def dem_create(self, request):
+        data = await request.json()
+        m = self.dem.create_monitor(data.get("name", "Monitor"), data.get("url", "https://example.com"), data.get("monitor_type", "browser_synthetic"), data.get("status", "active"))
+        return web.json_response(m, status=201)
+
+    async def dem_get(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        m = self.dem.get_monitor(monitor_id)
+        if not m:
+            return web.json_response({"error": "Monitor not found"}, status=404)
+        return web.json_response(m)
+
+    async def dem_update(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        data = await request.json()
+        result = self.dem.update_monitor(monitor_id, data)
+        return web.json_response(result)
+
+    async def dem_delete(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        self.dem.delete_monitor(monitor_id)
+        return web.json_response({"status": "deleted"})
+
+    async def dem_run_check(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        result = self.dem.run_check(monitor_id)
+        return web.json_response(result)
+
+    async def dem_stats(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        stats = self.dem.get_monitor_stats(monitor_id)
+        return web.json_response(stats)
+
+    async def dem_vitals(self, request):
+        monitor_id = request.match_info["monitor_id"]
+        vitals = self.dem.get_core_web_vitals(monitor_id)
+        return web.json_response(vitals)
+
+    async def dem_summary(self, request):
+        return web.json_response(self.dem.get_global_summary())
+
+    async def alert_ingest(self, request):
+        data = await request.json()
+        alert = self.alert_corr.ingest_alert(data.get("name"), data.get("source"), data.get("severity", "warning"), data.get("message"))
+        return web.json_response(alert, status=201)
+
+    async def alert_ack(self, request):
+        alert_id = request.match_info["alert_id"]
+        self.alert_corr.acknowledge_alert(alert_id)
+        return web.json_response({"status": "acknowledged"})
+
+    async def alert_resolve(self, request):
+        alert_id = request.match_info["alert_id"]
+        self.alert_corr.resolve_alert(alert_id)
+        return web.json_response({"status": "resolved"})
+
+    async def alert_suppression(self, request):
+        data = await request.json()
+        rule = self.alert_corr.add_suppression_rule(data.get("name"), match_name=data.get("match_name"))
+        return web.json_response(rule, status=201)
+
+    async def alert_incidents(self, request):
+        status = request.query.get("status")
+        incidents = self.alert_corr.list_incidents(status=status)
+        return web.json_response({"incidents": incidents})
+
+    async def alert_resolve_incident(self, request):
+        incident_id = request.match_info["incident_id"]
+        self.alert_corr.resolve_incident(incident_id)
+        return web.json_response({"status": "resolved"})
+
+    async def alert_stats(self, request):
+        return web.json_response(self.alert_corr.get_statistics())
+
+    async def scaling_record_metric(self, request):
+        data = await request.json()
+        result = self.scaling.record_metric(data.get("resource_id"), data.get("metric"), data.get("value", 0))
+        return web.json_response(result, status=201)
+
+    async def scaling_predict(self, request):
+        resource_id = request.match_info["resource_id"]
+        metric = request.match_info["metric"]
+        result = self.scaling.predict(resource_id, metric)
+        return web.json_response(result)
+
+    async def scaling_policy(self, request):
+        data = await request.json()
+        self.scaling.set_scaling_policy(data.get("resource_id"), data.get("policy"))
+        return web.json_response({"status": "policy set"})
+
+    async def scaling_metrics(self, request):
+        resource_id = request.match_info["resource_id"]
+        metric = request.match_info["metric"]
+        result = self.scaling.get_metrics(resource_id, metric)
+        return web.json_response(result)
+
+    async def scaling_summary(self, request):
+        return web.json_response(self.scaling.get_summary())
+
+    async def health_register(self, request):
+        data = await request.json()
+        svc = self.health.register_service(data.get("service_id"), data.get("name"))
+        return web.json_response(svc, status=201)
+
+    async def health_services(self, request):
+        services = self.health.list_services()
+        return web.json_response({"services": services})
+
+    async def health_get(self, request):
+        svc_id = request.match_info["service_id"]
+        svc = self.health.get_service(svc_id)
+        if not svc:
+            return web.json_response({"error": "Service not found"}, status=404)
+        return web.json_response(svc)
+
+    async def health_delete(self, request):
+        svc_id = request.match_info["service_id"]
+        self.health.delete_service(svc_id)
+        return web.json_response({"status": "deleted"})
+
+    async def health_snapshot(self, request):
+        data = await request.json()
+        result = self.health.record_snapshot(data.get("service_id"), data.get("metrics", {}))
+        return web.json_response(result, status=201)
+
+    async def health_forecast(self, request):
+        svc_id = request.match_info["service_id"]
+        result = self.health.forecast(svc_id)
+        return web.json_response(result)
+
+    async def health_dashboard(self, request):
+        return web.json_response(self.health.get_dashboard())
+
+    async def assistant_message(self, request):
+        data = await request.json()
+        result = self.assistant.process_message(data.get("session_id"), data.get("user_id"), data.get("message"))
+        return web.json_response(result)
+
+    async def assistant_session(self, request):
+        session_id = request.match_info["session_id"]
+        session = self.assistant.get_session(session_id)
+        return web.json_response(session)
+
+    async def assistant_stats(self, request):
+        return web.json_response(self.assistant.get_statistics())
+
+    async def change_plan(self, request):
+        data = await request.json()
+        result = self.change.plan_change(data.get("title"), data.get("description"), data.get("change_type", "deployment"), data.get("target"), data.get("affected_resources", []))
+        return web.json_response(result, status=201)
+
+    async def change_approve(self, request):
+        change_id = request.match_info["change_id"]
+        data = await request.json()
+        result = self.change.approve_change(change_id, data.get("approver"))
+        return web.json_response(result)
+
+    async def change_reject(self, request):
+        change_id = request.match_info["change_id"]
+        data = await request.json()
+        result = self.change.reject_change(change_id, data.get("reason"))
+        return web.json_response(result)
+
+    async def change_outcome(self, request):
+        change_id = request.match_info["change_id"]
+        data = await request.json()
+        result = self.change.record_outcome(change_id, data.get("status"), data.get("result", {}))
+        return web.json_response(result)
+
+    async def change_stats(self, request):
+        return web.json_response(self.change.get_statistics())
+
+    async def capacity_record_usage(self, request):
+        data = await request.json()
+        result = self.capacity.record_usage(data.get("resource_id"), data.get("metric"), data.get("total", 100), data.get("used", 0))
+        return web.json_response(result, status=201)
+
+    async def capacity_usage(self, request):
+        resource_id = request.match_info["resource_id"]
+        metric = request.match_info["metric"]
+        result = self.capacity.get_usage(resource_id, metric)
+        return web.json_response(result)
+
+    async def capacity_recommend(self, request):
+        resource_id = request.match_info["resource_id"]
+        metric = request.match_info["metric"]
+        result = self.capacity.generate_recommendation(resource_id, metric)
+        return web.json_response(result)
+
+    async def capacity_simulate(self, request):
+        data = await request.json()
+        result = self.capacity.what_if_simulation(data.get("resource_id"), data.get("metric"), data.get("scenario"))
+        return web.json_response(result)
+
+    async def capacity_summary(self, request):
+        return web.json_response(self.capacity.get_summary())
+
+    async def chatbot_message(self, request):
+        data = await request.json()
+        result = self.chatbot.process_message(data.get("user_id"), data.get("message"), conversation_id=data.get("conversation_id"))
+        return web.json_response(result)
+
+    async def chatbot_conversation(self, request):
+        conv_id = request.match_info["conversation_id"]
+        conv = self.chatbot.get_conversation(conv_id)
+        return web.json_response(conv)
+
+    async def chatbot_tasks(self, request):
+        user_id = request.match_info["user_id"]
+        tasks = self.chatbot.list_tasks(user_id=user_id)
+        return web.json_response({"tasks": tasks})
+
+    async def chatbot_analytics(self, request):
+        return web.json_response(self.chatbot.get_analytics())

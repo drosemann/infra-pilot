@@ -45,6 +45,7 @@ from log_analyzer import LogAnomalyDetector
 from ai_assistant import AIAssistant
 from backup_validator import BackupValidator
 from ticket_triage import TicketTriage
+from routes.resiliency_routes import ResiliencyAPIRouter
 
 logging.basicConfig(
     level=logging.INFO,
@@ -107,6 +108,7 @@ class IntegrationAPIServer:
         self.service_mesh: ServiceMeshManager = self.service.service_mesh
         self.workspaces: WorkspaceManager = self.service.workspaces
         self.app["notification_manager"] = self.notification_manager
+        self.resiliency_router = ResiliencyAPIRouter(self.service.config)
 
     @web.middleware
     async def auth_middleware(self, request: web.Request, handler) -> web.Response:
@@ -389,6 +391,8 @@ class IntegrationAPIServer:
         self.app.router.add_get('/api/triage/queue', self.handle_triage_queue)
         self.app.router.add_post('/api/triage/tickets/{ticket_id}/escalate', self.handle_triage_escalate)
         self.app.router.add_get('/api/triage/stats', self.handle_triage_stats)
+        # v4 resiliency routes (features 31-40)
+        self.resiliency_router.register_routes(self.app)
 
     async def handle_index(self, request: web.Request) -> web.Response:
         return web.json_response({
@@ -2134,6 +2138,7 @@ class IntegrationAPIServer:
         await self.backup_manager.initialize()
         await self.resource_tracker.initialize()
         await self.multi_region.initialize()
+        await self.resiliency_router.initialize()
         await self.cdn_waf.initialize()
         await self.service_mesh.initialize()
         await self.workspaces.initialize()
@@ -2147,6 +2152,7 @@ class IntegrationAPIServer:
         await self.backup_manager.close()
         await self.resource_tracker.close()
         await self.multi_region.close()
+        await self.resiliency_router.close()
         await self.cdn_waf.close()
         await self.service_mesh.close()
         await self.workspaces.close()

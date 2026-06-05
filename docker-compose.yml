@@ -191,9 +191,63 @@ services:
       - minecraft
     restart: "no"
 
+  ipilot-cli:
+    build:
+      context: ./cli
+      dockerfile: Dockerfile
+      target: production
+    container_name: infra-pilot-cli
+    environment:
+      IPILOT_API_URL: http://management-panel:3001
+    networks:
+      - infra-pilot-net
+    profiles:
+      - cli
+    restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: infra-pilot-prometheus
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      integration-service:
+        condition: service_started
+    networks:
+      - infra-pilot-net
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: infra-pilot-grafana
+    volumes:
+      - ./infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: ""
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - infra-pilot-net
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   infra-pilot-net:

@@ -9,7 +9,7 @@ diese anleitung nutzt docker compose als standardweg. sie startet den kompletten
 | service | port | aufgabe |
 |---------|------|---------|
 | management panel | `5173` | web ui, live logs, config, backups, alerts |
-| orchestrator agent | `8000` | provisioning, docker/vps automation, discord cogs |
+| orchestrator agent | `8500` | provisioning, docker/vps automation, discord cogs |
 | integration service | `9000` | auth, users, notifications, metrics, modpacks, shared api |
 | service core | `8080` | java core service und player-server-logik |
 | discord service | intern | discord bot und pterodactyl/provisioning bridge |
@@ -98,7 +98,7 @@ PTERODACTYL_API_URL=https://your-panel.example.com/api
 PTERODACTYL_API_KEY=your-pterodactyl-api-key
 VITE_API_URL=https://api.your-domain.example
 DASHBOARD_URL=https://your-domain.example
-ORCHESTRATOR_URL=http://orchestrator-agent:8000
+ORCHESTRATOR_URL=http://orchestrator-agent:8500
 SERVICE_CORE_URL=http://service-core:8080
 INTEGRATION_API_URL=http://integration-service:9000
 ```
@@ -173,7 +173,7 @@ einfaches routing model:
 |------------|--------|
 | `https://your-domain.example` | `management-panel:5173` |
 | `https://api.your-domain.example` | `integration-service:9000` |
-| `https://orchestrator.your-domain.example` | `orchestrator-agent:8000` nur wenn nötig |
+| `https://orchestrator.your-domain.example` | `orchestrator-agent:8500` nur wenn nötig |
 
 postgres, redis, service core und discord service bleiben privat.
 

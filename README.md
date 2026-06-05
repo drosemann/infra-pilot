@@ -122,8 +122,7 @@ detailplan: [docs/feature-implementation-plan-v4.md](docs/feature-implementation
 • siem export — audit log streaming to splunk/elk/datadog/syslog (integration service)
 • gdpr & data retention — data lifecycle, right-to-erasure, consent management (integration service)
 • v4 features — 100 neue features in 10 kategorien: hybrid cloud, platform engineering, finops, resiliency, data platform, aiops, compliance v4, customer experience, soc deep, emerging tech — implementiert über integration service, orchestrator cogs, management panel, CLI und mobile (54.592+ zeilen code)
-• docker compose: `docker-compose.yml` ist als stack-scaffold vorhanden. aktuell besitzt nur `services/orchestrator-agent/` ein dockerfile; die compose-definitionen für management panel, discord service, service core und monitoring benötigen vor einem vollständigen stack-start noch dockerfiles bzw. infrastrukturdateien.
-• docker compose: `docker-compose.yml` startet den stack mit postgres, redis, service core, orchestrator, integration service, discord service, management panel und optionalem monitoring.
+• docker compose: `docker-compose.yml` startet den stack mit postgres, redis, orchestrator agent, integration service, discord service, management panel, service core (profil `minecraft`) und optionalem monitoring (profil `monitoring`) + CLI utility container (profil `cli`). alle services besitzen dockerfiles oder fertige upstream-images.
 
 ## quick start
 
@@ -163,6 +162,30 @@ python bot.py
 
 weitere details: [orchestrator agent readme](services/orchestrator-agent/README.md).
 
+### option 4: docker compose (vollständiger stack)
+
+```bash
+git clone https://github.com/DaaanielTV/infra-pilot.git
+cd infra-pilot
+cp .env.example .env  # oder nutze die bereits vorhandene .env
+docker compose up -d --build
+```
+
+danach geöffnete services:
+
+| Service | URL |
+|---------|-----|
+| management panel (frontend) | http://localhost:5173 |
+| management panel (api) | http://localhost:3001 |
+| integration service api | http://localhost:9000 |
+| orchestrator health | http://localhost:8500/health |
+
+mit monitoring:
+
+```bash
+docker compose --profile monitoring up -d --build
+```
+
 ### option 3: discord service prüfen
 
 ```bash
@@ -185,7 +208,8 @@ weitere details: [discord service readme](services/discord-service/README.md).
 | orchestrator agent | python 3.9+, pip, optional pytest |
 | discord service | node.js 18+, npm, discord-bot, pterodactyl-api-zugang |
 | service core | java/maven, sofern `services/service-core` genutzt oder erweitert wird |
-| optional | docker, docker compose, zig 0.16.0+ und zero-native cli für die native desktop-shell |
+| docker compose | docker, docker compose (für vollständigen stack-start) |
+| optional | zig 0.16.0+ und zero-native cli für die native desktop-shell |
 
 ## repository-struktur
 
@@ -193,19 +217,25 @@ weitere details: [discord service readme](services/discord-service/README.md).
 .
 ├── README.md                         # Hauptdokumentation
 ├── LICENSE                           # MIT License
+├── .env                              # Lokale Entwicklungsumgebungs-Variablen
 ├── docker-compose.yml                # Compose-Stack für alle lokalen/kleinen Deployments
-├── infra/naming/                     # Provider-neutrale Token-Auflösung
-├── docker-compose.yml                # Compose-Scaffold für den späteren Stack-Ausbau
+├── Makefile                          # Hilfsbefehle (verify, healthcheck)
+├── cli/                              # Python CLI Tool (Dockerfile, setup.py, ipilot/ commands)
+│   ├── Dockerfile                    # Multi-Stage Build für ipilot-CLI-Container
+│   └── ipilot/                       # CLI-Module (server, deploy, logs, edge, green, networking, …)
 ├── cli/ipilot/                       # Python CLI Tool (server, deploy, logs, edge, green, networking, platform-engineering +)
 ├── infra/                            # Provider-neutrale Token-Auflösung + Terraform Provider + Edge/Green Helpers
 ├── mobile/                           # React Native (Expo) App (server mgmt, push, edge/iot, green, platform-engineering screens)
 ├── scripts/                          # Setup-, Test-, Coverage- und Build-Hilfen
 ├── services/
-│   ├── management-panel/             # React/Vite + Express Docker Panel (120+ Pages, v3 + v4 Features: hybrid-cloud, platform-engineering, finops, resiliency, data-platform, aiops, compliance-v4, customer-experience, soc, emerging-tech)
-│   ├── orchestrator-agent/           # Python Provisioning-/Discord-Agent (90+ Cogs, v4: hybrid_cloud, platform_engineering, finops, resiliency, data_platform, aiops, compliance_v4, customer_experience, soc, emerging_tech)
-│   ├── discord-service/              # Discord.js Bot Service (29+ Module, Report Bot)
-│   ├── integration-service/          # Cross-Plattform-Hub (80+ Module: Auth, Edge, Green, Network, Market, Storage, Gaming, Identity, Automation, Viz, Integration, Platform Engineering + 10 V4 categories)
-│   └── service-core/                 # Java/Maven Minecraft-Plugin (economy, worlds, stats, items, gameplay, server, community)
+│   ├── management-panel/             # React/Vite + Express Docker Panel (Dockerfile ✅, target: development/production)
+│   ├── orchestrator-agent/           # Python Provisioning-/Discord-Agent (Dockerfile ✅, target: production)
+│   ├── discord-service/              # Discord.js Bot Service (Dockerfile ✅, target: production)
+│   ├── integration-service/          # Cross-Plattform-Hub (Dockerfile ✅, target: production)
+│   └── service-core/                 # Java/Maven Minecraft-Plugin (Dockerfile ✅)
+├── infrastructure/                   # Monitoring-Konfigurationen
+│   ├── prometheus/                   # Prometheus-Konfiguration (prometheus.yml)
+│   └── grafana/                      # Grafana-Dashboards und DataSources (provisioning/)
 ├── tests/                            # Repo-weite Unit-/Integration-/Smoke-Tests (identity, automation, integration, orchestrator, discord, management-panel, mobile, cli, platform-engineering, hybrid-cloud, finops, resiliency, data-platform, aiops, compliance-v4, customer-experience, soc, emerging-tech)
 └── docs/                             # Projekt-, Architektur-, Testing- und Operations-Doku (features-v3/ mit 100 feature-specs, features-v4/ mit 100 feature-specs in 10 kategorien)
 ```
@@ -910,23 +940,92 @@ pytest tests/
 
 ## docker & deployment
 
-### aktueller stand
+### Überblick
 
-• `docker-compose.yml` beschreibt den stack mit postgresql, redis, service core, orchestrator, integration service, discord service, management panel und optionalem monitoring.
-• alle compose-services besitzen dockerfiles oder fertige upstream images.
-• prometheus und grafana laufen über das optionale `monitoring` profile.
+Der gesamte Stack lässt sich mit `docker compose up` starten.
+Jeder Service besitzt ein eigenes Dockerfile oder verwendet ein offizielles Image:
 
-### stack starten
+| Service | Dockerfile / Image | Profile | Port(s) |
+|---------|-------------------|---------|---------|
+| postgres | `postgres:16-alpine` (upstream) | – | 5432 |
+| redis | `redis:7-alpine` (upstream) | – | 6379 |
+| management-panel | `services/management-panel/Dockerfile` (target: development) | – | 5173, 3001 |
+| orchestrator-agent | `services/orchestrator-agent/Dockerfile` (target: production) | – | 8500 |
+| integration-service | `services/integration-service/Dockerfile` (target: production) | – | 9000 |
+| discord-service | `services/discord-service/Dockerfile` (target: production) | – | 3000 |
+| service-core | `services/service-core/Dockerfile` | `minecraft` | – |
+| ipilot-cli | `cli/Dockerfile` (target: production) | `cli` | – |
+| prometheus | `prom/prometheus:v2.53.0` (upstream) | `monitoring` | 9090 |
+| grafana | `grafana/grafana:11.1.0` (upstream) | `monitoring` | 3000 |
 
+### Voraussetzungen
+
+- Docker Engine 24+ mit Docker Compose v2
+- `.env`-Datei im Projekt-Root (eine `.env` mit Defaults liegt bereits bei)
+
+### Stack starten
+
+**Nur Kern-Services (empfohlen für den Start):**
 ```bash
 docker compose up -d --build
 ```
 
-mit monitoring:
-
+**Mit Monitoring (Prometheus + Grafana):**
 ```bash
 docker compose --profile monitoring up -d --build
 ```
+
+**Mit Minecraft-Plugin:**
+```bash
+docker compose --profile minecraft up -d --build
+```
+
+**Vollständiger Stack (alles inkl. Monitoring + CLI):**
+```bash
+docker compose --profile monitoring --profile minecraft up -d --build
+```
+
+**CLI-Container ausführen:**
+```bash
+docker compose run --rm ipilot-cli ipilot --help
+```
+
+### Services
+
+| Name | Beschreibung | Erreichbar unter |
+|------|-------------|------------------|
+| `management-panel` | React/Vite-Frontend + Express-Backend | http://localhost:5173 |
+| `orchestrator-agent` | Python-Orchestrator mit Discord-Cogs | http://localhost:8500 |
+| `integration-service` | Cross-Plattform-API-Hub | http://localhost:9000 |
+| `discord-service` | Discord.js-Bot-Service | http://localhost:3002 |
+| `service-core` | Java/Minecraft-Plugin (nur mit `--profile minecraft`) | – |
+| `ipilot-cli` | Admin-CLI (nur mit `--profile cli` oder `docker compose run`) | – |
+| `prometheus` | Metrics-Scraping (nur mit `--profile monitoring`) | http://localhost:9090 |
+| `grafana` | Monitoring-Dashboard (nur mit `--profile monitoring`) | http://localhost:3000 |
+
+### Umgebungsvariablen
+
+Die `.env`-Datei im Projekt-Root steuert alle wichtigen Einstellungen:
+
+```env
+# Datenbank
+POSTGRES_USER=infra_pilot
+POSTGRES_PASSWORD=infra_pilot_dev_password
+POSTGRES_DB=infra_pilot
+
+# JWT
+JWT_SECRET=infra-pilot-local-dev-secret
+
+# Discord (standardmäßig deaktiviert)
+DISCORD_SERVICE_DISABLED=true
+ORCHESTRATOR_AGENT_DISABLED=true
+
+# Monitoring (optional)
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=admin
+```
+
+Ein vollständiges Template mit allen Optionen: `.env.example`
 
 ### deployment-dokumentation
 

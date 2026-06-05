@@ -1,10 +1,5 @@
 import React from 'react';
-import { colors } from '../../design-tokens/colors';
-import { typography } from '../../design-tokens/typography';
-import { space } from '../../design-tokens/space';
-import { radii } from '../../design-tokens/radius';
-import { shadows } from '../../design-tokens/shadow';
-import { breakpoints } from '../../design-tokens/breakpoints';
+import { colors, typography, space, radii, shadows, breakpoints } from '../../design-tokens/tokens';
 
 type Theme = typeof colors & typeof typography & typeof space & typeof radii & typeof shadows & typeof breakpoints;
 

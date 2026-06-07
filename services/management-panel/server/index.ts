@@ -2299,6 +2299,19 @@ app.post('/api/apps/:appId/modpacks/install', verifyAuth, async (req: Request, r
     return res.status(400).json({ error: 'modpackId and platform are required' });
   }
 
+  const allowedPlatforms = new Set(['modrinth', 'curseforge']);
+  if (!allowedPlatforms.has(platform)) {
+    return res.status(400).json({ error: 'Invalid platform' });
+  }
+
+  const modpackParts = String(modpackId).split(':');
+  if (modpackParts.length < 2 || !modpackParts[1]) {
+    return res.status(400).json({ error: 'Invalid modpackId format' });
+  }
+
+  const safePlatform = encodeURIComponent(platform);
+  const safeModpackRef = encodeURIComponent(modpackParts[1]);
+
   try {
     const { data: app, error: appError } = await supabase
       .from('docker_apps')
@@ -2324,7 +2337,7 @@ app.post('/api/apps/:appId/modpacks/install', verifyAuth, async (req: Request, r
     await logAudit(userId, 'modpack:install', 'modpack', appId, null, { modpackId, platform });
 
     // Fire-and-forget: trigger installation asynchronously
-    fetch(`${INTEGRATION_SERVICE_URL}/api/modpacks/${platform}/${modpackId.split(':')[1]}`)
+    fetch(`${INTEGRATION_SERVICE_URL}/api/modpacks/${safePlatform}/${safeModpackRef}`)
       .then(r => r.json())
       .then(details => {
         if (details.error) {

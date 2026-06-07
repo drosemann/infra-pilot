@@ -223,8 +223,9 @@ def setup_orchestration_routes(app, wf_manager, ansible_manager, pipeline_manage
         try:
             result = await chaos_manager.run_experiment(request.match_info["experiment_id"])
             return web.json_response(result)
-        except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+        except ValueError:
+            logger.warning("Invalid chaos experiment request", exc_info=True)
+            raise web.HTTPBadRequest(text="Invalid chaos experiment request.")
 
     async def stop_chaos_experiment(request):
         result = await chaos_manager.stop_experiment(request.match_info["experiment_id"])

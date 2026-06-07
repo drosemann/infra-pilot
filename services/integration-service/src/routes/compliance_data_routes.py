@@ -26,8 +26,9 @@ def setup_classification_routes(app, classification_engine):
         try:
             result = classification_engine.label_resource(data["resource_id"], data["label"])
             return web.json_response({"success": result})
-        except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+        except ValueError:
+            logger.warning("Invalid label request in /api/v1/classification/label", exc_info=True)
+            raise web.HTTPBadRequest(text="Invalid request payload.")
 
     async def classification_stats(request):
         stats = classification_engine.get_statistics()

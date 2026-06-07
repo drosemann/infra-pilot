@@ -11,6 +11,9 @@ on:
     paths:
       - 'services/integration-service/**'
 
+permissions:
+  contents: read
+
 env:
   SERVICE_PATH: services/integration-service
   REGISTRY: ghcr.io

@@ -5,6 +5,7 @@ import { apiClient } from "../lib/api";
 import { clearAccessToken } from "../lib/auth";
 import { useConfig } from "../lib/types";
 import { Sidebar } from "./Sidebar";
+import { UserAvatar } from "./UserAvatar";
 import DemoFlagBadge from "./DemoFlagBadge";
 import { Announcements } from "./accessibility/Announcements";
 
@@ -122,12 +123,11 @@ export const MainLayout = () => {
                         {user.role || "Admin"}
                       </p>
                     </div>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-white via-slate-200 to-slate-500 text-sm font-bold text-black shadow-lg shadow-white/10">
-                      {(user.display_name || "JD")
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")}
-                    </div>
+                    <UserAvatar
+                      value={user.id || user.email}
+                      size={36}
+                      className="rounded-full shadow-lg shadow-white/10"
+                    />
                     <button
                       onClick={handleLogout}
                       className="ml-2 rounded-full border border-white/10 p-1 transition-colors hover:bg-white/10"

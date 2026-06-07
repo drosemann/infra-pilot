@@ -532,6 +532,7 @@ real-time monitoring is handled via:
 - [x] prepaid billing (pay-as-you-go balance system)
 - [x] modpack-installer (one-click curseforge/modrinth install)
 - [x] 2fa (totp) (two-factor authentication)
+- [x] user avatar (identicon) — automatisch generierte profilbilder via jdenticon (kein upload nötig)
 - [x] discord token validation (validate bot token before start)
 
 ## learn more

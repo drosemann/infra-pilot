@@ -3011,6 +3011,10 @@ app.post('/api/i18n/translations', verifyAuth, async (req: Request, res: Respons
   if (!locale || !key || !value) {
     return res.status(400).json({ error: 'locale, key, and value are required' });
   }
+  const forbiddenKeys = new Set(['__proto__', 'constructor', 'prototype']);
+  if (forbiddenKeys.has(locale) || forbiddenKeys.has(key)) {
+    return res.status(400).json({ error: 'Invalid locale or key' });
+  }
   try {
     const { data } = await supabase
       .from('shared_config')

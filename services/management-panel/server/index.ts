@@ -1007,7 +1007,7 @@ app.get('/api/apps/:appId/config/read', verifyAuth, async (req: Request, res: Re
     if (error || !app) return res.status(404).json({ error: 'App not found' });
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
-    const { stdout, stderr } = await execAsync(`docker exec ${app.container_id} cat ${file}`).catch((err: any) => {
+    const { stdout, stderr } = await runCommand('docker', ['exec', app.container_id, 'cat', file]).catch((err: any) => {
       throw new Error(`Failed to read file: ${err.message}`);
     });
 

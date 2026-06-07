@@ -12,7 +12,7 @@ const candidates = [
 
 export default function IdleResourceReclamationPanel() {
   const totalSavings = candidates.reduce((sum, c) => {
-    const hourly = parseFloat(c.savings.replace("$", "").replace("/hr", ""));
+    const hourly = parseFloat(c.savings.replace(/[^0-9.]+/g, ""));
     return sum + hourly;
   }, 0);
 

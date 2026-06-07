@@ -11,6 +11,9 @@ on:
     paths:
       - 'services/orchestrator-agent/**'
 
+permissions:
+  contents: read
+
 env:
   SERVICE_PATH: services/orchestrator-agent
   REGISTRY: ghcr.io

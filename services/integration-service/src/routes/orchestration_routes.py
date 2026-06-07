@@ -61,7 +61,8 @@ def setup_orchestration_routes(app, wf_manager, ansible_manager, pipeline_manage
             result = await ansible_manager.ansible.execute_playbook(data["playbook_id"], data.get("inventory_override"), data.get("extra_vars"), data.get("tags"), data.get("limit"))
             return web.json_response(result)
         except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+            logger.exception("Invalid execute_playbook request: %s", e)
+            raise web.HTTPBadRequest(text="Invalid request.")
 
     async def ansible_executions(request):
         playbook_id = request.query.get("playbook_id")
@@ -82,7 +83,8 @@ def setup_orchestration_routes(app, wf_manager, ansible_manager, pipeline_manage
             result = await ansible_manager.salt.apply_state(data["state_id"], data.get("target_minions"), data.get("pillar"))
             return web.json_response(result)
         except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+            logger.exception("Invalid apply_salt_state request: %s", e)
+            raise web.HTTPBadRequest(text="Invalid request.")
 
     async def list_pipelines(request):
         status = request.query.get("status")
@@ -104,7 +106,8 @@ def setup_orchestration_routes(app, wf_manager, ansible_manager, pipeline_manage
             run = await pipeline_manager.run_pipeline(request.match_info["pipeline_id"], data.get("triggered_by", "manual"), data.get("variables"))
             return web.json_response(run)
         except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+            logger.exception("Invalid run_pipeline request: %s", e)
+            raise web.HTTPBadRequest(text="Invalid request.")
 
     async def get_pipeline_runs(request):
         limit = int(request.query.get("limit", 50))

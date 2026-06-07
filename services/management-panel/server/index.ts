@@ -3021,8 +3021,20 @@ app.post('/api/i18n/translations', verifyAuth, async (req: Request, res: Respons
       .select('value')
       .eq('key', 'i18n_translations')
       .single();
-    const translations = (data?.value as Record<string, any>) || {};
-    if (!translations[locale]) translations[locale] = {};
+    const rawTranslations = (data?.value && typeof data.value === 'object') ? (data.value as Record<string, any>) : {};
+    const translations: Record<string, any> = Object.create(null);
+    for (const [loc, entries] of Object.entries(rawTranslations)) {
+      if (loc === '__proto__' || loc === 'constructor' || loc === 'prototype') continue;
+      if (entries && typeof entries === 'object') {
+        const safeEntries: Record<string, any> = Object.create(null);
+        for (const [k, v] of Object.entries(entries as Record<string, any>)) {
+          if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+          safeEntries[k] = v;
+        }
+        translations[loc] = safeEntries;
+      }
+    }
+    if (!translations[locale] || typeof translations[locale] !== 'object') translations[locale] = Object.create(null);
     translations[locale][key] = value;
     await supabase
       .from('shared_config')

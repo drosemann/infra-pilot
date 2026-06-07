@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 const KB_DIR = path.resolve(process.cwd(), 'data', 'knowledge-base');
+const SAFE_ARTICLE_ID_RE = /^[A-Za-z0-9_-]+$/;
 
 export interface KBArticle {
   id: string;
@@ -29,8 +30,16 @@ async function ensureDir() {
   await fs.mkdir(KB_DIR, { recursive: true });
 }
 
+function sanitizeArticleId(id: string): string {
+  if (!SAFE_ARTICLE_ID_RE.test(id)) {
+    throw new Error('Invalid article id');
+  }
+  return id;
+}
+
 function articlePath(id: string): string {
-  return path.join(KB_DIR, `${id}.md`);
+  const safeId = sanitizeArticleId(id);
+  return path.join(KB_DIR, `${safeId}.md`);
 }
 
 function metaPath(): string {

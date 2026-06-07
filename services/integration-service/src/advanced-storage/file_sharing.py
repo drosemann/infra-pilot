@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import urlparse, quote
 
 logger = logging.getLogger(__name__)
+PBKDF2_ITERATIONS = 310000
+PBKDF2_SALT_BYTES = 16
 
 
 class SharingBackend(Enum):
@@ -187,7 +189,13 @@ class FileSharingManager:
 
         password_hash = None
         if password:
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            salt = secrets.token_bytes(PBKDF2_SALT_BYTES)
+            derived = hashlib.pbkdf2_hmac(
+                "sha256", password.encode(), salt, PBKDF2_ITERATIONS
+            )
+            password_hash = (
+                f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${derived.hex()}"
+            )
 
         link = ShareLink(
             link_id=share_id,
@@ -236,7 +244,18 @@ class FileSharingManager:
         if link.password_hash:
             if not password:
                 raise PermissionError("Password required")
-            if hashlib.sha256(password.encode()).hexdigest() != link.password_hash:
+            try:
+                algorithm, iterations_str, salt_hex, expected_hex = link.password_hash.split("$", 3)
+                if algorithm != "pbkdf2_sha256":
+                    raise ValueError("Unsupported password hash algorithm")
+                iterations = int(iterations_str)
+                salt = bytes.fromhex(salt_hex)
+                expected = bytes.fromhex(expected_hex)
+            except (ValueError, TypeError):
+                raise PermissionError("Incorrect password")
+
+            calculated = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+            if not hmac.compare_digest(calculated, expected):
                 raise PermissionError("Incorrect password")
 
         if link.allowed_users and user and user not in link.allowed_users:

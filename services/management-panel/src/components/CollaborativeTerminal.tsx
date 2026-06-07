@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Users, Share2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
+const generateRandomSuffix = (length = 4): string => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const randomBytes = new Uint8Array(length);
+  window.crypto.getRandomValues(randomBytes);
+  return Array.from(randomBytes, (byte) => chars[byte % chars.length]).join('');
+};
+
 interface TerminalUser {
   userId: string;
   displayName: string;
@@ -31,7 +38,7 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [showChat, setShowChat] = useState(false);
-  const [userName, setUserName] = useState(initialName || `User_${Math.random().toString(36).slice(2, 6)}`);
+  const [userName, setUserName] = useState(initialName || `User_${generateRandomSuffix(4)}`);
   const wsRef = useRef<WebSocket | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);

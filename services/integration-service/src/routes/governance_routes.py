@@ -105,8 +105,9 @@ def setup_compliance_routes(app, compliance_scanner):
         try:
             report = compliance_scanner.generate_report(scan_id)
             return web.json_response(report)
-        except ValueError as e:
-            raise web.HTTPNotFound(text=str(e))
+        except ValueError:
+            logger.warning("Failed to generate compliance report for scan_id=%s", scan_id, exc_info=True)
+            raise web.HTTPNotFound(text="Report not found")
 
     async def overall_status(request):
         status = compliance_scanner.get_overall_status()

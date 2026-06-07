@@ -22,8 +22,17 @@ function detectLanguage(filename: string): 'yaml' | 'json' | 'properties' | 'tex
   return 'text';
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function highlightSyntax(code: string, language: string): string {
-  let html = code;
+  let html = escapeHtml(code);
   if (language === 'json') {
     html = html.replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="json-key">$1</span>:');
     html = html.replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="json-string">$1</span>');

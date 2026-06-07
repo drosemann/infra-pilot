@@ -150,8 +150,9 @@ def setup_identity_routes(app, identity_manager, webauthn_manager, session_manag
                 data.get("reason", ""), data.get("resource_ids"),
                 data.get("is_break_glass", False))
             return web.json_response(result)
-        except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+        except ValueError:
+            logger.warning("Invalid PAM access request payload", exc_info=True)
+            raise web.HTTPBadRequest(text="Invalid request")
 
     async def pam_approve(request):
         data = await request.json()

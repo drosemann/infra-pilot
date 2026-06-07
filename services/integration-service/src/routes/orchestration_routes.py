@@ -189,8 +189,9 @@ def setup_orchestration_routes(app, wf_manager, ansible_manager, pipeline_manage
         try:
             window = maintenance_planner.create_window(data["name"], data.get("description", ""), data["start_time"], data["end_time"], data["affected_resources"], data["action_plan"], data.get("rollback_plan", ""), data.get("assigned_team", "ops"), data.get("requires_approval", True), data.get("notification_channels"), data.get("tags"))
             return web.json_response(window, status=201)
-        except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+        except ValueError:
+            logger.warning("Invalid maintenance window request", exc_info=True)
+            raise web.HTTPBadRequest(text="Invalid maintenance window request.")
 
     async def list_runbook_templates(request):
         category = request.query.get("category")

@@ -161,8 +161,8 @@ class SecretsManager:
                         if resp.status == 200:
                             vault_data = await resp.json()
                             entry['value'] = vault_data.get('data', {}).get('value', '')
-            except Exception as e:
-                logger.warning(f"Vault rotation failed for {secret_id}: {e}")
+            except Exception:
+                logger.warning("Vault rotation failed")
 
         entry['updated_at'] = datetime.now().isoformat()
         entry['last_rotated_at'] = datetime.now().isoformat()

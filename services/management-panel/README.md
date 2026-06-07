@@ -169,6 +169,47 @@ see the repository guide at [`../../docs/desktop/zero-native-management-panel.md
 | database | postgresql + supabase | structured, rls security |
 | auth | supabase auth | built-in, scalable |
 
+## canvas visualizations
+
+5 seiten nutzen die raw **Canvas 2D API** für interaktive infrastructure-visualisierungen:
+
+| Page | File | Purpose |
+|------|------|---------|
+| Topology3D | `src/pages/Topology3D.tsx` | 3d infrastructure topology graph (nodes, edges, forces) |
+| DependencyGraphViewer | `src/pages/DependencyGraphViewer.tsx` | Service dependency graph with zoom/pan |
+| GeolocationHeatmap | `src/pages/GeolocationHeatmap.tsx` | World-map heatmap + timelapse overlay |
+| BIDashboard | `src/pages/BIDashboard.tsx` | Bar charts, pie charts, metric cards |
+| CostAnalytics | `src/pages/CostAnalytics.tsx` | Cost trends, mini bar charts, sparklines |
+
+### HTML-in-Canvas rendering
+
+Alle text-labels in diesen canvas-zeichnungen werden via der experimentellen **HTML-in-Canvas** API gerendert — dem [WICG `layoutsubtree` + `drawElementImage`](https://github.com/WICG/canvas-draw-element) vorschlag.
+
+**Funktionsweise:**
+- In `useEffect` werden `document.createElement('span')` elemente erstellt und per `canvas.appendChild(el)` direkt in den canvas-dom eingehängt (erforderlich für `drawElementImage`)
+- Ein `paint`-event-listener auf dem canvas führt `ctx.drawElementImage(el, x, y)` aus, sobald der browser das layout des elements berechnet hat
+- Der zurückgegebene `DOMMatrix` wird auf `el.style.transform` gesetzt, damit canvas-hit-testing (z. B. klick-erkennung) mit den gerenderten positionen synchron bleibt
+- Geometrie (kreise, edgelines, balken) wird weiterhin mit `ctx.arc / fillRect / moveTo` gezeichnet — nur text-label werden als DOM-Elemente gehandhabt
+
+**Progressive enhancement / fallback:**
+```typescript
+const hasDrawElement = typeof (ctx as any).drawElementImage === 'function';
+if (hasDrawElement) {
+  /* HTML-in-Canvas via drawElementImage */
+} else {
+  ctx.fillText(label, x, y); /* fallback */
+}
+```
+
+**Vorteile:**
+- Kein manuelles text-trunkieren, text-wrapping oder `measureText` notwendig
+- Volle CSS-styling-fähigkeit (font-family, font-size, color, text-shadow, white-space)
+- Automatische i18n / RTL-unterstützung
+- Accessibility (screenreader können den DOM-text erfassen)
+- Vorbereitet für zukünftige browser-standards
+
+> **Hinweis:** Die HTML-in-Canvas API ist aktuell (2026) experimentell und hinter `chrome://flags/#canvas-draw-element` verfügbar. In browsern ohne support wird automatisch auf `fillText` zurückgefallen.
+
 ## project structure
 
 ```

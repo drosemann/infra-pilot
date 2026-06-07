@@ -72,6 +72,7 @@ function project3D(x: number, y: number, z: number, angleX: number, angleY: numb
 export default function Topology3D() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const projectedRef = useRef<any[]>([]);
   const [nodes, setNodes] = useState<TopoNode[]>([]);
   const [edges, setEdges] = useState<TopoEdge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +87,33 @@ export default function Topology3D() {
   const [autoRotate, setAutoRotate] = useState(true);
   const [dimensions, setDimensions] = useState({ w: 900, h: 600 });
   const animRef = useRef<number>(0);
+
+  // Paint event handler for HTML-in-Canvas labels
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.setAttribute('layoutsubtree', '');
+    const onPaint = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx || typeof (ctx as any).drawElementImage !== 'function') return;
+      const projected = projectedRef.current;
+      if (projected.length === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const node of projected) {
+        const span = canvas.querySelector<HTMLSpanElement>(`[data-t3d="${node.id}"]`);
+        if (!span) continue;
+        try {
+          const transform = (ctx as any).drawElementImage(span, node.sx, node.sy + node.drawR + 4);
+          if (transform) span.style.transform = transform.toString();
+        } catch {}
+      }
+      ctx.restore();
+    };
+    canvas.addEventListener('paint', onPaint);
+    return () => canvas.removeEventListener('paint', onPaint);
+  }, []);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -195,9 +223,28 @@ export default function Topology3D() {
       .filter(n => filterType === 'all' || n.type === filterType)
       .map(n => {
         const { sx, sy, scale: s } = project3D(n.position.x * scale, n.position.y * scale, n.position.z * scale, angleX, angleY, distance, w, h);
-        return { ...n, sx, sy, depth: s };
+        const isSel = selectedNode?.id === n.id;
+        const isHov = hoveredNode?.id === n.id;
+        const drawR = (isSel ? 16 : isHov ? 14 : 12) * s;
+        return { ...n, sx, sy, depth: s, drawR };
       })
       .sort((a, b) => a.depth - b.depth);
+
+    // Store projected for paint event + update HTML labels
+    projectedRef.current = projected;
+    const supportsHtmlLabel = typeof (ctx as any).drawElementImage === 'function';
+    if (supportsHtmlLabel) {
+      const existing = canvas.querySelectorAll('[data-t3d]');
+      const projectedIds = new Set(projected.map(n => n.id));
+      for (const el of existing) { if (!projectedIds.has(el.getAttribute('data-t3d')!)) el.remove(); }
+      projected.forEach(node => {
+        let span = canvas.querySelector<HTMLSpanElement>(`[data-t3d="${node.id}"]`);
+        if (!span) { span = document.createElement('span'); span.setAttribute('data-t3d', node.id); canvas.appendChild(span); }
+        span.textContent = node.name;
+        span.style.cssText = `font: bold ${Math.round(9 * node.depth)}px sans-serif; color: #e2e8f0; white-space: nowrap; pointer-events: none; position: absolute; left: 0; top: 0;`;
+      });
+      if (typeof (canvas as any).requestPaint === 'function') (canvas as any).requestPaint();
+    }
 
     // Draw edges
     for (const edge of edges) {
@@ -285,13 +332,15 @@ export default function Topology3D() {
       ctx.textBaseline = 'middle';
       ctx.fillText(icon, node.sx, node.sy);
 
-      // Label
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = `bold ${Math.round(9 * node.depth)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      const label = node.name.length > 14 ? node.name.slice(0, 12) + '..' : node.name;
-      ctx.fillText(label, node.sx, node.sy + r + 4);
+      // Label — HTML-in-Canvas via paint event, fillText fallback
+      if (!supportsHtmlLabel) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = `bold ${Math.round(9 * node.depth)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const label = node.name.length > 14 ? node.name.slice(0, 12) + '..' : node.name;
+        ctx.fillText(label, node.sx, node.sy + r + 4);
+      }
 
       // CPU bar
       if (node.depth > 0.5) {

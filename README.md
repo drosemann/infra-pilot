@@ -250,6 +250,7 @@ modernes docker-management-panel für self-hoster und hosting-workflows.
 • modi: personal mode als standard, business mode für kunden-, plan- und demo-datenflüsse.
 • features: app-/container-crud, logs, ressourcenlimits, setup-flow, seed demo feature gate, optionale zero-native desktop-shell.
 • dashboards/seiten: dashboard, appdetail, appform, monitoring, accesslogs, backups, reports, settings, auditlog, customers, billing, configeditor, cronjobmanager, databasemanager, gitdeploymanager, realtimemetrics, modpackbrowser, twofactorsetup, marketplace, dashboardbuilder, knowledgebase, themestudio, collaborativeterminal.
+• canvas-rendering: 5 seiten nutzen die raw Canvas 2D API für visualisierungen (Topology3D, DependencyGraphViewer, GeolocationHeatmap, BIDashboard, CostAnalytics). Alle Text-Labels werden via **HTML-in-Canvas** (`drawElementImage`) als echte DOM-Elemente gerendert — mit automatischem Fallback auf `fillText` wenn die API nicht verfügbar ist. Dadurch entfallen manuelles Text-Trunkieren und `measureText`, volle Accessibility und i18n.
 • real-time: websocket-server für live-container-logs (`docker logs -f`) und metrik-streaming (`docker stats`, 2s-intervall). live-cpu/memory/disk-gauges mit sparklines und netdata/grafana-integration.
 • globale suche: cmd+k-palette mit echtzeit-suche über apps, backups und audit-logs.
 • audit trail: append-only-log aller mutationen mit timeline-viewer und filterung.

@@ -142,6 +142,7 @@ type ViewMode = 'heatmap' | 'markers' | 'regions';
 export default function GeolocationHeatmap() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
+  const dimsRef = useRef({ w: 0, h: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('heatmap');
   const [metric, setMetric] = useState<string>('requests');
   const [heatmapData, setHeatmapData] = useState<HeatmapDataPoint[]>([]);
@@ -225,6 +226,41 @@ export default function GeolocationHeatmap() {
     return () => clearInterval(interval);
   }, [tlPlaying, timelapseFrames.length]);
 
+  // Paint event for HTML-in-Canvas legend + overlays
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.setAttribute('layoutsubtree', '');
+    const onPaint = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx || typeof (ctx as any).drawElementImage !== 'function') return;
+      const dpr = window.devicePixelRatio || 1;
+      const { w, h } = dimsRef.current;
+      if (!w || !h) return;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Legend
+      const legendEl = canvas.querySelector<HTMLDivElement>('[data-gh-legend]');
+      if (legendEl) {
+        try {
+          const transform = (ctx as any).drawElementImage(legendEl, 12, h - 40);
+          if (transform) legendEl.style.transform = transform.toString();
+        } catch {}
+      }
+      // Timelapse overlay
+      const tlEl = canvas.querySelector<HTMLSpanElement>('[data-gh-tl]');
+      if (tlEl) {
+        try {
+          const transform = (ctx as any).drawElementImage(tlEl, w - 12, 24);
+          if (transform) tlEl.style.transform = transform.toString();
+        } catch {}
+      }
+      ctx.restore();
+    };
+    canvas.addEventListener('paint', onPaint);
+    return () => canvas.removeEventListener('paint', onPaint);
+  }, []);
+
   // Canvas rendering
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -242,6 +278,7 @@ export default function GeolocationHeatmap() {
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
     ctx.scale(dpr, dpr);
+    dimsRef.current = { w, h };
 
     // Background
     ctx.fillStyle = '#0f172a';
@@ -378,8 +415,19 @@ export default function GeolocationHeatmap() {
       }
     }
 
-    // Timelapse overlay info
-    if (activeTimelapse && timelapseFrames[tlFrame]) {
+    // Timelapse overlay info — HTML-in-Canvas or fillText fallback
+    const supportsHtml = typeof (ctx as any).drawElementImage === 'function';
+    if (supportsHtml) {
+      const tlEl = canvas.querySelector<HTMLSpanElement>('[data-gh-tl]');
+      if (activeTimelapse && timelapseFrames[tlFrame]) {
+        const ts = new Date(timelapseFrames[tlFrame].timestamp);
+        let el = tlEl;
+        if (!el) { el = document.createElement('span'); el.setAttribute('data-gh-tl', ''); canvas.appendChild(el); }
+        el.textContent = `Frame: ${tlFrame + 1}/${timelapseFrames.length} - ${ts.toLocaleString()}`;
+        el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font:12px sans-serif;color:#ffffffcc;white-space:nowrap;';
+      } else if (el) { el.remove(); }
+      if (typeof (canvas as any).requestPaint === 'function') (canvas as any).requestPaint();
+    } else if (activeTimelapse && timelapseFrames[tlFrame]) {
       ctx.fillStyle = '#ffffffcc';
       ctx.font = '12px sans-serif';
       ctx.textAlign = 'right';
@@ -387,29 +435,36 @@ export default function GeolocationHeatmap() {
       ctx.fillText(`Frame: ${tlFrame + 1}/${timelapseFrames.length} - ${ts.toLocaleString()}`, w - 12, 24);
     }
 
-    // Legend
-    const legendY = h - 40;
-    ctx.fillStyle = '#1e293be0';
-    ctx.fillRect(12, legendY, 180, 30);
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(12, legendY, 180, 30);
-
-    const legendColors = ['#1a365d', '#2563eb', '#60a5fa', '#93c5fd'];
-    const barW = 120;
-    const barH = 8;
-    const barX = 24;
-    const barY2 = legendY + 11;
-    for (let i = 0; i < legendColors.length; i++) {
-      ctx.fillStyle = legendColors[i];
-      ctx.fillRect(barX + (i / legendColors.length) * barW, barY2, barW / legendColors.length, barH);
+    // Legend — HTML-in-Canvas or canvas fallback
+    if (supportsHtml) {
+      const legendEl = canvas.querySelector<HTMLDivElement>('[data-gh-legend]');
+      let el = legendEl;
+      if (!el) { el = document.createElement('div'); el.setAttribute('data-gh-legend', ''); canvas.appendChild(el); }
+      el.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;display:flex;align-items:center;gap:8px;padding:4px 12px;background:#1e293be0;border:1px solid #334155;border-radius:4px;font:9px sans-serif;color:#94a3b8;';
+      el.innerHTML = '<div style="width:120px;height:8px;border-radius:2px;background:linear-gradient(to right,#1a365d,#2563eb,#60a5fa,#93c5fd)"></div><span>Low</span><span>High</span>';
+    } else {
+      const legendY = h - 40;
+      ctx.fillStyle = '#1e293be0';
+      ctx.fillRect(12, legendY, 180, 30);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(12, legendY, 180, 30);
+      const legendColors = ['#1a365d', '#2563eb', '#60a5fa', '#93c5fd'];
+      const barW = 120;
+      const barH = 8;
+      const barX = 24;
+      const barY2 = legendY + 11;
+      for (let i = 0; i < legendColors.length; i++) {
+        ctx.fillStyle = legendColors[i];
+        ctx.fillRect(barX + (i / legendColors.length) * barW, barY2, barW / legendColors.length, barH);
+      }
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Low', barX, legendY + 26);
+      ctx.textAlign = 'right';
+      ctx.fillText('High', barX + barW, legendY + 26);
     }
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '9px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('Low', barX, legendY + 26);
-    ctx.textAlign = 'right';
-    ctx.fillText('High', barX + barW, legendY + 26);
   }, [heatmapData, regions, timelapseFrames, tlFrame, viewMode, metric, mousePos, drillDownCity]);
 
   // Handle canvas click for drill-down

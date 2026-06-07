@@ -99,6 +99,7 @@ function forceSimulation(nodes: LayoutNode[], edges: DependencyEdge[], width: nu
 export default function DependencyGraphViewer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const projectedRef = useRef<any[]>([]);
   const [graph, setGraph] = useState<DependencyGraph | null>(null);
   const [layoutNodes, setLayoutNodes] = useState<LayoutNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<DependencyNode | null>(null);
@@ -124,6 +125,62 @@ export default function DependencyGraphViewer() {
   }, []);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
+
+  // Paint event for HTML-in-Canvas labels
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.setAttribute('layoutsubtree', '');
+    const onPaint = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx || typeof (ctx as any).drawElementImage !== 'function') return;
+      const projected = projectedRef.current;
+      if (projected.length === 0) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = dimensions.w || 900;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const node of projected) {
+        const el = canvas.querySelector<HTMLDivElement>(`[data-dgv="${node.id}"]`);
+        if (!el) continue;
+        try {
+          const r = 28 + 4;
+          const transform = (ctx as any).drawElementImage(el, node.x, node.y + r + 14);
+          if (transform) el.style.transform = transform.toString();
+        } catch {}
+      }
+      if (graph) {
+        for (const edge of graph.edges) {
+          const src = projected.find(n => n.id === edge.source);
+          const tgt = projected.find(n => n.id === edge.target);
+          if (!src || !tgt || !edge.label) continue;
+          const midX = (src.x + tgt.x) / 2;
+          const midY = (src.y + tgt.y) / 2;
+          const dy = tgt.y - src.y;
+          const dx = tgt.x - src.x;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const nx = -dy / dist;
+          const ny = dx / dist;
+          const eSpan = canvas.querySelector<HTMLSpanElement>(`[data-dgv-e="${edge.id}"]`);
+          if (!eSpan) continue;
+          try {
+            const transform = (ctx as any).drawElementImage(eSpan, midX + nx * 12, midY + ny * 12);
+            if (transform) eSpan.style.transform = transform.toString();
+          } catch {}
+        }
+      }
+      const zoomEl = canvas.querySelector<HTMLSpanElement>('[data-dgv-zoom]');
+      if (zoomEl) {
+        try {
+          const transform = (ctx as any).drawElementImage(zoomEl, w - 12, 20);
+          if (transform) zoomEl.style.transform = transform.toString();
+        } catch {}
+      }
+      ctx.restore();
+    };
+    canvas.addEventListener('paint', onPaint);
+    return () => canvas.removeEventListener('paint', onPaint);
+  }, [graph]);
 
   // Compute layout when graph changes
   useEffect(() => {
@@ -161,6 +218,38 @@ export default function DependencyGraphViewer() {
     ctx.clearRect(0, 0, dimensions.w, dimensions.h);
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, dimensions.w, dimensions.h);
+
+    // Store projected for paint event + update HTML labels
+    projectedRef.current = layoutNodes;
+    const supportsHtml = typeof (ctx as any).drawElementImage === 'function';
+    if (supportsHtml) {
+      const existing = canvas.querySelectorAll('[data-dgv]');
+      const ids = new Set(layoutNodes.map(n => n.id));
+      for (const el of existing) { if (!ids.has(el.getAttribute('data-dgv')!)) el.remove(); }
+      layoutNodes.forEach(node => {
+        let div = canvas.querySelector<HTMLDivElement>(`[data-dgv="${node.id}"]`);
+        if (!div) { div = document.createElement('div'); div.setAttribute('data-dgv', node.id); canvas.appendChild(div); }
+        div.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;text-align:center;';
+        div.innerHTML = `<div style="font:${selectedNode?.id === node.id ? 'bold 10px sans-serif' : '9px sans-serif'};color:#e2e8f0">${node.name}</div><div style="font:7px sans-serif;color:#64748b">${node.type}</div>`;
+      });
+      if (graph) {
+        const eExisting = canvas.querySelectorAll('[data-dgv-e]');
+        const eIds = new Set(graph.edges.map(e => e.id));
+        for (const el of eExisting) { if (!eIds.has(el.getAttribute('data-dgv-e')!)) el.remove(); }
+        graph.edges.forEach(edge => {
+          if (!edge.label) return;
+          let span = canvas.querySelector<HTMLSpanElement>(`[data-dgv-e="${edge.id}"]`);
+          if (!span) { span = document.createElement('span'); span.setAttribute('data-dgv-e', edge.id); canvas.appendChild(span); }
+          span.textContent = edge.label;
+          span.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font:9px sans-serif;color:#94a3b8;white-space:nowrap;';
+        });
+      }
+      let zoomEl = canvas.querySelector<HTMLSpanElement>('[data-dgv-zoom]');
+      if (!zoomEl) { zoomEl = document.createElement('span'); zoomEl.setAttribute('data-dgv-zoom', ''); canvas.appendChild(zoomEl); }
+      zoomEl.textContent = `${Math.round(zoom * 100)}% | ${layoutNodes.length} nodes | ${graph?.edges.length || 0} edges`;
+      zoomEl.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font:11px sans-serif;color:#94a3b8;white-space:nowrap;';
+      if (typeof (canvas as any).requestPaint === 'function') (canvas as any).requestPaint();
+    }
 
     ctx.save();
     ctx.translate(pan.x, pan.y);
@@ -207,8 +296,8 @@ export default function DependencyGraphViewer() {
         ctx.closePath();
         ctx.fill();
 
-        // Edge label
-        if (edge.label) {
+        // Edge label — HTML-in-Canvas via paint event, fillText fallback
+        if (edge.label && !supportsHtml) {
           ctx.fillStyle = '#94a3b8';
           ctx.font = '9px sans-serif';
           ctx.textAlign = 'center';
@@ -250,26 +339,28 @@ export default function DependencyGraphViewer() {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // Node label
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = isSelected ? 'bold 10px sans-serif' : '9px sans-serif';
-      ctx.textAlign = 'center';
-      const label = node.name.length > 14 ? node.name.slice(0, 12) + '..' : node.name;
-      ctx.fillText(label, x, y + r + 14);
-
-      // Type label
-      ctx.fillStyle = '#64748b';
-      ctx.font = '7px sans-serif';
-      ctx.fillText(node.type, x, y + r + 24);
+      // Node label — HTML-in-Canvas via paint event, fillText fallback
+      if (!supportsHtml) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = isSelected ? 'bold 10px sans-serif' : '9px sans-serif';
+        ctx.textAlign = 'center';
+        const label = node.name.length > 14 ? node.name.slice(0, 12) + '..' : node.name;
+        ctx.fillText(label, x, y + r + 14);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '7px sans-serif';
+        ctx.fillText(node.type, x, y + r + 24);
+      }
     }
 
     ctx.restore();
 
-    // Zoom indicator
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${Math.round(zoom * 100)}% | ${layoutNodes.length} nodes | ${graph?.edges.length || 0} edges`, dimensions.w - 12, 20);
+    // Zoom indicator — HTML-in-Canvas via paint event, fillText fallback
+    if (!supportsHtml) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${Math.round(zoom * 100)}% | ${layoutNodes.length} nodes | ${graph?.edges.length || 0} edges`, dimensions.w - 12, 20);
+    }
 
   }, [layoutNodes, graph, selectedNode, zoom, pan, dimensions]);
 

@@ -40,9 +40,11 @@ function SparklineCanvas({ data, color, height, width, fillColor }: { data: numb
 
 function BarChart({ data, color, height, width }: { data: { label: string; value: number }[]; color: string; height: number; width: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const paintedRef = useRef(false);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || data.length === 0) return;
+    canvas.setAttribute('layoutsubtree', '');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
@@ -53,25 +55,58 @@ function BarChart({ data, color, height, width }: { data: { label: string; value
     const max = Math.max(...data.map(d => d.value), 1);
     const barW = width / data.length * 0.7;
     const gap = width / data.length * 0.3;
+    const supportsHtml = typeof (ctx as any).drawElementImage === 'function';
     data.forEach((d, i) => {
       const x = i * (barW + gap) + gap / 2;
       const barH = (d.value / max) * (height - 20);
       ctx.fillStyle = color;
       ctx.fillRect(x, height - barH - 10, barW, barH);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '8px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(d.label, x + barW / 2, height - 2);
+      if (supportsHtml) {
+        let span = canvas.querySelector<HTMLSpanElement>(`[data-bc="${i}"]`);
+        if (!span) { span = document.createElement('span'); span.setAttribute('data-bc', String(i)); canvas.appendChild(span); }
+        span.textContent = d.label;
+        span.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font:8px sans-serif;color:#94a3b8;white-space:nowrap;';
+      } else {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(d.label, x + barW / 2, height - 2);
+      }
     });
+    if (supportsHtml && !paintedRef.current) {
+      paintedRef.current = true;
+      const onPaint = () => {
+        const c = canvasRef.current;
+        const cx = c?.getContext('2d');
+        if (!cx || typeof (cx as any).drawElementImage !== 'function') return;
+        const dp = window.devicePixelRatio || 1;
+        cx.save();
+        cx.setTransform(dp, 0, 0, dp, 0, 0);
+        data.forEach((d, i) => {
+          const span = canvas.querySelector<HTMLSpanElement>(`[data-bc="${i}"]`);
+          if (!span) return;
+          const x = i * (barW + gap) + gap / 2;
+          try {
+            const tr = (cx as any).drawElementImage(span, x + barW / 2, height - 2);
+            if (tr) span.style.transform = tr.toString();
+          } catch {}
+        });
+        cx.restore();
+      };
+      canvas.addEventListener('paint', onPaint, { once: true });
+      if (typeof (canvas as any).requestPaint === 'function') (canvas as any).requestPaint();
+    }
   }, [data, color, height, width]);
   return <canvas ref={canvasRef} style={{ width, height }} />;
 }
 
 function MiniPieChart({ data, size }: { data: { label: string; value: number; color: string }[]; size: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const paintedRef = useRef(false);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || data.length === 0) return;
+    canvas.setAttribute('layoutsubtree', '');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
@@ -95,11 +130,40 @@ function MiniPieChart({ data, size }: { data: { label: string; value: number; co
     ctx.arc(size / 2, size / 2, size / 4, 0, Math.PI * 2);
     ctx.fillStyle = '#0f172a';
     ctx.fill();
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = 'bold 10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${total}`, size / 2, size / 2);
+    const supportsHtml = typeof (ctx as any).drawElementImage === 'function';
+    if (supportsHtml) {
+      let span = canvas.querySelector<HTMLSpanElement>('[data-mpc]');
+      if (!span) { span = document.createElement('span'); span.setAttribute('data-mpc', ''); canvas.appendChild(span); }
+      span.textContent = `${total}`;
+      span.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none;font:bold 10px sans-serif;color:#e2e8f0;';
+      if (!paintedRef.current) {
+        paintedRef.current = true;
+        const onPaint = () => {
+          const c = canvasRef.current;
+          const cx = c?.getContext('2d');
+          if (!cx || typeof (cx as any).drawElementImage !== 'function') return;
+          const dp = window.devicePixelRatio || 1;
+          cx.save();
+          cx.setTransform(dp, 0, 0, dp, 0, 0);
+          const el = canvas.querySelector<HTMLSpanElement>('[data-mpc]');
+          if (el) {
+            try {
+              const tr = (cx as any).drawElementImage(el, size / 2, size / 2);
+              if (tr) el.style.transform = tr.toString();
+            } catch {}
+          }
+          cx.restore();
+        };
+        canvas.addEventListener('paint', onPaint, { once: true });
+        if (typeof (canvas as any).requestPaint === 'function') (canvas as any).requestPaint();
+      }
+    } else {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${total}`, size / 2, size / 2);
+    }
   }, [data, size]);
   return <canvas ref={canvasRef} style={{ width: size, height: size }} />;
 }

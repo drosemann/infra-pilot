@@ -51,7 +51,7 @@ def handle_iam_security(args):
         info = {"id": args.id, "type": args.resource, "status": "active"}
         print(json.dumps(info, indent=2) if args.output == "json" else f"{args.resource.title()} {args.id}: {info}")
     elif args.action == "create":
-        print(f"Created user {args.username} (mfa: {args.mfa})")
+        print(f"Created user {args.username} (mfa: [REDACTED])")
     elif args.action == "update":
         print(f"Updated resource {args.id}")
     elif args.action == "delete":

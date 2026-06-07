@@ -44,6 +44,54 @@ export function ArticleEditor({ article, categories, onSave, onClose }: ArticleE
     });
   };
 
+  const isSafeUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return false;
+    try {
+      const parsed = new URL(trimmed, 'http://localhost');
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
+    } catch {
+      return false;
+    }
+  };
+
+  const renderInlineMarkdown = (line: string) => {
+    const nodes: JSX.Element[] = [];
+    const pattern = /(\*\*(.*?)\*\*)|(\[([^\]]+)\]\(([^)]+)\))/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(<span key={`text-${lastIndex}`}>{line.slice(lastIndex, match.index)}</span>);
+      }
+
+      if (match[1]) {
+        nodes.push(<strong key={`bold-${match.index}`}>{match[2]}</strong>);
+      } else if (match[3]) {
+        const linkText = match[4];
+        const linkUrl = match[5];
+        if (isSafeUrl(linkUrl)) {
+          nodes.push(
+            <a key={`link-${match.index}`} href={linkUrl} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer">
+              {linkText}
+            </a>
+          );
+        } else {
+          nodes.push(<span key={`unsafe-link-${match.index}`}>{match[0]}</span>);
+        }
+      }
+
+      lastIndex = pattern.lastIndex;
+    }
+
+    if (lastIndex < line.length) {
+      nodes.push(<span key={`text-${lastIndex}`}>{line.slice(lastIndex)}</span>);
+    }
+
+    return nodes;
+  };
+
   const renderMarkdown = (text: string) => {
     const lines = text.split('\n');
     return lines.map((line, i) => {
@@ -54,9 +102,7 @@ export function ArticleEditor({ article, categories, onSave, onClose }: ArticleE
       if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-blue-500 pl-4 py-1 my-2 text-slate-400 bg-slate-800/50 rounded">{line.slice(2)}</blockquote>;
       if (line.startsWith('```')) return <pre key={i} className="bg-slate-900 rounded-lg p-4 my-2 text-sm text-green-400 overflow-x-auto">{line.slice(3)}</pre>;
       if (line.trim() === '') return <div key={i} className="h-2" />;
-      const bolded = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      const linked = bolded.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-400 hover:underline">$1</a>');
-      return <p key={i} className="text-slate-300 mb-1" dangerouslySetInnerHTML={{ __html: linked }} />;
+      return <p key={i} className="text-slate-300 mb-1">{renderInlineMarkdown(line)}</p>;
     });
   };
 

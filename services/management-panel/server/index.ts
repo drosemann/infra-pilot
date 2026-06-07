@@ -963,7 +963,7 @@ app.get('/api/apps/:appId/config', verifyAuth, async (req: Request, res: Respons
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
     const safePath = path.replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
-    const { stdout, stderr } = await execAsync(`docker exec ${app.container_id} ls -la ${safePath}`).catch((err: any) => {
+    const { stdout, stderr } = await runCommand('docker', ['exec', app.container_id, 'ls', '-la', safePath]).catch((err: any) => {
       throw new Error(`Failed to list directory: ${err.message}`);
     });
 

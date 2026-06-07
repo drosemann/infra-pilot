@@ -1047,7 +1047,7 @@ app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: 
     const backupPath = `${filePath}.bak.${timestamp}`;
 
     // Create backup
-    await execAsync(`docker exec ${app.container_id} cp ${filePath} ${backupPath}`).catch(() => {
+    await runCommand('docker', ['exec', app.container_id, 'cp', filePath, backupPath]).catch(() => {
       // Backup is best-effort; file may not exist yet
     });
 

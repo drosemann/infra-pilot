@@ -3,7 +3,9 @@ import json
 import uuid
 import time
 import hashlib
+import hmac
 import base64
+import binascii
 import logging
 import secrets
 import urllib.parse
@@ -867,7 +869,7 @@ class IdentityProviderManagerExtended:
         for uid, user in self._users.items():
             if user.get("email") == username or user.get("preferred_username") == username:
                 stored_hash = user.get("password_hash")
-                if stored_hash and hashlib.sha256(password.encode()).hexdigest() == stored_hash:
+                if stored_hash and self._verify_password(password, stored_hash):
                     return user
         return None
 
@@ -875,12 +877,31 @@ class IdentityProviderManagerExtended:
                  password: Optional[str] = None) -> Dict[str, Any]:
         user_data = dict(claims)
         if password:
-            user_data["password_hash"] = hashlib.sha256(password.encode()).hexdigest()
+            user_data["password_hash"] = self._hash_password(password)
         user_data["id"] = user_id
         user_data["created_at"] = datetime.utcnow().isoformat()
         user_data["updated_at"] = datetime.utcnow().isoformat()
         self._users[user_id] = user_data
         return user_data
+
+    def _hash_password(self, password: str) -> str:
+        iterations = 310000
+        salt = secrets.token_bytes(16)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+        return f"pbkdf2_sha256${iterations}${base64.b64encode(salt).decode('ascii')}${base64.b64encode(dk).decode('ascii')}"
+
+    def _verify_password(self, password: str, stored_hash: str) -> bool:
+        try:
+            algorithm, iter_str, salt_b64, hash_b64 = stored_hash.split("$", 3)
+            if algorithm != "pbkdf2_sha256":
+                return False
+            iterations = int(iter_str)
+            salt = base64.b64decode(salt_b64.encode("ascii"))
+            expected = base64.b64decode(hash_b64.encode("ascii"))
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+            return hmac.compare_digest(candidate, expected)
+        except (ValueError, TypeError, binascii.Error):
+            return False
 
     def update_user(self, user_id: str, claims: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         user = self._users.get(user_id)

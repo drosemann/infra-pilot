@@ -132,6 +132,7 @@ services/management-panel/
 - quick overview of app status
 - total, running, stopped, error counts
 - click-to-manage app list
+- user avatar (identicon): deterministisches profilbild aus der user-id via jdenticon
 
 ### hosting business mode (coming soon)
 

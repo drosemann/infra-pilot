@@ -281,6 +281,7 @@ modernes docker-management-panel für self-hoster und hosting-workflows.
 • wcag 2.1 aa: screenreader-support, tastaturnavigation, focus-management und aria-labels.
 • theme studio: visueller theme-builder mit live-vorschau, export/import und community-galerie.
 • bulk operations manager: batch-aktionen mit mehrfachauswahl, fortschrittsanzeige und rollback.
+• user avatar (identicon): automatisch generierte profilbilder basierend auf der user-id mittels jdenticon – kein upload nötig.
 • desktop app: tauri-basierte native desktop-app mit system tray, offline-modus und auto-updater.
 • wichtige skripte:
   • `npm run dev` startet frontend und backend parallel.

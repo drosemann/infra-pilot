@@ -1,0 +1,37 @@
+# EditorConfig – https://editorconfig.org
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.py]
+indent_size = 4
+
+[*.java]
+indent_size = 4
+
+[*.{go,rs,zig}]
+indent_size = 4
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{json,svg}]
+indent_size = 2
+
+[*.xml]
+indent_size = 4
+
+[*.{sh,bash,zsh}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.{bat,cmd}]
+end_of_line = crlf

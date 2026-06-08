@@ -26,6 +26,7 @@ import com.playerservers.features.server.AntiCheatManager;
 import com.playerservers.features.server.CommandCooldownManager;
 import com.playerservers.features.server.PermissionManager;
 import com.playerservers.features.server.VIPPerksManager;
+import com.playerservers.features.social.*;
 import com.playerservers.features.performance.PerformanceProfilerManager;
 
 import net.md_5.bungee.api.plugin.Plugin;
@@ -62,6 +63,14 @@ public class PlayerServerPlugin extends Plugin {
     private PermissionManager permissionManager;
     private VIPPerksManager vipPerksManager;
     private PerformanceProfilerManager performanceProfilerManager;
+    private FriendManager friendManager;
+    private InvitationManager invitationManager;
+    private ServerDiscoveryManager serverDiscoveryManager;
+    private ReviewManager reviewManager;
+    private ProfileManager profileManager;
+    private MessageManager messageManager;
+    private CommunityManager communityManager;
+    private ActivityManager activityManager;
     private InactivityShutdownTask inactivityShutdown;
 
     @Override
@@ -105,6 +114,14 @@ public class PlayerServerPlugin extends Plugin {
         permissionManager = new PermissionManager(this);
         vipPerksManager = new VIPPerksManager(this);
         performanceProfilerManager = new PerformanceProfilerManager(this);
+        friendManager = new FriendManager(this);
+        invitationManager = new InvitationManager(this);
+        serverDiscoveryManager = new ServerDiscoveryManager(this);
+        reviewManager = new ReviewManager(this, economyManager);
+        messageManager = new MessageManager(this, friendManager);
+        communityManager = new CommunityManager(this);
+        activityManager = new ActivityManager(this, friendManager);
+        profileManager = new ProfileManager(this, friendManager, playerStatistics);
         inactivityShutdown = new InactivityShutdownTask(this);
 
         getProxy().getPluginManager().registerCommand(this, new ServerCommand(this));
@@ -129,6 +146,15 @@ public class PlayerServerPlugin extends Plugin {
         new com.playerservers.features.server.VIPPerksManager.VIPCommands(this, vipPerksManager);
         getProxy().getPluginManager().registerCommand(this, new VIPPerksManager.VIPCommands.VIPAdminCommands(vipPerksManager));
         new PerformanceProfilerManager.PerformanceCommand(this, performanceProfilerManager);
+
+        getProxy().getPluginManager().registerCommand(this, new FriendCommand(this, friendManager));
+        getProxy().getPluginManager().registerCommand(this, new InvitationCommand(this, invitationManager));
+        getProxy().getPluginManager().registerCommand(this, new DiscoveryCommand(this, serverDiscoveryManager));
+        getProxy().getPluginManager().registerCommand(this, new ReviewCommand(this, reviewManager));
+        getProxy().getPluginManager().registerCommand(this, new ProfileCommand(this, profileManager));
+        getProxy().getPluginManager().registerCommand(this, new MessageCommand(this, messageManager));
+        getProxy().getPluginManager().registerCommand(this, new CommunityCommand(this, communityManager));
+        getProxy().getPluginManager().registerCommand(this, new ActivityCommand(this, activityManager));
 
         getProxy().getPluginManager().registerListener(this, activityRewardListener);
         getProxy().getPluginManager().registerListener(this, new PluginMessageListener(this));
@@ -173,4 +199,12 @@ public class PlayerServerPlugin extends Plugin {
     public PermissionManager getPermissionManager() { return permissionManager; }
     public VIPPerksManager getVipPerksManager() { return vipPerksManager; }
     public PerformanceProfilerManager getPerformanceProfilerManager() { return performanceProfilerManager; }
+    public FriendManager getFriendManager() { return friendManager; }
+    public InvitationManager getInvitationManager() { return invitationManager; }
+    public ServerDiscoveryManager getServerDiscoveryManager() { return serverDiscoveryManager; }
+    public ReviewManager getReviewManager() { return reviewManager; }
+    public ProfileManager getProfileManager() { return profileManager; }
+    public MessageManager getMessageManager() { return messageManager; }
+    public CommunityManager getCommunityManager() { return communityManager; }
+    public ActivityManager getActivityManager() { return activityManager; }
 }

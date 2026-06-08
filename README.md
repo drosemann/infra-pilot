@@ -1113,18 +1113,17 @@ der zentrale dokumentationsindex liegt unter [docs/README.md](docs/README.md).
 
 beiträge sind willkommen. bitte vorab lesen:
 
-• [contributing.md](CONTRIBUTING.md)
-• [docs/contributing.md](docs/CONTRIBUTING.md)
+• [contributing guide](CONTRIBUTING.md) — branch-naming, commit-style, PR-checklist & tests
 • [code standards](docs/development/code-standards.md)
 • [code of conduct](CODE_OF_CONDUCT.md)
 
 kurzablauf:
 
 ```bash
-git checkout -b feature/my-feature
+git checkout -b feat/my-feature
 # Änderungen vornehmen und testen
-git commit -m "feat: describe change"
-git push origin feature/my-feature
+git commit -m "feat(scope): describe change"
+git push origin feat/my-feature
 ```
 
 ## v4 feature overview — compliance automation & audit 2.0

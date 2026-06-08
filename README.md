@@ -1,5 +1,7 @@
 # infra pilot
 
+[![CI](https://github.com/d5niel-lgtm/infra-pilot/actions/workflows/ci.yml/badge.svg)](https://github.com/d5niel-lgtm/infra-pilot/actions/workflows/ci.yml)
+
 infrastructure-orchestration und docker-management für self-hosting, demo-umgebungen und provider-neutrale provisioning-flows.
 
 infra pilot bündelt mehrere services und hilfsbibliotheken, um container-/game-server-verwaltung, discord-gesteuerte provisionierung, provider-neutrale testdaten und ein modernes management-panel in einem repository zu entwickeln.

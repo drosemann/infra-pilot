@@ -1,42 +1,44 @@
 ---
-name: feature request
-about: suggest a new feature or enhancement for infra pilot
-title: "[feature] "
+name: Feature Request
+about: Suggest an idea or enhancement for Infra Pilot
+title: "[Feature] "
 labels: enhancement
 assignees: ''
 ---
 
-## description
+## Description
 
-<!-- clear description of the feature you want -->
+<!-- A clear and concise description of the feature you'd like. -->
 
-## use case / problem
+## Use Case / Problem
 
-<!-- why is this feature needed? what problem does it solve? -->
+<!-- Required. What problem does this solve? When would you use this feature? -->
 
-## proposed solution
+**Example:** "As an operator, I want to automatically restart failed agents so that services are restored without manual intervention."
 
-<!-- how would you like this feature to work? -->
+## Proposed Solution
 
-## alternatives considered
+<!-- Required. How should this feature work? Be as specific as possible. -->
 
-<!-- what other approaches have you considered? -->
+**Example:** "Add a `--restart-policy` flag to the agent CLI that accepts `always`, `on-failure`, or `never`."
 
-## additional context
+## Alternatives Considered
 
-<!-- any other context, examples, or screenshots -->
+<!-- Optional. What other approaches or workarounds have you considered? -->
 
-## component(s) affected
+**Example:** "Currently we use a cron job to check and restart agents, but it's unreliable."
 
-<!-- which service(s) would this impact? -->
+## Additional Context
+
+<!-- Optional. Add any other context, examples, mockups, or screenshots here. -->
+
+## Components Affected
+
+<!-- Which service(s) would this change impact? -->
+
 - [ ] service-core
 - [ ] orchestrator-agent
 - [ ] discord-service
 - [ ] management-panel
 - [ ] documentation
 - [ ] other
-
-notes:
-• please search for existing feature requests before creating a new one
-• features are evaluated based on alignment with project goals
-• community contributions are welcome!

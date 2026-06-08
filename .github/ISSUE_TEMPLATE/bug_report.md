@@ -1,52 +1,55 @@
 ---
-name: bug report
-about: report a bug or issue with infra pilot
-title: "[bug] "
+name: Bug Report
+about: Create a bug report to help us improve Infra Pilot
+title: "[Bug] "
 labels: bug
 assignees: ''
 ---
 
-## description
+## Description
 
-<!-- clearly describe the bug you encountered -->
+<!-- A clear and concise description of the bug. -->
 
-## steps to reproduce
+## Steps to Reproduce
 
-•
-•
-•
+<!-- Required. Provide a minimal, step-by-step reproduction case. -->
 
-## expected behavior
+1. Go to '...'
+2. Click on '...'
+3. Scroll down to '...'
+4. See error
 
-<!-- what should happen? -->
+## Expected Behavior
 
-## actual behavior
+<!-- Required. What did you expect to happen? -->
 
-<!-- what actually happens? -->
+A clear and concise description of what you expected to happen.
 
-## environment
+## Actual Behavior
 
-• os: (linux/macos/windows)
-• component: (service-core/orchestrator-agent/discord-service/management-panel)
-• version: (e.g., main, v1.0.0)
-• docker: yes/no
+<!-- Required. What actually happened instead? -->
 
-## error log / screenshots
+A clear and concise description of what actually happened.
+
+## Environment
+
+- OS: (e.g., Windows 11, Ubuntu 24.04, macOS 15)
+- Component: (service-core / orchestrator-agent / discord-service / management-panel)
+- Version/Commit: (e.g., v1.2.3, main, abc1234)
+- Docker: (yes / no)
+
+## Error Logs / Screenshots
 
 ```
-<!-- paste error logs or stack traces here -->
+<!-- Paste any relevant logs, stack traces, or screenshots here. -->
 ```
 
-## possible solution
+## Possible Fix (optional)
 
-<!-- optional: suggest a fix or solution -->
+<!-- If you have an idea what might cause this or how to fix it, describe it here. -->
 
-## related issues
+## Related Issues
 
-<!-- link any related issues -->
+<!-- Link any related issues here, e.g., "Relates to #42". -->
+
 closes #
-
-notes:
-• please include as much detail as possible
-• do not include secrets or credentials in the issue
-• check existing issues before creating a duplicate

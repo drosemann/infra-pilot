@@ -67,6 +67,24 @@ permissions:
     default: true
   playerservers.vip.admin:
     default: op
+  playerservers.friend:
+    default: true
+  playerservers.invite:
+    default: true
+  playerservers.browse:
+    default: true
+  playerservers.rate:
+    default: true
+  playerservers.profile:
+    default: true
+  playerservers.msg:
+    default: true
+  playerservers.community:
+    default: true
+  playerservers.feed:
+    default: true
+  playerservers.server.public:
+    default: true
   playerservers.*:
     description: Wildcard permission
     default: op

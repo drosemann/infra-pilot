@@ -1,5 +1,6 @@
 package com.playerservers;
 
+import com.playerservers.features.social.ServerDiscoveryManager;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.chat.ComponentBuilder;
@@ -38,6 +39,7 @@ public class ServerCommand extends Command {
             case "join": handleJoin(player, playerUUID); break;
             case "list": handleList(player); break;
             case "manage": handleManage(player); break;
+            case "public": handlePublic(player, args); break;
             default: showHelp(player);
         }
     }
@@ -92,6 +94,38 @@ public class ServerCommand extends Command {
         plugin.getGuiManager().openMainMenu(player);
     }
 
+    private void handlePublic(ProxiedPlayer player, String[] args) {
+        if (!plugin.getDatabaseManager().hasServer(player.getUniqueId().toString())) {
+            player.sendMessage(new ComponentBuilder("You don't have a server!").color(ChatColor.RED).create());
+            return;
+        }
+        if (args.length < 2) {
+            player.sendMessage(new ComponentBuilder("Usage: /server public <true|false> [description] [tags]")
+                .color(ChatColor.RED).create());
+            return;
+        }
+        boolean isPublic = Boolean.parseBoolean(args[1]);
+        String description = "";
+        String tags = "";
+        if (args.length >= 3) {
+            StringBuilder descBuilder = new StringBuilder();
+            for (int i = 2; i < args.length; i++) {
+                if (args[i].startsWith("#")) {
+                    tags = args[i].substring(1);
+                    break;
+                }
+                if (descBuilder.length() > 0) descBuilder.append(" ");
+                descBuilder.append(args[i]);
+            }
+            description = descBuilder.toString();
+        }
+
+        ServerDiscoveryManager discovery = plugin.getServerDiscoveryManager();
+        discovery.setServerPublic(player.getUniqueId().toString(), isPublic, description, tags);
+        player.sendMessage(new ComponentBuilder("Server is now " + (isPublic ? "public" : "private") + "!")
+            .color(ChatColor.GREEN).create());
+    }
+
     private void showHelp(ProxiedPlayer player) {
         player.sendMessage(new ComponentBuilder("=== Server Commands ===").color(ChatColor.GOLD).create());
         player.sendMessage(new ComponentBuilder("/server create").color(ChatColor.YELLOW)
@@ -104,5 +138,7 @@ public class ServerCommand extends Command {
             .append(" - List servers").color(ChatColor.WHITE).create());
         player.sendMessage(new ComponentBuilder("/server manage").color(ChatColor.YELLOW)
             .append(" - Manage your server").color(ChatColor.WHITE).create());
+        player.sendMessage(new ComponentBuilder("/server public <true|false> [desc] [#tags]").color(ChatColor.YELLOW)
+            .append(" - Toggle server visibility").color(ChatColor.WHITE).create());
     }
 }

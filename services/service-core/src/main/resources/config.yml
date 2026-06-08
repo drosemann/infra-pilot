@@ -85,3 +85,21 @@ border:
       max_size: 10000
       expansion_rate: 50
       expansion_interval: 60
+
+social:
+  friends:
+    max_friends: 100
+    friend_requests_enabled: true
+  messaging:
+    max_message_length: 256
+    rate_limit_per_minute: 10
+  profiles:
+    bio_max_length: 500
+    custom_avatars_enabled: false
+  discovery:
+    max_servers_per_page: 20
+    require_description_for_public: true
+    min_server_age_for_public: 86400
+  communities:
+    max_communities_per_player: 5
+    max_members_per_community: 100

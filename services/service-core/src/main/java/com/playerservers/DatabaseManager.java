@@ -49,12 +49,141 @@ public class DatabaseManager {
                 "player_uuid VARCHAR(36) PRIMARY KEY," +
                 "server_name VARCHAR(255) NOT NULL," +
                 "server_status VARCHAR(50) NOT NULL," +
-                "creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                "is_public BOOLEAN DEFAULT false," +
+                "description TEXT," +
+                "tags VARCHAR(255)," +
+                "player_count INT DEFAULT 0," +
+                "max_players INT DEFAULT 20," +
+                "upvotes INT DEFAULT 0," +
+                "downvotes INT DEFAULT 0," +
+                "creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
                 ")";
             statement.executeUpdate(sql);
+
+            migratePlayerServersTable(connection);
+            setupSocialTables(statement);
         } catch (SQLException e) {
             plugin.getLogger().severe("Error setting up database: " + e.getMessage());
         }
+    }
+
+    private void migratePlayerServersTable(Connection connection) {
+        String[] columns = {
+            "is_public BOOLEAN DEFAULT false",
+            "description TEXT",
+            "tags VARCHAR(255)",
+            "player_count INT DEFAULT 0",
+            "max_players INT DEFAULT 20",
+            "upvotes INT DEFAULT 0",
+            "downvotes INT DEFAULT 0",
+            "last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        };
+        for (String columnDef : columns) {
+            String colName = columnDef.split(" ")[0];
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("ALTER TABLE player_servers ADD COLUMN IF NOT EXISTS " + columnDef);
+            } catch (SQLException e) {
+                // Column might already exist or MySQL version doesn't support IF NOT EXISTS
+                // Try without IF NOT EXISTS and ignore error
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.execute("ALTER TABLE player_servers ADD COLUMN " + columnDef);
+                } catch (SQLException e2) {
+                    // Column already exists, ignore
+                }
+            }
+        }
+    }
+
+    private void setupSocialTables(Statement statement) throws SQLException {
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS friends (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "player_uuid VARCHAR(36) NOT NULL," +
+            "friend_uuid VARCHAR(36) NOT NULL," +
+            "status ENUM('pending','accepted','blocked') NOT NULL DEFAULT 'pending'," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+            "UNIQUE KEY unique_friendship (player_uuid, friend_uuid)," +
+            "FOREIGN KEY (player_uuid) REFERENCES player_servers(player_uuid)," +
+            "FOREIGN KEY (friend_uuid) REFERENCES player_servers(player_uuid)" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS server_invitations (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "server_id VARCHAR(36) NOT NULL," +
+            "inviter_uuid VARCHAR(36) NOT NULL," +
+            "invitee_uuid VARCHAR(36) NOT NULL," +
+            "permission_level ENUM('player','operator','admin') NOT NULL DEFAULT 'player'," +
+            "status ENUM('pending','accepted','declined','expired') NOT NULL DEFAULT 'pending'," +
+            "expires_at TIMESTAMP NULL," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS server_reviews (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "server_id VARCHAR(36) NOT NULL," +
+            "reviewer_uuid VARCHAR(36) NOT NULL," +
+            "rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5)," +
+            "comment TEXT," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
+            "UNIQUE KEY unique_review (server_id, reviewer_uuid)" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS player_profiles (" +
+            "player_uuid VARCHAR(36) PRIMARY KEY," +
+            "bio TEXT," +
+            "avatar_url VARCHAR(255)," +
+            "website VARCHAR(255)," +
+            "discord VARCHAR(255)," +
+            "total_playtime INT DEFAULT 0," +
+            "servers_created INT DEFAULT 0," +
+            "friends_count INT DEFAULT 0," +
+            "reputation_score INT DEFAULT 0" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS messages (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "sender_uuid VARCHAR(36) NOT NULL," +
+            "receiver_uuid VARCHAR(36) NOT NULL," +
+            "message TEXT NOT NULL," +
+            "is_read BOOLEAN DEFAULT false," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "INDEX idx_receiver (receiver_uuid, is_read)," +
+            "INDEX idx_sender (sender_uuid)" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS communities (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "name VARCHAR(64) NOT NULL UNIQUE," +
+            "description TEXT," +
+            "owner_uuid VARCHAR(36) NOT NULL," +
+            "member_count INT DEFAULT 1," +
+            "is_public BOOLEAN DEFAULT true," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS community_members (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "community_id INT NOT NULL," +
+            "player_uuid VARCHAR(36) NOT NULL," +
+            "role ENUM('owner','admin','member') NOT NULL DEFAULT 'member'," +
+            "joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "UNIQUE KEY unique_membership (community_id, player_uuid)," +
+            "FOREIGN KEY (community_id) REFERENCES communities(id) ON DELETE CASCADE" +
+            ")");
+
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS activity_feed (" +
+            "id INT AUTO_INCREMENT PRIMARY KEY," +
+            "player_uuid VARCHAR(36) NOT NULL," +
+            "activity_type VARCHAR(50) NOT NULL," +
+            "target_id INT," +
+            "metadata TEXT," +
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "INDEX idx_player (player_uuid)," +
+            "INDEX idx_type (activity_type)," +
+            "INDEX idx_created (created_at)" +
+            ")");
     }
 
     public boolean hasServer(String playerUUID) {

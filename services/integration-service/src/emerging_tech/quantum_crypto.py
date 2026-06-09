@@ -1,6 +1,7 @@
 """Quantum-Safe Cryptography — post-quantum crypto (Kyber, Dilithium) for TLS, VPN, and signing."""
 
 import asyncio
+import aiofiles
 import json
 import logging
 import uuid
@@ -184,12 +185,12 @@ class QuantumCryptoManager:
         logger.info("Initialized QuantumCryptoManager with %d keys, %d assessments", len(self.keys), len(self.assessments))
 
     async def close(self):
-        self._save()
+        await self._save()
 
-    def _save(self):
+    async def _save(self):
         data = {"keys": [k.to_dict() for k in self.keys.values()], "assessments": [a.to_dict() for a in self.assessments.values()]}
-        with open(self.storage_path, "w") as f:
-            json.dump(data, f, indent=2)
+        async with aiofiles.open(self.storage_path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
 
     def _dict_to_key(self, data: dict[str, Any]) -> PQKeyPair:
         key = PQKeyPair(data["key_id"], data["name"], PQAlgorithm(data["algorithm"]), CertificateType(data.get("cert_type", "tls")))
@@ -214,7 +215,7 @@ class QuantumCryptoManager:
         key.security_level = self._security_level(algorithm)
         key.hybrid_cert_pem = f"-----BEGIN HYBRID CERT-----\n{key_id}\n-----END HYBRID CERT-----"
         self.keys[key_id] = key
-        self._save()
+        await self._save()
         logger.info("Generated PQ key %s: %s (%s)", key_id, name, algorithm.value)
         return key
 
@@ -247,7 +248,7 @@ class QuantumCryptoManager:
         if key and key.status == KeyStatus.ACTIVE:
             key.status = KeyStatus.REVOKED
             key.revoked_at = datetime.utcnow()
-            self._save()
+            await self._save()
             return True
         return False
 
@@ -257,7 +258,7 @@ class QuantumCryptoManager:
             return None
         new_key = await self.generate_key(f"{key.name}-rotated", key.algorithm, key.cert_type)
         key.status = KeyStatus.EXPIRED
-        self._save()
+        await self._save()
         return new_key
 
     async def create_assessment(self, name: str, total_endpoints: int) -> MigrationAssessment:
@@ -266,7 +267,7 @@ class QuantumCryptoManager:
         assessment.total_endpoints = total_endpoints
         assessment.status = MigrationStatus.ASSESSING
         self.assessments[assessment_id] = assessment
-        self._save()
+        await self._save()
         asyncio.create_task(self._simulate_assessment(assessment_id))
         return assessment
 
@@ -287,7 +288,7 @@ class QuantumCryptoManager:
             {"step": 4, "action": "Test backward compatibility", "status": "pending"},
             {"step": 5, "action": "Full PQ migration", "status": "pending"},
         ]
-        self._save()
+        await self._save()
 
     def get_assessment(self, assessment_id: str) -> Optional[MigrationAssessment]:
         return self.assessments.get(assessment_id)
@@ -392,7 +393,7 @@ class QuantumCryptoManager:
         return results
 
     # === State Machine ===
-    def transition_key_status(self, key_id: str, target_status: str) -> Optional[PQKeyPair]:
+    async def transition_key_status(self, key_id: str, target_status: str) -> Optional[PQKeyPair]:
         key = self.keys.get(key_id)
         if not key:
             return None
@@ -408,7 +409,7 @@ class QuantumCryptoManager:
             key.status = new_status
             if new_status in (KeyStatus.REVOKED, KeyStatus.COMPROMISED):
                 key.revoked_at = datetime.utcnow()
-            self._save()
+            await self._save()
             return key
         return None
 
@@ -455,7 +456,7 @@ class QuantumCryptoManager:
                 k.status = KeyStatus.REVOKED
                 k.revoked_at = datetime.utcnow()
                 count += 1
-        self._save()
+        await self._save()
         return count
 
     async def bulk_rotate_keys(self, key_ids: list[str]) -> int:
@@ -468,7 +469,7 @@ class QuantumCryptoManager:
         return count
 
     # === Tag Management ===
-    def add_key_tags(self, key_ids: list[str], tags: list[str]) -> int:
+    async def add_key_tags(self, key_ids: list[str], tags: list[str]) -> int:
         count = 0
         for kid in key_ids:
             k = self.keys.get(kid)
@@ -477,17 +478,17 @@ class QuantumCryptoManager:
                     if t not in k.tags:
                         k.tags.append(t)
                 count += 1
-        self._save()
+        await self._save()
         return count
 
-    def remove_key_tags(self, key_ids: list[str], tags: list[str]) -> int:
+    async def remove_key_tags(self, key_ids: list[str], tags: list[str]) -> int:
         count = 0
         for kid in key_ids:
             k = self.keys.get(kid)
             if k:
                 k.tags = [t for t in k.tags if t not in tags]
                 count += 1
-        self._save()
+        await self._save()
         return count
 
     # === Health Check ===

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import asyncio
+import aiofiles
 import aiohttp
 import ssl
 import socket
@@ -23,30 +24,12 @@ class SyntheticMonitoring(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.vps_manager = VPSManager()
-        self.checks_file = config.SYNTHETIC_CHECKS_FILE
+        self.cache_file = config.SYNTHETIC_CHECKS_FILE
         self.probe_locations = config.SYNTHETIC_PROBE_LOCATIONS
-        self._ensure_data_file()
         self.synthetic_check_loop.start()
 
     def cog_unload(self):
         self.synthetic_check_loop.cancel()
-
-    def _ensure_data_file(self):
-        os.makedirs(os.path.dirname(self.checks_file), exist_ok=True)
-        if not os.path.exists(self.checks_file):
-            with open(self.checks_file, "w") as f:
-                json.dump([], f)
-
-    def _load_checks(self) -> list:
-        try:
-            with open(self.checks_file, "r") as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return []
-
-    def _save_checks(self, checks: list):
-        with open(self.checks_file, "w") as f:
-            json.dump(checks, f, indent=2, default=str)
 
     @tasks.loop(minutes=config.SYNTHETIC_CHECK_INTERVAL_MINUTES)
     async def synthetic_check_loop(self):
@@ -232,10 +215,6 @@ class SyntheticMonitoring(commands.Cog):
             cursor.close()
             conn.close()
 
-            checks = self._load_checks()
-            checks.append({"type": check_type, "target": target, "created_at": str(datetime.now())})
-            self._save_checks(checks)
-
             await interaction.followup.send(embed=discord.Embed(description=f"Monitor created: {check_type} -> {target}", color=0x00FF00))
         except Exception as e:
             await interaction.followup.send(embed=discord.Embed(description=f"Error: {str(e)}", color=0xFF0000))
@@ -308,8 +287,12 @@ class SyntheticMonitoring(commands.Cog):
             embed.add_field(name="Interval", value=f"{check['interval_minutes']}m", inline=True)
             embed.add_field(name="Last Status", value=check.get("last_status", "pending"), inline=True)
 
-            passed = sum(1 for r in results if r["status"] == "passed")
-            failed = sum(1 for r in results if r["status"] == "failed")
+            passed = failed = 0
+            for r in results:
+                if r["status"] == "passed":
+                    passed += 1
+                elif r["status"] == "failed":
+                    failed += 1
             embed.add_field(name="Recent Pass/Fail", value=f"{passed}/{failed}", inline=True)
 
             if results:

@@ -56,6 +56,14 @@ fi
 
 echo "[${SCRIPT_NAME}] Preparing release for tag: ${TAG}"
 
+# Pick random release artwork
+RELEASE_ART=$(find images-for-releases -maxdepth 1 -name '*.png' 2>/dev/null | shuf -n1)
+if [[ -n "$RELEASE_ART" ]]; then
+  mkdir -p branding
+  cp "$RELEASE_ART" branding/release-art.png
+  echo "[${SCRIPT_NAME}] Selected release artwork: $RELEASE_ART"
+fi
+
 # Ensure clean working tree
 git status --porcelain >/dev/null || true
 if ! git diff --quiet HEAD; then
@@ -86,6 +94,12 @@ fi
 if [[ "$PUSH" == true ]]; then
   git push origin "$TAG"
   echo "Pushed tag ${TAG} to origin"
+
+  # Upload release artwork if one was picked
+  if [[ -f branding/release-art.png ]]; then
+    gh release upload "$TAG" branding/release-art.png --clobber 2>/dev/null || \
+      echo "[${SCRIPT_NAME}] Warning: gh release upload failed (install GitHub CLI?)"
+  fi
 fi
 
 echo "Release scaffold complete."

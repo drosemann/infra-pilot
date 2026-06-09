@@ -80,8 +80,10 @@ class TaskScheduler(commands.Cog):
             elif task_type == "custom":
                 command = task.get("command")
                 if command:
+                    import shlex
                     import subprocess
-                    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+                    cmd_parts = shlex.split(command)
+                    result = subprocess.run(cmd_parts, capture_output=True, text=True)
                     if result.returncode != 0:
                         status = "failed"
                         error = result.stderr

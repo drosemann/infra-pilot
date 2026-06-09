@@ -41,8 +41,9 @@ bot = commands.Bot(command_prefix='/', intents=intents)
 # A set of whitelisted user IDs (admin privileges)
 whitelist_ids = set(filter(None, os.getenv("WHITELIST_IDS", "").split(",")))
 
-# In-memory dictionary to keep track of user credits (should be replaced with persistent storage in production)
+# In-memory dictionaries (should be replaced with persistent storage in production)
 user_credits = {}
+vps_renewals = {}
 
 # API key for the cuty.io URL-shortening service
 API_KEY = os.getenv("CUTTLY_API_KEY", "")
@@ -330,8 +331,6 @@ async def renew(interaction: discord.Interaction, vps_id: str):
     # Deduct credits and renew the VPS (update expiry date)
     user_credits[user_id] -= 2
     renewal_date = datetime.now() + timedelta(days=8)
-    # vps_renewals should be maintained in persistent storage; here it is assumed as in-memory
-    vps_renewals = {}
     vps_renewals[vps_id] = renewal_date
 
     await interaction.response.send_message(
@@ -349,9 +348,9 @@ async def remove_everything_task(interaction: discord.Interaction):
     """
     await interaction.channel.send("### Node is full. Resetting all user instances...")
     try:
-        subprocess.run("docker rm -f $(sudo docker ps -a -q)", shell=True, check=True)
+        for container in client.containers.list(all=True):
+            container.remove(force=True)
         os.remove(database_file)
-        subprocess.run("pkill pytho*", shell=True, check=True)
         await interaction.channel.send("### All instances and data have been reset.")
     except Exception as e:
         await interaction.channel.send("### Failed to reset instances.")
@@ -397,14 +396,15 @@ async def remove_everything(interaction: discord.Interaction):
         return
 
     try:
-        subprocess.run("docker rm -f $(sudo docker ps -a -q)", shell=True, check=True)
+        for container in client.containers.list(all=True):
+            container.remove(force=True)
         await interaction.response.send_message(
             embed=discord.Embed(
                 description="All Docker containers have been removed.",
                 color=0x00ff00
             )
         )
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         await interaction.response.send_message(
             embed=discord.Embed(
                 description="Failed to remove Docker containers.",
@@ -414,7 +414,6 @@ async def remove_everything(interaction: discord.Interaction):
 
     try:
         os.remove(database_file)
-        # Ensure that 'port_db_file' exists before removing or handle exception if it doesn't.
         os.remove("port_db_file")  
         await interaction.response.send_message(
             embed=discord.Embed(
@@ -422,7 +421,6 @@ async def remove_everything(interaction: discord.Interaction):
                 color=0x00ff00
             )
         )
-        subprocess.run("pkill pytho*", shell=True, check=True)
     except Exception as e:
         await interaction.response.send_message(
             embed=discord.Embed(

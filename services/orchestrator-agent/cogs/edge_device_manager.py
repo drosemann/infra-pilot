@@ -295,13 +295,17 @@ class EdgeDeviceManager:
     def list_devices(self, status: Optional[str] = None,
                      device_type: Optional[str] = None,
                      tag: Optional[str] = None) -> list[EdgeDevice]:
-        result = list(self.devices.values())
-        if status:
-            result = [d for d in result if d.status == status]
-        if device_type:
-            result = [d for d in result if d.device_type == device_type]
-        if tag:
-            result = [d for d in result if tag in d.tags]
+        if not any([status, device_type, tag]):
+            return list(self.devices.values())
+        result = []
+        for d in self.devices.values():
+            if status and d.status != status:
+                continue
+            if device_type and d.device_type != device_type:
+                continue
+            if tag and tag not in d.tags:
+                continue
+            result.append(d)
         return result
 
     def update_device(self, device_id: str, updates: dict[str, Any]) -> Optional[EdgeDevice]:
@@ -438,21 +442,28 @@ class EdgeDeviceManager:
         return sorted(updates, key=lambda u: u.created_at, reverse=True)
 
     def get_devices_summary(self) -> dict[str, Any]:
-        total = len(self.devices)
-        online = sum(1 for d in self.devices.values() if d.status == "online")
-        offline = sum(1 for d in self.devices.values() if d.status == "offline")
-        degraded = sum(1 for d in self.devices.values() if d.status == "degraded")
-        provisioning = sum(1 for d in self.devices.values() if d.status == "provisioning")
+        online = offline = degraded = provisioning = 0
+        for d in self.devices.values():
+            if d.status == "online":
+                online += 1
+            elif d.status == "offline":
+                offline += 1
+            elif d.status == "degraded":
+                degraded += 1
+            elif d.status == "provisioning":
+                provisioning += 1
+        pending = 0
+        for u in self.firmware_updates.values():
+            if u.status not in ("completed", "failed"):
+                pending += 1
         return {
-            "total": total,
+            "total": len(self.devices),
             "online": online,
             "offline": offline,
             "degraded": degraded,
             "provisioning": provisioning,
             "groups_count": len(self.groups),
-            "pending_updates": sum(
-                1 for u in self.firmware_updates.values() if u.status not in ("completed", "failed")
-            ),
+            "pending_updates": pending,
         }
 
 

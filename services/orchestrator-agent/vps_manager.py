@@ -1,5 +1,6 @@
 import docker
 import asyncio
+import aiofiles
 from dataclasses import dataclass
 from typing import Dict, Optional, List
 import logging
@@ -32,9 +33,9 @@ class VPSManager:
         self.logger = logging.getLogger('vps_manager')
         self.vps_instances = {}
         self.database_lock = Lock()
-        self.load_instances()
+        self._load_instances()
 
-    def load_instances(self):
+    def _load_instances(self):
         try:
             if os.path.exists(config.VPS_INSTANCES_FILE):
                 with open(config.VPS_INSTANCES_FILE, 'r') as f:
@@ -43,10 +44,11 @@ class VPSManager:
             self.logger.error(f"Error loading VPS instances: {e}")
             self.vps_instances = {}
 
-    def save_instances(self):
+    async def save_instances(self):
         try:
-            with open(config.VPS_INSTANCES_FILE, 'w') as f:
-                json.dump(self.vps_instances, f, indent=2)
+            content = json.dumps(self.vps_instances, indent=2)
+            async with aiofiles.open(config.VPS_INSTANCES_FILE, 'w') as f:
+                await f.write(content)
         except Exception as e:
             self.logger.error(f"Error saving VPS instances: {e}")
 
@@ -156,7 +158,7 @@ class VPSManager:
             }
 
             self.vps_instances[container.id] = instance_info
-            self.save_instances()
+            await self.save_instances()
             return container.id
         except Exception as e:
             self.logger.error(f"Error creating VPS: {e}")
@@ -168,7 +170,7 @@ class VPSManager:
             container.stop()
             container.remove()
             self.vps_instances.pop(container_id, None)
-            self.save_instances()
+            await self.save_instances()
             self.remove_from_database(container_id)
             return True
         except Exception as e:
@@ -179,7 +181,7 @@ class VPSManager:
         try:
             container = self.client.containers.get(container_id)
             container.start()
-            self._update_status(container_id, "running")
+            await self._update_status(container_id, "running")
             return True
         except Exception as e:
             self.logger.error(f"Error starting VPS: {e}")
@@ -189,7 +191,7 @@ class VPSManager:
         try:
             container = self.client.containers.get(container_id)
             container.stop()
-            self._update_status(container_id, "stopped")
+            await self._update_status(container_id, "stopped")
             return True
         except Exception as e:
             self.logger.error(f"Error stopping VPS: {e}")
@@ -199,16 +201,16 @@ class VPSManager:
         try:
             container = self.client.containers.get(container_id)
             container.restart()
-            self._update_status(container_id, "running")
+            await self._update_status(container_id, "running")
             return True
         except Exception as e:
             self.logger.error(f"Error restarting VPS: {e}")
             return False
 
-    def _update_status(self, container_id: str, status: str):
+    async def _update_status(self, container_id: str, status: str):
         if container_id in self.vps_instances:
             self.vps_instances[container_id]["status"] = status
-            self.save_instances()
+            await self.save_instances()
 
     async def get_vps_stats(self, container_id: str) -> Optional[Dict]:
         try:
@@ -258,7 +260,7 @@ class VPSManager:
                     "memory_limit": cfg.memory_limit,
                     "storage_limit": cfg.storage_limit,
                 })
-                self.save_instances()
+                await self.save_instances()
             container.start()
             return True
         except Exception as e:
@@ -281,7 +283,7 @@ class VPSManager:
                     "name": backup_name,
                     "retention_type": retention_type,
                 })
-                self.save_instances()
+                await self.save_instances()
 
             self._record_backup(container_id, image.id, backup_name, retention_type)
             self._apply_retention_policy(container_id)
@@ -365,7 +367,7 @@ class VPSManager:
             instance_info["container_id"] = container.id
             self.vps_instances[container.id] = instance_info
             self.vps_instances.pop(container_id, None)
-            self.save_instances()
+            await self.save_instances()
             return True
         except Exception as e:
             self.logger.error(f"Error restoring backup: {e}")
@@ -386,7 +388,7 @@ class VPSManager:
                     "created_at": timestamp,
                     "name": snapshot_name,
                 })
-                self.save_instances()
+                await self.save_instances()
 
             self._record_snapshot(container_id, snapshot_name, image.id)
             return image.id
@@ -452,7 +454,7 @@ class VPSManager:
             new_info["created_at"] = datetime.now().isoformat()
             new_info["cloned_from"] = container_id
             self.vps_instances[new_container.id] = new_info
-            self.save_instances()
+            await self.save_instances()
             return new_container.id
         except Exception as e:
             self.logger.error(f"Error cloning VPS: {e}")

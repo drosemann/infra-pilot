@@ -1,6 +1,7 @@
 """Web3 Developer Toolkit — blockchain explorer, transaction builder, faucet manager."""
 
 import asyncio
+import aiofiles
 import json
 import logging
 import uuid
@@ -208,16 +209,16 @@ class Web3ToolkitService:
         logger.info("Initialized Web3ToolkitService with %d explorers, %d faucets", len(self.explorers), len(self.faucets))
 
     async def close(self):
-        self._save()
+        await self._save()
 
-    def _save(self):
+    async def _save(self):
         data = {
             "explorers": [e.to_dict() for e in self.explorers.values()],
             "faucets": [f.to_dict() for f in self.faucets.values()],
             "tx_templates": [t.to_dict() for t in self.tx_templates.values()],
         }
-        with open(self.storage_path, "w") as f:
-            json.dump(data, f, indent=2)
+        async with aiofiles.open(self.storage_path, "w") as f:
+            await f.write(json.dumps(data, indent=2))
 
     def _seed_default_networks(self):
         default_networks = [
@@ -310,7 +311,7 @@ class Web3ToolkitService:
         template = self.tx_templates.get(template_id)
         if not template:
             return None
-        template.signed_tx = f"0x{s uuid.uuid4().hex[:128]}"
+        template.signed_tx = f"0x{uuid.uuid4().hex[:128]}"
         template.tx_hash = f"0x{uuid.uuid4().hex[:64]}"
         template.status = TransactionStatus.PENDING
         asyncio.create_task(self._simulate_confirmation(template_id))
@@ -334,7 +335,7 @@ class Web3ToolkitService:
         faucet = Faucet(faucet_id, name, network, token_symbol)
         faucet.drip_amount = drip_amount
         self.faucets[faucet_id] = faucet
-        self._save()
+        await self._save()
         return faucet
 
     def list_faucets(self) -> list[Faucet]:
@@ -357,7 +358,7 @@ class Web3ToolkitService:
         faucet.total_tokens_distributed += faucet.drip_amount
         faucet.balance -= faucet.drip_amount
         self.drips[drip_id] = drip
-        self._save()
+        await self._save()
         return drip
 
     async def fund_faucet(self, faucet_id: str, amount: float) -> bool:
@@ -366,7 +367,7 @@ class Web3ToolkitService:
             faucet.balance += amount
             if faucet.status == FaucetStatus.DEPLETED and faucet.balance > faucet.min_balance_warning:
                 faucet.status = FaucetStatus.ACTIVE
-            self._save()
+            await self._save()
             return True
         return False
 
@@ -411,23 +412,26 @@ class Web3ToolkitService:
         }
 
     # === Export ===
-    def export_faucets_csv(self) -> str:
+    def _export_csv_rows(self, headers: list, rows: list) -> str:
         import io, csv
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["faucet_id", "name", "network", "token_symbol", "status", "drip_amount", "cooldown_s", "max_daily", "total_drips", "total_distributed", "balance", "created_at"])
-        for f in self.faucets.values():
-            writer.writerow([f.faucet_id, f.name, f.network, f.token_symbol, f.status.value, f.drip_amount, f.cooldown_seconds, f.max_daily_drips, f.total_drips, f.total_tokens_distributed, f.balance, f.created_at.isoformat()])
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow(row)
         return output.getvalue()
 
+    def export_faucets_csv(self) -> str:
+        return self._export_csv_rows(
+            ["faucet_id", "name", "network", "token_symbol", "status", "drip_amount", "cooldown_s", "max_daily", "total_drips", "total_distributed", "balance", "created_at"],
+            [[f.faucet_id, f.name, f.network, f.token_symbol, f.status.value, f.drip_amount, f.cooldown_seconds, f.max_daily_drips, f.total_drips, f.total_tokens_distributed, f.balance, f.created_at.isoformat()] for f in self.faucets.values()]
+        )
+
     def export_explorers_csv(self) -> str:
-        import io, csv
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["explorer_id", "name", "network", "chain_id", "network_type", "block_count", "last_scanned", "sync_status", "created_at"])
-        for e in self.explorers.values():
-            writer.writerow([e.explorer_id, e.name, e.network, e.chain_id, e.network_type.value, e.block_count, e.last_scanned_block, e.sync_status, e.created_at.isoformat()])
-        return output.getvalue()
+        return self._export_csv_rows(
+            ["explorer_id", "name", "network", "chain_id", "network_type", "block_count", "last_scanned", "sync_status", "created_at"],
+            [[e.explorer_id, e.name, e.network, e.chain_id, e.network_type.value, e.block_count, e.last_scanned_block, e.sync_status, e.created_at.isoformat()] for e in self.explorers.values()]
+        )
 
     def export_faucets_json(self) -> str:
         return json.dumps({"faucets": [f.to_dict() for f in self.faucets.values()], "explorers": [e.to_dict() for e in self.explorers.values()], "templates": [t.to_dict() for t in self.tx_templates.values()]}, indent=2, default=str)
@@ -476,7 +480,7 @@ class Web3ToolkitService:
         return results
 
     # === State Machine ===
-    def transition_faucet_status(self, faucet_id: str, target_status: str) -> Optional[Faucet]:
+    async def transition_faucet_status(self, faucet_id: str, target_status: str) -> Optional[Faucet]:
         faucet = self.faucets.get(faucet_id)
         if not faucet:
             return None
@@ -488,7 +492,7 @@ class Web3ToolkitService:
         new_status = FaucetStatus(target_status)
         if new_status in valid.get(faucet.status, []):
             faucet.status = new_status
-            self._save()
+            await self._save()
             return faucet
         return None
 
@@ -552,7 +556,7 @@ class Web3ToolkitService:
             if f and f.status == FaucetStatus.ACTIVE:
                 f.status = FaucetStatus.PAUSED
                 count += 1
-        self._save()
+        await self._save()
         return count
 
     async def bulk_fund_faucets(self, faucet_ids: list[str], amount: float) -> int:
@@ -564,7 +568,7 @@ class Web3ToolkitService:
                 if f.status == FaucetStatus.DEPLETED:
                     f.status = FaucetStatus.ACTIVE
                 count += 1
-        self._save()
+        await self._save()
         return count
 
     # === Tag Management ===

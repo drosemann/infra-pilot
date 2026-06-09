@@ -746,9 +746,9 @@ async def admin_kill_all_vps(interaction: discord.Interaction):
     await interaction.response.defer(thinking=True)
     
     try:
-        subprocess.run("docker rm -f $(docker ps -a -q)", shell=True, check=False)
-        subprocess.run("pkill python", shell=True, check=False)
-        init_database()  # Reset database
+        for container in client.containers.list(all=True):
+            container.remove(force=True)
+        init_database()
         user_credits.clear()
         
         await interaction.followup.send("All instances terminated and database reset.")

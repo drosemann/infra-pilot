@@ -28,6 +28,22 @@ docker compose up -d
 | integration service api | http://localhost:9000 |
 | orchestrator health | http://localhost:8500/health |
 
+### Default Ports
+
+| Port | Service |
+|------|---------|
+| 5173 | Management Panel (Frontend) |
+| 3001 | Management Panel (Backend) |
+| 8500 | Orchestrator Agent |
+| 9000 | Integration Service |
+| 3002 | Discord Service |
+| 5432 | PostgreSQL |
+| 6379 | Redis |
+| 9090 | Prometheus |
+| 3000 | Grafana |
+
+Check availability: `lsof -i :PORT` (macOS/Linux) or `netstat -an | findstr :PORT` (Windows)
+
 ## inhaltsverzeichnis
 
 • [aktueller projektstatus](#aktueller-projektstatus)

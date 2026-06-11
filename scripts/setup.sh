@@ -89,6 +89,25 @@ fi
 
 log_success "Prerequisites check passed"
 
+# Validate key infrastructure files
+echo ""
+log_info "Validating infrastructure files..."
+
+INFRA_FILES=(
+    "docker-compose.yml"
+    ".env.example"
+    "infrastructure/prometheus/prometheus.yml"
+    "infrastructure/grafana/provisioning/datasources/prometheus.yml"
+)
+
+for file in "${INFRA_FILES[@]}"; do
+    if [ -f "$file" ]; then
+        log_success "Found $file"
+    else
+        log_warning "Missing $file - some features may not work"
+    fi
+done
+
 # Setup each service
 echo ""
 log_info "Setting up services..."

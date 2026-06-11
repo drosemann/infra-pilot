@@ -48,15 +48,6 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.1.0",
     "ws": "^8.18.0"
-    "pg": "^8.9.0",
-    "express-rate-limit": "^8.5.2",
-    "ws": "^8.18.0",
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
-    "@tauri-apps/plugin-notification": "^2.0.0",
-    "@tauri-apps/plugin-updater": "^2.0.0",
-    "@tauri-apps/plugin-shell": "^2.0.0",
-    "effect": "^3.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

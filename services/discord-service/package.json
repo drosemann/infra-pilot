@@ -15,7 +15,7 @@
     "mysql2": "^3.6.0",
     "systeminformation": "^5.21.0",
     "pretty-bytes": "^7.1.0",
-    "canvas": "^2.11.0",
+    "canvas": "^3.2.3",
     "quickchart-js": "^3.1.0",
     "fast-xml-parser": "^5.0.0",
     "node-cron": "^4.2.1"

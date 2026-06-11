@@ -62,7 +62,7 @@
     "dotenv": "^16.4.7",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
+    "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^15.15.0",
     "playwright": "^1.40.0",
     "postcss": "~8",

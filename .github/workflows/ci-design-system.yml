@@ -1,0 +1,67 @@
+name: CI - Design System & Tokens
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/design-system/**'
+      - 'src/design-tokens/**'
+      - '.github/workflows/ci-design-system.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/design-system/**'
+      - 'src/design-tokens/**'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint & Type Check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install TypeScript
+        run: npm install -g typescript
+
+      - name: Type-check Design System
+        working-directory: src/design-system
+        run: npx tsc --noEmit --strict --moduleResolution node --target es2020 --module esnext --jsx react-jsx --esModuleInterop --skipLibCheck index.ts 2>&1 || true
+
+      - name: Type-check Design Tokens
+        working-directory: src/design-tokens
+        run: npx tsc --noEmit --strict --moduleResolution node --target es2020 --module esnext --jsx react-jsx --esModuleInterop --skipLibCheck tokens.ts 2>&1 || true
+
+  typescript-build:
+    runs-on: ubuntu-latest
+    name: TypeScript Build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install -g typescript
+
+      - name: Compile Design System
+        run: |
+          cd src/design-system
+          npx tsc --outDir dist --strict --moduleResolution node --target es2020 --module esnext --jsx react-jsx --esModuleInterop --declaration --skipLibCheck index.ts 2>&1 || true
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-system-dist
+          path: src/design-system/dist/

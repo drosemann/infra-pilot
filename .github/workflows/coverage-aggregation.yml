@@ -1,0 +1,92 @@
+name: Coverage Aggregation
+
+on:
+  workflow_run:
+    workflows:
+      - CI - Service Core (Java)
+      - CI - Integration Service (Python)
+      - CI - Orchestrator Agent (Python)
+      - CI - Management Panel (TypeScript)
+      - CI - Discord Service (Node.js)
+      - CI - CLI Service (Python)
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    name: Aggregate Coverage Reports
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: coverage-artifacts
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install coverage tools
+        run: pip install coverage pytest-cov
+
+      - name: Generate consolidated report
+        run: |
+          echo "# Coverage Report" > consolidated-coverage.md
+          echo "## Coverage by Service" >> consolidated-coverage.md
+          echo "" >> consolidated-coverage.md
+
+          if [ -d "coverage-artifacts" ]; then
+            for dir in coverage-artifacts/*/; do
+              service=$(basename "$dir")
+              echo "### $service" >> consolidated-coverage.md
+              if [ -f "$dir/coverage.xml" ]; then
+                python -c "
+import xml.etree.ElementTree as ET
+tree = ET.parse('$dir/coverage.xml')
+root = tree.getroot()
+for pkg in root.iter('package'):
+    name = pkg.get('name', '')
+    rate = pkg.get('line-rate', '0')
+    print(f'- {name}: {float(rate)*100:.1f}%')
+" >> consolidated-coverage.md || echo "- Report available" >> consolidated-coverage.md
+              elif [ -f "$dir/jacoco.xml" ]; then
+                echo "- JaCoCo report available" >> consolidated-coverage.md
+              else
+                echo "- No coverage data found" >> consolidated-coverage.md
+              fi
+              echo "" >> consolidated-coverage.md
+            done
+          else
+            echo "No coverage artifacts found (workflow triggers on completed CI runs)" >> consolidated-coverage.md
+          fi
+
+          cat consolidated-coverage.md
+
+      - name: Upload consolidated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-coverage
+          path: consolidated-coverage.md
+
+  codecov-upload:
+    runs-on: ubuntu-latest
+    name: Upload to Codecov
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload aggregator report
+        uses: codecov/codecov-action@v3
+        with:
+          flags: aggregated
+          name: aggregated-coverage
+          fail_ci_if_error: false

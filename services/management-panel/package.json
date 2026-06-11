@@ -50,7 +50,7 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.21.0",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.40.0",
     "@tauri-apps/cli": "^2.0.0",
     "@types/express": "^4.17.21",

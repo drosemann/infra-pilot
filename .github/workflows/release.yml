@@ -1,0 +1,121 @@
+name: Release Management
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.2.3)'
+        required: false
+        type: string
+      prerelease:
+        description: 'Pre-release flag'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    name: Determine Version
+
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      is_prerelease: ${{ steps.semver.outputs.prerelease }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: semver
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ inputs.version }}" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "prerelease=${{ inputs.prerelease }}" >> $GITHUB_OUTPUT
+          else
+            # Use git tag count as version
+            tag_count=$(git tag --list 'v*' | wc -l)
+            next_version=$((tag_count + 1))
+            echo "version=0.${next_version}.0" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  changelog:
+    runs-on: ubuntu-latest
+    name: Generate Changelog
+    needs: version
+
+    outputs:
+      changelog: ${{ steps.gen.outputs.changelog }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: gen
+        run: |
+          echo "## Release ${{ needs.version.outputs.version }}" > changelog.md
+          echo "" >> changelog.md
+          echo "### Changes since last release" >> changelog.md
+          echo "" >> changelog.md
+          git log --oneline --no-decorate $(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD 2>/dev/null >> changelog.md || echo "- Initial release" >> changelog.md
+          echo "" >> changelog.md
+          echo "### Services included" >> changelog.md
+          echo "- CLI Service" >> changelog.md
+          echo "- Integration Service" >> changelog.md
+          echo "- Orchestrator Agent" >> changelog.md
+          echo "- Management Panel" >> changelog.md
+          echo "- Discord Service" >> changelog.md
+          echo "- Service Core" >> changelog.md
+          changelog=$(cat changelog.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$changelog" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Upload changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: changelog.md
+
+  release:
+    runs-on: ubuntu-latest
+    name: Create Release
+    needs: [version, changelog]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -a "v${{ needs.version.outputs.version }}" -m "Release v${{ needs.version.outputs.version }}"
+          git push origin "v${{ needs.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.version }}
+          body: ${{ needs.changelog.outputs.changelog }}
+          prerelease: ${{ needs.version.outputs.is_prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build all Docker images
+        env:
+          REGISTRY: ghcr.io
+        run: |
+          echo "Triggering multi-service build for release v${{ needs.version.outputs.version }}"
+          # Individual service builds are handled by docker-publish.yml on tag push

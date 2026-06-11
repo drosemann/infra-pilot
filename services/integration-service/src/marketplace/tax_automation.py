@@ -79,8 +79,8 @@ class TaxAutomationManager:
                     storage.clear()
                     for item in data:
                         storage[item['id']] = cls(**item)
-            except Exception as e:
-                logger.warning(f"Failed to load {attr}: {e}")
+            except Exception:
+                logger.warning("Failed to load tax automation data", exc_info=False)
 
     def _save_data(self):
         for file_key, attr in [
@@ -93,8 +93,8 @@ class TaxAutomationManager:
                 data = [asdict(v) for v in storage.values()]
                 with open(file_key, 'w') as f:
                     json.dump(data, f, indent=2, default=str)
-            except Exception as e:
-                logger.error(f"Failed to save {attr}: {e}")
+            except Exception:
+                logger.error("Failed to save %s", attr, exc_info=False)
 
     async def initialize(self):
         logger.info("TaxAutomationManager initialized")

@@ -83,6 +83,14 @@ const customersLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 // Simple observability instrumentation
 const APP_VERSION = process.env.APP_VERSION || 'dev';
 const metrics: {
@@ -1442,7 +1450,7 @@ app.get('/api/metrics/aggregated', verifyAuth, async (req: Request, res: Respons
 });
 
 // GET /api/metrics/realtime - Real-time resource data
-app.get('/api/metrics/realtime', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/metrics/realtime', verifyAuth, generalLimiter, async (req: Request, res: Response) => {
   const appId = req.query.appId as string | undefined;
   try {
     if (appId) {
@@ -3244,7 +3252,7 @@ SwaggerUIBundle({ url: '/api/openapi.json', dom_id: '#swagger-ui' });
 // ============================================================================
 
 // GET /api/config/:appId/advice - Analyze config against best practices
-app.get('/api/config/:appId/advice', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/config/:appId/advice', verifyAuth, generalLimiter, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
 
@@ -3286,7 +3294,7 @@ app.get('/api/config/:appId/advice', verifyAuth, async (req: Request, res: Respo
 });
 
 // POST /api/config/:appId/advice/:suggestionId/apply - Apply a suggestion
-app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, generalLimiter, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId, suggestionId } = req.params;
 

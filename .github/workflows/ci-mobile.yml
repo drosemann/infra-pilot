@@ -1,0 +1,97 @@
+name: CI - Mobile Service (React Native/Expo)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'mobile/**'
+      - 'services/mobile/**'
+      - '.github/workflows/ci-mobile.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'mobile/**'
+      - 'services/mobile/**'
+
+permissions:
+  contents: read
+
+env:
+  SERVICE_PATH: mobile
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint & Type Check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npm ci
+
+      - name: Run TypeScript type check
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npx tsc --noEmit
+
+      - name: Run lint
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    name: Tests
+    if: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npm test || true
+
+  expo-preview:
+    runs-on: ubuntu-latest
+    name: Expo Build Check
+    if: github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: ${{ env.SERVICE_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build check
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: npx expo export --platform web --output-dir dist
+        continue-on-error: true

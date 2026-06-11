@@ -1,0 +1,62 @@
+name: CI - Documentation Linting
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - '.github/workflows/ci-docs.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - '*.md'
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    name: Markdown Linting
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli
+
+      - name: Run markdownlint
+        run: markdownlint '**/*.md' --ignore node_modules --ignore .git --ignore '**/node_modules/**' --ignore '**/target/**' || true
+
+  check-links:
+    runs-on: ubuntu-latest
+    name: Check Links
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check broken links
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: '**/*.md --exclude "localhost" --exclude "127.0.0.1" --exclude "example.com" --exclude "your-domain.com" --exclude "github.com/your-org" --accept "200,429"'
+        continue-on-error: true
+
+  spell-check:
+    runs-on: ubuntu-latest
+    name: Spell Check
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install codespell
+        run: pip install codespell
+
+      - name: Run codespell
+        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use" || true

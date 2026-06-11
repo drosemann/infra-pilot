@@ -165,7 +165,8 @@ def setup_breach_routes(app, breach_manager):
             notification = breach_manager.send_notification(breach_id, data["template_type"], data.get("fields", {}))
             return web.json_response(notification)
         except (ValueError, KeyError) as e:
-            raise web.HTTPBadRequest(text=str(e))
+            logger.warning("Bad request in send_notification: %s", str(e))
+            raise web.HTTPBadRequest(text="Invalid notification request")
 
     async def get_timeline(request):
         breach_id = request.match_info["breach_id"]
@@ -178,7 +179,8 @@ def setup_breach_routes(app, breach_manager):
             report = breach_manager.generate_report(breach_id)
             return web.json_response(report)
         except ValueError as e:
-            raise web.HTTPNotFound(text=str(e))
+            logger.warning("Report generation failed for %s: %s", breach_id, str(e))
+            raise web.HTTPNotFound(text="Report not found")
 
     app.router.add_post("/api/v1/breaches", report_breach)
     app.router.add_get("/api/v1/breaches", list_breaches)

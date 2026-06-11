@@ -142,7 +142,7 @@ class DataIntegrityVerifier:
         return total_results
 
     async def _auto_repair(self, verification: Dict[str, Any], replica_name: str, trusted_checksum: str):
-        logger.info(f"Auto-repair triggered for {replica_name} from {verification.get('trusted_source', 'primary')}")
+        logger.info("Auto-repair triggered for replica from trusted source")
         await asyncio.sleep(1)
 
     async def get_results(self, verification_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:

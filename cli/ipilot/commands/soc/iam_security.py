@@ -60,16 +60,18 @@ def handle_iam_security(args):
         print(f"Executing access review {args.review_id}")
     elif args.action == "report":
         report_data = {"total_users": 245, "active": 218, "roles": 68, "mfa_rate": 98.8, "pending_reviews": 3, "privileged_users": 24}
+        redacted = {k: "[REDACTED]" if k in ("mfa_rate", "privileged_users") else v for k, v in report_data.items()}
         if args.output == "json":
-            print(json.dumps(report_data, indent=2))
+            print(json.dumps(redacted, indent=2))
         else:
             print(f"IAM {args.format.title()} Report")
             print(f"  Users: {report_data['total_users']} ({report_data['active']} active)")
             print(f"  Roles: {report_data['roles']}")
-            print(f"  MFA Rate: {report_data['mfa_rate']}%")
-            print(f"  Privileged Users: {report_data['privileged_users']}")
+            print(f"  MFA Rate: [REDACTED]")
+            print(f"  Privileged Users: [REDACTED]")
     elif args.action == "export":
         print(f"Exporting {args.type} as {args.format}")
     elif args.action == "health":
         health_info = {"status": "healthy", "mfa_adoption": "98.8%", "inactive_users": 27, "over_permissioned_roles": 7}
-        print(json.dumps(health_info, indent=2))
+        redacted = {k: "[REDACTED]" if k in ("mfa_adoption", "over_permissioned_roles") else v for k, v in health_info.items()}
+        print(json.dumps(redacted, indent=2))

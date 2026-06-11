@@ -87,7 +87,8 @@ def setup_compliance_routes(app, compliance_scanner):
             scan = compliance_scanner.run_scan(data["standard"], data.get("target", "all"))
             return web.json_response(scan.to_dict())
         except ValueError as e:
-            raise web.HTTPBadRequest(text=str(e))
+            logger.warning("Bad request in run_scan: %s", str(e))
+            raise web.HTTPBadRequest(text="Invalid scan request")
 
     async def get_scan(request):
         scan_id = request.match_info["scan_id"]

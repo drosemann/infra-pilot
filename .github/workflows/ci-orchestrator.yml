@@ -102,7 +102,7 @@ jobs:
           pytest -q
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
           files: ./${{ env.SERVICE_PATH }}/coverage.xml
           flags: orchestrator-agent

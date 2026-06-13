@@ -42,7 +42,7 @@
     "jdenticon": "^3.3.0",
     "pg": "^8.9.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.7",
     "react-intl": "^10.1.13",
     "react-router-dom": "^6.30.4",
     "sonner": "^2.0.3",

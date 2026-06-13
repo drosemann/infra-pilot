@@ -40,6 +40,40 @@ services:
       - infra-pilot-net
     restart: unless-stopped
 
+  management-panel:
+    build:
+      context: ./services/management-panel
+      dockerfile: Dockerfile
+      target: development
+    container_name: infra-pilot-management-panel
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
+    ports:
+      - "${MANAGEMENT_FRONTEND_PORT:-5173}:5173"
+      - "${MANAGEMENT_BACKEND_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - infra-pilot-net
+    restart: unless-stopped
+
   orchestrator-agent:
     build:
       context: ./services/orchestrator-agent
@@ -47,15 +81,8 @@ services:
       target: production
     container_name: infra-pilot-orchestrator
     environment:
-      ORCHESTRATOR_AGENT_DISABLED: ${ORCHESTRATOR_AGENT_DISABLED:-true}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
-      REDIS_URL: redis://redis:6379/0
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:-infra_pilot}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
-      DB_NAME: ${POSTGRES_DB:-infra_pilot}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
       PYTHONUNBUFFERED: "1"
@@ -75,40 +102,8 @@ services:
     networks:
       - infra-pilot-net
     restart: unless-stopped
-
-  integration-service:
-    build:
-      context: ./services/integration-service
-      dockerfile: Dockerfile
-      target: production
-    container_name: infra-pilot-integration
-    environment:
-      DASHBOARD_URL: http://management-panel:5173
-      DISCORD_API_URL: http://discord-service:3000
-      SERVICE_CORE_URL: http://service-core:8080
-      ORCHESTRATOR_URL: http://orchestrator-agent:8500
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
-      PYTHONUNBUFFERED: "1"
-    ports:
-      - "${INTEGRATION_API_PORT:-9000}:9000"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      orchestrator-agent:
-        condition: service_started
-    networks:
-      - infra-pilot-net
-    restart: unless-stopped
+    profiles:
+      - discord
 
   discord-service:
     build:
@@ -117,18 +112,11 @@ services:
       target: production
     container_name: infra-pilot-discord
     environment:
-      DISCORD_SERVICE_DISABLED: ${DISCORD_SERVICE_DISABLED:-true}
       DISCORD_TOKEN: ${DISCORD_TOKEN:-}
       PTERODACTYL_API_URL: ${PTERODACTYL_API_URL:-http://localhost:8080/api}
       PTERODACTYL_API_KEY: ${PTERODACTYL_API_KEY:-local-dev-key}
       SERVER_CREATION_CHANNEL_ID: ${SERVER_CREATION_CHANNEL_ID:-}
-      SERVER_CREATOR_ROLE_ID: ${SERVER_CREATOR_ROLE_ID:-}
       LOCATION_ID: ${LOCATION_ID:-1}
-      MAX_SERVERS_PER_USER: ${MAX_SERVERS_PER_USER:-1}
-      CODE_REVIEW_WEBHOOK_PORT: 3000
-      ORCHESTRATOR_URL: http://orchestrator-agent:8500
-      INTEGRATION_API_URL: http://integration-service:9000
-      SERVICE_CORE_URL: http://service-core:8080
       API_BASE_URL: http://management-panel:3001
       DB_HOST: postgres
       DB_PORT: 5432
@@ -149,85 +137,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      orchestrator-agent:
-        condition: service_started
-      integration-service:
-        condition: service_started
     networks:
       - infra-pilot-net
     restart: unless-stopped
-
-  management-panel:
-    build:
-      context: ./services/management-panel
-      dockerfile: Dockerfile
-      target: development
-    container_name: infra-pilot-management-panel
-    environment:
-      NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3001
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
-      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
-      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
-      INTEGRATION_SERVICE_URL: http://integration-service:9000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD:-infra_pilot_dev_password}@postgres:5432/${POSTGRES_DB:-infra_pilot}
-      REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: ${JWT_SECRET:-infra-pilot-local-dev-secret}
-    ports:
-      - "${MANAGEMENT_FRONTEND_PORT:-5173}:5173"
-      - "${MANAGEMENT_BACKEND_PORT:-3001}:3001"
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      integration-service:
-        condition: service_started
-    networks:
-      - infra-pilot-net
-    restart: unless-stopped
-
-  service-core:
-    build:
-      context: ./services/service-core
-      dockerfile: Dockerfile
-    container_name: infra-pilot-service-core
-    environment:
-      JAVA_OPTS: ${JAVA_OPTS:-}
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:-infra_pilot}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-infra_pilot_dev_password}
-      DB_NAME: ${POSTGRES_DB:-infra_pilot}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - infra-pilot-net
     profiles:
-      - minecraft
-    restart: "no"
-
-  ipilot-cli:
-    build:
-      context: ./cli
-      dockerfile: Dockerfile
-      target: production
-    container_name: infra-pilot-cli
-    environment:
-      IPILOT_API_URL: http://management-panel:3001
-    networks:
-      - infra-pilot-net
-    profiles:
-      - cli
-    restart: "no"
+      - discord
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -237,9 +151,6 @@ services:
       - prometheus_data:/prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
-    depends_on:
-      integration-service:
-        condition: service_started
     networks:
       - infra-pilot-net
     restart: unless-stopped

@@ -1,17 +1,17 @@
-.PHONY: setup dev dev-services dev-services-down test test-coverage lint format clean help healthcheck verify verify-offline verify-json
+.PHONY: setup dev dev-services dev-services-down test test-coverage lint format clean help healthcheck
 
 setup:
 	@bash scripts/setup.sh
 
 dev:
-	@docker-compose up -d postgres redis && \
+	@docker compose up -d postgres redis && \
 		npm run dev --prefix services/management-panel
 
 dev-services:
-	@docker-compose up -d
+	@docker compose up -d
 
 dev-services-down:
-	@docker-compose down
+	@docker compose down
 
 test:
 	@pytest tests/ -v
@@ -26,19 +26,10 @@ format:
 	@prettier --write "services/**/*.{ts,tsx,js,jsx}"
 
 clean:
-	@docker-compose down -v && rm -rf node_modules
+	@docker compose down -v && rm -rf node_modules
 
 help:
 	@echo "Available commands: setup dev dev-services test lint format clean healthcheck"
 
 healthcheck:
 	bash ./scripts/healthcheck.sh
-
-verify:
-	bash ./scripts/verify.sh
-
-verify-offline:
-	bash ./scripts/verify.sh --offline
-
-verify-json:
-	bash ./scripts/verify.sh --json

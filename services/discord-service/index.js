@@ -52,32 +52,11 @@ const SERVER_TYPES = {
 };
 
 // --- Load Existing Modules ---
+const ServerStatus = require('./modules/serverStatus');
 const TicketSystem = require('./modules/ticketSystem');
 const TicketCommands = require('./modules/ticketCommands');
 const StatsCommands = require('./modules/statsCommands');
 const RoleManager = require('./modules/roleManager');
-const EconomyCommands = require('./modules/economyCommands');
-const DashboardManager = require('./modules/dashboard');
-
-const AdvancedTicketSystem = require('./modules/advancedTicketSystem');
-const ServerStatus = require('./modules/serverStatus');
-const EventScheduler = require('./modules/eventScheduler');
-const PollCreator = require('./modules/pollCreator');
-const RoleHierarchy = require('./modules/roleHierarchy');
-const CustomCommands = require('./modules/customCommands');
-const PrefixSettings = require('./modules/prefixSettings');
-const WarningSystem = require('./modules/warningSystem');
-const VerificationSystem = require('./modules/verificationSystem');
-const MessageFilter = require('./modules/messageFilter');
-const MessageLogger = require('./modules/messageLogger');
-const ActivityTracker = require('./modules/activityTracker');
-const WelcomeMessages = require('./modules/welcomeMessages');
-const VoiceManager = require('./modules/voiceManager');
-const TempVoiceChannels = require('./modules/tempVoiceChannels');
-const MessageScheduler = require('./modules/messageScheduler');
-const ChannelCleanup = require('./modules/channelCleanup');
-const MessageArchive = require('./modules/messageArchive');
-const CategoryManager = require('./modules/categoryManager');
 const TopicRotation = require('./modules/topicRotation');
 const StatsGraphs = require('./modules/statsGraphs');
 const VerificationLevels = require('./modules/verificationLevels');

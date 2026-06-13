@@ -43,8 +43,10 @@ import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 import { SERVER_PRESETS } from './presets.js';
 import openapiSpec from './openapi.js';
+import { bulkEngine } from './bulk-operations.js';
 import { analyzeConfiguration } from './config-advice-engine.js';
-// plugin-registry and change-approval-engine moved to experimental
+import * as pluginRegistry from './plugin-registry.js';
+import * as changeApproval from './change-approval-engine.js';
 
 dotenv.config({ path: '.env.local' });
 
@@ -2670,13 +2672,331 @@ app.post('/api/notification-channels/:id/test', verifyAuth, async (req: Request,
   }
 });
 
-// Billing routes moved to experimental/management-panel-expanded/billing.ts
+// ============================================================================
+// BILLING ROUTES (stored in shared_config as JSON)
+// ============================================================================
 
-// Knowledge base routes moved to experimental/management-panel-expanded/knowledge-base.ts
+const getBillingData = async (): Promise<any> => {
+  const { data } = await supabase
+    .from('shared_config')
+    .select('value')
+    .eq('key', 'billing_data')
+    .single();
+  return data?.value || { users: {}, rates: { cpuPerCoreHour: 0.05, ramPerGbHour: 0.02, storagePerGbHour: 0.001, backupPerGb: 0.01 } };
+};
 
-// Activity feed routes moved to experimental/management-panel-expanded/activity-feed.ts
+const setBillingData = async (value: any): Promise<void> => {
+  await supabase
+    .from('shared_config')
+    .upsert({ key: 'billing_data', value }, { onConflict: 'key' });
+};
 
-// Dashboard builder routes moved to experimental/management-panel-expanded/dashboard-builder.ts
+const getOrCreateUserBilling = async (userId: string): Promise<any> => {
+  const billing = await getBillingData();
+  if (!billing.users[userId]) {
+    billing.users[userId] = {
+      balance: 0,
+      totalSpent: 0,
+      totalToppedUp: 0,
+      transactions: [],
+      createdAt: new Date().toISOString(),
+    };
+    await setBillingData(billing);
+  }
+  return billing;
+};
+
+// GET /api/billing/balance - Get current user's balance
+app.get('/api/billing/balance', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    res.json({ balance: user.balance, totalSpent: user.totalSpent, totalToppedUp: user.totalToppedUp });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch balance' });
+  }
+});
+
+// POST /api/billing/topup - Simulate adding funds
+app.post('/api/billing/topup', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { amount } = req.body;
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be positive' });
+  }
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    user.balance += amount;
+    user.totalToppedUp += amount;
+    user.transactions.push({
+      id: crypto.randomUUID().slice(0, 16),
+      amount,
+      description: 'Top-up via management panel',
+      type: 'topup',
+      balanceAfter: user.balance,
+      timestamp: new Date().toISOString(),
+    });
+    user.transactions = user.transactions.slice(-100);
+    await setBillingData(billing);
+    await logAudit(userId, 'billing:topup', 'billing', null, null, { amount });
+    res.json({ balance: user.balance, totalSpent: user.totalSpent, totalToppedUp: user.totalToppedUp });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process top-up' });
+  }
+});
+
+// GET /api/billing/transactions - Get transaction history
+app.get('/api/billing/transactions', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const billing = await getOrCreateUserBilling(userId);
+    const user = billing.users[userId];
+    const txns = (user.transactions || []).map((t: any) => ({
+      id: t.id,
+      amount: t.amount,
+      description: t.description,
+      type: t.type,
+      balanceAfter: t.balanceAfter,
+      timestamp: t.timestamp,
+    }));
+    res.json(txns.reverse());
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+// GET /api/billing/cost-estimate - Calculate cost for given resources
+app.get('/api/billing/cost-estimate', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const billing = await getBillingData();
+    const rates = billing.rates;
+    const cpu = parseFloat(req.query.cpu as string) || 1;
+    const ram = parseFloat(req.query.ram as string) || 1;
+    const storage = parseFloat(req.query.storage as string) || 10;
+    const hourly = cpu * rates.cpuPerCoreHour + ram * rates.ramPerGbHour + storage * rates.storagePerGbHour;
+    const daily = hourly * 24;
+    const monthly = daily * 30;
+    res.json({ hourly: Math.round(hourly * 10000) / 10000, daily: Math.round(daily * 100) / 100, monthly: Math.round(monthly * 100) / 100 });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to calculate cost' });
+  }
+});
+
+// GET /api/billing/rates - Get current billing rates
+app.get('/api/billing/rates', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const billing = await getBillingData();
+    res.json(billing.rates);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch rates' });
+  }
+});
+
+// ============================================================================
+// FEATURE 32: KNOWLEDGE BASE ROUTES
+// ============================================================================
+
+import * as kb from './knowledge-base.js';
+
+app.get('/api/kb/articles', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const articles = await kb.listArticles();
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch articles' });
+  }
+});
+
+app.get('/api/kb/articles/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const article = await kb.getArticle(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.json(article);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch article' });
+  }
+});
+
+app.post('/api/kb/articles', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const article = await kb.createArticle({ ...req.body, author: userId });
+    await logAudit(userId, 'knowledge_base:create', 'kb_article', article.id);
+    res.status(201).json(article);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create article' });
+  }
+});
+
+app.put('/api/kb/articles/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const article = await kb.updateArticle(req.params.id, req.body);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    await logAudit((req as any).user.id, 'knowledge_base:update', 'kb_article', req.params.id);
+    res.json(article);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update article' });
+  }
+});
+
+app.delete('/api/kb/articles/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const ok = await kb.deleteArticle(req.params.id);
+    if (!ok) return res.status(404).json({ error: 'Article not found' });
+    await logAudit((req as any).user.id, 'knowledge_base:delete', 'kb_article', req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete article' });
+  }
+});
+
+app.get('/api/kb/search', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const qParam = req.query.q;
+    const q = typeof qParam === 'string' ? qParam : '';
+    if (!q || q.length < 2) return res.json([]);
+    const articles = await kb.searchArticles(q);
+    res.json(articles);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to search articles' });
+  }
+});
+
+app.get('/api/kb/categories', verifyAuth, async (_req: Request, res: Response) => {
+  try {
+    const categories = await kb.listCategories();
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+app.post('/api/kb/categories', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const category = await kb.createCategory(req.body);
+    res.status(201).json(category);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
+app.delete('/api/kb/categories/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const ok = await kb.deleteCategory(req.params.id);
+    if (!ok) return res.status(404).json({ error: 'Category not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete category' });
+  }
+});
+
+// ============================================================================
+// FEATURE 33: ACTIVITY FEED ROUTES
+// ============================================================================
+
+import * as activity from './activity-feed.js';
+
+app.get('/api/activity', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const type = req.query.type as string;
+    const userId = req.query.userId as string;
+    const from = req.query.from as string;
+    const to = req.query.to as string;
+    const result = await activity.getEvents({ limit, offset, type, userId, from, to });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch activity feed' });
+  }
+});
+
+app.get('/api/activity/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const event = await activity.getEvent(req.params.id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    res.json(event);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch activity event' });
+  }
+});
+
+app.get('/api/activity/export', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const format = (req.query.format as string) || 'json';
+    const type = req.query.type as string;
+    const userId = req.query.userId as string;
+    const from = req.query.from as string;
+    const to = req.query.to as string;
+    const output = await activity.exportEvents({ format: format as 'csv' | 'json', type, userId, from, to });
+    if (format === 'csv') {
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename=activity-export.csv');
+    } else {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=activity-export.json');
+    }
+    res.send(output);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to export activity feed' });
+  }
+});
+
+// ============================================================================
+// FEATURE 35: CUSTOM DASHBOARD BUILDER ROUTES
+// ============================================================================
+
+import * as de from './dashboard-engine.js';
+
+app.get('/api/dashboards', verifyAuth, async (_req: Request, res: Response) => {
+  try {
+    const dashboards = await de.listDashboards();
+    res.json(dashboards);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dashboards' });
+  }
+});
+
+app.get('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboard = await de.getDashboard(req.params.id);
+    if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+app.post('/api/dashboards', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboard = await de.createDashboard(req.body);
+    res.status(201).json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create dashboard' });
+  }
+});
+
+app.put('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const dashboard = await de.updateDashboard(req.params.id, req.body);
+    if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json(dashboard);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update dashboard' });
+  }
+});
+
+app.delete('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+  try {
+    const ok = await de.deleteDashboard(req.params.id);
+    if (!ok) return res.status(404).json({ error: 'Dashboard not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete dashboard' });
+  }
+});
 
 app.get('/api/dashboards/:id/data', verifyAuth, async (req: Request, res: Response) => {
   try {
@@ -2856,7 +3176,55 @@ app.post('/api/themes/:id/publish', verifyAuth, async (req: Request, res: Respon
   }
 });
 
-// Bulk operations routes moved to experimental/management-panel-expanded/bulk-operations.ts
+// ============================================================================
+// BULK OPERATIONS ROUTES
+// ============================================================================
+
+// POST /api/bulk/execute - Execute a bulk action
+app.post('/api/bulk/execute', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { action, ids, params } = req.body;
+  if (!action || !ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'action and ids array are required' });
+  }
+  try {
+    const job = await bulkEngine.execute(action, userId, ids, params || {});
+    res.status(202).json({
+      batchId: job.batchId,
+      status: job.status,
+      progress: job.progress,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to execute bulk action' });
+  }
+});
+
+// GET /api/bulk/:batchId - Get bulk action status
+app.get('/api/bulk/:batchId', verifyAuth, async (req: Request, res: Response) => {
+  const { batchId } = req.params;
+  try {
+    if (batchId === 'history') {
+      return res.json(bulkEngine.getHistory());
+    }
+    const job = await bulkEngine.getStatus(batchId);
+    if (!job) return res.status(404).json({ error: 'Batch not found' });
+    res.json(job);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch status' });
+  }
+});
+
+// POST /api/bulk/:batchId/undo - Rollback a bulk action
+app.post('/api/bulk/:batchId/undo', verifyAuth, async (req: Request, res: Response) => {
+  const { batchId } = req.params;
+  try {
+    const success = await bulkEngine.undo(batchId);
+    if (!success) return res.status(404).json({ error: 'Batch not found or already rolled back' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to undo bulk action' });
+  }
+});
 
 // ============================================================================
 // OPENAPI / SWAGGER DOCS
@@ -2963,14 +3331,765 @@ app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, generalLim
   }
 });
 
-// Plugin marketplace routes moved to experimental/management-panel-expanded/plugin-marketplace.ts
+// ============================================================================
+// PLUGIN MARKETPLACE ROUTES
+// ============================================================================
 
-// Terminal session routes moved to experimental/management-panel-expanded/terminal.ts
+// GET /api/plugins - List all plugins
+app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const appId = req.query.appId as string;
+  try {
+    const plugins = await pluginRegistry.listPlugins(userId, appId);
+    res.json(plugins);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch plugins' });
+  }
+});
 
-// Change approval routes moved to experimental/management-panel-expanded/change-approval.ts
+// GET /api/plugins/:id - Get plugin details
+app.get('/api/plugins/:id', verifyAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const appId = req.query.appId as string;
+  try {
+    const plugin = await pluginRegistry.getPlugin(id, undefined, appId);
+    if (!plugin) return res.status(404).json({ error: 'Plugin not found' });
+    res.json(plugin);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch plugin' });
+  }
+});
 
-// V3 + V4 routes removed for core MVP scope.
-// See experimental/management-panel-expanded/v3-v4-routes.ts
+// POST /api/plugins/:id/install - Install a plugin for an app
+app.post('/api/plugins/:id/install', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  const { appId } = req.body;
+
+  if (!appId) return res.status(400).json({ error: 'appId is required' });
+
+  try {
+    const { data: app, error: appError } = await supabase
+      .from('docker_apps')
+      .select('id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (appError || !app) return res.status(404).json({ error: 'App not found' });
+
+    await pluginRegistry.installPlugin(id, appId, userId);
+    await logAudit(userId, 'plugin:install', 'plugin', id, null, { appId });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to install plugin' });
+  }
+});
+
+// POST /api/plugins/:id/uninstall - Uninstall a plugin from an app
+app.post('/api/plugins/:id/uninstall', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { id } = req.params;
+  const { appId } = req.body;
+
+  if (!appId) return res.status(400).json({ error: 'appId is required' });
+
+  try {
+    await pluginRegistry.uninstallPlugin(id, appId);
+    await logAudit(userId, 'plugin:uninstall', 'plugin', id, null, { appId });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to uninstall plugin' });
+  }
+});
+
+// POST /api/plugins - Publish a new plugin
+app.post('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { name, description, version, author, category, tags, iconUrl, homepage } = req.body;
+
+  if (!name || !description || !version || !author || !category) {
+    return res.status(400).json({ error: 'name, description, version, author, and category are required' });
+  }
+
+  try {
+    const plugin = await pluginRegistry.publishPlugin({
+      id: crypto.randomUUID(),
+      name,
+      description,
+      version,
+      author,
+      category,
+      tags: tags || [],
+      downloads: 0,
+      iconUrl,
+      homepage,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    await logAudit(userId, 'plugin:publish', 'plugin', plugin.id, null, { name, version, category });
+    res.status(201).json(plugin);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to publish plugin' });
+  }
+});
+
+// ============================================================================
+// COLLABORATIVE TERMINAL ROUTES
+// ============================================================================
+
+const terminalSessions = new Map<string, { id: string; appId: string; createdBy: string; createdAt: string; users: Map<string, { id: string; displayName: string; cursor: { row: number; col: number }; joinedAt: string }> }>();
+
+// POST /api/terminal/sessions - Create a terminal session
+app.post('/api/terminal/sessions', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId } = req.body;
+
+  if (!appId) return res.status(400).json({ error: 'appId is required' });
+
+  try {
+    const { data: app, error: appError } = await supabase
+      .from('docker_apps')
+      .select('id')
+      .eq('id', appId)
+      .eq('user_id', userId)
+      .single();
+
+    if (appError || !app) return res.status(404).json({ error: 'App not found' });
+
+    const sessionId = crypto.randomUUID();
+    terminalSessions.set(sessionId, {
+      id: sessionId,
+      appId,
+      createdBy: userId,
+      createdAt: new Date().toISOString(),
+      users: new Map(),
+    });
+
+    res.status(201).json({
+      id: sessionId,
+      appId,
+      createdBy: userId,
+      createdAt: new Date().toISOString(),
+      users: [],
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create terminal session' });
+  }
+});
+
+// GET /api/terminal/sessions/:id - Get session details
+app.get('/api/terminal/sessions/:id', verifyAuth, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const session = terminalSessions.get(id);
+
+  if (!session) return res.status(404).json({ error: 'Session not found' });
+
+  res.json({
+    id: session.id,
+    appId: session.appId,
+    createdBy: session.createdBy,
+    createdAt: session.createdAt,
+    users: Array.from(session.users.values()),
+  });
+});
+
+// ============================================================================
+// CHANGE APPROVAL WORKFLOW ROUTES
+// ============================================================================
+
+// POST /api/change-requests - Create a change request
+app.post('/api/change-requests', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const { appId, action, reason, details, isBreakGlass } = req.body;
+
+  if (!appId || !action || !reason) {
+    return res.status(400).json({ error: 'appId, action, and reason are required' });
+  }
+
+  try {
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('display_name')
+      .eq('id', userId)
+      .single();
+
+    const userName = userProfile?.display_name || 'Unknown';
+    const request = changeApproval.createChangeRequest(userId, userName, appId, action, reason, details || '', isBreakGlass || false);
+
+    await logAudit(userId, 'change_request:create', 'change_request', request.id, null, { appId, action, status: request.status, isBreakGlass: request.isBreakGlass });
+    res.status(201).json(request);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create change request' });
+  }
+});
+
+// GET /api/change-requests - List change requests
+app.get('/api/change-requests', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const status = req.query.status as string;
+  const appId = req.query.appId as string;
+
+  try {
+    const requests = changeApproval.listChangeRequests({ status, userId, appId });
+    res.json(requests);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch change requests' });
+  }
+});
+
+// POST /api/change-requests/:id/approve - Approve a change request
+app.post('/api/change-requests/:id/approve', verifyAuth, async (req: Request, res: Response) => {
+  const reviewerId = (req as any).user.id;
+  const { id } = req.params;
+
+  try {
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('display_name')
+      .eq('id', reviewerId)
+      .single();
+
+    const reviewerName = userProfile?.display_name || 'Unknown';
+    const result = changeApproval.approveChangeRequest(id, reviewerId, reviewerName);
+
+    if (!result) return res.status(404).json({ error: 'Change request not found or already processed' });
+
+    await logAudit(reviewerId, 'change_request:approve', 'change_request', id);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to approve change request' });
+  }
+});
+
+// POST /api/change-requests/:id/reject - Reject a change request
+app.post('/api/change-requests/:id/reject', verifyAuth, async (req: Request, res: Response) => {
+  const reviewerId = (req as any).user.id;
+  const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!reason) return res.status(400).json({ error: 'Rejection reason is required' });
+
+  try {
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('display_name')
+      .eq('id', reviewerId)
+      .single();
+
+    const reviewerName = userProfile?.display_name || 'Unknown';
+    const result = changeApproval.rejectChangeRequest(id, reviewerId, reviewerName, reason);
+
+    if (!result) return res.status(404).json({ error: 'Change request not found or already processed' });
+
+    await logAudit(reviewerId, 'change_request:reject', 'change_request', id, null, { reason });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reject change request' });
+  }
+});
+
+// ============================================================================
+// V3 FEATURE ROUTES
+// ============================================================================
+
+const v3DataDir = path.join(__dirname, '..', 'data');
+fs.mkdir(v3DataDir, { recursive: true }).catch(() => {});
+
+// Helper: read/write JSON files for v3 in-memory DB
+async function v3Read<T>(name: string, fallback: T): Promise<T> {
+  try {
+    const raw = await fs.readFile(path.join(v3DataDir, `${name}.json`), 'utf-8');
+    return JSON.parse(raw);
+  } catch { return fallback; }
+}
+async function v3Write(name: string, data: any): Promise<void> {
+  await fs.writeFile(path.join(v3DataDir, `${name}.json`), JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// --- Topology 3D ---
+app.get('/api/v3/topology/nodes', async (_req: Request, res: Response) => {
+  const nodes = await v3Read<any[]>('topology_nodes', []);
+  res.json(nodes);
+});
+app.get('/api/v3/topology/edges', async (_req: Request, res: Response) => {
+  const edges = await v3Read<any[]>('topology_edges', []);
+  res.json(edges);
+});
+
+// --- Geo Heatmap ---
+app.get('/api/v3/geo/heatmap', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('geo_heatmap', []);
+  let filtered = data;
+  if (req.query.region) filtered = filtered.filter((d: any) => d.region === req.query.region);
+  if (req.query.startDate) filtered = filtered.filter((d: any) => new Date(d.date) >= new Date(req.query.startDate as string));
+  if (req.query.endDate) filtered = filtered.filter((d: any) => new Date(d.date) <= new Date(req.query.endDate as string));
+  res.json(filtered);
+});
+app.get('/api/v3/geo/regions', async (req: Request, res: Response) => {
+  const regions = await v3Read<any[]>('geo_regions', []);
+  let filtered = regions;
+  if (req.query.region) filtered = filtered.filter((r: any) => r.id === req.query.region);
+  res.json(filtered);
+});
+app.get('/api/v3/geo/cities', async (req: Request, res: Response) => {
+  const cities = await v3Read<any[]>('geo_cities', []);
+  let filtered = cities;
+  if (req.query.region) filtered = filtered.filter((c: any) => c.region === req.query.region);
+  if (req.query.limit) filtered = filtered.slice(0, parseInt(req.query.limit as string, 10));
+  res.json(filtered);
+});
+app.get('/api/v3/geo/filters', async (_req: Request, res: Response) => {
+  const filters = await v3Read<any>('geo_filters', { regions: [], providers: [], statuses: [] });
+  res.json(filters);
+});
+app.get('/api/v3/geo/timelapse', async (req: Request, res: Response) => {
+  const frames = await v3Read<any[]>('geo_timelapse', []);
+  let filtered = frames;
+  if (req.query.region) filtered = filtered.filter((f: any) => f.region === req.query.region);
+  res.json(filtered);
+});
+
+// --- Cost Analytics ---
+app.get('/api/v3/costs/breakdown', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('costs_breakdown', { categories: [], total: 0 });
+  res.json(data);
+});
+app.get('/api/v3/costs/trends', async (req: Request, res: Response) => {
+  const trends = await v3Read<any[]>('costs_trends', []);
+  let filtered = trends;
+  if (req.query.period) filtered = filtered.filter((t: any) => t.period === req.query.period);
+  res.json(filtered);
+});
+app.get('/api/v3/costs/unit-economics', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('costs_unit_economics', { cpu: 0, memory: 0, storage: 0, bandwidth: 0 });
+  res.json(data);
+});
+app.get('/api/v3/costs/budgets', async (_req: Request, res: Response) => {
+  const budgets = await v3Read<any[]>('costs_budgets', []);
+  res.json(budgets);
+});
+app.post('/api/v3/costs/budgets', async (req: Request, res: Response) => {
+  const budgets = await v3Read<any[]>('costs_budgets', []);
+  const newBudget = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString() };
+  budgets.push(newBudget);
+  await v3Write('costs_budgets', budgets);
+  res.status(201).json(newBudget);
+});
+app.get('/api/v3/costs/savings', async (_req: Request, res: Response) => {
+  const savings = await v3Read<any[]>('costs_savings', []);
+  res.json(savings);
+});
+app.get('/api/v3/costs/forecast', async (_req: Request, res: Response) => {
+  const forecast = await v3Read<any[]>('costs_forecast', []);
+  res.json(forecast);
+});
+
+// --- BI Dashboard ---
+app.get('/api/v3/bi/kpi-summary', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_kpi_summary', { mrr: 0, arr: 0, ltv: 0, cac: 0, churn: 0, activeCustomers: 0 });
+  res.json(data);
+});
+app.get('/api/v3/bi/mrr', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_mrr', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/arr', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_arr', { current: 0, growth: 0, breakdown: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/churn', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_churn', { rate: 0, trends: [], reasons: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/ltv', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_ltv', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/cac', async (_req: Request, res: Response) => {
+  const data = await v3Read<any>('bi_cac', { total: 0, byChannel: [] });
+  res.json(data);
+});
+app.get('/api/v3/bi/acquisition', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_acquisition', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/revenue', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_revenue', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/forecasts', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_forecasts', []);
+  res.json(data);
+});
+app.get('/api/v3/bi/cohorts', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('bi_cohorts', []);
+  res.json(data);
+});
+
+// --- Dependency Graph ---
+app.get('/api/v3/dependencies/graph', async (_req: Request, res: Response) => {
+  const graph = await v3Read<any>('dependency_graph', { nodes: [], edges: [] });
+  res.json(graph);
+});
+app.get('/api/v3/dependencies/impact/:nodeId', async (req: Request, res: Response) => {
+  const impact = await v3Read<any[]>('dependency_impact', []);
+  const filtered = impact.filter((i: any) => i.sourceId === req.params.nodeId || i.targetId === req.params.nodeId);
+  res.json(filtered);
+});
+app.post('/api/v3/dependencies/discover', async (_req: Request, res: Response) => {
+  const graph = await v3Read<any>('dependency_graph', { nodes: [], edges: [] });
+  res.json({ discovered: graph.nodes.length + graph.edges.length });
+});
+
+// --- Custom Report Builder ---
+app.get('/api/v3/reports/designs', async (_req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  res.json(designs);
+});
+app.post('/api/v3/reports/designs', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const newDesign = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  designs.push(newDesign);
+  await v3Write('report_designs', designs);
+  res.status(201).json(newDesign);
+});
+app.put('/api/v3/reports/designs/:id', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const idx = designs.findIndex((d: any) => d.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'Design not found' });
+  designs[idx] = { ...designs[idx], ...req.body, updatedAt: new Date().toISOString() };
+  await v3Write('report_designs', designs);
+  res.json(designs[idx]);
+});
+app.delete('/api/v3/reports/designs/:id', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const filtered = designs.filter((d: any) => d.id !== req.params.id);
+  await v3Write('report_designs', filtered);
+  res.status(204).end();
+});
+app.post('/api/v3/reports/designs/:id/generate', async (req: Request, res: Response) => {
+  const designs = await v3Read<any[]>('report_designs', []);
+  const design = designs.find((d: any) => d.id === req.params.id);
+  if (!design) return res.status(404).json({ error: 'Design not found' });
+  res.json({ id: crypto.randomUUID(), designId: req.params.id, status: 'generated', channels: req.body.channels || [], generatedAt: new Date().toISOString() });
+});
+app.get('/api/v3/reports/schedules', async (_req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  res.json(schedules);
+});
+app.post('/api/v3/reports/schedules', async (req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  const newSchedule = { id: crypto.randomUUID(), ...req.body, createdAt: new Date().toISOString() };
+  schedules.push(newSchedule);
+  await v3Write('report_schedules', schedules);
+  res.status(201).json(newSchedule);
+});
+app.delete('/api/v3/reports/schedules/:id', async (req: Request, res: Response) => {
+  const schedules = await v3Read<any[]>('report_schedules', []);
+  const filtered = schedules.filter((s: any) => s.id !== req.params.id);
+  await v3Write('report_schedules', filtered);
+  res.status(204).end();
+});
+app.get('/api/v3/reports/deliveries', async (_req: Request, res: Response) => {
+  const deliveries = await v3Read<any[]>('report_deliveries', []);
+  res.json(deliveries);
+});
+app.get('/api/v3/reports/templates', async (_req: Request, res: Response) => {
+  const templates = await v3Read<any[]>('report_templates', [
+    { id: 'executive-summary', name: 'Executive Summary', category: 'business' },
+    { id: 'cost-report', name: 'Cost Report', category: 'finance' },
+    { id: 'performance', name: 'Performance Report', category: 'ops' },
+    { id: 'incidents', name: 'Incident Report', category: 'ops' },
+    { id: 'anomaly-digest', name: 'Anomaly Digest', category: 'security' },
+    { id: 'capacity-forecast', name: 'Capacity Forecast', category: 'ops' },
+  ]);
+  res.json(templates);
+});
+
+// ============================================================================
+// V4 DATA PLATFORM & ANALYTICS API ROUTES
+// ============================================================================
+
+// --- Feature 41: Managed Data Lakehouse ---
+app.get('/api/v4/data/lakehouse', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  res.json(data);
+});
+app.post('/api/v4/data/lakehouse', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const cluster = { cluster_id: crypto.randomUUID(), ...req.body, tables: 0, status: 'active', created_at: new Date().toISOString() };
+  data.push(cluster);
+  await v3Write('v4_lakehouse_clusters', data);
+  res.status(201).json(cluster);
+});
+app.get('/api/v4/data/lakehouse/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const cluster = data.find((c: any) => c.cluster_id === req.params.id);
+  if (!cluster) return res.status(404).json({ error: 'Not found' });
+  res.json(cluster);
+});
+app.delete('/api/v4/data/lakehouse/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_lakehouse_clusters', []);
+  const filtered = data.filter((c: any) => c.cluster_id !== req.params.id);
+  await v3Write('v4_lakehouse_clusters', filtered);
+  res.status(204).end();
+});
+app.post('/api/v4/data/lakehouse/tables/:id/compact', async (req: Request, res: Response) => {
+  res.json({ table_id: req.params.id, status: 'compacted', timestamp: new Date().toISOString() });
+});
+app.post('/api/v4/data/lakehouse/tables/:id/vacuum', async (req: Request, res: Response) => {
+  res.json({ table_id: req.params.id, status: 'vacuumed', retention_hours: req.body.retention_hours || 168 });
+});
+
+// --- Feature 42: Streaming Data Pipeline ---
+app.get('/api/v4/data/streaming', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  res.json(data);
+});
+app.post('/api/v4/data/streaming', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  const cluster = { cluster_id: crypto.randomUUID(), ...req.body, topics: 0, connectors: 0, status: 'active', created_at: new Date().toISOString() };
+  data.push(cluster);
+  await v3Write('v4_streaming_clusters', data);
+  res.status(201).json(cluster);
+});
+app.get('/api/v4/data/streaming/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_streaming_clusters', []);
+  const cluster = data.find((c: any) => c.cluster_id === req.params.id);
+  if (!cluster) return res.status(404).json({ error: 'Not found' });
+  res.json(cluster);
+});
+app.post('/api/v4/data/streaming/:id/topics', async (req: Request, res: Response) => {
+  res.json({ cluster_id: req.params.id, topic: req.body.topic, partitions: req.body.partitions || 3, status: 'created' });
+});
+app.delete('/api/v4/data/streaming/:id/topics/:topic', async (req: Request, res: Response) => {
+  res.status(204).end();
+});
+app.post('/api/v4/data/streaming/:id/scale', async (req: Request, res: Response) => {
+  res.json({ cluster_id: req.params.id, nodes: req.body.nodes, status: 'scaled' });
+});
+
+// --- Feature 43: Data Quality Framework ---
+app.get('/api/v4/data/quality/rules', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_rules', []);
+  res.json(data);
+});
+app.post('/api/v4/data/quality/rules', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_rules', []);
+  const rule = { rule_id: crypto.randomUUID(), ...req.body, enabled: true, created_at: new Date().toISOString() };
+  data.push(rule);
+  await v3Write('v4_quality_rules', data);
+  res.status(201).json(rule);
+});
+app.post('/api/v4/data/quality/run', async (_req: Request, res: Response) => {
+  const rules = await v3Read<any[]>('v4_quality_rules', []);
+  const total = rules.length;
+  const passed = Math.floor(total * 0.8);
+  const failed = total - passed;
+  res.json({ total, passed, failed, timestamp: new Date().toISOString() });
+});
+app.get('/api/v4/data/quality/violations', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_quality_violations', []);
+  res.json(data);
+});
+app.get('/api/v4/data/quality/scorecard/:dataset', async (req: Request, res: Response) => {
+  res.json({ dataset: req.params.dataset, overall_score: 92.5, rules: 4, passing: 3, failing: 1 });
+});
+
+// --- Feature 44: Analytics Query Workbench ---
+app.get('/api/v4/data/query', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  res.json(data);
+});
+app.post('/api/v4/data/query/execute', async (req: Request, res: Response) => {
+  await new Promise(r => setTimeout(r, 100));
+  res.json({ query_id: crypto.randomUUID(), columns: ['id', 'name', 'value'], rows: [[1, 'test', 42.0]], row_count: 1, execution_time_ms: 42 });
+});
+app.post('/api/v4/data/query/save', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  const q = { query_id: crypto.randomUUID(), ...req.body, status: 'saved', created_at: new Date().toISOString() };
+  data.push(q);
+  await v3Write('v4_saved_queries', data);
+  res.status(201).json(q);
+});
+app.delete('/api/v4/data/query/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_saved_queries', []);
+  await v3Write('v4_saved_queries', data.filter((q: any) => q.query_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/query/schema', async (_req: Request, res: Response) => {
+  res.json([{ name: 'users', object_type: 'table', schema: 'public' }, { name: 'orders', object_type: 'table', schema: 'public' }]);
+});
+
+// --- Feature 45: Data Catalog & Governance ---
+app.get('/api/v4/data/catalog/assets', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  res.json(data);
+});
+app.post('/api/v4/data/catalog/assets', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  const asset = { asset_id: crypto.randomUUID(), ...req.body, certified: false, created_at: new Date().toISOString() };
+  data.push(asset);
+  await v3Write('v4_catalog_assets', data);
+  res.status(201).json(asset);
+});
+app.get('/api/v4/data/catalog/search', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_catalog_assets', []);
+  const q = (req.query.q as string || '').toLowerCase();
+  res.json(data.filter((a: any) => a.name?.toLowerCase().includes(q)));
+});
+app.post('/api/v4/data/catalog/harvest', async (_req: Request, res: Response) => {
+  res.json({ status: 'completed', assets_found: 5, columns_found: 30, duration_sec: 2.3 });
+});
+app.post('/api/v4/data/catalog/assets/:id/certify', async (req: Request, res: Response) => {
+  res.json({ asset_id: req.params.id, certified: true });
+});
+
+// --- Feature 46: Data Masking & Anonymization ---
+app.get('/api/v4/data/masking/rules', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_rules', []);
+  res.json(data);
+});
+app.post('/api/v4/data/masking/rules', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_rules', []);
+  const rule = { rule_id: crypto.randomUUID(), ...req.body, enabled: true, created_at: new Date().toISOString() };
+  data.push(rule);
+  await v3Write('v4_masking_rules', data);
+  res.status(201).json(rule);
+});
+app.get('/api/v4/data/masking/profiles', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_profiles', []);
+  res.json(data);
+});
+app.post('/api/v4/data/masking/profiles', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_masking_profiles', []);
+  const profile = { profile_id: crypto.randomUUID(), ...req.body, rules: [], enabled: true };
+  data.push(profile);
+  await v3Write('v4_masking_profiles', data);
+  res.status(201).json(profile);
+});
+app.post('/api/v4/data/masking/profiles/:id/apply', async (req: Request, res: Response) => {
+  res.json({ profile_id: req.params.id, status: 'applied', total_rows_masked: 1500 });
+});
+
+// --- Feature 47: Self-Service Reporting ---
+app.get('/api/v4/data/reports', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_reports', []);
+  res.json(data);
+});
+app.post('/api/v4/data/reports', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_reports', []);
+  const report = { report_id: crypto.randomUUID(), ...req.body, widgets: [], parameters: [], mode: 'visual', created_at: new Date().toISOString() };
+  data.push(report);
+  await v3Write('v4_reports', data);
+  res.status(201).json(report);
+});
+app.post('/api/v4/data/reports/:id/execute', async (req: Request, res: Response) => {
+  res.json({ report_id: req.params.id, status: 'executed', widgets: 4, execution_time_ms: 320 });
+});
+app.post('/api/v4/data/reports/:id/export', async (req: Request, res: Response) => {
+  res.json({ report_id: req.params.id, format: req.body.format || 'pdf', url: `/exports/reports/${req.params.id}.${req.body.format || 'pdf'}` });
+});
+app.post('/api/v4/data/reports/:id/schedules', async (req: Request, res: Response) => {
+  res.json({ schedule_id: crypto.randomUUID(), report_id: req.params.id, ...req.body, created_at: new Date().toISOString() });
+});
+
+// --- Feature 48: Real-Time Analytics Dashboard ---
+app.get('/api/v4/data/realtime/dashboards', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  res.json(data);
+});
+app.post('/api/v4/data/realtime/dashboards', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  const db = { dashboard_id: crypto.randomUUID(), ...req.body, panels: [], refresh: 5, status: 'active', created_at: new Date().toISOString() };
+  data.push(db);
+  await v3Write('v4_realtime_dashboards', data);
+  res.status(201).json(db);
+});
+app.delete('/api/v4/data/realtime/dashboards/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_realtime_dashboards', []);
+  await v3Write('v4_realtime_dashboards', data.filter((d: any) => d.dashboard_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/realtime/dashboards/:id/live', async (req: Request, res: Response) => {
+  const dashboard = { dashboard_id: req.params.id, panels: { p1: { metric: 'cpu', value: Math.random() * 100 } } };
+  res.json(dashboard);
+});
+app.post('/api/v4/data/realtime/metrics', async (req: Request, res: Response) => {
+  res.json({ metric: req.body.name, value: req.body.value, ingested: true, timestamp: new Date().toISOString() });
+});
+
+// --- Feature 49: Data Pipeline Observability ---
+app.get('/api/v4/data/pipelines', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_pipelines', []);
+  res.json(data);
+});
+app.post('/api/v4/data/pipelines', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_pipelines', []);
+  const pipeline = { pipeline_id: crypto.randomUUID(), ...req.body, nodes: [], edges: [], status: 'created', created_at: new Date().toISOString() };
+  data.push(pipeline);
+  await v3Write('v4_pipelines', data);
+  res.status(201).json(pipeline);
+});
+app.post('/api/v4/data/pipelines/:id/start', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'running' });
+});
+app.post('/api/v4/data/pipelines/:id/stop', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'stopped' });
+});
+app.get('/api/v4/data/pipelines/:id/health', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, status: 'running', health: 'healthy', issues: [], metrics: { throughput: 2500, latency_ms: 45, error_rate: 0.3, freshness_sec: 0.5 } });
+});
+app.get('/api/v4/data/pipelines/:id/rca', async (req: Request, res: Response) => {
+  res.json({ pipeline_id: req.params.id, root_causes: [{ node: 'source_db', issue: 'connection timeout', probability: 0.85 }] });
+});
+
+// --- Feature 50: Embedded Analytics SDK ---
+app.get('/api/v4/data/embed/customers', async (_req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  res.json(data);
+});
+app.post('/api/v4/data/embed/customers', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  const customer = { customer_id: crypto.randomUUID(), ...req.body, api_key: 'ip_ea_' + crypto.randomUUID().replace(/-/g, '').slice(0, 32), active: true, embeds: 0, created_at: new Date().toISOString() };
+  data.push(customer);
+  await v3Write('v4_embed_customers', data);
+  res.status(201).json(customer);
+});
+app.post('/api/v4/data/embed/customers/:id/rotate-key', async (req: Request, res: Response) => {
+  res.json({ customer_id: req.params.id, api_key: 'ip_ea_' + crypto.randomUUID().replace(/-/g, '').slice(0, 32) });
+});
+app.get('/api/v4/data/embed/embeds', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  if (req.query.customer_id) return res.json(data.filter((e: any) => e.customer_id === req.query.customer_id));
+  res.json(data);
+});
+app.post('/api/v4/data/embed/embeds', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  const embed = { embed_id: crypto.randomUUID(), ...req.body, active: true, created_at: new Date().toISOString() };
+  data.push(embed);
+  await v3Write('v4_embed_embeds', data);
+  res.status(201).json(embed);
+});
+app.get('/api/v4/data/embed/embeds/:id/code', async (req: Request, res: Response) => {
+  res.json({ embed_id: req.params.id, code: `<iframe src="https://analytics.infrapilot.io/embed/${req.params.id}" width="100%" height="600"></iframe>` });
+});
+app.delete('/api/v4/data/embed/embeds/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_embeds', []);
+  await v3Write('v4_embed_embeds', data.filter((e: any) => e.embed_id !== req.params.id));
+  res.status(204).end();
+});
+app.get('/api/v4/data/embed/stats', async (_req: Request, res: Response) => {
+  const customers = await v3Read<any[]>('v4_embed_customers', []);
+  const embeds = await v3Read<any[]>('v4_embed_embeds', []);
+  res.json({ total_customers: customers.length, total_embeds: embeds.length, active_customers: customers.filter((c: any) => c.active).length });
+});
+app.delete('/api/v4/data/embed/customers/:id', async (req: Request, res: Response) => {
+  const data = await v3Read<any[]>('v4_embed_customers', []);
+  await v3Write('v4_embed_customers', data.filter((c: any) => c.customer_id !== req.params.id));
+  res.status(204).end();
+});
 
 // ============================================================================
 // START SERVER

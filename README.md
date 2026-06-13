@@ -1,12 +1,12 @@
 # Infra Pilot
 
 <p align="center">
-  <img src="branding/logo.svg" alt="Infra Pilot Logo" width="120"/>
+  <img src="experimental/branding/logo.svg" alt="Infra Pilot Logo" width="120"/>
 </p>
 
 <p align="center">
 
-[![CI](https://img.shields.io/github/actions/workflow/status/d5niel-lgtm/infra-pilot/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/d5niel-lgtm/infra-pilot/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/d5niel-lgtm/infra-pilot/ci-core.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/d5niel-lgtm/infra-pilot/actions/workflows/ci-core.yml)
 [![License](https://img.shields.io/github/license/d5niel-lgtm/infra-pilot?style=flat-square)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
 [![Node](https://img.shields.io/badge/node-18%2B-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
@@ -16,20 +16,18 @@
 
 </p>
 
-**Infra Pilot** is a self-hosted infrastructure orchestration platform. It provides a unified dashboard, CLI, Discord bot, and mobile app for managing containers, cloud resources, and game servers across providers.
+**Infra Pilot** is a developer-first, self-hosted infrastructure orchestration platform — a modern alternative to Pterodactyl. It provides a unified web dashboard, CLI tool, and Discord bot for managing Docker-based servers, containers, and game servers.
 
-## Features
+## Core Features
 
-- **Web Dashboard** — React 19 management panel with real-time metrics, logs, and container management
+- **Web Dashboard** — React 19 management panel with real-time metrics, logs, and container lifecycle management
 - **CLI Tool** — `ipilot` command-line interface for scripting and automation
 - **Discord Bot** — Provision and manage servers directly from Discord
-- **Orchestrator Agent** — Python-based provisioning, monitoring, and auto-remediation
-- **Multi-Cloud** — Unified API for AWS, Azure, GCP, Hetzner, DigitalOcean, and more
-- **Green Computing** — Energy tracking, carbon dashboard, and sustainable scheduling
-- **Edge & IoT** — Device management, function runtime, mesh networking, and ML inference
-- **Identity & Security** — OIDC/SSO, WebAuthn passkeys, RBAC, audit trails, and breach notification
-- **FinOps** — Cost tracking, multi-cloud pricing comparison, and chargeback reports
-- **Mobile App** — React Native (Expo) with push notifications and device management
+- **Orchestration** — Health monitoring, backup management, alerting, and task scheduling
+- **Container Lifecycle** — Create, start, stop, restart, clone, and snapshot containers
+- **Modpack Installer** — One-click game server modpack deployment
+- **Multi-Tenant** — Customer workspaces with RBAC and audit trails
+- **Monitoring** — Resource metrics, health checks, and Prometheus/Grafana integration
 
 ## Quick Start
 
@@ -37,63 +35,61 @@
 git clone https://github.com/DaaanielTV/infra-pilot.git
 cd infra-pilot
 cp .env.example .env
-docker compose up -d
+docker compose up -d     # Starts core (postgres + redis + panel)
 ```
 
 | Service | URL |
 |---------|-----|
-| Management Panel (Frontend) | http://localhost:5173 |
-| Management Panel (API) | http://localhost:3001 |
+| Management Panel | http://localhost:5173 |
+| API | http://localhost:3001 |
 | Orchestrator Health | http://localhost:8500/health |
-| Integration Service API | http://localhost:9000 |
 
-## Services
+## Core Services
 
 | Service | Stack | Purpose |
 |---------|-------|---------|
-| **management-panel** | React 19, Express, PostgreSQL | Web dashboard for server and container management |
+| **management-panel** | React 19 + Express + PostgreSQL | Web dashboard for server and container management |
 | **orchestrator-agent** | Python (discord.py) | Server provisioning, health monitoring, and automation |
 | **discord-service** | Node.js (discord.js) | Discord bot for server creation and management |
-| **integration-service** | Python (aiohttp) | Cross-service communication and API gateway |
-| **service-core** | Java (Paper/Bukkit) | Minecraft server plugin |
+| **cli** | Python | Command-line interface for scripting |
+
+## Extended Features
+
+Extended/experimental features (mobile app, integration gateway, marketplace, data platform, edge computing, FinOps, compliance, and more) are maintained in the [`experimental/`](experimental/) directory.
 
 ## Repository Structure
 
 ```
-.
-├── services/
-│   ├── management-panel/     # React + Express dashboard
-│   ├── orchestrator-agent/   # Python provisioning agent
-│   ├── discord-service/      # Discord bot
-│   ├── integration-service/  # Cross-platform hub
-│   └── service-core/         # Minecraft plugin (Java)
-├── cli/                      # Python CLI tool (ipilot)
-├── mobile/                   # React Native (Expo) mobile app
-├── infra/                    # Provider-neutral naming, Terraform
-├── infrastructure/           # Monitoring configs (Prometheus, Grafana)
-├── tests/                    # Unit, integration, and smoke tests
-├── docs/                     # Architecture and development docs
-├── wiki/                     # User-facing documentation
-└── scripts/                  # Build, test, and setup helpers
+core/                    # Core product — strict MVP
+├── api/                 # Express REST API
+├── frontend/            # React dashboard
+├── cli/                 # Python CLI
+├── discord/             # Discord bot
+└── orchestrator/        # Orchestration agent
+experimental/            # Extended features (see experimental/README)
+infrastructure/          # Prometheus + Grafana
+services/                # Core service implementations
+docs/                    # Developer documentation
+wiki/                    # User-facing documentation
+scripts/                 # Build and setup helpers
 ```
 
 ## Requirements
 
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (for stack deployment)
-- Node.js 18+ (management panel, discord service)
-- Python 3.9+ (orchestrator agent, integration service)
-- Java 21 / Maven (service core)
+- Docker & Docker Compose v2
+- Node.js 18+ (for local frontend development)
+- Python 3.9+ (for CLI/orchestrator development)
+- PostgreSQL 16 (handled automatically by Docker Compose)
 
-## Documentation
+## Development
 
-| Resource | Description |
-|----------|-------------|
-| [Wiki](wiki/Home.md) | User-facing guides (installation, configuration, CLI reference) |
-| [Docs](docs/README.md) | Architecture, API references, development guides |
-| [Contributing](CONTRIBUTING.md) | Branch naming, commit style, PR workflow |
-| [Security](SECURITY.md) | Vulnerability reporting and security best practices |
-| [Code of Conduct](CODE_OF_CONDUCT.md) | Community guidelines |
+```bash
+make setup     # Install dependencies
+make dev       # Start core services + frontend dev server
+make test      # Run test suite
+make lint      # Lint codebase
+```
 
 ## License
 
-[MIT](LICENSE)
+MIT

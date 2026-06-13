@@ -7,7 +7,4 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  - job_name: integration-service
-    metrics_path: /api/metrics/prometheus
-    static_configs:
-      - targets: ["integration-service:9000"]
+  # integration-service moved to experimental

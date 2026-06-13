@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check broken links
-        uses: lycheeverse/lychee-action@v1
+        uses: lycheeverse/lychee-action@v2
         with:
           args: '**/*.md --exclude "localhost" --exclude "127.0.0.1" --exclude "example.com" --exclude "your-domain.com" --exclude "github.com/your-org" --accept "200,429"'
         continue-on-error: true

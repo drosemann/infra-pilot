@@ -13,7 +13,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.10",
     install_requires=[
-        "click==8.1.8",
+        "click==8.4.2",
         "requests==2.34.2",
         "pyyaml==6.0.3",
         "rich==15.0.0",

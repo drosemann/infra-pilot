@@ -61,7 +61,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.2",
     "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
     "autoprefixer": "~10",
     "dotenv": "^17.4.2",

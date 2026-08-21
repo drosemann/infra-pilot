@@ -11,7 +11,13 @@ class QueryBuilder {
   private pendingUpdate: Row | null = null;
   private isDelete = false;
 
-  constructor(private db: Db, private table: string) {}
+  private db: Db;
+  private table: string;
+
+  constructor(db: Db, table: string) {
+    this.db = db;
+    this.table = table;
+  }
 
   select(_columns = '*') {
     return this;
@@ -113,4 +119,5 @@ function makeSupabase(db: Db, users: Record<string, Row> = { token: { id: 'user-
   } as any;
 }
 
-export { Row, Db, makeResponse, QueryBuilder, makeSupabase };
+export type { Row, Db };
+export { makeResponse, QueryBuilder, makeSupabase };

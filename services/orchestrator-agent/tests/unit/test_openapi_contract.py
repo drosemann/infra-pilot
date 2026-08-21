@@ -14,9 +14,8 @@ import asyncio
 import pathlib
 
 import pytest
-import yaml
-
 import webhook_server
+import yaml
 
 SERVICE_ROOT = pathlib.Path(__file__).resolve().parents[2]
 SPEC_PATH = SERVICE_ROOT / "api_docs" / "openapi.yaml"
@@ -41,9 +40,9 @@ def test_spec_is_valid_openapi(spec):
 
 def test_spec_has_no_placeholder_servers(spec):
     for server in spec.get("servers", []):
-        assert "example.com" not in server.get("url", ""), (
-            "spec must not document placeholder servers"
-        )
+        assert "example.com" not in server.get(
+            "url", ""
+        ), "spec must not document placeholder servers"
 
 
 def _route_table(app) -> set:
@@ -57,9 +56,7 @@ def _route_table(app) -> set:
         if route.method.upper() == "HEAD":
             continue
         resource = getattr(route, "resource", None)
-        canonical = getattr(resource, "canonical", None) or getattr(
-            route, "path", None
-        )
+        canonical = getattr(resource, "canonical", None) or getattr(route, "path", None)
         routes.add((route.method.upper(), canonical))
     return routes
 

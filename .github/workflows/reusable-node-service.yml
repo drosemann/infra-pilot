@@ -15,7 +15,7 @@ on:
         description: Node.js version used for validation jobs.
         required: false
         type: string
-        default: '22'
+        default: '22.18'
       run-build:
         description: Run the build command after lint, type-check, and tests pass.
         required: false

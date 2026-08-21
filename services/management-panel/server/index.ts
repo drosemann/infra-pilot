@@ -1,4 +1,5 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
@@ -11,7 +12,7 @@ import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
-import { sanitizeAuditValue } from './audit-sanitize.js';
+import { sanitizeAuditValue } from './audit-sanitize.ts';
 
 /**
  * Run a command as a child process and capture stdout/stderr.
@@ -50,9 +51,9 @@ function runCommand(command: string, args: string[]): Promise<{ stdout: string; 
 import os from 'os';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
-import { SERVER_PRESETS } from './presets.js';
-import openapiSpec from './openapi.js';
-import { analyzeConfiguration } from './config-advice-engine.js';
+import { SERVER_PRESETS } from './presets.ts';
+import openapiSpec from './openapi.ts';
+import { analyzeConfiguration } from './config-advice-engine.ts';
 import {
   checkCpu,
   checkDisk,
@@ -61,11 +62,11 @@ import {
   checkMemory,
   collectSystemInfo,
   type DiagnosticCheck,
-} from './doctor.js';
-import { runBenchmark } from './benchmark.js';
-import { buildReport, reportToCsv, reportToPdf } from './reports.js';
-import { buildPlan } from './assistant.js';
-import { executeGraphQL } from './graphql.js';
+} from './doctor.ts';
+import { runBenchmark } from './benchmark.ts';
+import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
+import { buildPlan } from './assistant.ts';
+import { executeGraphQL } from './graphql.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });

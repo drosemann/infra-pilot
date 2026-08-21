@@ -9,6 +9,9 @@
 #   B404  import subprocess — core of a Docker/SSH orchestration tool.
 #   B603  subprocess without shell — docker exec/ssh calls are invoked
 #         with explicit argument lists, never a shell string.
+#   B604  shell=True keyword — only false positives today: typer's
+#         completion API takes a `shell` kwarg (bash/zsh/fish/...), no
+#         subprocess call is involved.
 #   B607  subprocess with partial path — invoking `docker`/`ssh` from
 #         PATH is intentional; no B602 (shell injection) findings exist.
 #   B311  random.randint for ephemeral container port assignment — not
@@ -41,4 +44,5 @@ skips:
   - B311
   - B404
   - B603
+  - B604
   - B607

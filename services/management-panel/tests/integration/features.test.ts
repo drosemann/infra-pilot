@@ -4,7 +4,6 @@ import http from 'node:http';
 import { app, setSupabaseClientForTests } from '../../server/index.ts';
 import { makeSupabase } from '../helpers/supabase-mock.ts';
 import { request } from '../helpers/http-client.ts';
-import * as changeApproval from '../../server/change-approval-engine.ts';
 
 describe('Feature API integration tests', () => {
   let server: http.Server;

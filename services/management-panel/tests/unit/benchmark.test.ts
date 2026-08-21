@@ -28,7 +28,7 @@ describe('benchmark module', () => {
   });
 
   it('measures disk write throughput', async () => {
-    const result = await measureDiskWriteMbps(1, __dirname, fakeSampler);
+    const result = await measureDiskWriteMbps(1, import.meta.dirname, fakeSampler);
     assert.ok(result.bytesWritten > 0);
     assert.ok(result.writeMbps > 0);
   });

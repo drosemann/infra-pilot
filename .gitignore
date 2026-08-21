@@ -58,3 +58,6 @@ panel_implementation/.cursor/
 generated_stubs/
 ai_generated/
 stubs/
+
+# Bandit scan output
+bandit-report.json

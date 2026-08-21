@@ -1,7 +1,6 @@
 """Unit tests for the Alembic migration integration (integration.py)."""
 
 import pytest
-
 from integration import _build_database_url, init_database_tables, run_db_migrations
 
 

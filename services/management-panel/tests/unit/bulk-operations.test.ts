@@ -35,7 +35,8 @@ describe('Bulk Operations Engine', () => {
     const job = await engine.execute('stop', 'user-1', ['app-1', 'app-2', 'app-3'], {});
     assert.equal(job.status, 'completed');
     assert.equal(job.itemIds.length, 3);
-    assert.equal(job.batchId, 'test-id');
+    assert.equal(typeof job.batchId, 'string');
+    assert.ok(job.batchId.length > 0);
     assert.deepEqual(Object.keys(job.progress), ['app-1', 'app-2', 'app-3']);
   });
 

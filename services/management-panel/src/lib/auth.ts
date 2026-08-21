@@ -1,4 +1,5 @@
-import { createClient, Session } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
 const env = (import.meta as any).env || {};
 const supabaseUrl = (env.VITE_SUPABASE_URL || 'http://localhost:54321') as string;

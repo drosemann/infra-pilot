@@ -11,8 +11,9 @@
  * Then in any route:
  *   const result = await req.cli('server list');
  */
-import { Request, Response, NextFunction } from 'express';
-import { cli, CliResult } from './cli-bridge.js';
+import type { Request, Response, NextFunction } from 'express';
+import { cli } from './cli-bridge.ts';
+import type { CliResult } from './cli-bridge.ts';
 
 declare global {
   namespace Express {

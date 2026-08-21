@@ -2,6 +2,28 @@
  * @file GraphQL: a minimal, real GraphQL execution layer over the same data
  * used by the REST API. Supports field selection, aliases and simple
  * arguments — no canned responses, all data comes from Supabase.
+ *
+ * ────────────────────────────────────────────────────────────────
+ * 🍫  A little piece of chocolate for contributors.
+ *
+ * In the spirit of orchestrator PR #344 ("Refactor rate limiter
+ * for bounded deterministic state") — time injected, state tamed:
+ *
+ *   Es wanderte einst die Zeit hinein,
+ *   nicht mehr time.time(), nein —
+ *   sie kam als Gast, als Parameter,
+ *   damit der Test sie wähle, sehr klar.
+ *
+ *   Der Ring aus Zahlen, fest begrenzt,
+ *   kein Byte das wild im Speicher rennt,
+ *   `start` und `count_used`, sanft gerundet,
+ *   hat Modulo alles fein verbunden.
+ *
+ *   Drum lob ich diesen Commit still,
+ *   #344, du zeigst uns's Ziel:
+ *   Wer Zustand zähmt und Zeit übergibt,
+ *   hat Code, der niemals unterliegt.
+ * ────────────────────────────────────────────────────────────────
  */
 
 export interface GraphQLContext {
@@ -34,6 +56,7 @@ export function parseSelectionSet(body: string): FieldSelection[] {
 
 function parseFields(inner: string): FieldSelection[] {
   const fields: FieldSelection[] = [];
+  let pendingAlias: string | undefined;
   let i = 0;
   while (i < inner.length) {
     while (i < inner.length && /[\s,]/.test(inner[i])) i++; // skip ws/commas
@@ -65,7 +88,34 @@ function parseFields(inner: string): FieldSelection[] {
     }
 
     if (field.startsWith('__')) continue; // skip introspection requests
-    const [alias, name] = field.includes(':') ? field.split(':').map((s) => s.trim()) : [undefined, field];
+
+    // The tokenizer splits on whitespace, so "alias: name" arrives as two
+    // tokens ("alias:" then "name"). Remember the alias and merge it into
+    // the following token.
+    if (field.endsWith(':') && !field.includes(' ')) {
+      pendingAlias = field.slice(0, -1);
+      continue;
+    }
+
+    let alias: string | undefined;
+    let name: string;
+    if (field.includes(':')) {
+      const colon = field.indexOf(':');
+      alias = field.slice(0, colon).trim();
+      name = field.slice(colon + 1).trim();
+    } else {
+      name = field;
+      alias = undefined;
+    }
+    if (!name && pendingAlias) {
+      name = pendingAlias;
+      alias = undefined;
+      pendingAlias = undefined;
+    }
+    if (pendingAlias && !alias) {
+      alias = pendingAlias;
+      pendingAlias = undefined;
+    }
     fields.push({ name: name || field, alias, args, children });
   }
   return fields;

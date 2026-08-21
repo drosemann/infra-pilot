@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import http from 'node:http';
 import { app, setSupabaseClientForTests } from '../../server/index.ts';
-import { Db, makeSupabase } from '../helpers/supabase-mock.ts';
+import { makeSupabase } from '../helpers/supabase-mock.ts';
+import type { Db } from '../helpers/supabase-mock.ts';
 import { requestWithHeaders } from '../helpers/http-client.ts';
 
 describe('customers rate-limiting middleware', () => {

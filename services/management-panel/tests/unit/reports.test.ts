@@ -2,27 +2,29 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { buildReport, reportToCsv, reportToPdf } from '../../server/reports.ts';
 
+const tableRows = (table: string) => {
+  if (table === 'docker_apps') return [{ id: 'app-1' }];
+  if (table === 'server_metrics') return [{ id: 1, recorded_at: '2026-08-01T00:00:00Z', cpu_pct: 12.5, memory_pct: 44 }];
+  if (table === 'backup_status') return [{ id: 1, started_at: '2026-08-01T00:00:00Z', status: 'success', size_bytes: 1024 }];
+  return [{ id: 1, triggered_at: '2026-08-01T00:00:00Z', status: 'firing', message: 'cpu high' }];
+};
+
+// Every chain stage is awaitable and chainable, mirroring supabase-js.
 const fakeSupabase = {
-  from: (table: string) => ({
-    select: () => ({
-      eq: () => ({
-        gte: () => ({
-          lte: () => ({
-            order: () => ({
-              limit: async () =>
-                table === 'docker_apps'
-                  ? { data: [{ id: 'app-1' }], error: null }
-                  : table === 'server_metrics'
-                    ? { data: [{ id: 1, recorded_at: '2026-08-01T00:00:00Z', cpu_pct: 12.5, memory_pct: 44 }], error: null }
-                    : table === 'backup_status'
-                      ? { data: [{ id: 1, started_at: '2026-08-01T00:00:00Z', status: 'success', size_bytes: 1024 }], error: null }
-                      : { data: [{ id: 1, triggered_at: '2026-08-01T00:00:00Z', status: 'firing', message: 'cpu high' }], error: null },
-            }),
-          }),
-        }),
-      }),
-    }),
-  }),
+  from: (table: string) => {
+    const step: any = {
+      select: () => step,
+      eq: () => step,
+      in: () => step,
+      gte: () => step,
+      lte: () => step,
+      order: () => step,
+      limit: () => step,
+      then: (resolve: (value: any) => void, reject?: (reason?: any) => void) =>
+        Promise.resolve({ data: tableRows(table), error: null }).then(resolve, reject),
+    };
+    return step;
+  },
 } as any;
 
 describe('reports module', () => {

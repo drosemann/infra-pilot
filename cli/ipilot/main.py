@@ -73,7 +73,8 @@ def completion(
     install: bool = typer.Option(False, "--install", help="Install shell completion"),
 ):
     """Set up shell completion for the CLI."""
-    from typer.completion import get_completion_script, install as install_completion
+    from typer.completion import get_completion_script
+    from typer.completion import install as install_completion
 
     resolved = shell if shell != "auto" else "bash"
     if install:
@@ -84,6 +85,8 @@ def completion(
             get_completion_script(
                 prog_name="ipilot",
                 complete_var="_IPILOT_COMPLETE",
+                # "shell" is a typer completion API kwarg, not a subprocess call;
+                # B604 is skipped codebase-wide in bandit.yaml
                 shell=resolved,
             )
         )

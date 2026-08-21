@@ -13,3 +13,4 @@ croniter==6.2.4
 aiofiles==25.1.0
 alembic==1.19.1
 hvac==2.4.0
+pyyaml==6.0.2

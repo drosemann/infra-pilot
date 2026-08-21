@@ -1,9 +1,17 @@
 """Unit tests for cli.ipilot.core.cli: app creation and client loading."""
 
+import re
 from unittest.mock import MagicMock
 
 import pytest
 from typer.testing import CliRunner
+
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences so assertions work with rich output."""
+    return ANSI_ESCAPE_RE.sub("", text)
 
 
 @pytest.fixture
@@ -28,7 +36,10 @@ class TestCreateApp:
         from cli.ipilot.core.cli import create_app
 
         result = runner.invoke(create_app(), [])
-        assert "Usage: ipilot" in result.output
+        assert result.exit_code == 2
+        # Rich may wrap the usage line in ANSI escapes (e.g. in CI), so
+        # compare against a stripped version of the output.
+        assert "Usage: ipilot" in strip_ansi(result.output)
 
     def test_help_exits_zero(self, runner):
         from cli.ipilot.core.cli import create_app

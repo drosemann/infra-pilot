@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import http from 'node:http';
 import { app, setSupabaseClientForTests } from '../../server/index.ts';
-import { Row, Db, makeSupabase } from '../helpers/supabase-mock.ts';
+import { makeSupabase } from '../helpers/supabase-mock.ts';
+import type { Row, Db } from '../helpers/supabase-mock.ts';
 import { request } from '../helpers/http-client.ts';
 
 describe('management-panel API integration contract', () => {

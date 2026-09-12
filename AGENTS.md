@@ -1,7 +1,13 @@
 # AGENTS.md — How to open a PR in infra-pilot
 
 This VM has **no GitHub login** (`gh auth` not configured, `origin` is HTTPS read-only).
-Push via the repo-scoped **deploy key + `deploy-ssh` remote**. Deploy keys have no API scope, so agents **push the branch only** — the owner opens the PR from web/mobile.
+We use the repo-scoped **deploy key** for all pushes.
+
+- Active push method: **deploy key + `deploy-ssh` remote**
+- Private key path (on this VM): `/home/dro/.ssh/infra-pilot-tmp` (`~/.ssh/infra-pilot-tmp`)
+- Public key path: `/home/dro/.ssh/infra-pilot-tmp.pub` — safe to share via link if owner must re-add it
+- Push remote: `deploy-ssh` = `git@github.com:drosemann/infra-pilot.git`
+- Deploy keys have no API scope, so agents **push the branch only** — the owner opens the PR from web/mobile.
 
 ## 1. Preconditions (do not change)
 

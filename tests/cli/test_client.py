@@ -466,11 +466,13 @@ class TestEndpoints:
         assert url == f"http://test.local{API_PREFIX}/inventory?tag=prod"
 
     def test_list_inventory_multiple_filters(self, client, session_calls):
+        """Include each provided inventory filter in the request URL."""
         client.list_inventory(tag="a", owner="b")
         _, url, _, _ = session_calls[0]
         assert url == f"http://test.local{API_PREFIX}/inventory?tag=a&owner=b"
 
     def test_create_server_accepts_legacy_server_type(self, client, session_calls):
+        """Map the legacy server type argument to the image payload field."""
         client.create_server(name="web", server_type="node", memory=512)
         _, url, body, _ = session_calls[0]
         assert url == f"http://test.local{API_PREFIX}/apps"

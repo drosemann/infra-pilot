@@ -203,7 +203,7 @@ def apply(
         try:
             result = client.create_server(
                 name=ds.get("name", "unknown"),
-                server_type=ds.get("type", "standard"),
+                image=ds.get("image") or ds.get("type", "standard"),
                 memory=ds.get("memory"),
             )
             results.append(

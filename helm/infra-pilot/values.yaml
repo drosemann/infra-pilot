@@ -86,7 +86,9 @@ postgresql:
     username: infrapilot
     # Prefer existingSecret (stable infra-pilot-secrets via secretName helper) over inline password.
     # See templates/secrets.yaml and _helpers.tpl – credentials are mounted from that Secret.
-    # postgres-password shares DB_PASSWORD (shared-key design) via adminPasswordKey; override if distinct admin password needed.
+    # When secrets.create=true, the generated Secret uses adminPasswordKey for the
+    # POSTGRES_PASSWORD administrator credential. With secrets.create=false, this
+    # key must exist in the externally managed existingSecret.
     existingSecret: infra-pilot-secrets
     secretKeys:
       adminPasswordKey: postgres-password
@@ -208,6 +210,7 @@ secrets:
   # Secret is created as infra-pilot-secrets (stable name via secretName helper) consumed by postgresql/redis/deployment.
   data:
     DB_PASSWORD: ""  # REQUIRED in production
+    POSTGRES_PASSWORD: ""  # REQUIRED in production; PostgreSQL administrator credential
     REDIS_PASSWORD: ""  # REQUIRED in production
     API_KEY: ""  # REQUIRED in production - generate via: openssl rand -hex 32
 

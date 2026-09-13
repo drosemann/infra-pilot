@@ -44,6 +44,35 @@ class TestValidateSecrets:
             with pytest.raises(RuntimeError):
                 validate_secrets("production", placeholder, "token")
 
+    def test_credential_whitespace_is_trimmed_before_validation(self):
+        with pytest.raises(
+            RuntimeError,
+            match="GITOPS_WEBHOOK_TOKEN, FEDERATION_API_TOKEN",
+        ):
+            validate_secrets(
+                "production",
+                "real-password",
+                "real-token",
+                gitops_webhook_token="   ",
+                federation_api_token="\t",
+                github_webhook_secret=" valid-github-secret ",
+            )
+
+    def test_explicit_whitespace_credentials_are_insecure_in_development(self):
+        insecure = validate_secrets(
+            "development",
+            "real-password",
+            "real-token",
+            gitops_webhook_token=" ",
+            federation_api_token="\t",
+            github_webhook_secret="\n",
+        )
+        assert insecure == [
+            "GITOPS_WEBHOOK_TOKEN",
+            "FEDERATION_API_TOKEN",
+            "GITHUB_WEBHOOK_SECRET",
+        ]
+
 
 class TestConfigValidate:
     def test_config_validate_uses_instance_attributes(self, monkeypatch):

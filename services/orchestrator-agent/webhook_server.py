@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # RBAC management API. Tenant users are represented by memberships inside
 # the engine and never authenticate over the wire.
 rbac_engine = RBACEngine()
+LOCAL_DEVELOPMENT_ENVIRONMENTS = frozenset({"dev", "development", "local"})
 
 
 def _serialize_rbac(obj: Any) -> Any:
@@ -492,7 +493,7 @@ async def verify_github_signature(
     X-GitHub-Delivery ID is accepted only once, which blocks replay of
     a captured signed request.
     """
-    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "").strip()
     if not secret:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
     delivery_id = request.headers.get("X-GitHub-Delivery", "")
@@ -527,7 +528,7 @@ async def verify_gitops_token(
     signature is accepted only once, which blocks replay of a captured
     request inside that window.
     """
-    token = os.getenv("GITOPS_WEBHOOK_TOKEN", "")
+    token = os.getenv("GITOPS_WEBHOOK_TOKEN", "").strip()
     if not token:
         return web.json_response({"error": "webhook auth not configured"}, status=503)
     timestamp = request.headers.get("X-Timestamp", "")
@@ -590,31 +591,33 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         opt-in for local development. This prevents the previous implicit
         dev bypass from accidentally reaching production.
         """
-        api_token = os.getenv("FEDERATION_API_TOKEN", "")
+        api_token = os.getenv("FEDERATION_API_TOKEN", "").strip()
         if not api_token:
             allow_insecure = (
                 os.getenv("ALLOW_INSECURE_FEDERATION", "").strip().lower() == "true"
             )
             if allow_insecure:
-                raw_env = os.getenv(
-                    "NODE_ENV", os.getenv("ENVIRONMENT", "development")
-                )
-                environment = raw_env.strip().lower() if isinstance(raw_env, str) else "development"
-                if environment == "production":
+                node_environment = os.getenv("NODE_ENV", "").strip()
+                environment = (
+                    node_environment or os.getenv("ENVIRONMENT", "").strip()
+                ).lower()
+                if environment not in LOCAL_DEVELOPMENT_ENVIRONMENTS:
                     logger.error(
-                        "ALLOW_INSECURE_FEDERATION=true is rejected in production; /api/ routes remain unauthenticated"
+                        "ALLOW_INSECURE_FEDERATION=true is rejected outside local development "
+                        "(resolved environment: %r)",
+                        environment,
                     )
                     return web.json_response(
                         {
                             "error": "auth not configured",
-                            "message": "FEDERATION_API_TOKEN is required in production – insecure bypass rejected",
+                            "message": "FEDERATION_API_TOKEN is required outside explicit local development",
                         },
                         status=503,
                     )
                 logger.warning(
                     "FEDERATION_API_TOKEN is not set but ALLOW_INSECURE_FEDERATION=true; "
                     "/api/ routes are unauthenticated in %s environment. "
-                    "Do not use this in production.",
+                    "Do not use this outside local development.",
                     environment,
                 )
                 return None

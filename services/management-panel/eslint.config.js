@@ -16,13 +16,21 @@ export default tseslint.config(
     ],
   },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
         ...globals.browser,
         ...globals.node,
+      },
+      parserOptions: {
+        project: [
+          "./tsconfig.app.json",
+          "./tsconfig.node.json",
+          "./tsconfig.eslint.json",
+        ],
+        tsconfigRootDir: import.meta.dirname,
       },
     },
     plugins: {
@@ -38,7 +46,7 @@ export default tseslint.config(
       "react-hooks/purity": "off",
       "react-hooks/refs": "off",
       "react-hooks/use-memo": "off",
-      "react-hooks/rules-of-hooks": "off",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/static-components": "off",
       "@typescript-eslint/no-unused-expressions": "off",
       "no-useless-assignment": "off",
@@ -71,6 +79,15 @@ export default tseslint.config(
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
+      // Keep legacy type-aware violations off while the remaining preset rules
+      // use the configured TypeScript projects for semantic checks.
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "off",
+      "@typescript-eslint/only-throw-error": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/no-redundant-type-constituents": "off",
+      "@typescript-eslint/no-base-to-string": "off",
 
       // Allow async functions without await
       // for consistency (esp. Convex `handler`s)

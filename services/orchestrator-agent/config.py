@@ -39,6 +39,12 @@ def validate_secrets(
     # Normalize environment for production checks (handles " Production ", "PRODUCTION", etc.)
     normalized_env = environment.strip().lower() if isinstance(environment, str) else ""
     is_production = normalized_env == "production"
+    raw_gitops_webhook_token = gitops_webhook_token
+    raw_federation_api_token = federation_api_token
+    raw_github_webhook_secret = github_webhook_secret
+    gitops_webhook_token = gitops_webhook_token.strip()
+    federation_api_token = federation_api_token.strip()
+    github_webhook_secret = github_webhook_secret.strip()
 
     # Base secrets always validated
     checks = [
@@ -47,11 +53,11 @@ def validate_secrets(
     ]
     # Webhook/federation secrets are required in production – in dev they
     # only warn if explicitly set to a placeholder value
-    if is_production or gitops_webhook_token:
+    if is_production or raw_gitops_webhook_token:
         checks.append(("GITOPS_WEBHOOK_TOKEN", gitops_webhook_token))
-    if is_production or federation_api_token:
+    if is_production or raw_federation_api_token:
         checks.append(("FEDERATION_API_TOKEN", federation_api_token))
-    if github_webhook_secret:
+    if raw_github_webhook_secret:
         checks.append(("GITHUB_WEBHOOK_SECRET", github_webhook_secret))
 
     insecure = [

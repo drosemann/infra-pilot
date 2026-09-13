@@ -70,6 +70,25 @@ class GitHubSignatureGuardTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(resp.status, 401)
 
+    async def test_trims_configured_secret_for_authentication(self):
+        self.secret = "test-secret"
+        os.environ["GITHUB_WEBHOOK_SECRET"] = f"  {self.secret}\t"
+        body = b'{"event":"push"}'
+        sig = self.valid_signature(body)
+        client = await self.build_client({}, body)
+        resp = await client.post(
+            "/webhook/github",
+            data=body,
+            headers=self.headers(**{"X-Hub-Signature-256": sig}),
+        )
+        self.assertEqual(resp.status, 200)
+
+    async def test_rejects_whitespace_only_secret(self):
+        os.environ["GITHUB_WEBHOOK_SECRET"] = "   "
+        client = await self.build_client({}, b"{}")
+        resp = await client.post("/webhook/github", data=b"{}")
+        self.assertEqual(resp.status, 503)
+
     async def test_rejects_wrong_signature(self):
         client = await self.build_client(
             {"X-Hub-Signature-256": "sha256=deadbeef"}, b"payload"
@@ -162,6 +181,20 @@ class GitOpsTokenGuardTest(unittest.IsolatedAsyncioTestCase):
             "/webhook/gitops", data=b"{}", headers={"X-Timestamp": "0"}
         )
         self.assertEqual(resp.status, 401)
+
+    async def test_trims_configured_token_for_authentication(self):
+        os.environ["GITOPS_WEBHOOK_TOKEN"] = f"  {self.secret}\n"
+        body = b"{}"
+        headers = self.headers(body)
+        client = await self.build_client(headers)
+        resp = await client.post("/webhook/gitops", data=body, headers=headers)
+        self.assertEqual(resp.status, 200)
+
+    async def test_rejects_whitespace_only_token(self):
+        os.environ["GITOPS_WEBHOOK_TOKEN"] = "\t"
+        client = await self.build_client({})
+        resp = await client.post("/webhook/gitops", data=b"{}")
+        self.assertEqual(resp.status, 503)
 
     async def test_rejects_wrong_secret(self):
         body = b"{}"

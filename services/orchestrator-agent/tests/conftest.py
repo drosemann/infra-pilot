@@ -1,6 +1,7 @@
 import pathlib
 import sys
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 import pytest
 
@@ -30,7 +31,13 @@ def no_database(monkeypatch):
 
 @dataclass
 class MockImage:
+    """Minimal mock for Docker image used in VPSManager.migrate_vps tests."""
+
     id: str = "image-1"
+
+    def save(self, *args, **kwargs):
+        """Return iterable chunks like docker-py Image.save()."""
+        return [b"chunk"]
 
 
 @dataclass
@@ -43,6 +50,7 @@ class MockContainer:
     started: bool = False
     restarted: bool = False
     updated: bool = False
+    last_exec: object = None
 
     def stop(self):
         self.stopped = True
@@ -66,6 +74,18 @@ class MockContainer:
     def commit(self, repository="", **kwargs):
         return MockImage(id=f"{repository}-img-1")
 
+    def exec_run(self, cmd, **kwargs):
+        self.last_exec = cmd
+
+        # Simulate successful exec for health checks / benchmarks
+        class _Result:
+            exit_code = 0
+            output = b"200"
+
+        # For pgrep / ping / curl / port checks return success by default
+        # cmd is list-form to avoid shell injection; store for assertion
+        return _Result()
+
     def stats(self, stream=False):
         return {
             "cpu_stats": {"cpu_usage": {"total_usage": 300}, "system_cpu_usage": 1000},
@@ -79,11 +99,16 @@ class MockContainer:
 
 
 class MockContainerCollection:
+    """Collects containers.run calls for assertions; get/list mirror docker-py."""
+
     def __init__(self):
-        self.created = []
-        self.by_id = {"container-1": MockContainer()}
+        self.created: list = []
+        self.by_id: dict = {"container-1": MockContainer()}
 
     def run(self, **kwargs):
+        # Simulate Docker's storage_opt validation: raise if driver mocked to reject (used in quota fallback tests)
+        if kwargs.get("storage_opt") and kwargs.get("_fail_storage_opt"):
+            raise RuntimeError("storage_opt is not supported for this driver")
         container = MockContainer(id=f"container-{len(self.created) + 1}")
         self.created.append((container, kwargs))
         self.by_id[container.id] = container
@@ -98,6 +123,28 @@ class MockContainerCollection:
         return list(self.by_id.values())
 
 
+class _MockImages:
+    """Image collection mock exposing get().save() like docker-py."""
+
+    def get(self, image_id: str):  # pylint: disable=unused-argument
+        class _Img:
+            def save(self, *args, **kwargs):
+                # Must accept bound self; return chunk iterable for migrate_vps
+                return [b"chunk"]
+
+        return _Img()
+
+    # Backward-compat alias for earlier inline mock shape
+    __getitem__ = get
+
+
 class MockDockerClient:
+    """Deterministic Docker mock covering containers/images/info for unit tests."""
+
     def __init__(self):
         self.containers = MockContainerCollection()
+        self.images = _MockImages()
+
+    def info(self) -> dict:
+        """Return minimal daemon info; overlay2 supports storage_opt in prod."""
+        return {"Driver": "overlay2"}

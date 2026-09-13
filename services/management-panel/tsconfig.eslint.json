@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.eslint.tsbuildinfo"
+  },
+  "include": ["playwright.config.ts", "server/**/*.ts", "tests/**/*.ts"]
+}

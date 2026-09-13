@@ -13,6 +13,8 @@ export const Customers = () => {
   const [email, setEmail] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string; email?: string } | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [seedModalOpen, setSeedModalOpen] = useState(false);
+  const [seedInProgress, setSeedInProgress] = useState(false);
 
   useEffect(() => {
     if (mode === 'business') {
@@ -56,8 +58,6 @@ export const Customers = () => {
     setShowModal(true);
   };
 
-  const [seedModalOpen, setSeedModalOpen] = useState(false);
-  const [seedInProgress, setSeedInProgress] = useState(false);
   // Feature flag: enable Seed Demo only in environments where it's intended
   const DEMO_FEATURE_ENABLED = (() => {
     try {

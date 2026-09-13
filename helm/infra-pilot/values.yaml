@@ -1,5 +1,9 @@
 # Default values for infra-pilot Helm chart
 
+# replicaCount is used when autoscaling.enabled=false. When HPA is enabled
+# (default) the HPA controls replicas (minReplicas 2). Use 1 for
+# non-HPA to avoid duplicate ManifestEngine reconciliation without
+# distributed coordination; see templates/deployment.yaml.
 replicaCount: 1
 
 global:
@@ -80,7 +84,16 @@ postgresql:
   auth:
     database: infrapilot
     username: infrapilot
-    password: ""  # MUST be overridden in production via --set postgresql.auth.password=$DB_PASSWORD or external secret
+    # Prefer existingSecret (stable infra-pilot-secrets via secretName helper) over inline password.
+    # See templates/secrets.yaml and _helpers.tpl – credentials are mounted from that Secret.
+    # When secrets.create=true, the generated Secret uses adminPasswordKey for the
+    # POSTGRES_PASSWORD administrator credential. With secrets.create=false, this
+    # key must exist in the externally managed existingSecret.
+    existingSecret: infra-pilot-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: db-password
+    password: ""  # Leave empty when using existingSecret; for dev only
   primary:
     persistence:
       size: 50Gi
@@ -93,7 +106,10 @@ redis:
   enabled: true
   auth:
     enabled: true
-    password: ""  # MUST be overridden in production via --set redis.auth.password=$REDIS_PASSWORD or external secret
+    # Use canonical stable secret infra-pilot-secrets (see _helpers.tpl secretName) – Bitnami Redis expects existingSecretPasswordKey.
+    existingSecret: infra-pilot-secrets
+    existingSecretPasswordKey: redis-password
+    password: ""  # Leave empty when using existingSecret; for dev only
   architecture: replication
   replica:
     replicaCount: 2
@@ -159,7 +175,14 @@ prometheus:
 
 grafana:
   enabled: true
-  adminPassword: ""  # MUST be overridden in production via --set grafana.adminPassword=$GRAFANA_PASSWORD or external secret
+  # Admin password: do not pass via --set or plain Helm values in production – use existingSecret or external-secrets.
+  # See https://github.com/grafana/helm-charts/blob/main/charts/grafana/README.md#admin-credentials
+  # Example:
+  #   admin:
+  #     existingSecret: grafana-admin-secret
+  #     userKey: admin-user
+  #     passwordKey: admin-password
+  adminPassword: ""  # Leave empty when using existingSecret; provide via external secret in production
   dashboards:
     enabled: true
   datasources:
@@ -184,8 +207,10 @@ configMaps:
 secrets:
   create: true
   # WARNING: In production, use external-secrets or a vault provider instead of plain values
+  # Secret is created as infra-pilot-secrets (stable name via secretName helper) consumed by postgresql/redis/deployment.
   data:
     DB_PASSWORD: ""  # REQUIRED in production
+    POSTGRES_PASSWORD: ""  # REQUIRED in production; PostgreSQL administrator credential
     REDIS_PASSWORD: ""  # REQUIRED in production
     API_KEY: ""  # REQUIRED in production - generate via: openssl rand -hex 32
 

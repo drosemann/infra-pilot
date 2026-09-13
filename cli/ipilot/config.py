@@ -11,12 +11,12 @@ CONFIG_DIR = os.path.expanduser("~/.ipilot")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
 ENV_API_URL = "IPILOT_API_URL"
-ENV_TOKEN = "IPILOT_TOKEN"
+ENV_TOKEN = "IPILOT_TOKEN"  # nosec B105
 ENV_OUTPUT = "IPILOT_OUTPUT"
 
 DEFAULT_API_URL = "http://localhost:3001"
 
-DEFAULT_CONFIG: Dict[str, Any] = {
+DEFAULT_CONFIG: Dict[str, Any] = {  # nosec B105
     "api_url": os.environ.get(ENV_API_URL, DEFAULT_API_URL),
     "api_key": None,
     "token": None,

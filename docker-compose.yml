@@ -24,8 +24,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '1.0'
           memory: 512M
         reservations:
+          cpus: '0.5'
           memory: 256M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -52,8 +54,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.25'
           memory: 128M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -96,8 +100,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '2.0'
           memory: 1G
         reservations:
+          cpus: '0.5'
           memory: 512M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -139,8 +145,10 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '1.0'
           memory: 512M
         reservations:
+          cpus: '0.5'
           memory: 256M
     labels:
       app.kubernetes.io/name: infra-pilot
@@ -153,6 +161,20 @@ services:
       dockerfile: Dockerfile
       target: production
     container_name: infra-pilot-discord
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # WARNING: direct Docker socket mount = host root equivalent.
+    # The :ro suffix only restricts filesystem writes to the socket path;
+    # it does NOT filter Docker Engine API requests – any holder can mutate the daemon.
+    # In production use an allowlisted socket proxy (e.g. tecnativa/docker-socket-proxy)
+    # and set DOCKER_HOST to the proxy (e.g. tcp://socket-proxy:2375). This mount
+    # is for trusted dev/lab only. Enable only via --profile discord.
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:-}
       PTERODACTYL_API_URL: ${PTERODACTYL_API_URL:-http://localhost:8080/api}

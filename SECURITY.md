@@ -28,7 +28,7 @@ get a fix before any other work.
 ```
                       ┌────────────────────────────┐
    Public Internet ──▶│ Orchestrator Agent          │
-                      │  - webhook server (:8080)   │
+                      │  - webhook server (:8500)   │
                       │  - Discord bot              │
                       └──────┬───────────┬──────────┘
                              │           │
@@ -50,14 +50,15 @@ get a fix before any other work.
 
 | Interface | Who | What they can do | Guard |
 |-----------|-----|------------------|-------|
-| `GET /health`, `GET /api/health` | Anyone | Check liveness | No sensitive data returned |
+| `GET /health`, `GET /api/health` | Anyone | Check liveness (no DB) | No sensitive data returned |
+| `GET /ready`, `GET /api/ready` | K8s / load-balancer | Readiness (DB check) | 503 if DB down; used as `readinessProbe` |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
 | `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `X-Signature-256` = HMAC-SHA256 of `X-Timestamp` + body (`GITOPS_WEBHOOK_TOKEN`), one signature per replay window; **fail closed** (503) if unset |
-| `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check |
-| `POST /api/v1/deployments`, `GET /api/v1/providers` | CLI / management panel | Trigger manifest reconciliation | Federation token (fails closed in production); optional `user_id`+`org_id` checked against `manifest:deploy` permission |
-| `/api/v1/rbac/*` | RBAC-authorized principals | Manage roles/orgs/memberships | RBAC engine + per-project scoping |
-| Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN` |
-| `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists |
+| `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check; 503 without token unless `ALLOW_INSECURE_FEDERATION=true` |
+| `POST /api/v1/deployments`, `GET /api/v1/providers` | CLI / management panel | Trigger manifest reconciliation | Federation token (now fail-closed by default via `ALLOW_INSECURE_FEDERATION`); optional `user_id`+`org_id` strictly validated and checked against `manifest:deploy`; admin path audited |
+| `/api/v1/rbac/*` | RBAC-authorized principals | Manage roles/orgs/memberships (create + revoke) | RBAC engine + per-project scoping; deletions persisted via `rbac_store` so revokes survive restart |
+| Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN`; health-check targets validated against allow-lists |
+| `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists; resource limits enforced against `RESOURCE_LIMITS` |
 
 ### Secrets and credentials
 
@@ -91,6 +92,9 @@ Regression tests assert these properties on every CI run
 | 2026-07 | Wide-open CORS restricted to configured origins |
 | 2026-07 | Hardcoded/placeholder secrets replaced; placeholder secrets rejected in production |
 | 2026-08 | Gitleaks + npm audit gates enabled in CI; coverage gates raised |
+| 2026-08 | Health-check command injection fixed (allow-list + list exec) and resource limits enforced; federation auth now fail-closed by default (`ALLOW_INSECURE_FEDERATION`) |
+| 2026-08 | RBAC revocation persistence fixed (DELETE routes + `rbac_store`); Helm secrets now required (fail-fast), readiness probe `/ready` added; discord-service hardened (read_only, no-new-privileges, cap_drop ALL, :ro) |
+| 2026-08 | CI hardened: promtool config check, postgres 16-alpine alignment, coverage gates (orchestrator 50%, panel 35%, discord 20%), bandit/ESLint warnings promoted |
 
 ## Security Best Practices (for contributors)
 

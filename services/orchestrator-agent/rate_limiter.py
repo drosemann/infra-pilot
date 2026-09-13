@@ -25,7 +25,7 @@ DEFAULT_METHODS: Tuple[str, ...] = ("GET", "POST", "PUT", "DELETE", "PATCH")
 
 
 class RateLimitStrategy(Enum):
-    TOKEN_BUCKET = "token_bucket"
+    TOKEN_BUCKET = "token_bucket"  # nosec B105
     SLIDING_WINDOW = "sliding_window"
     FIXED_WINDOW = "fixed_window"
 

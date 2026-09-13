@@ -202,6 +202,20 @@ class TestServerCommands:
         assert result.exit_code == 0
         client.create_server.assert_called_once_with("web", "node", 512)
 
+    def test_create_with_image_flag(self, client, invoke):
+        """Pass the image option through when creating a server."""
+        result = invoke(
+            ["server", "create", "web", "--image", "nginx:latest", "--memory", "512"]
+        )
+        assert result.exit_code == 0
+        client.create_server.assert_called_once_with("web", "nginx:latest", 512)
+
+    def test_create_requires_image_or_type(self, client, invoke):
+        """Reject server creation when neither image option is provided."""
+        result = invoke(["server", "create", "web"])
+        assert result.exit_code != 0
+        client.create_server.assert_not_called()
+
     def test_delete(self, client, invoke):
         result = invoke(["server", "delete", "srv-1"])
         assert result.exit_code == 0
@@ -212,6 +226,27 @@ class TestServerCommands:
         result = invoke(["server", "status", "srv-1"])
         assert result.exit_code == 0
         client.server_status.assert_called_once_with("srv-1")
+
+    def test_start(self, client, invoke):
+        """Start the requested server through the API client."""
+        client.start_server.return_value = {"status": "running"}
+        result = invoke(["server", "start", "srv-1"])
+        assert result.exit_code == 0
+        client.start_server.assert_called_once_with("srv-1")
+
+    def test_stop(self, client, invoke):
+        """Stop the requested server through the API client."""
+        client.stop_server.return_value = {"status": "stopped"}
+        result = invoke(["server", "stop", "srv-1"])
+        assert result.exit_code == 0
+        client.stop_server.assert_called_once_with("srv-1")
+
+    def test_restart(self, client, invoke):
+        """Restart the requested server through the API client."""
+        client.restart_server.return_value = {"status": "running"}
+        result = invoke(["server", "restart", "srv-1"])
+        assert result.exit_code == 0
+        client.restart_server.assert_called_once_with("srv-1")
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
@@ -364,10 +399,11 @@ class TestBackupCommands:
         )
 
     def test_snapshots(self, client, invoke):
+        """List snapshots from the app-scoped endpoint."""
         client._get.return_value = {"snapshots": []}
         result = invoke(["backup", "snapshots", "srv-1"])
         assert result.exit_code == 0
-        client._get.assert_called_once_with("/servers/srv-1/snapshots")
+        client._get.assert_called_once_with("/apps/srv-1/snapshots")
 
     def test_snapshots_list_response(self, client, invoke):
         client._get.return_value = []
@@ -375,15 +411,17 @@ class TestBackupCommands:
         assert result.exit_code == 0
 
     def test_snapshots_create(self, client, invoke):
+        """Create a snapshot through the app-scoped endpoint."""
         result = invoke(["backup", "snapshots", "srv-1", "--create"])
         assert result.exit_code == 0
-        client._post.assert_called_once_with("/servers/srv-1/snapshots", {})
+        client._post.assert_called_once_with("/apps/srv-1/snapshots", {})
 
     def test_snapshots_restore(self, client, invoke):
+        """Restore a snapshot through the app-scoped endpoint."""
         result = invoke(["backup", "snapshots", "srv-1", "--restore", "snap-1"])
         assert result.exit_code == 0
         client._post.assert_called_once_with(
-            "/servers/srv-1/snapshots/snap-1/restore", {}
+            "/apps/srv-1/snapshots/snap-1/restore", {}
         )
 
     def test_restore(self, client, invoke):
@@ -580,6 +618,7 @@ class TestGitopsExtras:
         assert target.exists()
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
+        """Build the GitOps client from the persisted CLI configuration."""
         monkeypatch.setattr(
             "cli.ipilot.commands.gitops.ApiClient",
             lambda *a, **k: MagicMock(),

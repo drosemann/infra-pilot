@@ -17,16 +17,19 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 | `version` | Show version |
 | `interactive` | REPL mode |
 | `completion [shell] [--install]` | Shell completion |
-| `health` | System health |
+| `doctor doctor [--fix] [--verbose]` | System health |
 
 ## Server Management
 
 | Command | Description |
 |---------|-------------|
 | `server list` | List servers |
-| `server create <name> --type --memory` | Create server |
+| `server create <name> --image <image> [--memory MB]` | Create server (`--type` is a deprecated alias for `--image`) |
 | `server delete <id>` | Delete server |
 | `server status <id>` | Server status |
+| `server start <id>` | Start container |
+| `server stop <id>` | Stop container |
+| `server restart <id>` | Restart container |
 
 ## Backup & Snapshots
 
@@ -43,10 +46,16 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 
 | Command | Description |
 |---------|-------------|
-| `deploy <server> <branch> [--template]` | Deploy branch |
+| `deploy deploy <server> <branch> [--repo-url] [--template]` | Deploy branch |
 | `deploy list [--server]` | List deployments |
 | `deploy status <id>` | Deployment status |
 | `deploy rollback <id>` | Rollback deployment |
+
+## Logs
+
+| Command | Description |
+|---------|-------------|
+| `logs fetch <server> [--lines] [--follow]` | Fetch server logs |
 
 ## GitOps (Infrastructure as Code)
 
@@ -150,9 +159,9 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 
 | Command | Description |
 |---------|-------------|
-| `doctor [--fix] [--verbose]` | System diagnostics |
-| `benchmark [--server]` | Performance benchmarks |
-| `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis |
+| `doctor doctor [--fix] [--verbose]` | System diagnostics |
+| `benchmark [--server]` | Performance benchmarks (alias for `doctor benchmark`) |
+| `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis (alias for `doctor diagnose`) |
 
 ---
 

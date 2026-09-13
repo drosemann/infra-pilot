@@ -168,27 +168,6 @@ ipilot apikeys list
 ipilot apikeys revoke <key-id>
 ```
 
-## Runbooks
-
-```bash
-# List built-in runbooks
-ipilot runbook list
-
-# Execute deploy-production runbook
-ipilot runbook execute deploy-production
-
-# Execute backup verification
-ipilot runbook execute backup-verify
-
-# Create a custom runbook
-ipilot runbook create my-deploy \
-  --description "Custom deployment workflow" \
-  --steps '[{"action":"git_pull","target":"repo"},{"action":"backup","target":"database"},{"action":"docker_pull","target":"app"},{"action":"restart","target":"app"},{"action":"healthcheck","target":"app"},{"action":"notify","target":"discord"}]'
-
-# Show runbook details
-ipilot runbook show deploy-production
-```
-
 ## Plugin Management
 
 ```bash
@@ -220,13 +199,13 @@ ipilot plugins uninstall proxmox
 
 ```bash
 # Run diagnostics
-ipilot doctor
+ipilot doctor doctor
 
 # Auto-fix issues
-ipilot doctor --fix
+ipilot doctor doctor --fix
 
 # Verbose diagnostics
-ipilot doctor --verbose
+ipilot doctor doctor --verbose
 
 # Benchmark local system
 ipilot benchmark
@@ -275,8 +254,8 @@ ipilot rollback history --resource server --id web-01
 ## Create a Server and View Logs
 
 ```bash
-ipilot server create --name web-prod --type web --memory 4096
-ipilot logs <id> --lines 50 --follow
+ipilot server create web-prod --image nginx:latest --memory 4096
+ipilot logs fetch <id> --lines 50
 ```
 
 ## Backups

@@ -194,21 +194,25 @@ _SAFE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9._-]{1,128}$")
 def _require_actor_permission(
     request: web.Request, org_id: str, permission: Permission
 ) -> Optional[web.Response]:
-    """Check actor_user_id has permission; return error response or None if allowed."""
-    # Actor can be supplied via query, header, or JSON body (for DELETE with body)
+    """Check actor_user_id has permission; return error response or None if allowed.
+
+    Trust model: every ``/api/`` route already requires the shared
+    ``FEDERATION_API_TOKEN`` bearer (see ``verify_federation_token``), so the
+    federation token holder is platform admin by design. ``actor_user_id`` is
+    asserted by that trusted caller (query ``?actor_user_id=...`` or header
+    ``X-Actor-User-Id``) for per-user scoping and audit – it is NOT an
+    independent authentication proof. Do not expose ``/api/`` without the
+    federation token and expect per-user isolation.
+    """
+    # Actor can be supplied via query or header. (Membership revocation also
+    # accepts it in the JSON body – handled by that caller, not here, because
+    # request.json() may only be consumed once.)
     actor_user_id = (
         request.query.get("actor_user_id")
         or request.headers.get("X-Actor-User-Id")
         or request.headers.get("X-User-Id")
     )
-    # For membership delete the body contains user_id for target; actor is separate
     if not actor_user_id:
-        # Try to extract from JSON body if present (best-effort)
-        try:
-            # request.json() can only be called once; caller should pass body
-            pass
-        except Exception:
-            pass
         return web.json_response(
             {
                 "error": "actor_user_id required (query ?actor_user_id=... or header X-Actor-User-Id)"
@@ -231,7 +235,12 @@ def _require_actor_permission(
 
 
 async def rbac_org_delete(request: web.Request) -> web.Response:
-    """Delete an organization and its persisted state (requires org:delete)."""
+    """Delete an organization and its persisted state (requires org:delete).
+
+    Trust model: see ``_require_actor_permission`` – the federation token
+    holder asserts ``actor_user_id``; this check scopes/audits the operation
+    but does not authenticate the actor independently.
+    """
     org_id = request.match_info["org_id"]
     if rbac_engine.get_org(org_id) is None:
         return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
@@ -254,10 +263,18 @@ async def rbac_org_delete(request: web.Request) -> web.Response:
 
 
 async def rbac_role_delete(request: web.Request) -> web.Response:
-    """Delete a custom role (built-ins cannot be deleted, requires actor with org:manage)."""
+    """Delete a custom role (built-ins cannot be deleted, requires actor with org:manage).
+
+    Trust model: see ``_require_actor_permission`` – the federation token
+    holder asserts ``actor_user_id``; this check scopes/audits the operation
+    but does not authenticate the actor independently.
+    """
     role_name = request.match_info["role_name"]
-    if rbac_engine.get_role(role_name) is None:
+    role = rbac_engine.get_role(role_name)
+    if role is None:
         return web.json_response({"error": f"unknown role: {role_name}"}, status=404)
+    if role.is_builtin:
+        return web.json_response({"error": "cannot delete built-in role"}, status=400)
     # Role is global – require actor who can manage orgs; use first org of actor or require actor_user_id with any org
     actor_user_id = (
         request.query.get("actor_user_id")
@@ -283,23 +300,32 @@ async def rbac_role_delete(request: web.Request) -> web.Response:
         return web.json_response(
             {"error": "org:manage permission required"}, status=403
         )
-    if not rbac_engine.delete_role(role_name):
-        return web.json_response({"error": "cannot delete built-in role"}, status=400)
+    # Persist first – if DB fails, do not mutate in-memory state (atomic,
+    # same ordering as rbac_org_delete / rbac_membership_delete). The
+    # built-in guard above ensures we never delete a built-in DB row.
     before = rbac_store.rbac_persist_failures
     await rbac_store.delete_role(role_name)
     if rbac_store.rbac_persist_failures > before:
-        # Restore in-memory if persistence failed (re-seed from store would restore on restart)
         logger.error(
-            "Failed to persist role delete %s; consider manual cleanup", role_name
+            "Failed to persist role delete %s; in-memory state unchanged", role_name
         )
         return web.json_response(
-            {"error": "persistence failed, role may reappear on restart"}, status=500
+            {"error": "persistence failed, role not deleted"}, status=500
         )
+    if not rbac_engine.delete_role(role_name):
+        # Defensive: is_builtin was checked above, so this means the role
+        # vanished between the lookup and now – DB row is already gone.
+        logger.warning("Role %s missing from engine after persisted delete", role_name)
     return web.json_response({"deleted": role_name})
 
 
 async def rbac_membership_delete(request: web.Request) -> web.Response:
-    """Revoke a membership (role assignment, requires member:remove)."""
+    """Revoke a membership (role assignment, requires member:remove).
+
+    Trust model: see ``_require_actor_permission`` – the federation token
+    holder asserts ``actor_user_id``; this check scopes/audits the operation
+    but does not authenticate the actor independently.
+    """
     try:
         body = await request.json()
     except Exception:
@@ -359,6 +385,12 @@ async def deployment_apply(request: web.Request) -> web.Response:
     Without them the federation token holder acts as platform admin; this
     path is audited and should be used only by trusted internal callers
     (e.g. management-panel forward).
+
+    Trust model: ``FEDERATION_API_TOKEN`` is a shared platform-admin
+    credential. ``user_id``/``org_id`` and ``as_platform_admin`` are asserted
+    by that trusted caller for scoping/audit – they are NOT independently
+    authenticated. Anyone holding the federation token can deploy as any user
+    or as platform admin. Keep the token server-side only.
     """
     try:
         body = await request.json()
@@ -590,6 +622,11 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         (503) unless ``ALLOW_INSECURE_FEDERATION=true`` is explicitly set – an
         opt-in for local development. This prevents the previous implicit
         dev bypass from accidentally reaching production.
+
+        The federation token is a shared platform-admin credential: any
+        holder can assert any ``user_id``/``actor_user_id`` or set
+        ``as_platform_admin=true``. Per-user / per-actor checks below are
+        scoping and audit, not independent authentication.
         """
         api_token = os.getenv("FEDERATION_API_TOKEN", "").strip()
         if not api_token:

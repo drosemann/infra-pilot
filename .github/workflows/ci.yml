@@ -370,7 +370,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -528,7 +528,6 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           args: '**/*.md --exclude "localhost" --exclude "127.0.0.1" --exclude "example.com" --exclude "your-domain.com" --exclude "github.com/your-org" --accept "200,429"'
-        continue-on-error: true
 
   docs-spell-check:
     needs: changes
@@ -599,11 +598,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+      - name: Install promtool
+        run: |
+          PROM_VERSION=2.53.0
+          PROM_SHA256=d9900a11e3c89261e6416e3c9989858bad7b206af8b6838dfe9a5392d8ddc60d
+          curl -fsSL -o /tmp/prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz
+          echo "${PROM_SHA256}  /tmp/prometheus.tar.gz" | sha256sum -c -
+          # Verify GPG signature when available (download .asc if present)
+          tar -xzf /tmp/prometheus.tar.gz -C /tmp
+          sudo mv /tmp/prometheus-${PROM_VERSION}.linux-amd64/promtool /usr/local/bin/
+          promtool --version
       - name: Check Prometheus config
         run: |
           if [ -f infra/monitoring/prometheus/prometheus.yml ]; then
-            echo "Prometheus config exists"
-            cat infra/monitoring/prometheus/prometheus.yml | head -20
+            promtool check config infra/monitoring/prometheus/prometheus.yml
+            if [ -f infra/monitoring/prometheus/alerts.yml ]; then
+              promtool check rules infra/monitoring/prometheus/alerts.yml
+            fi
+          fi
+      - name: Check alert rules syntax
+        run: |
+          if [ -f infra/monitoring/prometheus/alerts.yml ]; then
+            promtool check rules infra/monitoring/prometheus/alerts.yml
+          else
+            echo "No alerts.yml found, skipping"
           fi
 
   # ── Scripts ────────────────────────────────────────────────────────

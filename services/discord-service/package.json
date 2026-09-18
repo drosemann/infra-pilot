@@ -7,7 +7,7 @@
     "start": "node index.js",
     "check": "node --check index.js",
     "test": "node --test tests/*.js",
-    "test:coverage": "NODE_V8_COVERAGE=coverage/v8 node --test --experimental-test-coverage tests/*.js --test-coverage-lines=15 --test-coverage-functions=10 --test-coverage-branches=5 --test-coverage-statements=15",
+    "test:coverage": "NODE_V8_COVERAGE=coverage/v8 node --test --experimental-test-coverage tests/*.js --test-coverage-lines=20 --test-coverage-functions=15 --test-coverage-branches=10 --test-coverage-statements=20",
     "lint": "node --check index.js && node --check integration.js && node --check cli-bridge.js && node --check ./modules/*.js",
     "type-check": "node --check index.js"
   },

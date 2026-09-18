@@ -483,7 +483,7 @@ app.post('/api/setup/init', loginLimiter, async (req: Request, res: Response) =>
 // ============================================================================
 
 // POST /api/validate/discord-token - Validate a Discord bot token
-app.post('/api/validate/discord-token', async (req: Request, res: Response) => {
+app.post('/api/validate/discord-token', generalLimiter, async (req: Request, res: Response) => {
   const { token } = req.body;
 
   if (!token || typeof token !== 'string') {
@@ -1365,7 +1365,7 @@ app.post('/api/auth/2fa/verify-setup', verifyAuth, async (req: Request, res: Res
   await forwardToIntegration(req, res, '/api/auth/2fa/verify-setup');
 });
 
-app.post('/api/auth/2fa/verify', async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/verify', loginLimiter, async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/verify');
 });
 
@@ -1386,7 +1386,7 @@ app.get('/api/auth/2fa/backup-codes', verifyAuth, async (req: Request, res: Resp
   }
 });
 
-app.post('/api/auth/2fa/verify-backup', async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/verify-backup', loginLimiter, async (req: Request, res: Response) => {
   await forwardToIntegration(req, res, '/api/auth/2fa/verify-backup');
 });
 
@@ -2836,6 +2836,7 @@ const forwardDeploymentToOrchestrator = async (deployment: any): Promise<any | n
       {
         manifest: buildManifestFromDeployment(deployment),
         dry_run: !!deployment.dryRun,
+        as_platform_admin: true,
       },
       {
         headers: { Authorization: `Bearer ${ORCHESTRATOR_API_TOKEN}` },

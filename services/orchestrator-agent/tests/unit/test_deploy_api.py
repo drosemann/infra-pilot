@@ -1,4 +1,9 @@
-"""Integration tests for the deployment API on the webhook server."""
+"""Integration tests for the deployment API on the webhook server.
+
+Covers the explicit as_platform_admin gate: deployments without user_id/org_id must
+set as_platform_admin=true, otherwise the server returns HTTP 400. This guards the
+previous implicit platform-admin bypass from accidentally reaching production.
+"""
 
 import hashlib
 import hmac
@@ -164,9 +169,14 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 400)
 
     async def test_dry_run_reconcile_returns_counts(self):
+        # Single json kwarg with both dry_run and explicit admin flag; duplicate json= would be SyntaxError.
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-dry"), "dry_run": True},
+            json={
+                "manifest": make_manifest("m-dry"),
+                "dry_run": True,
+                "as_platform_admin": True,
+            },
             headers=AUTH,
         )
         self.assertEqual(resp.status, 200)
@@ -177,9 +187,10 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["errors"], [])
 
     async def test_apply_reconcile_creates_instance(self):
+        # Explicit admin flag required when no user/org context is supplied.
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-apply")},
+            json={"manifest": make_manifest("m-apply"), "as_platform_admin": True},
             headers=AUTH,
         )
         self.assertEqual(resp.status, 200)
@@ -188,9 +199,13 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(body["instances_created"], 1)
 
     async def test_provider_failure_reports_207(self):
+        # Even failure path requires explicit admin flag (positive path with flag).
         resp = await self.client.post(
             "/api/v1/deployments",
-            json={"manifest": make_manifest("m-boom", image="nginx:boom")},
+            json={
+                "manifest": make_manifest("m-boom", image="nginx:boom"),
+                "as_platform_admin": True,
+            },
             headers=AUTH,
         )
         self.assertEqual(resp.status, 207)
@@ -280,3 +295,36 @@ class DeployApiTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(resp.status, 200)
         body = await resp.json()
         self.assertEqual(body["manifest_name"], "m-gitops")
+
+    async def test_platform_admin_flag_required_when_no_user_context(self):
+        """Regression: federation deployments without user_id/org_id must set as_platform_admin."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-no-admin")},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)
+        body = await resp.json()
+        self.assertIn("as_platform_admin", body.get("error", ""))
+
+    async def test_platform_admin_flag_required_for_dry_run(self):
+        """Dry-run without user context also requires explicit flag."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-dry-no-flag"), "dry_run": True},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)
+        self.assertIn("as_platform_admin", (await resp.json()).get("error", ""))
+
+    async def test_apply_without_flag_and_without_user_is_rejected(self):
+        """Apply path without flag and without user context is also 400."""
+        resp = await self.client.post(
+            "/api/v1/deployments",
+            json={"manifest": make_manifest("m-apply-no-flag")},
+            headers=AUTH,
+        )
+        self.assertEqual(resp.status, 400)
+        body = await resp.json()
+        self.assertIn("as_platform_admin", body.get("error", ""))
+        self.assertIn("hint", body)

@@ -17,8 +17,9 @@
 #   B311  random.randint for ephemeral container port assignment — not
 #         security material (token/secret generation uses secrets).
 #   B104  binding 0.0.0.0 — required for the public webhook endpoint.
-#   B105  hardcoded password — only placeholder/enum comparisons in
-#         config validation, no real secrets.
+#   B105  hardcoded password — narrowed to per-line `# nosec B105` in
+#         config.py:11 and alembic.ini:6 only; no global skip so new
+#         findings still fail CI.
 #   B108  /tmp usage — migration scratch dir only.
 #   B110  try/except: pass — error handling is logged by callers.
 #   B112  bare except: pass — logged by callers.
@@ -37,7 +38,6 @@ exclude_dirs:
 skips:
   - B101
   - B104
-  - B105
   - B108
   - B110
   - B112

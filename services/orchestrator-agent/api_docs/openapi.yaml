@@ -44,6 +44,47 @@ paths:
                   status: { type: string, enum: [ok, degraded] }
                   service: { type: string }
                   postgresql: { type: string, enum: [up, down] }
+  /ready:
+    get:
+      tags: [Monitoring]
+      summary: Readiness check (database probe, distinct from liveness)
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status: { type: string, enum: [ready] }
+                  service: { type: string }
+        "503":
+          description: Not ready (DB down)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/ready:
+    get:
+      tags: [Monitoring]
+      summary: Readiness check (aliased under authenticated prefix)
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status: { type: string, enum: [ready] }
+                  service: { type: string }
+        "503":
+          description: Not ready (DB down)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /api/health:
     get:
       tags: [Monitoring]
@@ -143,6 +184,34 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rbac/roles/{role_name}:
+    delete:
+      tags: [RBAC]
+      summary: Delete a custom role (built-ins cannot be deleted)
+      parameters:
+        - name: role_name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Role deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: string }
+        "400":
+          description: Cannot delete built-in role
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Role not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /api/v1/rbac/orgs:
     post:
       tags: [RBAC]
@@ -194,6 +263,29 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/rbac/orgs/{org_id}:
+    delete:
+      tags: [RBAC]
+      summary: Delete an organization and its memberships
+      parameters:
+        - name: org_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Organization deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: string }
+        "404":
+          description: Organization not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /api/v1/rbac/assign:
     post:
       tags: [RBAC]
@@ -224,6 +316,44 @@ paths:
               schema: { $ref: "#/components/schemas/Error" }
         "404":
           description: Organization not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      tags: [RBAC]
+      summary: Revoke a membership (role assignment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, org_id]
+              properties:
+                user_id: { type: string }
+                org_id: { type: string }
+                project_id: { type: string }
+      responses:
+        "200":
+          description: Membership revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    type: object
+                    properties:
+                      user_id: { type: string }
+                      org_id: { type: string }
+                      project_id: { type: string }
+        "400":
+          description: Missing fields
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Membership not found
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }

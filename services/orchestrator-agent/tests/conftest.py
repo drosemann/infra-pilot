@@ -43,6 +43,7 @@ class MockContainer:
     started: bool = False
     restarted: bool = False
     updated: bool = False
+    reloaded: bool = False
 
     def stop(self):
         self.stopped = True
@@ -62,6 +63,9 @@ class MockContainer:
     def update(self, **kwargs):
         self.updated = True
         self.update_kwargs = kwargs
+
+    def reload(self):
+        self.reloaded = True
 
     def commit(self, repository="", **kwargs):
         return MockImage(id=f"{repository}-img-1")

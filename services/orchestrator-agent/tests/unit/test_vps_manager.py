@@ -130,6 +130,31 @@ def test_update_vps_config_changes_limits(monkeypatch, tmp_path):
         "cpu_quota": 200000,
         "mem_limit": "1024m",
     }
+    assert container.reloaded is True
+
+
+def test_update_vps_config_persists_workload_exit_during_restart(
+    monkeypatch, tmp_path
+):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    container = mock_client.containers.by_id[container_id]
+
+    def reload_exited_workload():
+        container.reloaded = True
+        container.status = "exited"
+
+    container.reload = reload_exited_workload
+
+    assert (
+        asyncio.run(manager.update_vps_config(container_id, make_config(config_type)))
+        is True
+    )
+    assert manager.vps_instances[container_id]["status"] == "exited"
+    persisted = json.loads(
+        (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    )
+    assert persisted[container_id]["status"] == "exited"
 
 
 def test_list_user_instances_scopes_to_user(monkeypatch, tmp_path):
@@ -294,3 +319,43 @@ def test_failed_resize_restores_a_running_developer_workload(monkeypatch, tmp_pa
     assert container.status == "running"
     assert container.started is True
     assert manager.vps_instances[container_id]["config"]["memory_limit"] == 512
+
+
+def test_failed_resize_persists_unknown_when_recovery_and_refresh_fail(
+    monkeypatch, tmp_path, caplog
+):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    container = mock_client.containers.by_id[container_id]
+
+    def update_fails(**_kwargs):
+        raise RuntimeError("Docker rejected resource update")
+
+    def recovery_start_fails():
+        raise RuntimeError("Docker rejected recovery start")
+
+    def reload_fails():
+        raise RuntimeError("Docker state unavailable")
+
+    container.update = update_fails
+    container.start = recovery_start_fails
+    container.reload = reload_fails
+
+    assert (
+        asyncio.run(manager.update_vps_config(container_id, make_config(config_type)))
+        is False
+    )
+    assert manager.vps_instances[container_id]["status"] == "unknown"
+    persisted = json.loads(
+        (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    )
+    assert persisted[container_id]["status"] == "unknown"
+    assert "Error updating VPS config: Docker rejected resource update" in caplog.text
+    assert (
+        "Error restarting VPS after failed config update: "
+        "Docker rejected recovery start" in caplog.text
+    )
+    assert (
+        "Error refreshing VPS state after failed config update: "
+        "Docker state unavailable" in caplog.text
+    )

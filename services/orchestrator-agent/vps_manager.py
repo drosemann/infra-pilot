@@ -7,7 +7,6 @@ import os
 import random
 import re
 import subprocess
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from threading import Lock
@@ -515,6 +514,7 @@ class VPSManager:
             )
             if was_running:
                 container.start()
+            container.reload()
             if container_id in self.vps_instances:
                 self.vps_instances[container_id]["config"].update(
                     {
@@ -527,13 +527,31 @@ class VPSManager:
                 await self.save_instances()
             return True
         except Exception as exc:
+            logger.error("Error updating VPS config: %s", exc)
             # A failed resize must not leave a previously running developer
             # workload down.  Docker updates are synchronous, so restarting is
             # the safest rollback we can perform here.
+            status = "unknown"
             if container is not None and was_running:
-                with suppress(Exception):
+                try:
                     container.start()
-            logger.error("Error updating VPS config: %s", exc)
+                except Exception as recovery_exc:
+                    logger.error(
+                        "Error restarting VPS after failed config update: %s",
+                        recovery_exc,
+                    )
+            if container is not None:
+                try:
+                    container.reload()
+                    status = container.status
+                except Exception as state_exc:
+                    logger.error(
+                        "Error refreshing VPS state after failed config update: %s",
+                        state_exc,
+                    )
+            if container_id in self.vps_instances:
+                self.vps_instances[container_id]["status"] = status
+                await self.save_instances()
             return False
 
     async def create_backup(

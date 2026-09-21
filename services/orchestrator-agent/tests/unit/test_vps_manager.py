@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import json
 import sys
 
 import docker
@@ -129,6 +130,31 @@ def test_update_vps_config_changes_limits(monkeypatch, tmp_path):
         "cpu_quota": 200000,
         "mem_limit": "1024m",
     }
+    assert container.reloaded is True
+
+
+def test_update_vps_config_persists_workload_exit_during_restart(
+    monkeypatch, tmp_path
+):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    container = mock_client.containers.by_id[container_id]
+
+    def reload_exited_workload():
+        container.reloaded = True
+        container.status = "exited"
+
+    container.reload = reload_exited_workload
+
+    assert (
+        asyncio.run(manager.update_vps_config(container_id, make_config(config_type)))
+        is True
+    )
+    assert manager.vps_instances[container_id]["status"] == "exited"
+    persisted = json.loads(
+        (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    )
+    assert persisted[container_id]["status"] == "exited"
 
 
 def test_list_user_instances_scopes_to_user(monkeypatch, tmp_path):
@@ -216,3 +242,120 @@ def test_instances_persist_to_json_fallback(monkeypatch, tmp_path):
     assert '"container_id": "container-1"' in persisted
     assert '"user_id": "user-1"' in persisted
     assert '"TOKEN"' not in persisted
+
+
+def test_high_volume_developer_workflow_handles_fifty_application_vms(
+    monkeypatch, tmp_path
+):
+    """Exercise provisioning, daily operations, and persistence at team scale."""
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    applications = (
+        "nginx:alpine",
+        "node:22-alpine",
+        "python:3.13-slim",
+        "postgres:17-alpine",
+        "redis:7-alpine",
+    )
+
+    async def developer_workflow():
+        creations = []
+        for developer in range(10):
+            for application in applications:
+                creations.append(
+                    manager.create_vps(
+                        f"developer-{developer}",
+                        make_config(
+                            config_type,
+                            image=application,
+                            ports={"8080/tcp": str(30000 + len(creations))},
+                            env_vars={"APP_ENV": "staging"},
+                        ),
+                    )
+                )
+
+        container_ids = await asyncio.gather(*creations)
+        assert all(container_ids)
+        assert len(set(container_ids)) == 50
+
+        # Typical self-service activity: inspect a team inventory, restart an
+        # application, resize another one, and take a deployment backup.
+        inventory = await manager.list_user_instances("developer-4")
+        assert len(inventory) == 5
+        assert all(item["stats"]["status"] == "running" for item in inventory)
+
+        assert await manager.restart_vps(container_ids[0]) is True
+        assert await manager.update_vps_config(
+            container_ids[1],
+            make_config(config_type, cpu_limit=2.0, memory_limit=1024),
+        )
+        assert await manager.create_backup(container_ids[2], "weekly")
+
+    asyncio.run(developer_workflow())
+
+    assert len(mock_client.containers.created) == 50
+    persisted = json.loads(
+        (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    )
+    assert len(persisted) == 50
+    assert {entry["user_id"] for entry in persisted.values()} == {
+        f"developer-{developer}" for developer in range(10)
+    }
+
+
+def test_failed_resize_restores_a_running_developer_workload(monkeypatch, tmp_path):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    container = mock_client.containers.by_id[container_id]
+
+    def update_fails(**_kwargs):
+        raise RuntimeError("Docker rejected resource update")
+
+    container.update = update_fails
+
+    assert (
+        asyncio.run(manager.update_vps_config(container_id, make_config(config_type)))
+        is False
+    )
+    assert container.status == "running"
+    assert container.started is True
+    assert manager.vps_instances[container_id]["config"]["memory_limit"] == 512
+
+
+def test_failed_resize_persists_unknown_when_recovery_and_refresh_fail(
+    monkeypatch, tmp_path, caplog
+):
+    manager, config_type, mock_client = build_manager(monkeypatch, tmp_path)
+    container_id = asyncio.run(manager.create_vps("user-1", make_config(config_type)))
+    container = mock_client.containers.by_id[container_id]
+
+    def update_fails(**_kwargs):
+        raise RuntimeError("Docker rejected resource update")
+
+    def recovery_start_fails():
+        raise RuntimeError("Docker rejected recovery start")
+
+    def reload_fails():
+        raise RuntimeError("Docker state unavailable")
+
+    container.update = update_fails
+    container.start = recovery_start_fails
+    container.reload = reload_fails
+
+    assert (
+        asyncio.run(manager.update_vps_config(container_id, make_config(config_type)))
+        is False
+    )
+    assert manager.vps_instances[container_id]["status"] == "unknown"
+    persisted = json.loads(
+        (tmp_path / "vps_instances.json").read_text(encoding="utf-8")
+    )
+    assert persisted[container_id]["status"] == "unknown"
+    assert "Error updating VPS config: Docker rejected resource update" in caplog.text
+    assert (
+        "Error restarting VPS after failed config update: "
+        "Docker rejected recovery start" in caplog.text
+    )
+    assert (
+        "Error refreshing VPS state after failed config update: "
+        "Docker state unavailable" in caplog.text
+    )

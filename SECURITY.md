@@ -51,7 +51,8 @@ get a fix before any other work.
 | Interface | Who | What they can do | Guard |
 |-----------|-----|------------------|-------|
 | `GET /health`, `GET /api/health` | Anyone | Check liveness (no DB) | No sensitive data returned |
-| `GET /ready`, `GET /api/ready` | K8s / load-balancer | Readiness (DB check) | 503 if DB down; used as `readinessProbe` |
+| `GET /ready` | K8s / load-balancer | Readiness (DB check) | Public; 503 if DB down; used as `readinessProbe` |
+| `GET /api/ready` | Federation-authenticated clients | Readiness (DB check) | Requires federation authentication through `federation_auth_middleware`; 503 if DB down |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
 | `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `X-Signature-256` = HMAC-SHA256 of `X-Timestamp` + body (`GITOPS_WEBHOOK_TOKEN`), one signature per replay window; **fail closed** (503) if unset |
 | `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check; 503 without token unless `ALLOW_INSECURE_FEDERATION=true` in explicit local envs (`dev`/`development`/`local`) |

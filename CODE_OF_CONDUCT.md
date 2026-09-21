@@ -2,7 +2,8 @@
 
 ## Our Promise
 
-We promise to make this project a safe and welcoming place for everyone, no matter their age, body size, disability, race, gender, religion, or identity.
+We promise to make this project a safe and welcoming place for everyone, no
+matter their age, body size, disability, race, gender, religion, or identity.
 
 We promise to act in ways that build an open, friendly, and healthy community.
 
@@ -36,7 +37,8 @@ This code of conduct applies in all project spaces (GitHub, Discord, etc.) and w
 
 ## Reporting
 
-If someone is being abusive or harassing you, tell the project maintainers. We will review every report quickly and fairly. We will keep your report private.
+If someone is being abusive or harassing you, tell the project maintainers. We
+will review every report quickly and fairly. We will keep your report private.
 
 ## Credits
 

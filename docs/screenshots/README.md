@@ -1,0 +1,88 @@
+# Screenshots
+
+Conceptual UI previews with demo data. They show intended layout,
+navigation, and density — they are illustrations, not captures of a
+running release, and must not be called screenshots in docs.
+
+The word "screenshot" is reserved for real captures. When the first
+real capture lands, place it beside the mockup as "Current
+implementation" with version, date, and environment below.
+
+---
+
+## Capture log
+
+| File | Status | Captured from | Date |
+| --- | --- | --- | --- |
+| `01-dashboard.png` | concept | — | — |
+| `02-monitoring.png` | concept | — | — |
+| `03-applications.png` | concept | — | — |
+| `04-backups.png` | concept | — | — |
+| `05-cli-gitops.png` | concept | — | — |
+| `tour.gif` | concept | — | — |
+
+Promoting a file to `verified` requires: capture from a running
+stack via `scripts/capture-screenshots.mjs`, plus version, date, and
+environment filled in above. One verified view of the highest-value
+workflow beats five more concepts.
+
+---
+
+## Files
+
+| File | View | Source fidelity |
+| --- | --- | --- |
+| `01-dashboard.png` | Dashboard hero, metrics, fleet | Matches `src/pages/Dashboard.tsx` |
+| `02-monitoring.png` | Throughput, health, live logs | Matches `src/pages/Monitoring.tsx` |
+| `03-applications.png` | App table with status and ports | Matches app list UX |
+| `04-backups.png` | Retention cards and recent runs | Matches `src/pages/Backups.tsx` |
+| `05-cli-gitops.png` | `ipilot` terminal and webhook | Matches `cli/` and webhook auth |
+| `tour.gif` | Captioned tour of all five views | Generated, 720x405, under 500 KB |
+
+All PNG images are `1600x900`. The tour GIF is kept small
+enough to pass the `check-added-large-files` hook.
+
+---
+
+## Regenerating
+
+Two paths, in order of preference:
+
+### 1. Real browser captures (preferred)
+
+Requires Node.js 22+ and a running stack:
+
+```bash
+cd services/management-panel
+npm install
+npx playwright install chromium
+npm run dev &
+node ../../scripts/capture-screenshots.mjs
+```
+
+The script navigates the local panel, seeds demo state where
+possible, and overwrites this folder. Review diffs before
+committing; mask secrets and personal data.
+
+### 2. Faithful mockups (offline fallback)
+
+Used for the current images. Requires Python plus Pillow:
+
+```bash
+python3 /tmp/opencode/gen_screenshots.py
+```
+
+The generator mirrors component structure, copy, colors, and
+spacing from `src/pages` and `src/components`. Keep text
+generic (`Acme Corp`, `shop-api`) and avoid real hostnames.
+
+---
+
+## Contribution rules
+
+- Keep the same five filenames and dimensions.
+- Update this README when views change materially.
+- Do not commit screenshots with secrets, tokens, or
+  personal data.
+- Reference images from the root `README.md` only; wiki
+  pages link back to the root for visual context.

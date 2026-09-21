@@ -7,6 +7,9 @@ Thanks for wanting to help! We welcome bug fixes, new features, docs, and ideas.
 - [How to Contribute](#how-to-contribute)
 - [Branch Names](#branch-names)
 - [Commits](#commits)
+- [Code Style](#code-style)
+- [Documentation](#documentation)
+- [Security](#security)
 - [PR Checklist](#pr-checklist)
 - [Running Tests](#running-tests)
 
@@ -38,6 +41,28 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`
 
 Keep the summary under 72 characters.
 
+## Code Style
+
+- Python: `black`, `isort`, `flake8`, `bandit` clean.
+- TypeScript: `npm run lint` with zero warnings.
+- Shell: `shellcheck` clean for `scripts/`.
+- Markdown: keep lines short, blank lines around blocks.
+
+## Documentation
+
+Follow [docs/DOCUMENTATION](./docs/DOCUMENTATION.md).
+Roughly every 25 lines of behavioral change needs a doc
+unit: docstring, README section, or contract artifact.
+Update screenshots in `docs/screenshots/` when panel views
+change materially.
+
+## Security
+
+Never commit secrets, tokens, `.env`, or private keys.
+New endpoints need HMAC, bearer, or RBAC guards.
+Trust-boundary changes require a `SECURITY.md` update.
+Report vulnerabilities privately per `SECURITY.md`.
+
 ## PR Checklist
 
 Before submitting, check these off:
@@ -52,7 +77,10 @@ Before submitting, check these off:
 ## Running Tests
 
 ```bash
-pytest tests/
-cd services/management-panel && npm test
-cd services/orchestrator-agent && pytest
+pytest tests/ -q
+bash scripts/test.sh --coverage
+cd services/management-panel && npm run lint && npm run test:coverage
 ```
+
+See [SUPPORT](./SUPPORT.md) for triage expectations and
+[Code of Conduct](./CODE_OF_CONDUCT.md) for behavior rules.

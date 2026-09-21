@@ -45,15 +45,16 @@ spec:
               protocol: TCP
           env:
             {{- toYaml .Values.orchestrator.env | nindent 12 }}
+            # DB/Redis passwords are sourced from the stable infra-pilot-secrets Secret (see _helpers.tpl secretName).
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "infra-pilot.fullname" . }}-secrets
+                  name: {{ include "infra-pilot.secretName" . }}
                   key: db-password
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "infra-pilot.fullname" . }}-secrets
+                  name: {{ include "infra-pilot.secretName" . }}
                   key: redis-password
           livenessProbe:
             httpGet:

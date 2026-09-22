@@ -348,8 +348,8 @@ Summary only. The binding policy is [SECURITY](./SECURITY.md).
 
 - Secrets in environment, never in code. Gitleaks scans history.
 - Orchestrator refuses placeholder secrets in production.
-- New HTTP endpoints require HMAC, bearer, or RBAC. No open
- -by-default routes.
+- New HTTP endpoints require HMAC, bearer, or RBAC. No
+  open-by-default routes.
 - Container spawns forbid `--privileged`, `--cap-add=ALL`,
   shell interpolation, and uncapped resources.
 - Docker socket mounts are trusted-dev only. Use an allowlisted
@@ -364,6 +364,7 @@ Summary only. The binding policy is [SECURITY](./SECURITY.md).
 ```bash
 pytest tests/ -q
 bash scripts/test.sh --coverage
+(cd services/orchestrator-agent && pytest -q)
 cd services/management-panel && npm run lint && npm run test:coverage
 ```
 

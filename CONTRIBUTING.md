@@ -79,6 +79,7 @@ Before submitting, check these off:
 ```bash
 pytest tests/ -q
 bash scripts/test.sh --coverage
+(cd services/orchestrator-agent && pytest -q)
 cd services/management-panel && npm run lint && npm run test:coverage
 ```
 

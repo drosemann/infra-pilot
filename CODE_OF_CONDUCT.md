@@ -37,8 +37,10 @@ This code of conduct applies in all project spaces (GitHub, Discord, etc.) and w
 
 ## Reporting
 
-If someone is being abusive or harassing you, tell the project maintainers. We
-will review every report quickly and fairly. We will keep your report private.
+If someone is being abusive or harassing you, report it privately by emailing
+[the maintainer](mailto:daniel.rosemann10@gmail.com). We will review every
+report quickly and fairly. Reports submitted through this email channel will
+be kept confidential.
 
 ## Credits
 

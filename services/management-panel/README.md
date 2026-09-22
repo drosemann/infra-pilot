@@ -9,8 +9,8 @@ Pilot API.
 Conceptual UI previews with demo data (see `docs/screenshots/`).
 Illustrations of the intended UI, not captures of a running release:
 
-![Dashboard](../../docs/screenshots/01-dashboard.png)
-![Monitoring](../../docs/screenshots/02-monitoring.png)
+See the root README's [Screenshots section](../../README.md#screenshots) for
+the Dashboard and Monitoring previews.
 
 Full set: dashboard, monitoring, applications, backups, and CLI/GitOps,
 plus an animated `tour.gif`. Regeneration instructions live in

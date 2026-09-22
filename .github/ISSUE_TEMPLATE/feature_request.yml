@@ -1,0 +1,46 @@
+name: Feature request
+description: Propose a new capability or improvement
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem first, then the proposal.
+        Small, scoped requests ship fastest.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Who is affected and what hurts today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: API, UI, or CLI shape if known
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - management-panel
+        - orchestrator-agent
+        - cli (ipilot)
+        - discord-service
+        - helm / infra
+        - docs
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope checklist
+      options:
+        - label: I can help implement or test this
+        - label: Docs impact considered (README, wiki, OpenAPI)
+        - label: Security impact considered (auth, secrets, isolation)

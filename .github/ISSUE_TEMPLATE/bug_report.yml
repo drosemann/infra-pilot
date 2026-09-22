@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a reproducible problem
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Fill in what you can.
+        Never include secrets, tokens, or private keys.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: main @ abc1234, or image tag
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - management-panel
+        - orchestrator-agent
+        - cli (ipilot)
+        - discord-service
+        - helm / infra
+        - docs
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and output
+      description: Paste redacted logs or command output
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I redacted all secrets and personal data
+          required: true
+        - label: I checked FAQ and Troubleshooting
+          required: false

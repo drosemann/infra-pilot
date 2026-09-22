@@ -250,7 +250,9 @@ export const Sidebar = ({
               <h1 className="text-xl font-semibold tracking-tight text-white">
                 Infra Pilot
               </h1>
-              <p className="text-xs text-white/45">v2.4.1</p>
+              <p className="text-xs text-white/45">
+                {__APP_VERSION__ === "dev" ? "dev" : `v${__APP_VERSION__}`}
+              </p>
             </div>
           </div>
         </div>

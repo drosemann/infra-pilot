@@ -20,7 +20,11 @@ docker compose up -d
 
 The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at `http://localhost:8500`.
 
-`POSTGRES_PASSWORD`, `GITOPS_WEBHOOK_TOKEN`, and `FEDERATION_API_TOKEN` are required by Compose. The generator fills blank values; alternatively, set secure values yourself before `docker compose up`.
+Preview the panel in `docs/screenshots/` before starting if you want to know what awaits you.
+
+`POSTGRES_PASSWORD`, `GITOPS_WEBHOOK_TOKEN`, and `FEDERATION_API_TOKEN`
+are required by Compose. The generator fills blank values; alternatively,
+set secure values yourself before `docker compose up`.
 
 ```bash
 docker compose ps
@@ -58,4 +62,6 @@ docker compose up -d --build
 docker compose down
 ```
 
-`docker compose down` preserves named volumes. Use `docker compose down -v` only when you intend to remove local PostgreSQL, Redis, Prometheus, and Grafana data.
+`docker compose down` preserves named volumes. Use `docker compose down -v`
+only when you intend to remove local PostgreSQL, Redis, Prometheus, and
+Grafana data.

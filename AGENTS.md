@@ -42,7 +42,8 @@ We use the repo-scoped **deploy key** for all pushes.
    ```
 3. Make changes. Follow `CONTRIBUTING.md` PR checklist:
    - branch name + clear commits, tests pass, docs updated, no secrets.
-   - Commit format: `<type>(<scope>): <short description>`, <72 chars. Types: `feat|fix|docs|refactor|test|chore|perf|style`.
+   - Commit format: `<type>(<scope>): <short description>`, <72 chars.
+     Types: `feat|fix|docs|refactor|test|chore|perf|style`.
 4. Verify before push:
    ```bash
    git status --short
@@ -68,4 +69,5 @@ We use the repo-scoped **deploy key** for all pushes.
 - NEVER push to `main`, never force-push, never `git push --force`.
 - NEVER commit secrets, tokens, `.env`, private keys. CI blocks on gitleaks.
 - NEVER run `gh auth login`, change remotes, or delete `~/.ssh/infra-pilot-tmp*`.
-- NEVER print the private key. Public key may be shared via link if owner must re-add Deploy key (`Settings > Deploy keys > Allow write access`).
+- NEVER print the private key. Public key may be shared via link if owner
+  must re-add Deploy key (`Settings > Deploy keys > Allow write access`).

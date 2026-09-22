@@ -1,6 +1,20 @@
 # Management Panel
 
-React/TypeScript frontend and Express/WebSocket backend for operating Docker applications, backups, configuration, monitoring, and the panel-facing Infra Pilot API.
+React/TypeScript frontend and Express/WebSocket backend for operating Docker
+applications, backups, configuration, monitoring, and the panel-facing Infra
+Pilot API.
+
+## Screenshots
+
+Conceptual UI previews with demo data (see `docs/screenshots/`).
+Illustrations of the intended UI, not captures of a running release:
+
+See the root README's [Screenshots section](../../README.md#screenshots) for
+the Dashboard and Monitoring previews.
+
+Full set: dashboard, monitoring, applications, backups, and CLI/GitOps,
+plus an animated `tour.gif`. Regeneration instructions live in
+`docs/screenshots/README.md`.
 
 ## Start locally
 
@@ -22,7 +36,11 @@ npm run dev
 | Swagger UI | `GET /api/docs` | Interactive API documentation. |
 | WebSocket | `ws://host:3001?appId=<id>` | Live application logs and metrics. |
 
-Setup, health, and documentation endpoints are intentionally reachable without an application session. Operational `/api/*` routes are protected by the backend's `verifyAuth` middleware unless explicitly documented otherwise. Treat the OpenAPI document and `server/index.ts` as the authoritative route list.
+Setup, health, and documentation endpoints are intentionally reachable without
+an application session. Operational `/api/*` routes are protected by the
+backend's `verifyAuth` middleware unless explicitly documented otherwise.
+Treat the OpenAPI document and `server/index.ts` as the authoritative
+route list.
 
 ## Configuration
 
@@ -58,4 +76,6 @@ The project also contains Playwright and accessibility tests; see `package.json`
 
 ## Docker integration
 
-The panel invokes Docker operations for application lifecycle actions, logs, stats, and terminal-related features. Give Docker access only to trusted deployments, because the Docker socket is privileged.
+The panel invokes Docker operations for application lifecycle actions, logs,
+stats, and terminal-related features. Give Docker access only to trusted
+deployments, because the Docker socket is privileged.

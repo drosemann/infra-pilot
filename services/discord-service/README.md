@@ -1,6 +1,8 @@
 # Discord Service
 
-Optional Node.js integration that handles Discord workflows and Pterodactyl-backed server provisioning. In the root Compose file it is disabled by default and is enabled with the `discord` profile.
+Optional Node.js integration that handles Discord workflows and
+Pterodactyl-backed server provisioning. In the root Compose file it is disabled
+by default and is enabled with the `discord` profile.
 
 ## Start it
 
@@ -34,11 +36,16 @@ node index.js
 | `WHITELIST_IDS`, `SERVER_LIMIT`, `HEALTH_CHECK_INTERVAL_SECONDS` | Operational limits and monitoring. |
 | `API_BASE_URL` | Management-panel API URL (Compose uses `http://management-panel:3001`). |
 
-See `.env.example` for optional backup, database-management, code-review, and notification values. Keep all tokens out of source control.
+See `.env.example` for optional backup, database-management, code-review, and
+notification values. Keep all tokens out of source control.
 
 ## Module map
 
-The `modules/` directory groups independently loaded features such as provisioning, ticketing, backups, monitoring/alerts, databases, resource pools, templates, scheduling, role management, and Pterodactyl calls. `index.js` wires Discord events and commands; `integration.js` and `cli-bridge.js` connect to the surrounding Infra Pilot services.
+The `modules/` directory groups independently loaded features such as
+provisioning, ticketing, backups, monitoring/alerts, databases, resource
+pools, templates, scheduling, role management, and Pterodactyl calls.
+`index.js` wires Discord events and commands; `integration.js` and
+`cli-bridge.js` connect to the surrounding Infra Pilot services.
 
 ## Checks
 

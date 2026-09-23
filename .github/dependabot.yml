@@ -1,6 +1,6 @@
 version: 2
 updates:
-    - package-ecosystem: "pip"
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "monthly"
@@ -10,19 +10,19 @@ updates:
     groups:
       patch-and-minor:
         patterns:
-                    - "*"
+          - "*"
         update-types:
-                    - "minor"
-                    - "patch"
+          - "minor"
+          - "patch"
     labels:
-            - "dependencies"
-            - "python"
+      - "dependencies"
+      - "python"
     assignees:
-            - "drosemann"
+      - "drosemann"
     reviewers:
-            - "drosemann"
+      - "drosemann"
 
-    - package-ecosystem: "pip"
+  - package-ecosystem: "pip"
     directory: "/services/orchestrator-agent"
     schedule:
       interval: "monthly"
@@ -32,24 +32,24 @@ updates:
     groups:
       patch-and-minor:
         patterns:
-                    - "*"
+          - "*"
         update-types:
-                    - "patch"
-                    - "minor"
+          - "patch"
+          - "minor"
       major:
         patterns:
-                    - "*"
+          - "*"
         update-types:
-                    - "major"
+          - "major"
     labels:
-            - "dependencies"
-            - "python"
+      - "dependencies"
+      - "python"
     assignees:
-            - "drosemann"
+      - "drosemann"
     reviewers:
-            - "drosemann"
+      - "drosemann"
 
-    - package-ecosystem: "npm"
+  - package-ecosystem: "npm"
     directory: "/services/management-panel"
     schedule:
       interval: "weekly"
@@ -59,24 +59,24 @@ updates:
     groups:
       prod-patch-minor:
         patterns:
-                    - "*"
+          - "*"
         dependency-type: "production"
         update-types:
-                    - "minor"
-                    - "patch"
+          - "minor"
+          - "patch"
       dev-dependencies:
         patterns:
-                    - "*"
+          - "*"
         dependency-type: "development"
     labels:
-            - "dependencies"
-            - "javascript"
+      - "dependencies"
+      - "javascript"
     assignees:
-            - "drosemann"
+      - "drosemann"
     reviewers:
-            - "drosemann"
+      - "drosemann"
 
-    - package-ecosystem: "npm"
+  - package-ecosystem: "npm"
     directory: "/services/discord-service"
     schedule:
       interval: "weekly"
@@ -86,19 +86,19 @@ updates:
     groups:
       patch-and-minor:
         patterns:
-                    - "*"
+          - "*"
         update-types:
-                    - "minor"
-                    - "patch"
+          - "minor"
+          - "patch"
     labels:
-            - "dependencies"
-            - "javascript"
+      - "dependencies"
+      - "javascript"
     assignees:
-            - "drosemann"
+      - "drosemann"
     reviewers:
-            - "drosemann"
+      - "drosemann"
 
-    - package-ecosystem: "github-actions"
+  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
@@ -108,11 +108,11 @@ updates:
     groups:
       all-actions:
         patterns:
-                    - "*"
+          - "*"
     labels:
-            - "dependencies"
-            - "github-actions"
+      - "dependencies"
+      - "github-actions"
     assignees:
-            - "drosemann"
+      - "drosemann"
     reviewers:
-            - "drosemann"
+      - "drosemann"

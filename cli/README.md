@@ -10,7 +10,10 @@ ipilot --help
 ipilot login <api-key>
 ```
 
-For editable development installation, run `pip install -e ./cli`. Set `IPILOT_API_URL` to target a non-default panel API; `IPILOT_TOKEN` and `IPILOT_OUTPUT` override the stored token and output format for a single command.
+For editable development installation, run `pip install -e ./cli`.
+Set `IPILOT_API_URL` to target a non-default panel API; `IPILOT_TOKEN` and
+`IPILOT_OUTPUT` override the stored token and output format for a single
+command.
 
 ## Command groups
 
@@ -30,11 +33,16 @@ ipilot server --help
 ipilot docs --output docs/cli-reference.md
 ```
 
-`ipilot docs` produces a help-based reference for the current executable. The curated examples are in [wiki/04-Usage-Examples.md](../wiki/04-Usage-Examples.md); configuration precedence is in [wiki/03-Configuration.md](../wiki/03-Configuration.md).
+`ipilot docs` produces a help-based reference for the current executable.
+The curated examples are in [wiki/04-Usage-Examples.md](../wiki/04-Usage-Examples.md);
+configuration precedence is in [wiki/03-Configuration.md](../wiki/03-Configuration.md).
 
 ## Configuration files
 
-The default profile is `~/.ipilot/config.json`; named profiles are stored as `~/.ipilot/config-<profile>.json`. Environment overrides take precedence over persisted values. Do not put credentials in shell history or commit profile files.
+The default profile is `~/.ipilot/config.json`; named profiles are stored as
+`~/.ipilot/config-<profile>.json`. Environment overrides take precedence over
+persisted values. Do not put credentials in shell history or commit profile
+files.
 
 ## Development checks
 

@@ -1,0 +1,61 @@
+/**
+ * Capture real management-panel screenshots with Playwright.
+ *
+ * Requires: Node 22+, `npm install`, running panel stack.
+ * Usage:
+ *   npm run dev &
+ *   node scripts/capture-screenshots.mjs
+ *
+ * Output: docs/screenshots/*.png (1600x900).
+ * Mask secrets before committing.
+ */
+import { chromium } from 'playwright';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const OUT = path.resolve(__dirname, '../docs/screenshots');
+const BASE = process.env.PANEL_URL || 'http://localhost:5173';
+const NAVIGATION_ATTEMPTS = 5;
+const NAVIGATION_RETRY_DELAY_MS = 2000;
+const NAVIGATION_TIMEOUT_MS = 30_000;
+
+const shots = [
+  { route: '/dashboard', file: '01-dashboard.png' },
+  { route: '/monitoring', file: '02-monitoring.png' },
+  { route: '/apps', file: '03-applications.png' },
+  { route: '/backups', file: '04-backups.png' },
+  { route: '/settings', file: '05-cli-gitops.png' },
+];
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+
+async function gotoWithRetry(page, url) {
+  for (let attempt = 1; attempt <= NAVIGATION_ATTEMPTS; attempt += 1) {
+    try {
+      return await page.goto(url, {
+        waitUntil: 'networkidle',
+        timeout: NAVIGATION_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (attempt === NAVIGATION_ATTEMPTS) {
+        throw error;
+      }
+
+      console.warn(
+        `navigation attempt ${attempt} failed for ${url}; retrying in ${NAVIGATION_RETRY_DELAY_MS}ms`,
+      );
+      await page.waitForTimeout(NAVIGATION_RETRY_DELAY_MS);
+    }
+  }
+}
+
+for (const s of shots) {
+  await gotoWithRetry(page, `${BASE}${s.route}`);
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: path.join(OUT, s.file) });
+  console.log(`captured ${s.file}`);
+}
+
+await browser.close();

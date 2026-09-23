@@ -159,6 +159,10 @@ class VPSManager:
         self.client = docker.from_env()
         self.vps_instances: Dict[str, Any] = {}
         self.database_lock = Lock()
+        # Several provisioning requests can complete at once.  Serialising
+        # persistence prevents concurrent JSON writes from truncating the
+        # fallback inventory while the database is unavailable.
+        self._persistence_lock = asyncio.Lock()
         self._load_instances()
 
     def _load_instances(self):
@@ -204,51 +208,52 @@ class VPSManager:
 
     async def save_instances(self):
         """Persist VPS instance metadata to PostgreSQL (primary) and JSON file (fallback)."""
-        try:
-            from db import get_pool
+        async with self._persistence_lock:
+            try:
+                from db import get_pool
 
-            pool = await get_pool()
-            async with pool.acquire() as conn:
-                for cid, info in self.vps_instances.items():
-                    metadata = {
-                        k: v
-                        for k, v in info.items()
-                        if k
-                        not in (
-                            "container_id",
-                            "user_id",
-                            "container_name",
-                            "ssh_command",
-                            "status",
-                            "created_at",
+                pool = await get_pool()
+                async with pool.acquire() as conn:
+                    for cid, info in self.vps_instances.items():
+                        metadata = {
+                            k: v
+                            for k, v in info.items()
+                            if k
+                            not in (
+                                "container_id",
+                                "user_id",
+                                "container_name",
+                                "ssh_command",
+                                "status",
+                                "created_at",
+                            )
+                        }
+                        await conn.execute(
+                            "INSERT INTO vps_containers "
+                            "(container_id, user_id, container_name, ssh_command, status, metadata) "
+                            "VALUES ($1, $2, $3, $4, $5, $6::jsonb) "
+                            "ON CONFLICT (container_id) DO UPDATE SET "
+                            "  user_id = EXCLUDED.user_id, "
+                            "  container_name = EXCLUDED.container_name, "
+                            "  ssh_command = EXCLUDED.ssh_command, "
+                            "  status = EXCLUDED.status, "
+                            "  metadata = COALESCE(vps_containers.metadata, '{}'::jsonb) || EXCLUDED.metadata",
+                            cid,
+                            info.get("user_id", ""),
+                            info.get("container_name", cid[:12]),
+                            info.get("ssh_command", ""),
+                            info.get("status", "running"),
+                            json.dumps(metadata),
                         )
-                    }
-                    await conn.execute(
-                        "INSERT INTO vps_containers "
-                        "(container_id, user_id, container_name, ssh_command, status, metadata) "
-                        "VALUES ($1, $2, $3, $4, $5, $6::jsonb) "
-                        "ON CONFLICT (container_id) DO UPDATE SET "
-                        "  user_id = EXCLUDED.user_id, "
-                        "  container_name = EXCLUDED.container_name, "
-                        "  ssh_command = EXCLUDED.ssh_command, "
-                        "  status = EXCLUDED.status, "
-                        "  metadata = COALESCE(vps_containers.metadata, '{}'::jsonb) || EXCLUDED.metadata",
-                        cid,
-                        info.get("user_id", ""),
-                        info.get("container_name", cid[:12]),
-                        info.get("ssh_command", ""),
-                        info.get("status", "running"),
-                        json.dumps(metadata),
-                    )
-        except Exception as exc:
-            logger.warning("DB save failed, falling back to JSON: %s", exc)
-        # Always write JSON fallback as well
-        try:
-            content = json.dumps(self.vps_instances, indent=2)
-            async with aiofiles.open(config.VPS_INSTANCES_FILE, "w") as f:
-                await f.write(content)
-        except Exception as exc:
-            logger.error("Error saving VPS instances to JSON: %s", exc)
+            except Exception as exc:
+                logger.warning("DB save failed, falling back to JSON: %s", exc)
+            # Always write JSON fallback as well
+            try:
+                content = json.dumps(self.vps_instances, indent=2)
+                async with aiofiles.open(config.VPS_INSTANCES_FILE, "w") as f:
+                    await f.write(content)
+            except Exception as exc:
+                logger.error("Error saving VPS instances to JSON: %s", exc)
 
     def is_safe_name(self, name: str) -> bool:
         """Check if a container name is safe (matches allowed pattern).
@@ -610,6 +615,8 @@ class VPSManager:
         Returns:
             ``True`` on success.
         """
+        container = None
+        was_running = False
         try:
             _validate_resource_limits(cfg)
             # Storage quota cannot be resized via container.update (writable layer size is immutable).
@@ -630,12 +637,17 @@ class VPSManager:
                         container_id,
                     )
             container = self.client.containers.get(container_id)
-            container.stop()
+            was_running = container.status == "running"
+            if was_running:
+                container.stop()
             container.update(
                 cpu_period=CPU_PERIOD,
                 cpu_quota=int(cfg.cpu_limit * CPU_PERIOD),
                 mem_limit=f"{cfg.memory_limit}m",
             )
+            if was_running:
+                container.start()
+            container.reload()
             if container_id in self.vps_instances:
                 self.vps_instances[container_id]["config"].update(
                     {
@@ -644,11 +656,35 @@ class VPSManager:
                         "storage_limit": cfg.storage_limit,
                     }
                 )
+                self.vps_instances[container_id]["status"] = container.status
                 await self.save_instances()
-            container.start()
             return True
         except Exception as exc:
             logger.error("Error updating VPS config: %s", exc)
+            # A failed resize must not leave a previously running developer
+            # workload down.  Docker updates are synchronous, so restarting is
+            # the safest rollback we can perform here.
+            status = "unknown"
+            if container is not None and was_running:
+                try:
+                    container.start()
+                except Exception as recovery_exc:
+                    logger.error(
+                        "Error restarting VPS after failed config update: %s",
+                        recovery_exc,
+                    )
+            if container is not None:
+                try:
+                    container.reload()
+                    status = container.status
+                except Exception as state_exc:
+                    logger.error(
+                        "Error refreshing VPS state after failed config update: %s",
+                        state_exc,
+                    )
+            if container_id in self.vps_instances:
+                self.vps_instances[container_id]["status"] = status
+                await self.save_instances()
             return False
 
     async def create_backup(

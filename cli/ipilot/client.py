@@ -192,24 +192,56 @@ class ApiClient:
     def create_server(
         self,
         name: str,
-        server_type: str,
+        image: Optional[str] = None,
         memory: Optional[int] = None,
+        server_type: Optional[str] = None,
     ) -> Any:
         """Create a new server.
 
         Args:
             name: Server name.
-            server_type: Server type identifier.
-            memory: Optional memory limit in MB.
+            image: Docker image (e.g. ``nginx:latest``). Falls back to
+                ``server_type`` for backward compatibility with older
+                callers that passed a type identifier.
+            memory: Optional memory limit in MB (sent as ``memoryLimit``).
+            server_type: Deprecated alias for ``image``.
 
         Returns:
             Created server details.
         """
+        actual_image = image or server_type
+        payload: Dict[str, Any] = {"name": name, "image": actual_image}
+        if memory is not None:
+            payload["memoryLimit"] = f"{memory}m"
         return self._request(
             "POST",
             "/apps",
-            {"name": name, "type": server_type, "memory": memory},
+            payload,
         )
+
+    def start_server(self, server_id: str) -> Any:
+        """Start a server container.
+
+        Args:
+            server_id: The server ID.
+        """
+        return self._request("POST", f"/apps/{server_id}/start", {})
+
+    def stop_server(self, server_id: str) -> Any:
+        """Stop a server container.
+
+        Args:
+            server_id: The server ID.
+        """
+        return self._request("POST", f"/apps/{server_id}/stop", {})
+
+    def restart_server(self, server_id: str) -> Any:
+        """Restart a server container.
+
+        Args:
+            server_id: The server ID.
+        """
+        return self._request("POST", f"/apps/{server_id}/restart", {})
 
     def delete_server(self, server_id: str) -> Any:
         """Delete a server.
@@ -232,12 +264,14 @@ class ApiClient:
 
         Args:
             server_id: The server ID.
-            lines: Number of log lines to return.
-            follow: Whether to follow (stream) log output.
+            lines: Number of log lines to return (sent as ``limit`` to match
+                the panel API).
+            follow: Whether to follow (stream) log output (currently
+                informational; the panel returns a paginated snapshot).
         """
         return self._request(
             "GET",
-            f"/apps/{server_id}/logs?lines={lines}&follow={follow}",
+            f"/apps/{server_id}/logs?limit={lines}",
         )
 
     def list_backups(self, server_id: Optional[str] = None) -> Any:

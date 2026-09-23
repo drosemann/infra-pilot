@@ -162,15 +162,25 @@ ENDPOINT_CASES = [
         ("web", "node", 512),
         "POST",
         "/apps",
-        {"name": "web", "type": "node", "memory": 512},
+        {"name": "web", "image": "node", "memoryLimit": "512m"},
+    ),
+    (
+        "create_server",
+        ("web", "nginx:latest"),
+        "POST",
+        "/apps",
+        {"name": "web", "image": "nginx:latest"},
     ),
     ("delete_server", ("srv-1",), "DELETE", "/apps/srv-1", None),
     ("server_status", ("srv-1",), "GET", "/apps/srv-1/status", None),
+    ("start_server", ("srv-1",), "POST", "/apps/srv-1/start", {}),
+    ("stop_server", ("srv-1",), "POST", "/apps/srv-1/stop", {}),
+    ("restart_server", ("srv-1",), "POST", "/apps/srv-1/restart", {}),
     (
         "get_logs",
         ("srv-1", 100, True),
         "GET",
-        "/apps/srv-1/logs?lines=100&follow=True",
+        "/apps/srv-1/logs?limit=100",
         None,
     ),
     ("list_backups", (), "GET", "/backup-jobs", None),
@@ -456,6 +466,14 @@ class TestEndpoints:
         assert url == f"http://test.local{API_PREFIX}/inventory?tag=prod"
 
     def test_list_inventory_multiple_filters(self, client, session_calls):
+        """Include each provided inventory filter in the request URL."""
         client.list_inventory(tag="a", owner="b")
         _, url, _, _ = session_calls[0]
         assert url == f"http://test.local{API_PREFIX}/inventory?tag=a&owner=b"
+
+    def test_create_server_accepts_legacy_server_type(self, client, session_calls):
+        """Map the legacy server type argument to the image payload field."""
+        client.create_server(name="web", server_type="node", memory=512)
+        _, url, body, _ = session_calls[0]
+        assert url == f"http://test.local{API_PREFIX}/apps"
+        assert body == {"name": "web", "image": "node", "memoryLimit": "512m"}

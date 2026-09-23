@@ -9,8 +9,18 @@ import path from "path";
 
 const host = process.env.TAURI_DEV_HOST;
 
+// Single source of truth for the displayed product version:
+// explicit APP_VERSION wins, then the npm package version,
+// then 'dev' for ad-hoc runs outside npm. Injected as
+// __APP_VERSION__ so the UI never hardcodes a version string.
+const appVersion =
+  process.env.APP_VERSION || process.env.npm_package_version || "dev";
+
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),

@@ -24,11 +24,13 @@ For the repository's supported local stack, prefer `docker compose up -d` from t
 | `/api/…` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Federation status, RBAC, provider discovery, and manifest deployment operations. |
 | `/webhook/gitops` | `GITOPS_WEBHOOK_TOKEN` HMAC signature with timestamp/replay validation | Trigger a GitOps manifest reconciliation. |
 
-Do not expose probe routes, bearer tokens, or webhook secrets directly to untrusted networks. Use an ingress, firewall, or private network boundary.
+Do not expose probe routes, bearer tokens, or webhook secrets directly to
+untrusted networks. Use an ingress, firewall, or private network boundary.
 
 ## Configuration
 
-The root `.env.example` is authoritative for the Compose deployment; this directory's `.env.example` lists standalone defaults.
+The root `.env.example` is authoritative for the Compose deployment; this
+directory's `.env.example` lists standalone defaults.
 
 | Variable | Purpose |
 |---|---|
@@ -57,4 +59,6 @@ pytest tests/unit/ -v
 pytest tests/smoke/ -v
 ```
 
-See the repository [architecture guide](../../wiki/06-Architecture.md) and [authentication matrix](../../wiki/11-Auth-Matrix.md) for the cross-service view.
+See the repository [architecture guide](../../wiki/06-Architecture.md) and
+[authentication matrix](../../wiki/11-Auth-Matrix.md) for the cross-service
+view.

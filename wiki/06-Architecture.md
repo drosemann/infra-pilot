@@ -41,15 +41,18 @@ The agent's maintained modules are deliberately small and independently testable
 | `webhook_server.py` | aiohttp routes, authentication middleware, GitOps signature verification, and HTTP responses. |
 | `vps_manager.py`, `db.py`, `secrets_manager.py` | Docker lifecycle helpers, PostgreSQL access, and secret-management support. |
 
-The OpenAPI contract in `services/orchestrator-agent/api_docs/openapi.yaml` is verified by the agent test suite and is the route-level source of truth.
+The OpenAPI contract in `services/orchestrator-agent/api_docs/openapi.yaml` is
+verified by the agent test suite and is the route-level source of truth.
 
 ## Request and deployment flow
 
 1. A user operates the panel or CLI; panel API authentication protects operational panel routes.
 2. A GitOps caller sends a signed request to the orchestrator's `/webhook/gitops` endpoint.
-3. The agent validates the signature/timestamp, parses the manifest, and asks a registered compute provider to reconcile desired state.
+3. The agent validates the signature/timestamp, parses the manifest, and asks a
+   registered compute provider to reconcile desired state.
 4. `/health` and `/metrics` remain probe-facing; `/api/` requires the configured federation bearer token.
-5. Prometheus can scrape metrics, and Grafana reads its provisioned Prometheus data source when the monitoring profile is active.
+5. Prometheus can scrape metrics, and Grafana reads its provisioned Prometheus
+   data source when the monitoring profile is active.
 
 ## Authentication and security
 
@@ -61,4 +64,5 @@ The OpenAPI contract in `services/orchestrator-agent/api_docs/openapi.yaml` is v
 | GitHub webhook | GitHub HMAC secret when that webhook route is enabled. |
 | Health and metrics | Public by design for local probes/scraping; protect exposure at the network layer. |
 
-Refer to [Auth Matrix](11-Auth-Matrix.md), the orchestrator OpenAPI file, and [Security](08-Security.md) before exposing services outside a trusted network.
+Refer to [Auth Matrix](11-Auth-Matrix.md), the orchestrator OpenAPI file, and
+[Security](08-Security.md) before exposing services outside a trusted network.

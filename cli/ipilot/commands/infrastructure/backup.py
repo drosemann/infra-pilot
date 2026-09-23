@@ -95,14 +95,14 @@ def snapshots(
     """Manage server snapshots"""
     client = _get_client(ctx)
     if create:
-        result = client._post(f"/servers/{server}/snapshots", {})
+        result = client._post(f"/apps/{server}/snapshots", {})
         print_output(result, ctx.obj.get("output", "table"))
         return
     if restore:
-        result = client._post(f"/servers/{server}/snapshots/{restore}/restore", {})
+        result = client._post(f"/apps/{server}/snapshots/{restore}/restore", {})
         print_output(result, ctx.obj.get("output", "table"))
         return
-    result = client._get(f"/servers/{server}/snapshots")
+    result = client._get(f"/apps/{server}/snapshots")
     data = (
         result if isinstance(result, builtins.list) else result.get("snapshots", result)
     )

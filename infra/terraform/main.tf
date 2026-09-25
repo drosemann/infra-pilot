@@ -23,6 +23,10 @@ terraform {
     region         = "us-east-1"
     encrypt        = true
     dynamodb_table = "infra-pilot-terraform-locks"
+    # Operator prerequisite (configure once, outside this module):
+    # the state bucket MUST have Versioning + default SSE-KMS enabled and
+    # public access blocked. `encrypt = true` only enables SSE-S3/AES256
+    # for state content; it does not create or harden the bucket itself.
   }
 }
 
@@ -118,7 +122,9 @@ module "monitoring" {
 resource "aws_ecr_repository" "repos" {
   for_each = toset(var.ecr_repository_names)
   name = each.value
-  image_tag_mutability = "MUTABLE"
+  # IMMUTABLE prevents tag overwrites (e.g. re-pushed `latest` shadowing a
+  # deployed digest). Deployments pin digests; mutable tags break that.
+  image_tag_mutability = "IMMUTABLE"
   image_scanning_configuration {
     scan_on_push = true
   }

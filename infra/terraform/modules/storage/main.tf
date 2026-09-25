@@ -78,6 +78,20 @@ resource "random_password" "db_password" {
   special = false
 }
 
+# The DB password lives in Secrets Manager, not in outputs or app config.
+# Services read it via secretKeyRef / ECS secret injection; operators with
+# IAM access can fetch it with `aws secretsmanager get-secret-value`.
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.name_prefix}-postgres-password"
+  recovery_window_in_days = 30
+  tags = { Name = "${var.name_prefix}-postgres-password" }
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = random_password.db_password.result
+}
+
 resource "aws_elasticache_subnet_group" "redis" {
   name       = "${var.name_prefix}-redis-subnet"
   subnet_ids = var.subnet_ids
@@ -133,9 +147,12 @@ output "rds_endpoint" {
   sensitive = true
 }
 
-output "rds_password" {
-  value = random_password.db_password.result
-  sensitive = true
+# NOTE: the password itself is intentionally NOT an output (it would persist
+# in plaintext in the state file). Fetch it from Secrets Manager:
+#   aws secretsmanager get-secret-value --secret-id <db_password_secret_arn> --query SecretString
+output "db_password_secret_arn" {
+  value       = aws_secretsmanager_secret.db_password.arn
+  description = "ARN of the Secrets Manager secret holding the RDS password"
 }
 
 output "redis_endpoint" {

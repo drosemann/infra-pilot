@@ -71,6 +71,31 @@ get a fix before any other work.
 - Gitleaks scans the full git history on every push; npm audit and pip-audit
   run for dependency CVEs.
 
+### Infrastructure credentials and monitoring
+
+- Terraform state contains the RDS password even though it is omitted from
+  outputs. The state bucket requires versioning, default SSE-S3/AES256,
+  blocked public access, and restricted IAM access.
+- Production deployment reads `infra-pilot-prod-postgres-password` from
+  Secrets Manager into `infra-pilot-secrets` under `db-password` before Helm
+  runs with `secrets.create=false`. The deployment role needs
+  `secretsmanager:GetSecretValue` on that secret, plus `kms:Decrypt` if a
+  customer managed KMS key is used. Kubernetes access must permit Secret
+  creation and patching in the deployment namespace.
+- Provision the other required keys (`postgres-password`, `redis-password`,
+  and `api-key`) in that Secret through your secret manager before deployment.
+  The sync preserves those keys. Passwords must stay out of Helm values,
+  Terraform outputs, and deployment logs.
+- Compose node-exporter uses the host network namespace and listens only on
+  the private Docker bridge address configured by `NODE_EXPORTER_HOST_IP`.
+  Prometheus reaches that address from `infra-pilot-net`; port 9100 is not
+  bound on public interfaces. This configuration targets Linux Docker hosts.
+- Helm allows panel egress and orchestrator ingress on TCP 8500 within the
+  same release. When the panel's token Secret is configured, the Secret and
+  `orchestrator-api-token` key must exist for the Pod to start.
+- Encrypted backups upload only the `.gpg` artifact to S3. Plaintext may
+  remain locally unless `--no-plaintext` is set.
+
 ### Container isolation (regression contract)
 
 Container spawns MUST NOT:

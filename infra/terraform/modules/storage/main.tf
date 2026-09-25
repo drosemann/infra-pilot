@@ -78,6 +78,19 @@ resource "random_password" "db_password" {
   special = false
 }
 
+# The production workflow copies this secret to infra-pilot-secrets/db-password
+# before Helm runs. Services consume it via secretKeyRef, not Helm values.
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.name_prefix}-postgres-password"
+  recovery_window_in_days = 30
+  tags = { Name = "${var.name_prefix}-postgres-password" }
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = random_password.db_password.result
+}
+
 resource "aws_elasticache_subnet_group" "redis" {
   name       = "${var.name_prefix}-redis-subnet"
   subnet_ids = var.subnet_ids
@@ -133,9 +146,14 @@ output "rds_endpoint" {
   sensitive = true
 }
 
-output "rds_password" {
-  value = random_password.db_password.result
-  sensitive = true
+# Omitting rds_password prevents output disclosure, but random_password,
+# aws_db_instance.password and aws_secretsmanager_secret_version.secret_string
+# still store the password in Terraform state. Protect state as credential
+# material with encryption and restricted access. Fetch the password from Secrets Manager:
+#   aws secretsmanager get-secret-value --secret-id <db_password_secret_arn> --query SecretString
+output "db_password_secret_arn" {
+  value       = aws_secretsmanager_secret.db_password.arn
+  description = "ARN of the Secrets Manager secret holding the RDS password"
 }
 
 output "redis_endpoint" {

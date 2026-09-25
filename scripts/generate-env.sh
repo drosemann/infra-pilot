@@ -46,5 +46,6 @@ fill GITOPS_WEBHOOK_TOKEN "$(gen_secret)"
 fill FEDERATION_API_TOKEN "$(gen_secret)"
 fill DISCORD_TOKEN "$(gen_secret)"
 fill PTERODACTYL_API_KEY "$(gen_secret)"
+fill GRAFANA_ADMIN_PASSWORD "$(gen_secret)"
 
 echo "Done. Review $ENV_FILE before starting services."

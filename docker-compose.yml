@@ -269,6 +269,8 @@ services:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      # generate-env.sh fills GRAFANA_ADMIN_PASSWORD with a random value.
+      # The 'admin' fallback exists for zero-config local starts only.
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_INSTALL_PLUGINS: ""
     healthcheck:
@@ -317,6 +319,36 @@ services:
           memory: 128M
         reservations:
           memory: 64M
+    profiles:
+      - monitoring
+
+  # Host metrics for the node_* alerts in infra/monitoring/prometheus/alerts.yml.
+  # Without it, HighMemoryUsage/HighCPUUsage/DiskSpaceLow never fire.
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: infra-pilot-node-exporter
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    ports:
+      - "${NODE_EXPORTER_PORT:-9100}:9100"
+    networks:
+      - infra-pilot-net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: node-exporter
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - monitoring
 

@@ -7,6 +7,9 @@ rule_files:
   - "alerts.yml"
 
 alerting:
+  # No Alertmanager is deployed by default; add its address here when you
+  # run one (e.g. via the Helm prometheus.alertmanager sub-chart), otherwise
+  # alerts evaluate but have no receiver.
   alertmanagers:
     - static_configs:
         - targets: []
@@ -25,12 +28,23 @@ scrape_configs:
     scrape_interval: 15s
     metrics_path: /metrics
     static_configs:
+      # NOTE: only the orchestrator exposes Prometheus /metrics here.
+      # The management panel exposes JSON health at /health + /api/health
+      # (no Prometheus format) — do not add management-panel:3001 until it
+      # serves /metrics, or failed scrapes will spam the log.
       - targets:
-          - "management-panel:3001"
           - "orchestrator-agent:8500"
         labels:
           project: infra-pilot
           environment: production
+
+  - job_name: node-exporter
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: host
+          component: node-exporter
 
   - job_name: postgres-exporter
     scrape_interval: 15s

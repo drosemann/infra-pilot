@@ -56,6 +56,6 @@ spec:
             matchLabels:
               app.kubernetes.io/component: management-panel
       ports:
-        - port: 3000
+        - port: {{ .Values.managementPanel.service.port }}
     {{- end }}
 {{- end }}

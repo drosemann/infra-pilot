@@ -35,6 +35,35 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import re
+
+# Validation bounds for manifests. from_dict() stays lenient (parsing only);
+# call validate() / validate_strict() before reconciling untrusted input
+# (see deployment_apply in webhook_server.py).
+MAX_INSTANCES = 50
+MAX_PORT_MAPPINGS = 16
+MAX_ENV_ENTRIES = 64
+MAX_LABEL_ENTRIES = 64
+MAX_ENV_VALUE_LEN = 4096
+MAX_USER_DATA_LEN = 65536
+MAX_SSH_KEYS = 16
+MAX_SSH_KEY_LEN = 8192
+NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
+IMAGE_PATTERN = re.compile(r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$")
+ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+PORT_KEY_PATTERN = re.compile(r"^(\d{1,5})/(tcp|udp)$")
+# Env vars that must never come from a manifest: they escape confinement
+# (library preload) or redirect control-plane connections.
+DENIED_ENV_VARS = frozenset(
+    {
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "DOCKER_CERT_PATH",
+    }
+)
+
 
 class HealthCheckType(str, Enum):
     PING = "ping"
@@ -177,6 +206,23 @@ class InfraFile:
             ),
         )
 
+    def validate(self, strict: bool = False) -> None:
+        """Validate manifest content; raise ValueError on violation.
+
+        Lenient checks always apply (types, sizes, image/port/env shape).
+        With ``strict=True`` (untrusted API input) host ports < 1025 are
+        additionally rejected – binding privileged ports requires an
+        explicit operator override outside the manifest.
+        """
+        if not NAME_PATTERN.fullmatch(self.metadata.name):
+            raise ValueError(f"invalid metadata.name: {self.metadata.name!r}")
+        if len(self.spec.instances) > MAX_INSTANCES:
+            raise ValueError(
+                f"too many instances: {len(self.spec.instances)} > {MAX_INSTANCES}"
+            )
+        for inst in self.spec.instances:
+            _validate_instance(inst, strict=strict)
+
     def to_dict(self) -> Dict[str, Any]:
         """Serialize back to a plain dictionary."""
         return {
@@ -253,3 +299,64 @@ class InfraFile:
                 ],
             },
         }
+
+
+def _validate_host_port(value: Any, strict: bool) -> None:
+    try:
+        host_port = int(str(value))
+    except (TypeError, ValueError):
+        raise ValueError(f"invalid host port: {value!r}") from None
+    if not 1 <= host_port <= 65535:
+        raise ValueError(f"host port out of range: {value!r}")
+    if strict and host_port < 1025:
+        raise ValueError(
+            f"privileged host port rejected in strict mode: {value!r} "
+            "(use >= 1025 or an operator override)"
+        )
+
+
+def _validate_instance(inst: "InfraInstance", strict: bool) -> None:
+    if not inst.name or not NAME_PATTERN.fullmatch(inst.name):
+        raise ValueError(f"invalid instance name: {inst.name!r}")
+    if not isinstance(inst.image, str) or len(inst.image) > 255:
+        raise ValueError(f"invalid image: {inst.image!r}")
+    if not IMAGE_PATTERN.fullmatch(inst.image):
+        raise ValueError(f"invalid image reference: {inst.image!r}")
+    for numeric, label in (
+        (inst.cpu, "cpu"),
+        (inst.memory_mb, "memory_mb"),
+        (inst.storage_gb, "storage_gb"),
+    ):
+        if not isinstance(numeric, (int, float)) or not (0 < numeric <= 1_000_000):
+            raise ValueError(f"invalid {label}: {numeric!r}")
+    if not isinstance(inst.ports, dict) or len(inst.ports) > MAX_PORT_MAPPINGS:
+        raise ValueError(f"invalid ports mapping for {inst.name!r}")
+    for container_port, host_port in inst.ports.items():
+        match = (
+            PORT_KEY_PATTERN.fullmatch(str(container_port))
+            if isinstance(container_port, str)
+            else None
+        )
+        if not match or not 1 <= int(match.group(1)) <= 65535:
+            raise ValueError(f"invalid container port: {container_port!r}")
+        _validate_host_port(host_port, strict)
+    for mapping, limit, label in (
+        (inst.env, MAX_ENV_ENTRIES, "env"),
+        (inst.labels, MAX_LABEL_ENTRIES, "labels"),
+    ):
+        if not isinstance(mapping, dict) or len(mapping) > limit:
+            raise ValueError(f"invalid {label} mapping for {inst.name!r}")
+    for key, value in inst.env.items():
+        if not isinstance(key, str) or not ENV_KEY_PATTERN.fullmatch(key):
+            raise ValueError(f"invalid env key: {key!r}")
+        if key in DENIED_ENV_VARS:
+            raise ValueError(f"denied env var: {key!r}")
+        if not isinstance(value, str) or len(value) > MAX_ENV_VALUE_LEN:
+            raise ValueError(f"invalid env value for {key!r}")
+    if not isinstance(inst.user_data, str) or len(inst.user_data) > MAX_USER_DATA_LEN:
+        raise ValueError(f"user_data too large for {inst.name!r}")
+    if not isinstance(inst.ssh_keys, list) or len(inst.ssh_keys) > MAX_SSH_KEYS:
+        raise ValueError(f"invalid ssh_keys for {inst.name!r}")
+    for ssh_key in inst.ssh_keys:
+        if not isinstance(ssh_key, str) or len(ssh_key) > MAX_SSH_KEY_LEN:
+            raise ValueError(f"invalid ssh_key for {inst.name!r}")

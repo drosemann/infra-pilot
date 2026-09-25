@@ -230,6 +230,8 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.53.0
+    extra_hosts:
+      - "host.docker.internal:${NODE_EXPORTER_HOST_IP:-172.17.0.1}"
     container_name: infra-pilot-prometheus
     volumes:
       - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -329,15 +331,14 @@ services:
     container_name: infra-pilot-node-exporter
     command:
       - --path.rootfs=/host
+      # Bind only the host's private Docker bridge address (see .env.example).
+      - --web.listen-address=${NODE_EXPORTER_HOST_IP:-172.17.0.1}:9100
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host:ro,rslave
-    ports:
-      - "${NODE_EXPORTER_PORT:-9100}:9100"
-    networks:
-      - infra-pilot-net
+    network_mode: host
     restart: unless-stopped
     deploy:
       resources:

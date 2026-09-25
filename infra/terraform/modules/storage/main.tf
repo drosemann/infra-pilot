@@ -78,9 +78,8 @@ resource "random_password" "db_password" {
   special = false
 }
 
-# The DB password lives in Secrets Manager, not in outputs or app config.
-# Services read it via secretKeyRef / ECS secret injection; operators with
-# IAM access can fetch it with `aws secretsmanager get-secret-value`.
+# The production workflow copies this secret to infra-pilot-secrets/db-password
+# before Helm runs. Services consume it via secretKeyRef, not Helm values.
 resource "aws_secretsmanager_secret" "db_password" {
   name                    = "${var.name_prefix}-postgres-password"
   recovery_window_in_days = 30
@@ -147,8 +146,10 @@ output "rds_endpoint" {
   sensitive = true
 }
 
-# NOTE: the password itself is intentionally NOT an output (it would persist
-# in plaintext in the state file). Fetch it from Secrets Manager:
+# Omitting rds_password prevents output disclosure, but random_password,
+# aws_db_instance.password and aws_secretsmanager_secret_version.secret_string
+# still store the password in Terraform state. Protect state as credential
+# material with encryption and restricted access. Fetch the password from Secrets Manager:
 #   aws secretsmanager get-secret-value --secret-id <db_password_secret_arn> --query SecretString
 output "db_password_secret_arn" {
   value       = aws_secretsmanager_secret.db_password.arn

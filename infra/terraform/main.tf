@@ -24,7 +24,7 @@ terraform {
     encrypt        = true
     dynamodb_table = "infra-pilot-terraform-locks"
     # Operator prerequisite (configure once, outside this module):
-    # the state bucket MUST have Versioning + default SSE-KMS enabled and
+    # the state bucket MUST have Versioning + default SSE-S3/AES256 enabled and
     # public access blocked. `encrypt = true` only enables SSE-S3/AES256
     # for state content; it does not create or harden the bucket itself.
   }

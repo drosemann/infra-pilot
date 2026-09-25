@@ -98,33 +98,34 @@ if ! docker compose ls 2>/dev/null | grep -q infra-pilot; then
 fi
 
 mkdir -p "$OUT_DIR"
+OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 stamp=$(date +%Y%m%d_%H%M%S)
 ARTIFACTS=()
 
 maybe_encrypt_and_upload() {
   local file="$1"
+  local upload_file="$file"
   if [[ -n "$ENCRYPT_TO" ]]; then
     info "Encrypting $file for $ENCRYPT_TO ..."
     gpg --batch --yes --trust-model always --encrypt --recipient "$ENCRYPT_TO" \
       --output "${file}.gpg" "$file"
+    upload_file="${file}.gpg"
     ARTIFACTS+=("${file}.gpg")
     if [[ "$NO_PLAINTEXT" == true ]]; then
       rm -f "$file"
     fi
   fi
   if [[ -n "$S3_URI" ]]; then
-    info "Uploading $file to $S3_URI ..."
-    aws s3 cp "$file" "$S3_URI/$(basename "$file")"
-    if [[ -f "${file}.gpg" ]]; then
-      aws s3 cp "${file}.gpg" "$S3_URI/$(basename "${file}.gpg")"
-    fi
+    info "Uploading $upload_file to $S3_URI ..."
+    aws s3 cp "$upload_file" "$S3_URI/$(basename "$upload_file")"
   fi
 }
 
 prune() {
   local pattern="$1"
   local kept="$2"
-  # shellcheck disable=SC2086 -- $pattern is intentionally a glob
+  # $pattern is intentionally a glob.
+  # shellcheck disable=SC2086
   mapfile -t old_files < <(ls -1t "$OUT_DIR"/$pattern 2>/dev/null | tail -n +"$((kept + 1))" || true)
   if [[ ${#old_files[@]} -gt 0 ]]; then
     info "Removing ${#old_files[@]} old file(s) of $pattern (keep=$kept)..."
@@ -169,7 +170,8 @@ fi
 if [[ "$WITH_GRAFANA" == true ]]; then
   grafana_file="$OUT_DIR/grafana_${stamp}.tgz"
   info "Archiving Grafana volume: $grafana_file"
-  if docker run --rm \
+  if docker volume inspect infra-pilot_grafana_data > /dev/null 2>&1 \
+    && docker run --rm \
     -v infra-pilot_grafana_data:/data:ro \
     -v "$OUT_DIR:/out" \
     alpine tar czf "/out/$(basename "$grafana_file")" -C /data . > /dev/null 2>&1; then

@@ -49,7 +49,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.managementPanel.existingSecret }}
                   key: orchestrator-api-token
-                  optional: true
             {{- end }}
           livenessProbe:
             httpGet:

@@ -94,7 +94,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     needs: [build-and-push, deploy-staging]
-    if: ${{ github.event.inputs.environment == 'prod' && github.event.inputs.environment != 'staging' }}
+    if: ${{ !cancelled() && needs.build-and-push.result == 'success' && github.event.inputs.environment == 'prod' }}
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -110,6 +110,29 @@ jobs:
           role-to-assume: ${{ secrets.AWS_PROD_ROLE_ARN }}
           aws-region: us-east-1
       - run: aws eks update-kubeconfig --name infra-pilot-prod --region us-east-1
+      - name: Sync production database password
+        env:
+          DB_PASSWORD_SECRET_ID: infra-pilot-prod-postgres-password
+        run: |
+          set -euo pipefail
+          umask 077
+          secret_dir="$(mktemp -d)"
+          trap 'rm -rf "$secret_dir"' EXIT
+          aws secretsmanager get-secret-value \
+            --secret-id "$DB_PASSWORD_SECRET_ID" --query SecretString --output json \
+            | python3 -c 'import json, pathlib, sys; password = json.load(sys.stdin); assert isinstance(password, str) and password, "Empty database password"; pathlib.Path(sys.argv[1]).write_text(password)' \
+              "$secret_dir/db-password"
+          kubectl create namespace infra-pilot --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n infra-pilot create secret generic infra-pilot-secrets \
+            --from-file="db-password=$secret_dir/db-password" --dry-run=client -o json \
+            > "$secret_dir/secret.json"
+          if kubectl -n infra-pilot get secret infra-pilot-secrets > /dev/null 2>&1; then
+            # Merge only db-password, preserving other externally managed keys.
+            kubectl -n infra-pilot patch secret infra-pilot-secrets \
+              --type=merge --patch-file="$secret_dir/secret.json"
+          else
+            kubectl -n infra-pilot create -f "$secret_dir/secret.json"
+          fi
       - name: Deploy Helm chart
         env:
           HELM_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.sha }}
@@ -123,8 +146,7 @@ jobs:
             --set replicaCount=3 \
             --set autoscaling.minReplicas=3 \
             --set autoscaling.maxReplicas=20 \
-            --set postgresql.auth.password=${{ secrets.DB_PASSWORD }} \
-            --set redis.auth.password=${{ secrets.REDIS_PASSWORD }} \
+            --set secrets.create=false \
             --set orchestrator.env[0].value=production \
             --wait --timeout 15m
       - name: Smoke test

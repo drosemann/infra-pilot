@@ -108,6 +108,7 @@ class ManifestEngine:
         self, desired: InfraFile, current_instances: Dict[str, InstanceInfo]
     ) -> DriftReport:
         """Compare desired instances against current state."""
+        desired.validate()
         entries: List[DriftEntry] = []
         desired_names: Set[str] = {i.name for i in desired.spec.instances}
         current_names: Set[str] = set(current_instances.keys())
@@ -248,6 +249,7 @@ class ManifestEngine:
     # ------------------------------------------------------------------
     async def reconcile(self, desired: InfraFile) -> ReconcileResult:
         """Converge actual infrastructure toward the desired manifest."""
+        desired.validate()
         result = ReconcileResult(
             manifest_name=desired.metadata.name,
             dry_run=self.dry_run,

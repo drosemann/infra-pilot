@@ -92,9 +92,13 @@ Regression tests assert these properties on every CI run
 
 - `docker-compose.yml` defaults to the production panel image.
   `compose.override.yml` (auto-loaded) restores HMR dev servers for local
-  work only — deploy production with
-  `docker compose -f docker-compose.yml up -d` and terminate TLS at a
-  reverse proxy / ingress; Express and the orchestrator never serve public
+  work only. Before running `docker compose -f docker-compose.yml up -d` in
+  production, change the management-panel port mappings to bind to
+  `127.0.0.1` (for example, `127.0.0.1:3001:3001` and
+  `127.0.0.1:5173:5173`). Alternatively, remove the panel's host port
+  mappings and connect the TLS proxy through the Compose network. The
+  unmodified file publishes panel ports on all interfaces. Terminate TLS at
+  the proxy / ingress; Express and the orchestrator must not serve public
   traffic directly.
 - Manifests are strictly validated on the API path (`validate(strict=True)`):
   privileged host ports, denied env vars, oversized payloads

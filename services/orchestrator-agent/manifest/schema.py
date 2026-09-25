@@ -31,16 +31,18 @@ Example ``infra.yaml``::
           driver: local
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
+from ipaddress import ip_network
 from typing import Any, Dict, List, Optional
-
-import re
 
 # Validation bounds for manifests. from_dict() stays lenient (parsing only);
 # call validate() / validate_strict() before reconciling untrusted input
 # (see deployment_apply in webhook_server.py).
 MAX_INSTANCES = 50
+MAX_NETWORKS = 50
+MAX_STORAGE = 50
 MAX_PORT_MAPPINGS = 16
 MAX_ENV_ENTRIES = 64
 MAX_LABEL_ENTRIES = 64
@@ -49,7 +51,9 @@ MAX_USER_DATA_LEN = 65536
 MAX_SSH_KEYS = 16
 MAX_SSH_KEY_LEN = 8192
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
-IMAGE_PATTERN = re.compile(r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$")
+IMAGE_PATTERN = re.compile(
+    r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$"
+)
 ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PORT_KEY_PATTERN = re.compile(r"^(\d{1,5})/(tcp|udp)$")
 # Env vars that must never come from a manifest: they escape confinement
@@ -220,8 +224,20 @@ class InfraFile:
             raise ValueError(
                 f"too many instances: {len(self.spec.instances)} > {MAX_INSTANCES}"
             )
+        if len(self.spec.networks) > MAX_NETWORKS:
+            raise ValueError(
+                f"too many networks: {len(self.spec.networks)} > {MAX_NETWORKS}"
+            )
+        if len(self.spec.storage) > MAX_STORAGE:
+            raise ValueError(
+                f"too many storage volumes: {len(self.spec.storage)} > {MAX_STORAGE}"
+            )
         for inst in self.spec.instances:
             _validate_instance(inst, strict=strict)
+        for network in self.spec.networks:
+            _validate_network(network)
+        for volume in self.spec.storage:
+            _validate_storage(volume)
 
     def to_dict(self) -> Dict[str, Any]:
         """Serialize back to a plain dictionary."""
@@ -315,6 +331,31 @@ def _validate_host_port(value: Any, strict: bool) -> None:
         )
 
 
+def _validate_network(network: InfraNetwork) -> None:
+    if not isinstance(network.name, str) or not NAME_PATTERN.fullmatch(network.name):
+        raise ValueError(f"invalid network name: {network.name!r}")
+    if not isinstance(network.cidr, str) or len(network.cidr) > 64:
+        raise ValueError(f"invalid network CIDR: {network.cidr!r}")
+    if network.cidr:
+        try:
+            ip_network(network.cidr, strict=False)
+        except ValueError:
+            raise ValueError(f"invalid network CIDR: {network.cidr!r}") from None
+
+
+def _validate_storage(volume: InfraStorage) -> None:
+    if not isinstance(volume.name, str) or not NAME_PATTERN.fullmatch(volume.name):
+        raise ValueError(f"invalid storage name: {volume.name!r}")
+    if not isinstance(volume.driver, str) or not NAME_PATTERN.fullmatch(volume.driver):
+        raise ValueError(f"invalid storage driver: {volume.driver!r}")
+    if (
+        isinstance(volume.size_gb, bool)
+        or not isinstance(volume.size_gb, (int, float))
+        or not 0 < volume.size_gb <= 1_000_000
+    ):
+        raise ValueError(f"invalid storage size_gb: {volume.size_gb!r}")
+
+
 def _validate_instance(inst: "InfraInstance", strict: bool) -> None:
     if not inst.name or not NAME_PATTERN.fullmatch(inst.name):
         raise ValueError(f"invalid instance name: {inst.name!r}")
@@ -327,7 +368,11 @@ def _validate_instance(inst: "InfraInstance", strict: bool) -> None:
         (inst.memory_mb, "memory_mb"),
         (inst.storage_gb, "storage_gb"),
     ):
-        if not isinstance(numeric, (int, float)) or not (0 < numeric <= 1_000_000):
+        if (
+            isinstance(numeric, bool)
+            or not isinstance(numeric, (int, float))
+            or not (0 < numeric <= 1_000_000)
+        ):
             raise ValueError(f"invalid {label}: {numeric!r}")
     if not isinstance(inst.ports, dict) or len(inst.ports) > MAX_PORT_MAPPINGS:
         raise ValueError(f"invalid ports mapping for {inst.name!r}")

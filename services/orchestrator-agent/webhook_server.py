@@ -35,8 +35,8 @@ rbac_engine = RBACEngine()
 LOCAL_DEVELOPMENT_ENVIRONMENTS = frozenset({"dev", "development", "local"})
 
 # Bound inbound JSON bodies to contain memory-DoS via huge manifests.
-# aiohttp's request.json() has no size cap, so POST handlers read the raw
-# body and enforce this limit first.
+# aiohttp bounds buffered request bodies at the application level, including
+# chunked requests, before POST handlers parse or verify them.
 MAX_BODY_BYTES = int(os.getenv("MAX_BODY_BYTES", str(256 * 1024)))
 
 
@@ -657,7 +657,7 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     Extracted from start_webhook_server so the route table can be tested
     with aiohttp's TestClient without binding a real port.
     """
-    app = web.Application()
+    app = web.Application(client_max_size=MAX_BODY_BYTES)
 
     # Per-app rate-limit state (fresh per build, so tests stay isolated).
     # Default rules cover /api/v1/deployments (30/min) etc.; the GitOps

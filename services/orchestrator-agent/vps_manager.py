@@ -86,7 +86,9 @@ def _validate_resource_limits(cfg: "VPSConfig") -> None:
         )
 
 
-SAFE_IMAGE_PATTERN = re.compile(r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$")
+SAFE_IMAGE_PATTERN = re.compile(
+    r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$"
+)
 SAFE_PORT_KEY_PATTERN = re.compile(r"^(\d{1,5})/(tcp|udp)$")
 SAFE_ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 DENIED_ENV_VARS = frozenset(
@@ -117,7 +119,9 @@ def _validate_image(image: str) -> None:
     allowlist = [
         p.strip() for p in os.getenv("ALLOWED_IMAGES", "").split(",") if p.strip()
     ]
-    if allowlist and not any(image == p or image.startswith(p) for p in allowlist):
+    if allowlist and not any(
+        image == p or image.startswith((p + ":", p + "@", p + "/")) for p in allowlist
+    ):
         raise ValueError(f"image not in ALLOWED_IMAGES allow-list: {image!r}")
 
 

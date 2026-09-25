@@ -78,10 +78,34 @@ Container spawns MUST NOT:
 - run with `--privileged` or `--cap-add=ALL`
 - take image/name/command strings built via string interpolation or a shell
 - bypass the per-VPS resource limits
+- bind host ports `< 1025` (privileged; requires operator override outside
+  the manifest), accept `LD_PRELOAD`/`LD_LIBRARY_PATH`/`DOCKER_HOST` env
+  vars, or pull images outside the optional `ALLOWED_IMAGES` prefix
+  allow-list
 
 Regression tests assert these properties on every CI run
 (`test_create_vps_never_spawns_privileged_containers`,
-`test_container_name_validation_rejects_injection`).
+`test_container_name_validation_rejects_injection`,
+`services/orchestrator-agent/tests/unit/test_hardening_p0.py`).
+
+### Production deployment notes
+
+- `docker-compose.yml` defaults to the production panel image.
+  `compose.override.yml` (auto-loaded) restores HMR dev servers for local
+  work only — deploy production with
+  `docker compose -f docker-compose.yml up -d` and terminate TLS at a
+  reverse proxy / ingress; Express and the orchestrator never serve public
+  traffic directly.
+- Manifests are strictly validated on the API path (`validate(strict=True)`):
+  privileged host ports, denied env vars, oversized payloads
+  (`MAX_BODY_BYTES`, default 256 KiB, 413 on excess) and unbounded maps are
+  rejected with 400/413 before reconciliation.
+- `/api/*` and `/webhook/gitops` are rate-limited per client IP (429 with
+  `Retry-After`); limits are intentionally modest on deploy/webhook routes.
+- The Docker socket is host-root equivalent. In production never mount
+  `/var/run/docker.sock` directly — put an allowlisted socket proxy
+  (e.g. `tecnativa/docker-socket-proxy`) in front and point `DOCKER_HOST`
+  at it. The direct mount in compose is trusted-dev/lab only.
 
 ### Known hardening history
 
@@ -95,6 +119,10 @@ Regression tests assert these properties on every CI run
 | 2026-08 | Health-check command injection fixed (allow-list + list exec) and resource limits enforced; federation auth now fail-closed by default (`ALLOW_INSECURE_FEDERATION`) |
 | 2026-08 | RBAC revocation persistence fixed (DELETE routes + `rbac_store`); Helm secrets now required (fail-fast), readiness probe `/ready` added; discord-service hardened (read_only, no-new-privileges, cap_drop ALL, :ro) |
 | 2026-08 | CI hardened: promtool config check, postgres 16-alpine alignment, coverage gates (orchestrator 50%, panel 35%, discord 20%), bandit/ESLint warnings promoted |
+| 2026-09 | P0 production hardening: compose prod-default + dev override, panel
+  Express defaults (bounded JSON, security headers, no fingerprint),
+  strict manifest/spawn validation, bounded webhook bodies, per-IP rate
+  limits on `/api/*` + `/webhook/gitops` |
 
 ## Security Best Practices (for contributors)
 

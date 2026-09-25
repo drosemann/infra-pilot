@@ -40,7 +40,7 @@ Scheduling (example cron, daily 02:00, offsite via S3):
 
 Restore: see scripts/db-restore.sh (supports .gpg artifacts).
 EOF
-  exit 0
+  exit "${1:-0}"
 }
 
 KEEP=10
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
     --skip-redis) WITH_REDIS=false; shift ;;
     --skip-grafana) WITH_GRAFANA=false; shift ;;
     --help) usage ;;
-    *) echo "Unknown option: $1" >&2; usage ;;
+    *) echo "Unknown option: $1" >&2; usage 2 ;;
   esac
 done
 

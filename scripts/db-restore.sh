@@ -37,7 +37,7 @@ Notes:
   - Verify restores with --dry-run style checks (pg_restore --list) before
     production use.
 EOF
-  exit 0
+  exit "${1:-0}"
 }
 
 ASSUME_YES=false
@@ -49,12 +49,12 @@ while [[ $# -gt 0 ]]; do
     --help) usage ;;
     -*)
       echo "Unknown option: $1" >&2
-      usage
+      usage 2
       ;;
     *)
       if [[ -n "$BACKUP_FILE" ]]; then
         echo "Multiple backup files given" >&2
-        usage
+        usage 2
       fi
       BACKUP_FILE="$1"; shift ;;
   esac
@@ -62,7 +62,7 @@ done
 
 if [[ -z "$BACKUP_FILE" ]]; then
   error "Missing backup file argument"
-  usage
+  usage 2
 fi
 
 if [[ ! -f "$BACKUP_FILE" ]]; then

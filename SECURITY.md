@@ -95,6 +95,9 @@ Regression tests assert these properties on every CI run
 | 2026-08 | Health-check command injection fixed (allow-list + list exec) and resource limits enforced; federation auth now fail-closed by default (`ALLOW_INSECURE_FEDERATION`) |
 | 2026-08 | RBAC revocation persistence fixed (DELETE routes + `rbac_store`); Helm secrets now required (fail-fast), readiness probe `/ready` added; discord-service hardened (read_only, no-new-privileges, cap_drop ALL, :ro) |
 | 2026-08 | CI hardened: promtool config check, postgres 16-alpine alignment, coverage gates (orchestrator 50%, panel 35%, discord 20%), bandit/ESLint warnings promoted |
+| 2026-09 | Auth-failure observability: RBAC denies promoted to warning + counted
+  (`orchestrator_auth_failures_total{outcome=...}` on `/metrics`); fixed
+  `/metrics` 500s on Linux (psutil `vss` → `vms` fallback, aiohttp charset) |
 
 ## Security Best Practices (for contributors)
 

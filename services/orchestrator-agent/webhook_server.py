@@ -24,6 +24,7 @@ from aiohttp import web
 from compute.registry import ProviderRegistry
 from manifest.engine import ManifestEngine
 from manifest.schema import InfraFile
+from rate_limiter import RateLimitRegistry, RateLimitRule
 from rbac import Organization, Permission, RBACEngine, Role
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,36 @@ logger = logging.getLogger(__name__)
 # the engine and never authenticate over the wire.
 rbac_engine = RBACEngine()
 LOCAL_DEVELOPMENT_ENVIRONMENTS = frozenset({"dev", "development", "local"})
+
+# Bound inbound JSON bodies to contain memory-DoS via huge manifests.
+# aiohttp bounds buffered request bodies at the application level, including
+# chunked requests, before POST handlers parse or verify them.
+MAX_BODY_BYTES = int(os.getenv("MAX_BODY_BYTES", str(256 * 1024)))
+
+
+async def _read_json_body(request: web.Request) -> Any:
+    """Read and parse a JSON body bounded by MAX_BODY_BYTES.
+
+    Raises ValueError("body too large") or ValueError("invalid JSON body").
+    """
+    content_length = request.headers.get("Content-Length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_BODY_BYTES:
+                raise ValueError("body too large")
+        except ValueError as exc:
+            if str(exc) == "body too large":
+                raise
+            raise ValueError("invalid JSON body") from None
+    raw = await request.read()
+    if len(raw) > MAX_BODY_BYTES:
+        raise ValueError("body too large")
+    import json as _json
+
+    try:
+        return _json.loads(raw.decode("utf-8")) if raw else {}
+    except Exception:
+        raise ValueError("invalid JSON body") from None
 
 
 def _serialize_rbac(obj: Any) -> Any:
@@ -393,8 +424,11 @@ async def deployment_apply(request: web.Request) -> web.Response:
     or as platform admin. Keep the token server-side only.
     """
     try:
-        body = await request.json()
-    except Exception:
+        body = await _read_json_body(request)
+    except ValueError as exc:
+        status = 413 if str(exc) == "body too large" else 400
+        return web.json_response({"error": str(exc)}, status=status)
+    if not isinstance(body, dict):
         return web.json_response({"error": "invalid JSON body"}, status=400)
     manifest_data = body.get("manifest")
     if not isinstance(manifest_data, dict) or not manifest_data:
@@ -462,6 +496,9 @@ async def deployment_apply(request: web.Request) -> web.Response:
         )
     try:
         desired = InfraFile.from_dict(manifest_data)
+        desired.validate(strict=True)
+    except ValueError as exc:
+        return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
     except Exception as exc:
         return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
     result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
@@ -577,6 +614,13 @@ async def verify_gitops_token(
         )
         return web.json_response({"error": "invalid webhook signature"}, status=401)
     body = await request.read()
+    if len(body) > MAX_BODY_BYTES:
+        logger.warning(
+            "Rejected oversized webhook body (%d bytes) from %s",
+            len(body),
+            request.remote,
+        )
+        return web.json_response({"error": "body too large"}, status=413)
     expected = hmac.new(
         token.encode(), f"{timestamp}\n".encode() + body, hashlib.sha256
     ).hexdigest()
@@ -613,7 +657,36 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     Extracted from start_webhook_server so the route table can be tested
     with aiohttp's TestClient without binding a real port.
     """
-    app = web.Application()
+    app = web.Application(client_max_size=MAX_BODY_BYTES)
+
+    # Per-app rate-limit state (fresh per build, so tests stay isolated).
+    # Default rules cover /api/v1/deployments (30/min) etc.; the GitOps
+    # webhook gets its own rule since it is HMAC-authenticated and
+    # internet-reachable by design.
+    rate_registry = RateLimitRegistry()
+    rate_registry.add_rules(rate_registry.get_default_rules())
+    rate_registry.add_rule(RateLimitRule("/webhook/*", 60, 60, methods=["POST"]))
+
+    @web.middleware
+    async def rate_limit_middleware(request: web.Request, handler):
+        """Reject over-limit clients with 429 before auth/handlers run."""
+        client_key = f"ip:{request.remote or 'unknown'}"
+        allowed, _remaining, reset, _strategy = rate_registry.check_request(
+            request.path, request.method, client_key
+        )
+        if not allowed:
+            retry_after = max(1, int(reset - time.time()) + 1)
+            return web.json_response(
+                {
+                    "error": "rate_limit_exceeded",
+                    "message": "Too many requests",
+                },
+                status=429,
+                headers={"Retry-After": str(retry_after)},
+            )
+        return await handler(request)
+
+    app.middlewares.append(rate_limit_middleware)
 
     async def verify_federation_token(request: web.Request) -> Optional[web.Response]:
         """Check Bearer token on federation API routes (fail-closed).

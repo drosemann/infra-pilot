@@ -17,7 +17,7 @@ usage() {
   cat <<EOF
 Restore the Infra Pilot Postgres database from a backup file.
 
-Usage: $(basename "$0") <backup-file.dump> [--yes]
+Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes]
 
 Options:
   --yes       Skip the confirmation prompt
@@ -25,9 +25,17 @@ Options:
 
 Notes:
   - The backup file must be a pg_dump custom-format dump (created by db-backup.sh).
+    GPG-encrypted artifacts (*.dump.gpg, requires gpg + your private key)
+    are decrypted to a temp file automatically.
   - Stop the services that write to the database (orchestrator-agent, discord-service,
     management-panel) before restoring to avoid data loss.
   - The restore uses --clean --if-exists, so existing tables are dropped and recreated.
+  - Redis/Grafana: db-backup.sh also writes redis_*.rdb snapshots and
+    grafana_*.tgz volume archives. To restore those, stop the stack and
+    copy/extract the artifact back into the redis_data / grafana_data
+    volumes (see wiki/12-Backup-Restore.md), then start the stack.
+  - Verify restores with --dry-run style checks (pg_restore --list) before
+    production use.
 EOF
   exit 0
 }
@@ -62,7 +70,20 @@ if [[ ! -f "$BACKUP_FILE" ]]; then
   exit 1
 fi
 
-if [[ $(head -c 5 "$BACKUP_FILE") != "PGDMP" ]]; then
+# GPG-encrypted artifacts are decrypted to a temp file (cleaned up on exit).
+RESTORE_FILE="$BACKUP_FILE"
+if [[ "$BACKUP_FILE" == *.gpg ]]; then
+  if ! command -v gpg &> /dev/null; then
+    error "gpg not found in PATH (required to decrypt $BACKUP_FILE)"
+    exit 1
+  fi
+  RESTORE_FILE="$(mktemp --suffix=.dump)"
+  trap 'rm -f "$RESTORE_FILE"' EXIT
+  info "Decrypting $BACKUP_FILE ..."
+  gpg --batch --yes --decrypt --output "$RESTORE_FILE" "$BACKUP_FILE"
+fi
+
+if [[ $(head -c 5 "$RESTORE_FILE") != "PGDMP" ]]; then
   error "Not a pg_dump custom-format backup: $BACKUP_FILE"
   exit 1
 fi
@@ -88,6 +109,6 @@ fi
 
 docker compose -f "$ROOT_DIR/docker-compose.yml" exec -T postgres \
   pg_restore --clean --if-exists --no-owner \
-  -U "$POSTGRES_USER" -d "$POSTGRES_DB" - < "$BACKUP_FILE"
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" - < "$RESTORE_FILE"
 
 success "Restore completed from: $BACKUP_FILE"

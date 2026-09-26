@@ -56,6 +56,52 @@ spec:
             matchLabels:
               app.kubernetes.io/component: management-panel
       ports:
-        - port: 3000
+        - port: http
     {{- end }}
+{{- if .Values.networkPolicies.egress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-panel-to-orchestrator
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "infra-pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: management-panel
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "infra-pilot.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: orchestrator
+      ports:
+        - port: 8500
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-orchestrator-from-panel
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "infra-pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: orchestrator
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "infra-pilot.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: management-panel
+      ports:
+        - port: 8500
+          protocol: TCP
+{{- end }}
 {{- end }}

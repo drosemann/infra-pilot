@@ -75,6 +75,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Production hardening defaults (no new deps): hide framework fingerprint,
+// bound JSON bodies, minimal security headers. Reverse proxy / ingress
+// terminates TLS; Express never serves public traffic directly.
+app.disable('x-powered-by');
+app.set('trust proxy', false);
+
 const execAsync = promisify(exec);
 
 /**
@@ -277,7 +283,16 @@ const corsOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://l
   .map((o) => o.trim())
   .filter(Boolean);
 app.use(cors({ origin: corsOrigins, credentials: true }));
-app.use(express.json());
+// Bound JSON bodies to contain memory-DoS via large payloads.
+app.use(express.json({ limit: '100kb' }));
+// Minimal security headers (helmet-equivalent subset without new dep).
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
 
 // Health and observability-aware health
 const APP_HEALTH = {

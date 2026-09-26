@@ -86,6 +86,93 @@ def _validate_resource_limits(cfg: "VPSConfig") -> None:
         )
 
 
+SAFE_IMAGE_PATTERN = re.compile(
+    r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$"
+)
+SAFE_PORT_KEY_PATTERN = re.compile(r"^(\d{1,5})/(tcp|udp)$")
+SAFE_ENV_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+DENIED_ENV_VARS = frozenset(
+    {
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "DOCKER_HOST",
+        "DOCKER_TLS_VERIFY",
+        "DOCKER_CERT_PATH",
+    }
+)
+MAX_SPAWN_PORTS = 16
+MAX_SPAWN_ENV = 64
+
+
+def _validate_image(image: str) -> None:
+    """Reject malformed image references before passing them to the daemon.
+
+    An optional ``ALLOWED_IMAGES`` env var (comma-separated prefixes)
+    further restricts pulls to trusted registries/repositories.
+    """
+    if not isinstance(image, str) or not image or len(image) > 255:
+        raise ValueError(f"invalid image: {image!r}")
+    if any(c in image for c in " \t\n\r;&|`$'\"\\"):
+        raise ValueError(f"invalid image reference: {image!r}")
+    if not SAFE_IMAGE_PATTERN.fullmatch(image):
+        raise ValueError(f"invalid image reference: {image!r}")
+    allowlist = [
+        p.strip() for p in os.getenv("ALLOWED_IMAGES", "").split(",") if p.strip()
+    ]
+    if allowlist and not any(
+        image == p or image.startswith((p + ":", p + "@", p + "/")) for p in allowlist
+    ):
+        raise ValueError(f"image not in ALLOWED_IMAGES allow-list: {image!r}")
+
+
+def _validate_spawn_ports(ports: Dict[str, str]) -> None:
+    """Validate container->host port mappings for spawns.
+
+    Host ports must be >= 1025: binding privileged ports requires root /
+    extra capabilities and is rejected on the spawn path. Container ports
+    may be any valid port (e.g. 22, 80 inside the container).
+    """
+    if not isinstance(ports, dict) or len(ports) > MAX_SPAWN_PORTS:
+        raise ValueError(f"invalid ports mapping: {ports!r}")
+    for container_port, host_port in ports.items():
+        match = (
+            SAFE_PORT_KEY_PATTERN.fullmatch(str(container_port))
+            if isinstance(container_port, str)
+            else None
+        )
+        if not match or not 1 <= int(match.group(1)) <= 65535:
+            raise ValueError(f"invalid container port: {container_port!r}")
+        try:
+            host = int(str(host_port))
+        except (TypeError, ValueError):
+            raise ValueError(f"invalid host port: {host_port!r}") from None
+        if not PORT_MIN <= host <= PORT_MAX:
+            raise ValueError(
+                f"host port {host_port!r} out of bounds [{PORT_MIN}, {PORT_MAX}]"
+            )
+
+
+def _validate_spawn_env(env_vars: Dict[str, str]) -> None:
+    """Validate environment for spawns (shape + denied vars)."""
+    if not isinstance(env_vars, dict) or len(env_vars) > MAX_SPAWN_ENV:
+        raise ValueError(f"invalid env_vars mapping: {env_vars!r}")
+    for key, value in env_vars.items():
+        if not isinstance(key, str) or not SAFE_ENV_KEY_PATTERN.fullmatch(key):
+            raise ValueError(f"invalid env key: {key!r}")
+        if key in DENIED_ENV_VARS:
+            raise ValueError(f"denied env var: {key!r}")
+        if not isinstance(value, str) or len(value) > 4096:
+            raise ValueError(f"invalid env value for {key!r}")
+
+
+def _validate_spawn_config(cfg: "VPSConfig") -> None:
+    """Run all spawn validations (resources + image + ports + env)."""
+    _validate_resource_limits(cfg)
+    _validate_image(cfg.image)
+    _validate_spawn_ports(cfg.ports or {})
+    _validate_spawn_env(cfg.env_vars or {})
+
+
 def _storage_opt(storage_limit_gb: int) -> Optional[Dict[str, str]]:
     """Return Docker storage_opt for writable-layer quota if driver supports it.
 
@@ -420,7 +507,7 @@ class VPSManager:
             The container ID on success, or ``None``.
         """
         try:
-            _validate_resource_limits(cfg)
+            _validate_spawn_config(cfg)
             run_kwargs: Dict[str, Any] = dict(
                 image=cfg.image,
                 detach=True,

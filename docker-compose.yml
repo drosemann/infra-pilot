@@ -68,13 +68,16 @@ services:
     build:
       context: ./services/management-panel
       dockerfile: Dockerfile
-      target: development
+      # Production default. Local HMR dev lives in compose.override.yml
+      # (auto-loaded by `docker compose up`) which switches back to
+      # `target: development`.
+      target: production
     container_name: infra-pilot-management-panel
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
-      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
+      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-production}
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
       DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
@@ -230,6 +233,8 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.53.0
+    extra_hosts:
+      - "host.docker.internal:${NODE_EXPORTER_HOST_IP:-172.17.0.1}"
     container_name: infra-pilot-prometheus
     volumes:
       - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -269,6 +274,8 @@ services:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      # generate-env.sh fills GRAFANA_ADMIN_PASSWORD with a random value.
+      # The 'admin' fallback exists for zero-config local starts only.
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_INSTALL_PLUGINS: ""
     healthcheck:
@@ -317,6 +324,35 @@ services:
           memory: 128M
         reservations:
           memory: 64M
+    profiles:
+      - monitoring
+
+  # Host metrics for the node_* alerts in infra/monitoring/prometheus/alerts.yml.
+  # Without it, HighMemoryUsage/HighCPUUsage/DiskSpaceLow never fire.
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.8.2
+    container_name: infra-pilot-node-exporter
+    command:
+      - --path.rootfs=/host
+      # Bind only the host's private Docker bridge address (see .env.example).
+      - --web.listen-address=${NODE_EXPORTER_HOST_IP:-172.17.0.1}:9100
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    labels:
+      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/component: node-exporter
+      app.kubernetes.io/part-of: infra-pilot
     profiles:
       - monitoring
 

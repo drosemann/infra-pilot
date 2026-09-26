@@ -1,0 +1,11 @@
+# Local development override — auto-loaded by `docker compose up`.
+# Base docker-compose.yml defaults to production. This file restores the
+# HMR dev servers for local work only. Production deploys should use
+# `docker compose -f docker-compose.yml up -d` (no override).
+services:
+  management-panel:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+      VITE_ENVIRONMENT: development

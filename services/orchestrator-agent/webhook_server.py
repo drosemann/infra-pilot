@@ -253,12 +253,13 @@ def _require_actor_permission(
     if not _SAFE_ID_PATTERN.fullmatch(actor_user_id):
         return web.json_response({"error": "invalid actor_user_id format"}, status=400)
     if not rbac_engine.has_permission(actor_user_id, permission, org_id=org_id):
-        logger.info(
+        logger.warning(
             "RBAC deny: actor %s lacks %s in org %s",
             actor_user_id,
             permission.value,
             org_id,
         )
+        _count_auth_failure("rbac_403")
         return web.json_response(
             {"error": f"{permission.value} permission required"}, status=403
         )
@@ -325,9 +326,10 @@ async def rbac_role_delete(request: web.Request) -> web.Response:
         for o in actor_orgs
     ):
         # Also allow owner/admin who may not yet have org? Fallback to global check via first org
-        logger.info(
+        logger.warning(
             "RBAC deny: actor %s lacks org:manage for role delete", actor_user_id
         )
+        _count_auth_failure("rbac_403")
         return web.json_response(
             {"error": "org:manage permission required"}, status=403
         )
@@ -458,12 +460,13 @@ async def deployment_apply(request: web.Request) -> web.Response:
         if not rbac_engine.has_permission(
             user_id, Permission.MANIFEST_DEPLOY, org_id=org_id
         ):
-            logger.info(
+            logger.warning(
                 "RBAC deny: user %s lacks manifest:deploy in org %s from %s",
                 user_id,
                 org_id,
                 request.remote,
             )
+            _count_auth_failure("rbac_403")
             return web.json_response(
                 {"error": "manifest:deploy permission required"}, status=403
             )
@@ -564,6 +567,7 @@ async def verify_github_signature(
     """
     secret = os.getenv("GITHUB_WEBHOOK_SECRET", "").strip()
     if not secret:
+        _count_auth_failure("webhook_503")
         return web.json_response({"error": "webhook auth not configured"}, status=503)
     delivery_id = request.headers.get("X-GitHub-Delivery", "")
     if not delivery_id or not _delivery_is_fresh(delivery_id):
@@ -571,6 +575,7 @@ async def verify_github_signature(
             "Rejected webhook with missing or replayed delivery ID from %s",
             request.remote,
         )
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "invalid webhook delivery"}, status=401)
     body = await request.read()
     signature = request.headers.get("X-Hub-Signature-256", "")
@@ -579,6 +584,7 @@ async def verify_github_signature(
         logger.warning(
             "Rejected webhook with invalid signature from %s", request.remote
         )
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "invalid webhook signature"}, status=401)
     return await handler(request)
 
@@ -599,6 +605,7 @@ async def verify_gitops_token(
     """
     token = os.getenv("GITOPS_WEBHOOK_TOKEN", "").strip()
     if not token:
+        _count_auth_failure("webhook_503")
         return web.json_response({"error": "webhook auth not configured"}, status=503)
     timestamp = request.headers.get("X-Timestamp", "")
     if not _timestamp_is_fresh(timestamp):
@@ -606,12 +613,14 @@ async def verify_gitops_token(
             "Rejected webhook with missing or stale timestamp from %s",
             request.remote,
         )
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "stale webhook"}, status=401)
     signature = request.headers.get("X-Signature-256", "")
     if not signature.startswith("sha256="):
         logger.warning(
             "Rejected webhook with missing signature from %s", request.remote
         )
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "invalid webhook signature"}, status=401)
     body = await request.read()
     if len(body) > MAX_BODY_BYTES:
@@ -628,9 +637,11 @@ async def verify_gitops_token(
         logger.warning(
             "Rejected webhook with invalid signature from %s", request.remote
         )
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "invalid webhook signature"}, status=401)
     if not _is_recently_seen(_seen_signatures, signature):
         logger.warning("Rejected replayed webhook signature from %s", request.remote)
+        _count_auth_failure("webhook_401")
         return web.json_response({"error": "replayed webhook"}, status=401)
     return await handler(request)
 
@@ -717,6 +728,7 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
                         "(resolved environment: %r)",
                         environment,
                     )
+                    _count_auth_failure("federation_503")
                     return web.json_response(
                         {
                             "error": "auth not configured",
@@ -731,6 +743,7 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
                     environment,
                 )
                 return None
+            _count_auth_failure("federation_503")
             return web.json_response(
                 {
                     "error": "auth not configured",
@@ -741,6 +754,7 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer ") and hmac.compare_digest(auth[7:], api_token):
             return None
+        _count_auth_failure("federation_401")
         return web.json_response(
             {
                 "error": "unauthorized",
@@ -793,21 +807,30 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
             "# TYPE rbac_persist_failures_total counter",
             f"rbac_persist_failures_total {rbac_store.rbac_persist_failures}",
             "",
+            "# HELP orchestrator_auth_failures_total Security rejections by outcome",
+            "# TYPE orchestrator_auth_failures_total counter",
+            *(
+                f'orchestrator_auth_failures_total{{outcome="{outcome}"}} {count}'
+                for outcome, count in sorted(_auth_failure_counters.items())
+            ),
+            "",
             "# HELP python_info Python runtime info",
             "# TYPE python_info gauge",
             f'python_info{{version="{pyver}"}} 1',
             "",
         ]
 
-        # Process metrics
+        # Process metrics (psutil field names differ per OS: Linux exposes
+        # vms/rss, macOS vss/rss – fall back so /metrics never 500s).
         proc = psutil.Process()
         with proc.oneshot():
             mem = proc.memory_info()
+            vsize = getattr(mem, "vms", getattr(mem, "vss", 0))
             lines.append(
                 "# HELP process_virtual_memory_bytes Virtual memory size in bytes"
             )
             lines.append("# TYPE process_virtual_memory_bytes gauge")
-            lines.append(f"process_virtual_memory_bytes {mem.vss}")
+            lines.append(f"process_virtual_memory_bytes {vsize}")
             lines.append(
                 "# HELP process_resident_memory_bytes Resident memory size in bytes"
             )
@@ -847,7 +870,8 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
 
         return web.Response(
             text="\n".join(lines),
-            content_type="text/plain; charset=utf-8",
+            content_type="text/plain",
+            charset="utf-8",
         )
 
     async def federation_status(request: web.Request) -> web.Response:

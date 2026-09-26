@@ -63,21 +63,23 @@ class AuthObservabilityTest(unittest.IsolatedAsyncioTestCase):
             json={"manifest": "x"},
         )
         self.assertEqual(resp.status, 401)
-        self.assertGreaterEqual(
-            webhook_server._auth_failure_counters["webhook_401"], 1
-        )
+        self.assertGreaterEqual(webhook_server._auth_failure_counters["webhook_401"], 1)
 
     async def test_metrics_exposes_counters(self):
         os.environ["FEDERATION_API_TOKEN"] = "secret"
-        await self.client.get(
+        auth_resp = await self.client.get(
             "/api/v1/federation/status",
             headers={"Authorization": "Bearer wrong"},
         )
+        self.assertEqual(auth_resp.status, 401)
         resp = await self.client.get("/metrics")
         self.assertEqual(resp.status, 200)
         text = await resp.text()
         self.assertIn("orchestrator_auth_failures_total", text)
-        self.assertIn('outcome="federation_401"', text)
+        self.assertIn(
+            'orchestrator_auth_failures_total{outcome="federation_401"} 1',
+            text.splitlines(),
+        )
 
 
 if __name__ == "__main__":

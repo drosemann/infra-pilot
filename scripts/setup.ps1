@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Set up the Infra Pilot development environment on Windows.
+Set up the infra-passenger development environment on Windows.
 .DESCRIPTION
 Checks prerequisites, validates infrastructure files, and creates .env from .env.example.
 .PARAMETER Offline

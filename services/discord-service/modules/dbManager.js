@@ -104,7 +104,7 @@ async function createDatabase(dbName, userId, appId = null) {
       '-e', `MYSQL_PASSWORD=${dbPassword}`,
       '-P',
       '--restart', 'always',
-      '-l', 'managed_by=infra-pilot',
+      '-l', 'managed_by=infra-passenger',
       '-l', `db_name=${dbName}`,
       '-l', `user_id=${userId}`,
       'mysql:8.0',

@@ -4,8 +4,8 @@
 
 | Error                  | Fix                                                         |
 |------------------------|-------------------------------------------------------------|
-| `Connection refused`   | API is not running — check `docker compose ps`, verify URL with `ipilot config get` |
-| `Unauthorized`         | Log in again with `ipilot login <api-key>`                   |
+| `Connection refused`   | API is not running — check `docker compose ps`, verify URL with `infra-passenger config get` |
+| `Unauthorized`         | Log in again with `infra-passenger login <api-key>`                   |
 | `404 Not Found`        | Update to the latest version                                |
 
 ## Docker Stack
@@ -39,6 +39,6 @@ docker compose logs orchestrator-agent --tail=50 -f
 
 ## Support
 
-- [Issues](https://github.com/drosemann/infra-pilot/issues)
-- [Discussions](https://github.com/drosemann/infra-pilot/discussions)
-- Security: see [SECURITY.md](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)
+- [Issues](https://github.com/drosemann/infra-passenger/issues)
+- [Discussions](https://github.com/drosemann/infra-passenger/discussions)
+- Security: see [SECURITY.md](https://github.com/drosemann/infra-passenger/blob/main/SECURITY.md)

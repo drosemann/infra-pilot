@@ -18,7 +18,7 @@ section()  { echo ""; echo -e "${BLUE}──────────────
 
 usage() {
   cat <<EOF
-Run tests for all Infra Pilot services.
+Run tests for all infra-passenger services.
 
 Usage: $(basename "$0") [OPTIONS]
 
@@ -101,7 +101,7 @@ for suite in "${TEST_SUITES[@]}"; do
 
     set +e
     if [ "$SHOW_COVERAGE" = true ]; then
-      pytest tests/ -q --cov=cli/ipilot --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov-report=term-missing --cov-fail-under=100
+      pytest tests/ -q --cov=cli/infra-passenger --cov-report=xml:coverage.xml --cov-report=html:coverage_html --cov-report=term-missing --cov-fail-under=100
     else
       pytest tests/ -q
     fi

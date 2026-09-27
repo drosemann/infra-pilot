@@ -188,7 +188,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     ep.totalMs += duration;
     metrics.endpoints[key] = ep;
     // Simple log for observability during development
-    console.log(`[infra-pilot] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+    console.log(`[infra-passenger] ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
   });
   next();
 });
@@ -3256,7 +3256,7 @@ app.get('/api/openapi.json', (_req: Request, res: Response) => {
 
 app.get('/api/docs', (_req: Request, res: Response) => {
   res.send(`<!DOCTYPE html>
-<html><head><title>Infra Pilot API Docs</title>
+<html><head><title>infra-passenger API Docs</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
 </head><body>
 <div id="swagger-ui"></div>

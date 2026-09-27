@@ -45,7 +45,7 @@ The `modules/` directory groups independently loaded features such as
 provisioning, ticketing, backups, monitoring/alerts, databases, resource
 pools, templates, scheduling, role management, and Pterodactyl calls.
 `index.js` wires Discord events and commands; `integration.js` and
-`cli-bridge.js` connect to the surrounding Infra Pilot services.
+`cli-bridge.js` connect to the surrounding infra-passenger services.
 
 ## Checks
 

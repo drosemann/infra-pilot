@@ -31,7 +31,7 @@ def package(tmp_path, monkeypatch):
 
 class TestRegister:
     def test_register_decorator_stores_app(self):
-        from cli.ipilot.core.command_registry import get_registry, register
+        from cli.infra_passenger.core.command_registry import get_registry, register
 
         app = typer.Typer()
         register("zz_unique_cmd", "help text")(app)
@@ -40,10 +40,10 @@ class TestRegister:
 
 class TestDiscoverCommands:
     def _discover(self):
-        from cli.ipilot.core.command_registry import discover_commands
+        from cli.infra_passenger.core.command_registry import discover_commands
 
         discover_commands("fakecmds_x")
-        from cli.ipilot.core.command_registry import get_registry
+        from cli.infra_passenger.core.command_registry import get_registry
 
         return get_registry()
 
@@ -56,7 +56,7 @@ class TestDiscoverCommands:
     def test_missing_package_logs_warning(self, caplog):
         import logging
 
-        from cli.ipilot.core.command_registry import discover_commands
+        from cli.infra_passenger.core.command_registry import discover_commands
 
         with caplog.at_level(logging.WARNING):
             discover_commands("no_such_package_xyz")
@@ -65,7 +65,7 @@ class TestDiscoverCommands:
 
 class TestAttachToApp:
     def test_attaches_discovered_apps(self, package):
-        from cli.ipilot.core.command_registry import attach_to_app, discover_commands
+        from cli.infra_passenger.core.command_registry import attach_to_app, discover_commands
 
         discover_commands("fakecmds_x")
         app = typer.Typer()
@@ -77,7 +77,7 @@ class TestAttachToApp:
         assert "Simple command" in result.output
 
     def test_get_registry_keys_are_typer_apps(self, package):
-        from cli.ipilot.core.command_registry import discover_commands, get_registry
+        from cli.infra_passenger.core.command_registry import discover_commands, get_registry
 
         discover_commands("fakecmds_x")
         for name, sub_app in get_registry().items():
@@ -87,7 +87,7 @@ class TestAttachToApp:
 
 class TestRegistryWithMainApp:
     def test_main_app_exposes_known_groups(self):
-        from cli.ipilot.main import app
+        from cli.infra_passenger.main import app
 
         result = CliRunner().invoke(app, ["--help"])
         for command in ("server", "backup", "deploy", "logs", "ssh", "secrets"):

@@ -1,5 +1,5 @@
 groups:
-  - name: infra-pilot-alerts
+  - name: infra-passenger-alerts
     interval: 30s
     rules:
       - alert: ServiceDown

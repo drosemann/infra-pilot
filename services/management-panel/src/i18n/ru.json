@@ -1,5 +1,5 @@
 {
-  "app.name": "Infra Pilot",
+  "app.name": "infra-passenger",
   "app.tagline": "Панель управления инфраструктурой",
   "nav.dashboard": "Панель",
   "nav.monitoring": "Мониторинг",

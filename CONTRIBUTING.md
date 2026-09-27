@@ -16,7 +16,7 @@ Thanks for wanting to help! We welcome bug fixes, new features, docs, and ideas.
 ## How to Contribute
 
 1. **Fork** the repo and clone your copy
-2. **Add upstream**: `git remote add upstream https://github.com/drosemann/infra-pilot.git`
+2. **Add upstream**: `git remote add upstream https://github.com/drosemann/infra-passenger.git`
 3. **Create a branch** from `main` (see naming below)
 4. **Make your changes** and make sure tests pass
 5. **Push** and open a Pull Request to `main`

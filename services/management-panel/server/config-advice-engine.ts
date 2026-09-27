@@ -535,7 +535,7 @@ const RULES: Rule[] = [
         id: generateId(), severity: 'info', category: 'Application',
         title: 'No Labels Configured',
         description: 'Docker labels help with organization and automation.',
-        recommendation: 'Add labels like app=name, environment=production, managed-by=infra-pilot.',
+        recommendation: 'Add labels like app=name, environment=production, managed-by=infra-passenger.',
         autoFixable: false,
         fixCommand: '',
       };

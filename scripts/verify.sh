@@ -17,7 +17,7 @@ error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Run verification stages across the Infra Pilot project.
+Run verification stages across the infra-passenger project.
 
 Usage: $(basename "$0") [OPTIONS]
 

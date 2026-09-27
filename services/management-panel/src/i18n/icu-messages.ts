@@ -1,7 +1,7 @@
 import { defineMessages } from 'react-intl';
 
 export const messages = defineMessages({
-  appName: { id: 'app.name', defaultMessage: 'Infra Pilot' },
+  appName: { id: 'app.name', defaultMessage: 'infra-passenger' },
   appTagline: { id: 'app.tagline', defaultMessage: 'Infrastructure Management Panel' },
   navDashboard: { id: 'nav.dashboard', defaultMessage: 'Dashboard' },
   navMonitoring: { id: 'nav.monitoring', defaultMessage: 'Monitoring' },

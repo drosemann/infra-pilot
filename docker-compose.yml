@@ -1,13 +1,13 @@
-name: infra-pilot
+name: infra-passenger
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: infra-pilot-postgres
+    container_name: infra-passenger-postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-infra_pilot}
+      POSTGRES_USER: ${POSTGRES_USER:-infra_passenger}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example or scripts/generate-env.sh)}
-      POSTGRES_DB: ${POSTGRES_DB:-infra_pilot}
+      POSTGRES_DB: ${POSTGRES_DB:-infra_passenger}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -30,13 +30,13 @@ services:
           cpus: '0.5'
           memory: 256M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: postgres
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
 
   redis:
     image: redis:7-alpine
-    container_name: infra-pilot-redis
+    container_name: infra-passenger-redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -49,7 +49,7 @@ services:
       retries: 10
       start_period: 5s
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -60,9 +60,9 @@ services:
           cpus: '0.25'
           memory: 128M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: redis
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
 
   management-panel:
     build:
@@ -72,7 +72,7 @@ services:
       # (auto-loaded by `docker compose up`) which switches back to
       # `target: development`.
       target: production
-    container_name: infra-pilot-management-panel
+    container_name: infra-passenger-management-panel
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
@@ -80,7 +80,7 @@ services:
       VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-production}
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_passenger}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_passenger}
       REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3001}
     ports:
@@ -98,7 +98,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -109,18 +109,18 @@ services:
           cpus: '0.5'
           memory: 512M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: management-panel
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
 
   orchestrator-agent:
     build:
       context: ./services/orchestrator-agent
       dockerfile: Dockerfile
       target: production
-    container_name: infra-pilot-orchestrator
+    container_name: infra-passenger-orchestrator
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-infra_passenger}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_passenger}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       GITOPS_WEBHOOK_PORT: 8500
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
@@ -143,7 +143,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -154,16 +154,16 @@ services:
           cpus: '0.5'
           memory: 256M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: orchestrator-agent
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
 
   discord-service:
     build:
       context: ./services/discord-service
       dockerfile: Dockerfile
       target: production
-    container_name: infra-pilot-discord
+    container_name: infra-passenger-discord
     read_only: true
     tmpfs:
       - /tmp
@@ -187,9 +187,9 @@ services:
       API_BASE_URL: http://management-panel:3001
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: ${POSTGRES_USER:-infra_pilot}
+      DB_USER: ${POSTGRES_USER:-infra_passenger}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB:-infra_pilot}
+      DB_NAME: ${POSTGRES_DB:-infra_passenger}
       WHITELIST_IDS: ${WHITELIST_IDS:-}
       HEALTH_CHECK_INTERVAL_SECONDS: ${HEALTH_CHECK_INTERVAL_SECONDS:-60}
       DEFAULT_SSH_IMAGE: ${DEFAULT_SSH_IMAGE:-ubuntu:22.04}
@@ -216,7 +216,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -225,9 +225,9 @@ services:
         reservations:
           memory: 256M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: discord-service
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
     profiles:
       - discord
 
@@ -235,7 +235,7 @@ services:
     image: prom/prometheus:v2.53.0
     extra_hosts:
       - "host.docker.internal:${NODE_EXPORTER_HOST_IP:-172.17.0.1}"
-    container_name: infra-pilot-prometheus
+    container_name: infra-passenger-prometheus
     volumes:
       - ./infra/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -248,7 +248,7 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -257,15 +257,15 @@ services:
         reservations:
           memory: 256M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: prometheus
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
     profiles:
       - monitoring
 
   grafana:
     image: grafana/grafana:11.1.0
-    container_name: infra-pilot-grafana
+    container_name: infra-passenger-grafana
     volumes:
       - ./infra/monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./infra/monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
@@ -290,7 +290,7 @@ services:
       prometheus:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -299,24 +299,24 @@ services:
         reservations:
           memory: 256M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: grafana
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
     profiles:
       - monitoring
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
-    container_name: infra-pilot-postgres-exporter
+    container_name: infra-passenger-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-infra_pilot}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_pilot}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-infra_passenger}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-infra_passenger}?sslmode=disable"
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: unless-stopped
     deploy:
       resources:
@@ -331,7 +331,7 @@ services:
   # Without it, HighMemoryUsage/HighCPUUsage/DiskSpaceLow never fire.
   node-exporter:
     image: quay.io/prometheus/node-exporter:v1.8.2
-    container_name: infra-pilot-node-exporter
+    container_name: infra-passenger-node-exporter
     command:
       - --path.rootfs=/host
       # Bind only the host's private Docker bridge address (see .env.example).
@@ -350,9 +350,9 @@ services:
         reservations:
           memory: 64M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: node-exporter
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
     profiles:
       - monitoring
 
@@ -364,7 +364,7 @@ services:
   # back into tests/load/k6/ (gitignored).
   loadtest:
     image: grafana/k6:latest
-    container_name: infra-pilot-loadtest
+    container_name: infra-passenger-loadtest
     profiles:
       - loadtest
     entrypoint: ["sh", "-c"]
@@ -387,7 +387,7 @@ services:
       orchestrator-agent:
         condition: service_healthy
     networks:
-      - infra-pilot-net
+      - infra-passenger-net
     restart: "no"
     deploy:
       resources:
@@ -396,9 +396,9 @@ services:
         reservations:
           memory: 128M
     labels:
-      app.kubernetes.io/name: infra-pilot
+      app.kubernetes.io/name: infra-passenger
       app.kubernetes.io/component: loadtest
-      app.kubernetes.io/part-of: infra-pilot
+      app.kubernetes.io/part-of: infra-passenger
 
 volumes:
   postgres_data:
@@ -407,5 +407,5 @@ volumes:
   grafana_data:
 
 networks:
-  infra-pilot-net:
+  infra-passenger-net:
     driver: bridge

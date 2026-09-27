@@ -24,7 +24,7 @@ scrape_configs:
           service: monitoring
           component: prometheus
 
-  - job_name: infra-pilot-services
+  - job_name: infra-passenger-services
     scrape_interval: 15s
     metrics_path: /metrics
     static_configs:
@@ -35,7 +35,7 @@ scrape_configs:
       - targets:
           - "orchestrator-agent:8500"
         labels:
-          project: infra-pilot
+          project: infra-passenger
           environment: production
 
   - job_name: node-exporter

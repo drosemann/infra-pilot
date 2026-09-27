@@ -248,7 +248,7 @@ export const Sidebar = ({
             <SimpleLogo size={40} />
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-white">
-                Infra Pilot
+                infra-passenger
               </h1>
               <p className="text-xs text-white/45">
                 {__APP_VERSION__ === "dev" ? "dev" : `v${__APP_VERSION__}`}

@@ -50,11 +50,11 @@ Expected: HTTP `200` from both health endpoints and
 bash scripts/db-backup.sh
 
 # Production: encrypted + offsite (cron daily 02:00 recommended)
-bash scripts/db-backup.sh --s3 s3://my-bucket/infra-pilot \
+bash scripts/db-backup.sh --s3 s3://my-bucket/infra-passenger \
   --encrypt-to ops@example.com --no-plaintext
 
 # Restore (decrypts .gpg automatically; confirm prompt unless --yes)
-bash scripts/db-restore.sh backups/infra-pilot_<stamp>.dump --yes
+bash scripts/db-restore.sh backups/infra-passenger_<stamp>.dump --yes
 ```
 
 Retention defaults: daily 7, weekly 4, monthly 6.
@@ -82,7 +82,7 @@ Details: [wiki/12-Backup-Restore](../wiki/12-Backup-Restore.md).
    400/413 (`MAX_BODY_BYTES`, default 256 KiB).
 4. Kubernetes: the chart deploys orchestrator + management panel with
    probes, HPA, NetworkPolicies and `existingSecret`
-   (`infra-pilot-secrets`); Terraform keeps the RDS password in Secrets
+   (`infra-passenger-secrets`); Terraform keeps the RDS password in Secrets
    Manager (ARN output) and uses immutable ECR tags.
 5. Observe: Prometheus scrapes orchestrator `/metrics` (includes
    `orchestrator_auth_failures_total{outcome=...}`), postgres-exporter

@@ -13,18 +13,18 @@ def client():
 
 @pytest.fixture
 def runner(client, monkeypatch, tmp_path):
-    from cli.ipilot.commands import inventory
+    from cli.infra_passenger.commands import inventory
 
     monkeypatch.setattr(inventory, "_get_client", lambda ctx: client)
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json"))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json"))
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 

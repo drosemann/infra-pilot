@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Run tests for all Infra Pilot services on Windows.
+Run tests for all infra-passenger services on Windows.
 .PARAMETER Coverage
 Include coverage reports
 .PARAMETER Offline

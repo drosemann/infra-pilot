@@ -2,7 +2,7 @@
  * CLI Bridge Middleware
  *
  * Adds a `req.cli` property to Express requests, allowing route handlers
- * to invoke `ipilot` CLI commands and get parsed JSON results.
+ * to invoke `infra-passenger` CLI commands and get parsed JSON results.
  *
  * Import in index.ts:
  *   import { cliMiddleware } from './cli-bridge-middleware.js';
@@ -32,7 +32,7 @@ export function cliMiddleware(req: Request, _res: Response, next: NextFunction) 
  * Example route replacements demonstrating CLI-first architecture.
  *
  * Replace your existing route handlers with these to delegate to the CLI.
- * Each route calls `ipilot <command> --output json` and returns the result.
+ * Each route calls `infra-passenger <command> --output json` and returns the result.
  */
 
 // Example: Replace app.get('/api/servers', ...)

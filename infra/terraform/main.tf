@@ -1,4 +1,4 @@
-# Terraform configuration for Infra Pilot infrastructure deployment
+# Terraform configuration for infra-passenger infrastructure deployment
 # Provider configurations, backend, and root module
 
 terraform {
@@ -18,11 +18,11 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "infra-pilot-terraform-state"
+    bucket         = "infra-passenger-terraform-state"
     key            = "terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
-    dynamodb_table = "infra-pilot-terraform-locks"
+    dynamodb_table = "infra-passenger-terraform-locks"
     # Operator prerequisite (configure once, outside this module):
     # the state bucket MUST have Versioning + default SSE-S3/AES256 enabled and
     # public access blocked. `encrypt = true` only enables SSE-S3/AES256
@@ -63,16 +63,16 @@ variable "redis_node_type" {
 variable "ecr_repository_names" {
   description = "List of ECR repository names"
   type        = list(string)
-  default     = ["infra-pilot/orchestrator-agent", "infra-pilot/management-panel", "infra-pilot/discord-service"]
+  default     = ["infra-passenger/orchestrator-agent", "infra-passenger/management-panel", "infra-passenger/discord-service"]
 }
 
 locals {
-  name_prefix = "infra-pilot-${var.environment}"
+  name_prefix = "infra-passenger-${var.environment}"
   common_tags = {
-    Project     = "Infra Pilot"
+    Project     = "infra-passenger"
     Environment = var.environment
     ManagedBy   = "Terraform"
-    Owner       = "infra-pilot-team"
+    Owner       = "infra-passenger-team"
   }
 }
 

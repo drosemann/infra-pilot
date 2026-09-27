@@ -1,4 +1,4 @@
-"""Vault secrets management integration for Infra Pilot.
+"""Vault secrets management integration for infra-passenger.
 
 Provides secure storage and retrieval of secrets using HashiCorp Vault,
 AWS Secrets Manager, or Azure Key Vault as backends.
@@ -57,7 +57,7 @@ class VaultBackend(SecretsBackend):
                     with open(jwt_path) as f:
                         jwt = f.read().strip()
                     self.client.auth_kubernetes(
-                        role=self.role_id or "infra-pilot", jwt=jwt
+                        role=self.role_id or "infra-passenger", jwt=jwt
                     )
             elif self.role_id and self.secret_id:
                 self.client.auth_approle(role_id=self.role_id, secret_id=self.secret_id)
@@ -211,7 +211,7 @@ class VaultBackend(SecretsBackend):
             return False
 
     def generate_database_credentials(
-        self, mount_point: str = "database", role: str = "infra-pilot"
+        self, mount_point: str = "database", role: str = "infra-passenger"
     ) -> Dict:
         if not self.check_connection():
             raise RuntimeError("Not connected to Vault")
@@ -531,7 +531,7 @@ class SecretsManager:
     def list(self, path: str = "") -> List[str]:
         return self.backend.list_secrets(path)
 
-    def get_db_credentials(self, role: str = "infra-pilot") -> Dict:
+    def get_db_credentials(self, role: str = "infra-passenger") -> Dict:
         if isinstance(self.backend, VaultBackend):
             return self.backend.generate_database_credentials(role=role)
         raise NotImplementedError(

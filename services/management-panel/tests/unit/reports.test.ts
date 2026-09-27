@@ -80,7 +80,7 @@ describe('reports module', () => {
     });
     const text = pdf.toString('latin1');
     assert.match(text, /%PDF-1\.4/);
-    assert.match(text, /Infra Pilot Report/);
+    assert.match(text, /infra-passenger Report/);
     assert.match(text, /%%EOF/);
   });
 });

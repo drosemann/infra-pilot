@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Infra Pilot Setup"
+echo "infra-passenger Setup"
 echo "================="
 
 cp .env.example .env 2>/dev/null || echo ".env already exists"

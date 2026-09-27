@@ -94,7 +94,7 @@ export async function measureDiskWriteMbps(
   tmpDir: string = os.tmpdir(),
   sampler: Sampler = defaultSampler,
 ): Promise<{ writeMbps: number; bytesWritten: number }> {
-  const filePath = path.join(tmpDir, `.infra-pilot-bench-${process.pid}-${sampler.now()}.tmp`);
+  const filePath = path.join(tmpDir, `.infra-passenger-bench-${process.pid}-${sampler.now()}.tmp`);
   const data = sampler.randomBytes(sizeMb * 1024 * 1024);
   const start = sampler.now();
   try {

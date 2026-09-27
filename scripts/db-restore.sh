@@ -15,7 +15,7 @@ error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Restore the Infra Pilot Postgres database from a backup file.
+Restore the infra-passenger Postgres database from a backup file.
 
 Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes]
 
@@ -93,8 +93,8 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
-POSTGRES_USER="${POSTGRES_USER:-infra_pilot}"
-POSTGRES_DB="${POSTGRES_DB:-infra_pilot}"
+POSTGRES_USER="${POSTGRES_USER:-infra_passenger}"
+POSTGRES_DB="${POSTGRES_DB:-infra_passenger}"
 
 info "About to restore $BACKUP_FILE into database '$POSTGRES_DB' (user '$POSTGRES_USER')."
 info "Existing data will be replaced (--clean --if-exists)."

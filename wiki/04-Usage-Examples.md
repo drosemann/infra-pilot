@@ -4,55 +4,55 @@
 
 ```bash
 # Export current infrastructure to YAML
-ipilot gitops export -o production.yaml
+infra-passenger gitops export -o production.yaml
 
 # Plan changes before applying
-ipilot gitops plan -f production.yaml
+infra-passenger gitops plan -f production.yaml
 
 # Apply with dry-run first
-ipilot gitops apply -f production.yaml --dry-run
-ipilot gitops apply -f production.yaml -y
+infra-passenger gitops apply -f production.yaml --dry-run
+infra-passenger gitops apply -f production.yaml -y
 
 # Scan for configuration drift
-ipilot gitops drift --scan
+infra-passenger gitops drift --scan
 ```
 
 ## SSH Session Management
 
 ```bash
 # Connect to a server via jump host
-ipilot ssh connect web-01 -u admin -j bastion.corp.com
+infra-passenger ssh connect web-01 -u admin -j bastion.corp.com
 
 # Manage jump hosts
-ipilot ssh jump-hosts --create bastion --host bastion.corp.com --user admin
+infra-passenger ssh jump-hosts --create bastion --host bastion.corp.com --user admin
 
 # Add SSH key
-ipilot ssh keys --add ~/.ssh/id_ed25519.pub --name laptop
+infra-passenger ssh keys --add ~/.ssh/id_ed25519.pub --name laptop
 
 # List active sessions
-ipilot ssh list --status active
+infra-passenger ssh list --status active
 
 # View session recording
-ipilot ssh record <session-id>
+infra-passenger ssh record <session-id>
 
 # Save a host for quick access
-ipilot ssh saved --add prod@web-01.example.com:2222
+infra-passenger ssh saved --add prod@web-01.example.com:2222
 ```
 
 ## Server Inventory
 
 ```bash
 # List all production servers with tags
-ipilot inventory list --tag production
+infra-passenger inventory list --tag production
 
 # Filter by environment and region
-ipilot inventory list --environment staging --region eu-west
+infra-passenger inventory list --environment staging --region eu-west
 
 # Filter by owner and provider
-ipilot inventory list --owner alice --provider aws
+infra-passenger inventory list --owner alice --provider aws
 
 # Update server metadata
-ipilot inventory update web-01 \
+infra-passenger inventory update web-01 \
   --owner "Platform Team" \
   --environment production \
   --region us-east-1 \
@@ -62,230 +62,230 @@ ipilot inventory update web-01 \
   --tags "frontend,api,critical"
 
 # Tag management
-ipilot inventory tags --add web-01:frontend
-ipilot inventory tags --add web-01:api
-ipilot inventory tags --remove web-01:deprecated
-ipilot inventory tags --list
+infra-passenger inventory tags --add web-01:frontend
+infra-passenger inventory tags --add web-01:api
+infra-passenger inventory tags --remove web-01:deprecated
+infra-passenger inventory tags --list
 ```
 
 ## Secret Management
 
 ```bash
 # Store a database URL
-ipilot secrets set DATABASE_URL "postgresql://user:pass@host:5432/db" \
+infra-passenger secrets set DATABASE_URL "postgresql://user:pass@host:5432/db" \
   --rotate --rotation-days 90
 
 # Store an API key
-ipilot secrets set STRIPE_API_KEY "sk_live_..." --rotation-days 30
+infra-passenger secrets set STRIPE_API_KEY "sk_live_..." --rotation-days 30
 
 # Retrieve a secret (latest version)
-ipilot secrets get DATABASE_URL
+infra-passenger secrets get DATABASE_URL
 
 # Retrieve a specific version
-ipilot secrets get DATABASE_URL --version 2
+infra-passenger secrets get DATABASE_URL --version 2
 
 # List all secrets
-ipilot secrets list
+infra-passenger secrets list
 
 # View version history
-ipilot secrets versions DATABASE_URL
+infra-passenger secrets versions DATABASE_URL
 
 # Rotate a specific secret
-ipilot secrets rotate --key DATABASE_URL
+infra-passenger secrets rotate --key DATABASE_URL
 
 # Rotate all secrets due for rotation
-ipilot secrets rotate --all
+infra-passenger secrets rotate --all
 
 # RBAC: grant/revoke access
-ipilot secrets roles DATABASE_URL --grant developer
-ipilot secrets roles DATABASE_URL --revoke viewer
-ipilot secrets roles DATABASE_URL
+infra-passenger secrets roles DATABASE_URL --grant developer
+infra-passenger secrets roles DATABASE_URL --revoke viewer
+infra-passenger secrets roles DATABASE_URL
 ```
 
 ## Deployment Templates
 
 ```bash
 # List all templates
-ipilot templates list
+infra-passenger templates list
 
 # Filter by type
-ipilot templates list --type node
-ipilot templates list --type python
+infra-passenger templates list --type node
+infra-passenger templates list --type python
 
 # Deploy a Node.js app
-ipilot templates deploy nodejs my-api --server web-01
+infra-passenger templates deploy nodejs my-api --server web-01
 
 # Deploy PostgreSQL
-ipilot templates deploy postgresql my-db
+infra-passenger templates deploy postgresql my-db
 
 # Deploy Traefik reverse proxy
-ipilot templates deploy traefik ingress
+infra-passenger templates deploy traefik ingress
 
 # Initialize a local project from template
-ipilot templates init nodejs my-api-project -o ./apps
+infra-passenger templates init nodejs my-api-project -o ./apps
 
 # Deploy with custom variables
-ipilot templates deploy nodejs my-api \
+infra-passenger templates deploy nodejs my-api \
   --server web-01 \
   --vars '{"environment_vars":{"PORT":"4000"},"ports":[{"hostPort":4000,"containerPort":4000}]}'
 
 # Dry-run a template deployment
-ipilot templates deploy redis cache --dry-run
+infra-passenger templates deploy redis cache --dry-run
 ```
 
 ## Webhooks
 
 ```bash
 # Create a webhook for deployments
-ipilot webhooks create deploy-notify https://hooks.example.com/deploy \
+infra-passenger webhooks create deploy-notify https://hooks.example.com/deploy \
   --events deploy,backup,alert \
   --secret whsec_abc123
 
 # List webhooks
-ipilot webhooks list
+infra-passenger webhooks list
 
 # Test a webhook
-ipilot webhooks test --id <id> --event deploy
+infra-passenger webhooks test --id <id> --event deploy
 
 # View delivery logs
-ipilot webhooks logs
-ipilot webhooks logs --id <id>
+infra-passenger webhooks logs
+infra-passenger webhooks logs --id <id>
 ```
 
 ## API Keys
 
 ```bash
 # Create a read-only key for CI/CD
-ipilot apikeys create github-actions --role readonly --expire 365
+infra-passenger apikeys create github-actions --role readonly --expire 365
 
 # Create an admin key
-ipilot apikeys create admin-key --role admin
+infra-passenger apikeys create admin-key --role admin
 
 # List keys
-ipilot apikeys list
+infra-passenger apikeys list
 
 # Revoke a compromised key
-ipilot apikeys revoke <key-id>
+infra-passenger apikeys revoke <key-id>
 ```
 
 ## Plugin Management
 
 ```bash
 # List available plugins
-ipilot plugins list
+infra-passenger plugins list
 
 # Show only installed
-ipilot plugins list --installed
+infra-passenger plugins list --installed
 
 # Install plugins
-ipilot plugins install kubernetes
-ipilot plugins install aws
-ipilot plugins install cloudflare
+infra-passenger plugins install kubernetes
+infra-passenger plugins install aws
+infra-passenger plugins install cloudflare
 
 # Update all plugins
-ipilot plugins update --all
+infra-passenger plugins update --all
 
 # Check for updates
-ipilot plugins update
+infra-passenger plugins update
 
 # Plugin info
-ipilot plugins info docker
+infra-passenger plugins info docker
 
 # Uninstall
-ipilot plugins uninstall proxmox
+infra-passenger plugins uninstall proxmox
 ```
 
 ## Developer Tools
 
 ```bash
 # Run diagnostics
-ipilot doctor doctor
+infra-passenger doctor doctor
 
 # Auto-fix issues
-ipilot doctor doctor --fix
+infra-passenger doctor doctor --fix
 
 # Verbose diagnostics
-ipilot doctor doctor --verbose
+infra-passenger doctor doctor --verbose
 
 # Benchmark local system
-ipilot benchmark
+infra-passenger benchmark
 
 # Benchmark a remote server
-ipilot benchmark --server web-01
+infra-passenger benchmark --server web-01
 
 # Diagnose connectivity issues
-ipilot diagnose --issue connectivity
+infra-passenger diagnose --issue connectivity
 
 # Diagnose specific server performance
-ipilot diagnose --server web-01 --issue performance
+infra-passenger diagnose --server web-01 --issue performance
 
 # Disk diagnosis
-ipilot diagnose --issue disk
+infra-passenger diagnose --issue disk
 
 # TUI dashboard
-ipilot tui dashboard
+infra-passenger tui dashboard
 
 # TUI monitor
-ipilot tui monitor web-01
+infra-passenger tui monitor web-01
 
 # TUI logs
-ipilot tui logs web-01
+infra-passenger tui logs web-01
 ```
 
 ## Rollback & Undo
 
 ```bash
 # List recent changes
-ipilot rollback list --limit 10
+infra-passenger rollback list --limit 10
 
 # Preview an undo
-ipilot rollback undo <change-id> --dry-run
+infra-passenger rollback undo <change-id> --dry-run
 
 # Execute undo
-ipilot rollback undo <change-id>
+infra-passenger rollback undo <change-id>
 
 # Rollback a server config
-ipilot rollback rollback server web-01 --version "2024-01-15T10:00:00Z"
+infra-passenger rollback rollback server web-01 --version "2024-01-15T10:00:00Z"
 
 # View change history for a specific resource
-ipilot rollback history --resource server --id web-01
+infra-passenger rollback history --resource server --id web-01
 ```
 
 ## Create a Server and View Logs
 
 ```bash
-ipilot server create web-prod --image nginx:latest --memory 4096
-ipilot logs fetch <id> --lines 50
+infra-passenger server create web-prod --image nginx:latest --memory 4096
+infra-passenger logs fetch <id> --lines 50
 ```
 
 ## Backups
 
 ```bash
 # Create a backup
-ipilot backup create <id>
+infra-passenger backup create <id>
 
 # Create with S3 target
-ipilot backup create <id> --s3 my-bucket:/backups
+infra-passenger backup create <id> --s3 my-bucket:/backups
 
 # Schedule automated backups
-ipilot backup schedule <id> --interval daily --retention 30
+infra-passenger backup schedule <id> --interval daily --retention 30
 
 # Schedule with S3 offsite storage
-ipilot backup schedule <id> --interval hourly --s3 my-bucket:/db-dumps
+infra-passenger backup schedule <id> --interval hourly --s3 my-bucket:/db-dumps
 
 # List backups
-ipilot backup list
+infra-passenger backup list
 
 # Manage snapshots
-ipilot backup snapshots <id>
-ipilot backup snapshots <id> --create
-ipilot backup snapshots <id> --restore <snapshot-id>
+infra-passenger backup snapshots <id>
+infra-passenger backup snapshots <id> --create
+infra-passenger backup snapshots <id> --restore <snapshot-id>
 
 # Restore
-ipilot backup restore <backup-id>
+infra-passenger backup restore <backup-id>
 
 # Configure S3 storage
-ipilot backup config \
+infra-passenger backup config \
   --s3-bucket my-backups \
   --s3-key ACCESS_KEY \
   --s3-secret SECRET_KEY \

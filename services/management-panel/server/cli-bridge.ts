@@ -1,6 +1,6 @@
 /**
  * @file CLI Bridge for the Management Panel.
- * Invokes `ipilot` CLI commands via subprocess and returns parsed JSON,
+ * Invokes `infra-passenger` CLI commands via subprocess and returns parsed JSON,
  * avoiding duplication of business logic in Express route handlers.
  *
  * Usage: import { cli } from './cli-bridge.js';
@@ -10,7 +10,7 @@
 import { execSync } from 'child_process';
 
 /** @constant {string} */
-const IPILOT_CMD = process.env.IPILOT_CMD || 'ipilot';
+const INFRA_PASSENGER_CMD = process.env.INFRA_PASSENGER_CMD || 'infra-passenger';
 /** @constant {number} */
 const CLI_TIMEOUT_MS = 30000;
 
@@ -24,9 +24,9 @@ export interface CliResult {
 }
 
 /**
- * Execute an ipilot CLI command and return parsed JSON.
+ * Execute an infra-passenger CLI command and return parsed JSON.
  * The command string should NOT include --output json (it is added automatically).
- * @param command - The ipilot subcommand to run (e.g. 'server list')
+ * @param command - The infra-passenger subcommand to run (e.g. 'server list')
  * @returns Parsed result with success flag
  */
 export function cli(command: string): CliResult {
@@ -35,7 +35,7 @@ export function cli(command: string): CliResult {
   }
 
   try {
-    const fullCmd = `${IPILOT_CMD} ${command} --output json`;
+    const fullCmd = `${INFRA_PASSENGER_CMD} ${command} --output json`;
     const stdout = execSync(fullCmd, {
       encoding: 'utf-8',
       timeout: CLI_TIMEOUT_MS,
@@ -56,9 +56,9 @@ export function cli(command: string): CliResult {
 }
 
 /**
- * Convenience wrappers for common ipilot operations.
+ * Convenience wrappers for common infra-passenger operations.
  */
-export const ipilot = {
+export const infraPassenger = {
   server: {
     /** @returns {CliResult} */
     list: () => cli('server list'),

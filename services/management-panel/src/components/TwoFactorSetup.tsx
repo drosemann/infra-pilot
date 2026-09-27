@@ -99,7 +99,7 @@ export const TwoFactorSetup = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'infrapilot-backup-codes.txt';
+    a.download = 'infra-passenger-backup-codes.txt';
     a.click();
     URL.revokeObjectURL(url);
   };

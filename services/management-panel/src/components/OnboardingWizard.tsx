@@ -9,7 +9,7 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { title: 'Welcome to Infra Pilot!', description: 'This quick tour will show you the key features.', target: '#dashboard-welcome', position: 'bottom' },
+  { title: 'Welcome to infra-passenger!', description: 'This quick tour will show you the key features.', target: '#dashboard-welcome', position: 'bottom' },
   { title: 'Your Apps', description: 'Manage your Docker containers here. Create, start, stop, and monitor apps.', target: '[data-tour="apps"]', position: 'right' },
   { title: 'Monitoring', description: 'View real-time metrics, performance charts, and system health.', target: '[data-tour="monitoring"]', position: 'right' },
   { title: 'Backups', description: 'Schedule automated backups and manage retention policies.', target: '[data-tour="backups"]', position: 'right' },

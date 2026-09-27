@@ -170,7 +170,7 @@ jobs:
           pip install ./cli
       - name: Run pytest for CLI
         run: |
-          pytest tests/cli/ -q --cov=cli/ipilot --cov-report=xml --cov-report=term-missing --cov-fail-under=100
+          pytest tests/cli/ -q --cov=cli/infra-passenger --cov-report=xml --cov-report=term-missing --cov-fail-under=100
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
         with:
@@ -409,16 +409,16 @@ jobs:
           pip install -r services/orchestrator-agent/requirements-dev.txt
       - name: Run pytest
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
+          DATABASE_URL: postgresql://test:test@localhost:5432/infra_passenger_test
           REDIS_URL: redis://localhost:6379
         run: |
           cd services/orchestrator-agent
           pytest -q
       - name: Validate database migrations
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/infra_pilot_test
+          DATABASE_URL: postgresql://test:test@localhost:5432/infra_passenger_test
         run: |
-          docker exec "${{ job.services.postgres.id }}" createdb -U test infra_pilot_test
+          docker exec "${{ job.services.postgres.id }}" createdb -U test infra_passenger_test
           cd services/orchestrator-agent
           alembic upgrade head
           alembic downgrade base

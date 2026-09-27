@@ -30,9 +30,9 @@ JWT auth · RBAC · 2FA/TOTP · WebAuthn/Passkeys · PAM (JIT access) · Audit t
 
 The deployment chain is **CLI → Management Panel (3001) → Orchestrator (8500)**:
 
-1. `ipilot deploy <server> <branch> [--repo-url <git-url>]` sends the
+1. `infra-passenger deploy <server> <branch> [--repo-url <git-url>]` sends the
    deployment to the panel's `POST /api/deployments` (default API URL is
-   the panel; override with `IPILOT_API_URL`).
+   the panel; override with `INFRA_PASSENGER_API_URL`).
 2. The panel stores the record in `shared_config` and — when
    `ORCHESTRATOR_API_TOKEN` is configured (see helm `managementPanel.env`) —
    forwards an `InfraFile` manifest to the orchestrator's
@@ -64,8 +64,8 @@ instead of blocking the API, and persistence failures are surfaced as
 
 ## Reporting Issues
 
-**Do not** open public issues. Email the maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). Expect a reply within 48 hours.
+**Do not** open public issues. Email the maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-passenger/blob/main/SECURITY.md)). Expect a reply within 48 hours.
 
 ---
 
-*See [SECURITY.md](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md) for the full security policy.*
+*See [SECURITY.md](https://github.com/drosemann/infra-passenger/blob/main/SECURITY.md) for the full security policy.*

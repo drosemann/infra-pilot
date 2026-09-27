@@ -22,24 +22,24 @@ def client():
 @pytest.fixture
 def runner(client, monkeypatch, tmp_path):
     for mod_name in MODULES:
-        module = importlib.import_module(f"cli.ipilot.commands.{mod_name}")
+        module = importlib.import_module(f"cli.infra_passenger.commands.{mod_name}")
         monkeypatch.setattr(module, "_get_client", lambda ctx: client)
     for mod_name in ("server", "deployment", "logs", "backup"):
         module = importlib.import_module(
-            f"cli.ipilot.commands.infrastructure.{mod_name}"
+            f"cli.infra_passenger.commands.infrastructure.{mod_name}"
         )
         monkeypatch.setattr(module, "_get_client", lambda ctx: client)
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 
@@ -77,7 +77,7 @@ class TestTemplates:
 
     def test_deploy_loads_vars_file(self, client, invoke, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        (tmp_path / "ipilot-vars.json").write_text('{"DOMAIN": "x.example"}')
+        (tmp_path / "infra-passenger-vars.json").write_text('{"DOMAIN": "x.example"}')
         result = invoke(["templates", "deploy", "node", "myapp"])
         assert result.exit_code == 0
         client.deploy_template.assert_called_once_with(
@@ -112,16 +112,16 @@ class TestTemplates:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.templates.ApiClient",
+            "cli.infra_passenger.commands.templates.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["templates", "list"])
         assert result.exit_code == 0
@@ -170,16 +170,16 @@ class TestRollback:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.rollback.ApiClient",
+            "cli.infra_passenger.commands.rollback.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["rollback", "list"])
         assert result.exit_code == 0
@@ -250,16 +250,16 @@ class TestServerCommands:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.infrastructure.server.ApiClient",
+            "cli.infra_passenger.commands.infrastructure.server.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["server", "list"])
         assert result.exit_code == 0
@@ -310,16 +310,16 @@ class TestDeploymentCommands:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.infrastructure.deployment.ApiClient",
+            "cli.infra_passenger.commands.infrastructure.deployment.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["deploy", "list"])
         assert result.exit_code == 0
@@ -340,16 +340,16 @@ class TestLogsCommands:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.infrastructure.logs.ApiClient",
+            "cli.infra_passenger.commands.infrastructure.logs.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["logs", "fetch", "srv-1"])
         assert result.exit_code == 0
@@ -464,16 +464,16 @@ class TestBackupCommands:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.infrastructure.backup.ApiClient",
+            "cli.infra_passenger.commands.infrastructure.backup.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["backup", "list"])
         assert result.exit_code == 0
@@ -533,16 +533,16 @@ class TestInventoryExtras:
 
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
-            "cli.ipilot.commands.inventory.ApiClient",
+            "cli.infra_passenger.commands.inventory.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["inventory", "list"])
         assert result.exit_code == 0
@@ -620,16 +620,16 @@ class TestGitopsExtras:
     def test_get_client_real_path(self, monkeypatch, tmp_path):
         """Build the GitOps client from the persisted CLI configuration."""
         monkeypatch.setattr(
-            "cli.ipilot.commands.gitops.ApiClient",
+            "cli.infra_passenger.commands.gitops.ApiClient",
             lambda *a, **k: MagicMock(),
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot")
+            "cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger")
         )
         monkeypatch.setattr(
-            "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+            "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
         )
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["gitops", "drift"])
         assert result.exit_code == 0

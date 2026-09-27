@@ -9,7 +9,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential gcc \
     && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml .
-COPY ipilot/ ./ipilot/
+COPY infra-passenger/ ./infra-passenger/
 RUN pip install --no-cache-dir .
 
 FROM base AS production
@@ -18,7 +18,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && adduser --disabled-password --gecos '' appuser
 COPY --from=build /usr/local /usr/local
-RUN ldd /usr/local/bin/ipilot 2>/dev/null || true
+RUN ldd /usr/local/bin/infra-passenger 2>/dev/null || true
 USER appuser
 ENTRYPOINT ["tini", "--"]
-CMD ["ipilot", "--help"]
+CMD ["infra-passenger", "--help"]

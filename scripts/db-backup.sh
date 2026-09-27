@@ -17,7 +17,7 @@ error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Create backups of the Infra Pilot state (Postgres, Redis, Grafana data).
+Create backups of the infra-passenger state (Postgres, Redis, Grafana data).
 
 Usage: $(basename "$0") [OPTIONS]
 
@@ -25,7 +25,7 @@ Options:
   --keep N          Keep only the N most recent backups per type (default: 10)
   --out DIR         Backup output directory (default: \$ROOT_DIR/backups)
   --s3 URI          Additionally upload finished artifacts to S3
-                    (e.g. s3://my-bucket/infra-pilot); requires the aws CLI
+                    (e.g. s3://my-bucket/infra-passenger); requires the aws CLI
   --encrypt-to KEY  Additionally encrypt artifacts with GPG for KEY
                     (key id, fingerprint or email); requires gpg.
                     Encrypted copies get a .gpg suffix; plaintext is kept
@@ -36,7 +36,7 @@ Options:
   --help            Show this help message
 
 Scheduling (example cron, daily 02:00, offsite via S3):
-  0 2 * * *  /opt/infra-pilot/scripts/db-backup.sh --s3 s3://my-bucket/infra-pilot >> /var/log/infra-pilot-backup.log 2>&1
+  0 2 * * *  /opt/infra-passenger/scripts/db-backup.sh --s3 s3://my-bucket/infra-passenger >> /var/log/infra-passenger-backup.log 2>&1
 
 Restore: see scripts/db-restore.sh (supports .gpg artifacts).
 EOF
@@ -65,8 +65,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-POSTGRES_USER="${POSTGRES_USER:-infra_pilot}"
-POSTGRES_DB="${POSTGRES_DB:-infra_pilot}"
+POSTGRES_USER="${POSTGRES_USER:-infra_passenger}"
+POSTGRES_DB="${POSTGRES_DB:-infra_passenger}"
 
 if ! command -v docker &> /dev/null; then
   error "docker not found in PATH"
@@ -85,8 +85,8 @@ fi
 
 COMPOSE=(docker compose -f "$ROOT_DIR/docker-compose.yml")
 
-if ! docker compose ls 2>/dev/null | grep -q infra-pilot; then
-  info "Infra Pilot stack is not running, starting postgres and redis..."
+if ! docker compose ls 2>/dev/null | grep -q infra-passenger; then
+  info "infra-passenger stack is not running, starting postgres and redis..."
   "${COMPOSE[@]}" up -d postgres redis
   info "Waiting for postgres to become healthy..."
   for _ in $(seq 1 30); do
@@ -137,7 +137,7 @@ prune() {
 }
 
 # --- Postgres (custom-format dump) ---
-backup_file="$OUT_DIR/infra-pilot_${stamp}.dump"
+backup_file="$OUT_DIR/infra-passenger_${stamp}.dump"
 info "Creating Postgres backup: $backup_file"
 "${COMPOSE[@]}" exec -T postgres \
   pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc > "$backup_file"
@@ -145,8 +145,8 @@ ARTIFACTS+=("$backup_file")
 size=$(du -h "$backup_file" | cut -f1)
 success "Postgres backup created ($size): $backup_file"
 maybe_encrypt_and_upload "$backup_file"
-prune "infra-pilot_*.dump" "$KEEP"
-prune "infra-pilot_*.dump.gpg" "$KEEP"
+prune "infra-passenger_*.dump" "$KEEP"
+prune "infra-passenger_*.dump.gpg" "$KEEP"
 
 # --- Redis (RDB snapshot; AOF persists in redis_data volume) ---
 if [[ "$WITH_REDIS" == true ]]; then
@@ -170,9 +170,9 @@ fi
 if [[ "$WITH_GRAFANA" == true ]]; then
   grafana_file="$OUT_DIR/grafana_${stamp}.tgz"
   info "Archiving Grafana volume: $grafana_file"
-  if docker volume inspect infra-pilot_grafana_data > /dev/null 2>&1 \
+  if docker volume inspect infra-passenger_grafana_data > /dev/null 2>&1 \
     && docker run --rm \
-    -v infra-pilot_grafana_data:/data:ro \
+    -v infra-passenger_grafana_data:/data:ro \
     -v "$OUT_DIR:/out" \
     alpine tar czf "/out/$(basename "$grafana_file")" -C /data . > /dev/null 2>&1; then
     ARTIFACTS+=("$grafana_file")

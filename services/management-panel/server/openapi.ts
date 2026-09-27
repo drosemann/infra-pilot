@@ -1,7 +1,7 @@
 const spec: Record<string, any> = {
   openapi: '3.1.0',
   info: {
-    title: 'Infra Pilot Management Panel API',
+    title: 'infra-passenger Management Panel API',
     version: '1.0.0',
     description: 'API for managing Docker apps, backups, alerts, and server infrastructure.',
   },

@@ -13,18 +13,18 @@ def client():
 
 @pytest.fixture
 def runner(client, monkeypatch, tmp_path):
-    from cli.ipilot.commands import gitops
+    from cli.infra_passenger.commands import gitops
 
     monkeypatch.setattr(gitops, "_get_client", lambda ctx: client)
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json"))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json"))
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 
@@ -38,7 +38,7 @@ def test_export_writes_yaml_file(client, invoke, tmp_path):
     assert result.exit_code == 0
     assert target.exists()
     content = target.read_text(encoding="utf-8")
-    assert "apiVersion: ipilot.io/v1" in content
+    assert "apiVersion: infra-passenger.io/v1" in content
     assert "srv-1" in content
 
 

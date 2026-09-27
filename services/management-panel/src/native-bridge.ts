@@ -1,4 +1,4 @@
-// Tauri API wrappers for the Infra Pilot desktop app
+// Tauri API wrappers for the infra-passenger desktop app
 // Provides native capabilities: window management, tray, notifications, file system, auto-updater
 
 let isTauri: boolean | null = null;
@@ -161,7 +161,7 @@ export async function installUpdate(): Promise<boolean> {
 // Offline State Sync (localStorage-based)
 // ============================================================================
 
-const OFFLINE_KEY = 'infra_pilot_offline_state';
+const OFFLINE_KEY = 'infra_passenger_offline_state';
 
 export interface OfflineState {
   pendingActions: Array<{

@@ -12,7 +12,7 @@ boundaries, invariants, and change rules.
 ```mermaid
 flowchart TB
   subgraph edge["Clients"]
-    CLI["ipilot CLI"]
+    CLI["infra-passenger CLI"]
     UI["React UI :5173"]
     CICD["GitOps caller"]
   end
@@ -69,7 +69,7 @@ and Pterodactyl boundary, Prometheus/Grafana on `/metrics`.
    interpolation, and missing resource limits.
 6. Generated contracts win over prose: panel
    `/api/openapi.json`, orchestrator `api_docs/openapi.yaml`,
-   CLI `ipilot --help`.
+   CLI `infra-passenger --help`.
 
 ---
 

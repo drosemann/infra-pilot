@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Infra Pilot Orchestrator Agent API
+  title: infra-passenger Orchestrator Agent API
   version: 1.0.0
   description: |
     HTTP surface of the Orchestrator Agent (aiohttp webhook server).

@@ -1,4 +1,4 @@
-"""Boot smoke test and command-level tests for the ipilot CLI entry point.
+"""Boot smoke test and command-level tests for the infra-passenger - touch every pod personally entry point.
 
 The boot smoke test guards against regressions like the historical
 ``NameError`` at import time (missing ``Optional`` import) that took the
@@ -10,15 +10,15 @@ import json
 import pytest
 from typer.testing import CliRunner
 
-from cli.ipilot.main import app
+from cli.infra_passenger.main import app
 
 
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     yield CliRunner(), config_dir
 
@@ -28,7 +28,7 @@ class TestBootSmoke:
         cli_runner, _ = runner
         result = cli_runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "Infra Pilot CLI" in result.output
+        assert "infra-passenger - touch every pod personally" in result.output
 
     def test_app_exposes_core_commands(self, runner):
         cli_runner, _ = runner
@@ -59,7 +59,7 @@ class TestVersionCommand:
         cli_runner, _ = runner
         result = cli_runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert result.output.startswith("ipilot v")
+        assert result.output.startswith("infra-passenger - touch every pod personally v")
 
 
 class TestLogoutCommand:
@@ -89,7 +89,7 @@ class TestLoginCommand:
             def login(self, api_key):
                 return {"token": f"token-for-{api_key}"}
 
-        monkeypatch.setattr("cli.ipilot.client.ApiClient", FakeClient)
+        monkeypatch.setattr("cli.infra_passenger.client.ApiClient", FakeClient)
 
         result = cli_runner.invoke(app, ["login", "my-api-key"])
 
@@ -118,7 +118,7 @@ class TestBatchCommand:
         result = cli_runner.invoke(app, ["batch", "--file", str(batch_file)])
 
         assert result.exit_code == 0
-        assert result.output.count("Running: ipilot version") == 2
+        assert result.output.count("Running: infra-passenger version") == 2
 
     def test_batch_missing_file_fails_cleanly(self, runner, tmp_path):
         cli_runner, _ = runner
@@ -159,7 +159,7 @@ class TestDoctorAliases:
         client.benchmark_system.return_value = {"status": "done"}
         client.diagnose_server.return_value = {"status": "done"}
         client.diagnose_system.return_value = {"status": "done"}
-        monkeypatch.setattr("cli.ipilot.commands.doctor._get_client", lambda ctx: client)
+        monkeypatch.setattr("cli.infra_passenger.commands.doctor._get_client", lambda ctx: client)
         return client
 
     def test_doctor_dispatches_to_doctor_subcommand(self, runner):

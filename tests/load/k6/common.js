@@ -1,4 +1,4 @@
-// Shared helpers for the Infra Pilot load test scenarios.
+// Shared helpers for the infra-passenger load test scenarios.
 //
 // Environment variables (all optional except where noted):
 //   K6_TARGET_ORCHESTRATOR  Base URL of the orchestrator agent.

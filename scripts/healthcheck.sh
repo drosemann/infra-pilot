@@ -17,7 +17,7 @@ info()    { echo -e "${BLUE}${1}${NC}"; }
 
 usage() {
   cat <<EOF
-Run health checks on the Infra Pilot project infrastructure.
+Run health checks on the infra-passenger project infrastructure.
 
 Usage: $(basename "$0") [OPTIONS]
 
@@ -94,11 +94,11 @@ if [ "$DRY_RUN" = true ]; then
     info "Dry-run mode: skipping live Docker service checks"
   fi
 else
-  check_docker_service "infra-pilot-postgres" "PostgreSQL" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-  check_docker_service "infra-pilot-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-  check_docker_service "infra-pilot-management-panel" "Management Panel" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-  check_docker_service "infra-pilot-orchestrator" "Orchestrator Agent" && OK=$((OK + 1)) || WARN=$((WARN + 1))
-  check_docker_service "infra-pilot-discord" "Discord Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-passenger-postgres" "PostgreSQL" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-passenger-redis" "Redis" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-passenger-management-panel" "Management Panel" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-passenger-orchestrator" "Orchestrator Agent" && OK=$((OK + 1)) || WARN=$((WARN + 1))
+  check_docker_service "infra-passenger-discord" "Discord Service" && OK=$((OK + 1)) || WARN=$((WARN + 1))
 fi
 
 if [ "$JSON_OUTPUT" = true ]; then

@@ -17,7 +17,7 @@ error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Set up the Infra Pilot development environment.
+Set up the infra-passenger development environment.
 
 Usage: $(basename "$0") [OPTIONS]
 

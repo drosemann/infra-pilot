@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Install all dependencies for Infra Pilot services on Windows.
+Install all dependencies for infra-passenger services on Windows.
 .PARAMETER Offline
 Skip package downloads (use cached artifacts only)
 #>

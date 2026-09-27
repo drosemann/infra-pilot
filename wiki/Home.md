@@ -1,12 +1,12 @@
-# Infra Pilot
+# infra-passenger
 
-Infra Pilot is a learning project for operating Docker-backed infrastructure through a Python CLI, a React/Express management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
+infra-passenger is a learning project for operating Docker-backed infrastructure through a Python CLI, a React/Express management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
 
 ## Start here
 
 ```bash
-git clone https://github.com/drosemann/infra-pilot.git
-cd infra-pilot
+git clone https://github.com/drosemann/infra-passenger.git
+cd infra-passenger
 cp .env.example .env
 bash scripts/generate-env.sh
 docker compose up -d
@@ -30,7 +30,7 @@ Illustrations of the intended UI, not captures of a running release:
 - Monitoring: throughput, health checks, live logs.
 - Applications: status, resources, uptime, ports.
 - Backups: retention policy and recent runs.
-- CLI and GitOps: `ipilot` plus signed webhook flow.
+- CLI and GitOps: `infra-passenger` plus signed webhook flow.
 
 Start with Installation below, then open
 `http://localhost:5173` after `docker compose up -d`.
@@ -48,5 +48,5 @@ Start with Installation below, then open
 
 The checked-in source of truth for public APIs is
 `services/orchestrator-agent/api_docs/openapi.yaml` for the orchestrator and
-the running panel's `/api/openapi.json` for the panel. Run `ipilot --help`
+the running panel's `/api/openapi.json` for the panel. Run `infra-passenger --help`
 for the CLI installed in your environment.

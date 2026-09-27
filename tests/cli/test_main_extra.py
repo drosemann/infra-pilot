@@ -8,17 +8,17 @@ from typer.testing import CliRunner
 
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app
+    from cli.infra_passenger.main import app
 
     return lambda args, **kwargs: runner.invoke(app, args, **kwargs)
 
@@ -31,7 +31,7 @@ class TestInteractive:
         )
         result = invoke(["interactive"])
         assert result.exit_code == 0
-        assert "ipilot v" in result.output
+        assert "infra-passenger - touch every pod personally v" in result.output
 
     def test_interactive_handles_keyboard_interrupt(self, invoke, monkeypatch):
         def ask(prompt, **kwargs):
@@ -44,18 +44,18 @@ class TestInteractive:
 
 class TestCompletion:
     def test_prints_completion_script(self, runner):
-        from cli.ipilot.main import app
+        from cli.infra_passenger.main import app
 
         result = runner.invoke(app, ["completion", "bash"])
         assert result.exit_code == 0
-        assert "_IPILOT_COMPLETE" in result.output
+        assert "_INFRA_PASSENGER_COMPLETE" in result.output
 
     def test_auto_shell_defaults_to_bash(self, runner):
-        from cli.ipilot.main import app
+        from cli.infra_passenger.main import app
 
         result = runner.invoke(app, ["completion"])
         assert result.exit_code == 0
-        assert "_IPILOT_COMPLETE" in result.output
+        assert "_INFRA_PASSENGER_COMPLETE" in result.output
 
     def test_install_calls_installer(self, invoke, monkeypatch):
         from unittest.mock import MagicMock
@@ -66,7 +66,7 @@ class TestCompletion:
         result = invoke(["completion", "--install", "zsh"])
 
         assert result.exit_code == 0
-        fake_install.assert_called_once_with("zsh", prog_name="ipilot")
+        fake_install.assert_called_once_with("zsh", prog_name="infra-passenger")
 
 
 class TestBatchEdgeCases:
@@ -87,7 +87,7 @@ class TestBatchEdgeCases:
 
 class TestDocsCommand:
     def test_docs_creates_output_dir(self, runner, tmp_path):
-        from cli.ipilot.main import app
+        from cli.infra_passenger.main import app
 
         out_dir = tmp_path / "nested" / "docs"
         out_file = out_dir / "reference.md"

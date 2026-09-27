@@ -36,7 +36,7 @@ workflow beats five more concepts.
 | `02-monitoring.png` | Throughput, health, live logs | Matches `src/pages/Monitoring.tsx` |
 | `03-applications.png` | App table with status and ports | Matches app list UX |
 | `04-backups.png` | Retention cards and recent runs | Matches `src/pages/Backups.tsx` |
-| `05-cli-gitops.png` | `ipilot` terminal and webhook | Matches `cli/` and webhook auth |
+| `05-cli-gitops.png` | `infra-passenger` terminal and webhook | Matches `cli/` and webhook auth |
 | `tour.gif` | Captioned tour of all five views | Generated, 720x405, under 500 KB |
 
 All PNG images are `1600x900`. The tour GIF is kept small

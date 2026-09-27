@@ -1,6 +1,6 @@
 # Security Policy & Threat Model
 
-This document is the security contract for Infra Pilot. It states who can do
+This document is the security contract for infra-passenger. It states who can do
 what through which interface, what the trust boundaries are, and how to report
 problems. **Pre-1.0 status: there are no tagged releases yet; treat every
 change as unreleased.**
@@ -44,7 +44,7 @@ get a fix before any other work.
 | B3 | Orchestrator → Docker daemon | Host access (socket = root equivalent) | Highest privilege in the system; must be minimized per operation |
 | B4 | Orchestrator → PostgreSQL/Redis | Users, backups, rotation metadata | Service credentials only; no interactive logins |
 | B5 | Management panel ↔ Supabase | Panel data, auth | Supabase key must never leave the server side |
-| B6 | CLI ↔ orchestrator API | API keys, config profiles | TLS in production; token stored in `~/.ipilot/config.json` |
+| B6 | CLI ↔ orchestrator API | API keys, config profiles | TLS in production; token stored in `~/.infra-passenger/config.json` |
 
 ### Who can do what via which API
 
@@ -54,7 +54,7 @@ get a fix before any other work.
 | `GET /ready`, `GET /api/ready` | K8s / load-balancer | Readiness (DB check) | 503 if DB down; used as `readinessProbe` |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
 | `POST /webhook/gitops` | CI/CD systems | Reconcile a manifest (deploy) | `X-Signature-256` = HMAC-SHA256 of `X-Timestamp` + body (`GITOPS_WEBHOOK_TOKEN`), one signature per replay window; **fail closed** (503) if unset |
-| `GET /api/v1/federation/status` | Other pilot instances | Read federation status | Constant-time federation token check; 503 without token unless `ALLOW_INSECURE_FEDERATION=true` in explicit local envs (`dev`/`development`/`local`) |
+| `GET /api/v1/federation/status` | Other infra-passenger instances | Read federation status | Constant-time federation token check; 503 without token unless `ALLOW_INSECURE_FEDERATION=true` in explicit local envs (`dev`/`development`/`local`) |
 | `POST /api/v1/deployments`, `GET /api/v1/providers` | CLI / management panel (federation token holders = platform admins) | Trigger manifest reconciliation | Federation token (fail-closed by default); `user_id`+`org_id` strictly validated and checked against `manifest:deploy` for scoping/audit; `as_platform_admin=true` is asserted by the token holder (accident-prevention, not a privilege boundary — any token holder can set it); admin path is logged |
 | `/api/v1/rbac/*` | Federation token holders (platform admins), scoped per-actor | Manage roles/orgs/memberships (create + revoke) | RBAC engine + per-project scoping; `actor_user_id` (query/header/body) is asserted by the token holder for scoping/audit, not independently authenticated; deletions persist via `rbac_store` (store-first, 500 without in-memory mutation on DB failure) so revokes survive restart |
 | Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN`; health-check targets validated against allow-lists |
@@ -76,8 +76,8 @@ get a fix before any other work.
 - Terraform state contains the RDS password even though it is omitted from
   outputs. The state bucket requires versioning, default SSE-S3/AES256,
   blocked public access, and restricted IAM access.
-- Production deployment reads `infra-pilot-prod-postgres-password` from
-  Secrets Manager into `infra-pilot-secrets` under `db-password` before Helm
+- Production deployment reads `infra-passenger-prod-postgres-password` from
+  Secrets Manager into `infra-passenger-secrets` under `db-password` before Helm
   runs with `secrets.create=false`. The deployment role needs
   `secretsmanager:GetSecretValue` on that secret, plus `kms:Decrypt` if a
   customer managed KMS key is used. Kubernetes access must permit Secret
@@ -88,7 +88,7 @@ get a fix before any other work.
   Terraform outputs, and deployment logs.
 - Compose node-exporter uses the host network namespace and listens only on
   the private Docker bridge address configured by `NODE_EXPORTER_HOST_IP`.
-  Prometheus reaches that address from `infra-pilot-net`; port 9100 is not
+  Prometheus reaches that address from `infra-passenger-net`; port 9100 is not
   bound on public interfaces. This configuration targets Linux Docker hosts.
 - Helm allows panel egress and orchestrator ingress on TCP 8500 within the
   same release. When the panel's token Secret is configured, the Secret and

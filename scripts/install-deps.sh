@@ -17,7 +17,7 @@ error()   { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Install all dependencies for Infra Pilot services.
+Install all dependencies for infra-passenger services.
 
 Usage: $(basename "$0") [OPTIONS]
 

@@ -3,7 +3,7 @@
 ## Runtime topology
 
 ```
-CLI (ipilot) ───────────────► Management panel API (:3001) ◄── React UI (:5173)
+CLI (infra-passenger) ───────────────► Management panel API (:3001) ◄── React UI (:5173)
                                       │
                                       ├── PostgreSQL (:5432)
                                       └── Redis (:6379)

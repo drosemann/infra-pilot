@@ -1,6 +1,6 @@
 {
-  "name": "Infra Pilot",
-  "short_name": "InfraPilot",
+  "name": "infra-passenger",
+  "short_name": "InfraPassenger",
   "description": "Infrastructure orchestration dashboard",
   "start_url": "/",
   "display": "standalone",

@@ -69,11 +69,11 @@ describe('useBulkSelection hook', () => {
 describe('i18n translations', () => {
   it('should have consistent keys across all locales', () => {
     const en = {
-      'app.name': 'Infra Pilot',
+      'app.name': 'infra-passenger',
       'nav.dashboard': 'Dashboard',
     };
     const de = {
-      'app.name': 'Infra Pilot',
+      'app.name': 'infra-passenger',
       'nav.dashboard': 'Dashboard',
     };
     assert.deepEqual(Object.keys(en), Object.keys(de));

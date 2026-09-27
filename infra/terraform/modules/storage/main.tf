@@ -57,8 +57,8 @@ resource "aws_db_instance" "postgres" {
   max_allocated_storage  = 500
   storage_encrypted      = true
   storage_type           = "gp3"
-  db_name                = "infrapilot"
-  username               = "infrapilot"
+  db_name                = "infra-passenger"
+  username               = "infra-passenger"
   password               = random_password.db_password.result
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -78,7 +78,7 @@ resource "random_password" "db_password" {
   special = false
 }
 
-# The production workflow copies this secret to infra-pilot-secrets/db-password
+# The production workflow copies this secret to infra-passenger-secrets/db-password
 # before Helm runs. Services consume it via secretKeyRef, not Helm values.
 resource "aws_secretsmanager_secret" "db_password" {
   name                    = "${var.name_prefix}-postgres-password"

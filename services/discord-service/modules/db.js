@@ -7,9 +7,9 @@ function getDbPool() {
     _dbPool = new Pool({
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT, 10) || 5432,
-      user: process.env.DB_USER || 'infra_pilot',
+      user: process.env.DB_USER || 'infra_passenger',
       password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'infra_pilot',
+      database: process.env.DB_NAME || 'infra_passenger',
       max: 5,
       connectionTimeoutMillis: 10000,
     });

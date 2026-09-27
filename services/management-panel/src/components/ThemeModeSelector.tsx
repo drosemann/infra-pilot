@@ -5,12 +5,12 @@ type Mode = 'system' | 'light' | 'dark';
 export const ThemeModeSelector: React.FC = () => {
   const [mode, setMode] = useState<Mode>(() => {
     if (typeof window === 'undefined') return 'system';
-    return (localStorage.getItem('infra_pilot_theme_mode') as Mode) ?? 'system';
+    return (localStorage.getItem('infra_passenger_theme_mode') as Mode) ?? 'system';
   });
 
   // Apply theme based on mode
   const applyMode = (m: Mode) => {
-    localStorage.setItem('infra_pilot_theme_mode', m);
+    localStorage.setItem('infra_passenger_theme_mode', m);
     if (m === 'system') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       if (mq.matches) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
@@ -26,7 +26,7 @@ export const ThemeModeSelector: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handler = () => setMode(localStorage.getItem('infra_pilot_theme_mode') as Mode || 'system');
+    const handler = () => setMode(localStorage.getItem('infra_passenger_theme_mode') as Mode || 'system');
     window.addEventListener('branding-variant-changed', handler);
     window.addEventListener('storage', handler);
     return () => {

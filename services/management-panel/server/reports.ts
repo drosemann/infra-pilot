@@ -82,7 +82,7 @@ function escapePdfText(text: string): string {
 /** Build a minimal valid single-page PDF containing the report rows. */
 export function reportToPdf(report: ReportData): Buffer {
   const lines: string[] = [];
-  lines.push(`Infra Pilot Report`);
+  lines.push(`infra-passenger Report`);
   lines.push(`Generated: ${report.generated_at}`);
   lines.push(`Range: ${report.range.since} -> ${report.range.until}`);
   lines.push('');

@@ -1,6 +1,6 @@
 /**
  * @file CLI Bridge for Discord Bot
- * Replaces direct Pterodactyl API calls with `ipilot` CLI subprocess calls.
+ * Replaces direct Pterodactyl API calls with `infra-passenger` CLI subprocess calls.
  * @example
  *   const { cli } = require('./cli-bridge');
  *   const result = cli('server list');
@@ -12,7 +12,7 @@
 const { execSync } = require('child_process');
 
 /** @constant {string} */
-const IPILOT_CMD = process.env.IPILOT_CMD || 'ipilot';
+const INFRA_PASSENGER_CMD = process.env.INFRA_PASSENGER_CMD || 'infra-passenger';
 /** @constant {number} */
 const CLI_TIMEOUT_MS = 30000;
 
@@ -24,8 +24,8 @@ const CLI_TIMEOUT_MS = 30000;
  */
 
 /**
- * Execute an ipilot CLI command and return parsed JSON.
- * @param {string} command - The ipilot subcommand to run (e.g. 'server list')
+ * Execute an infra-passenger CLI command and return parsed JSON.
+ * @param {string} command - The infra-passenger subcommand to run (e.g. 'server list')
  * @returns {CliResult} The result object with success flag and parsed data
  * @throws {Error} If the command string is invalid
  */
@@ -35,7 +35,7 @@ function cli(command) {
   }
 
   try {
-    const fullCmd = `${IPILOT_CMD} ${command} --output json`;
+    const fullCmd = `${INFRA_PASSENGER_CMD} ${command} --output json`;
     const stdout = execSync(fullCmd, {
       encoding: 'utf-8',
       timeout: CLI_TIMEOUT_MS,
@@ -60,10 +60,10 @@ function cli(command) {
 }
 
 /**
- * @namespace ipilot
+ * @namespace infraPassenger
  * @description Convenience wrappers for Discord bot operations.
  */
-const ipilot = {
+const infraPassenger = {
   server: {
     /** @returns {CliResult} */
     list: () => cli('server list'),
@@ -93,4 +93,4 @@ const ipilot = {
   },
 };
 
-module.exports = { cli, ipilot };
+module.exports = { cli, infraPassenger };

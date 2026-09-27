@@ -13,7 +13,7 @@ $placeholders = @(
     'your_discord_bot_token_here',
     'your_jwt_secret_key_here',
     'your_pterodactyl_api_key_here',
-    'infra_pilot_dev_password',
+    'infra_passenger_dev_password',
     'local-dev-anon-key'
 )
 

@@ -12,7 +12,7 @@ PLACEHOLDER_SECRETS = (
     frozenset(  # nosec B105 - placeholder allow-list, not a real secret
         {
             "CHANGE_ME",
-            "infra_pilot_dev_password",
+            "infra_passenger_dev_password",
             "your_discord_bot_token_here",
             "your_jwt_secret_key_here",
             "local-dev-anon-key",
@@ -93,9 +93,9 @@ class Config:
 
     # Database (PostgreSQL — matches docker-compose.yml)
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
-    DB_USER: str = os.getenv("DB_USER", "infra_pilot")
+    DB_USER: str = os.getenv("DB_USER", "infra_passenger")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "CHANGE_ME")
-    DB_NAME: str = os.getenv("DB_NAME", "infra_pilot")
+    DB_NAME: str = os.getenv("DB_NAME", "infra_passenger")
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
 
     # VPS

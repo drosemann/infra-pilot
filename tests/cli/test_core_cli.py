@@ -1,4 +1,4 @@
-"""Unit tests for cli.ipilot.core.cli: app creation and client loading."""
+"""Unit tests for cli.infra_passenger.core.cli: app creation and client loading."""
 
 import re
 from unittest.mock import MagicMock
@@ -16,42 +16,42 @@ def strip_ansi(text: str) -> str:
 
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     yield CliRunner()
 
 
 class TestCreateApp:
-    def test_creates_typer_app_named_ipilot(self):
-        from cli.ipilot.core.cli import create_app
+    def test_creates_typer_app_named_infra_passenger(self):
+        from cli.infra_passenger.core.cli import create_app
 
         app = create_app()
-        assert app.info.name == "ipilot"
-        assert "Infra Pilot CLI" in app.info.help
+        assert app.info.name == "infra-passenger"
+        assert "infra-passenger - touch every pod personally" in app.info.help
 
     def test_no_args_shows_help(self, runner):
-        from cli.ipilot.core.cli import create_app
+        from cli.infra_passenger.core.cli import create_app
 
         result = runner.invoke(create_app(), [])
         assert result.exit_code == 2
         # Rich may wrap the usage line in ANSI escapes (e.g. in CI), so
         # compare against a stripped version of the output.
-        assert "Usage: ipilot" in strip_ansi(result.output)
+        assert "Usage: infra-passenger" in strip_ansi(result.output)
 
     def test_help_exits_zero(self, runner):
-        from cli.ipilot.core.cli import create_app
+        from cli.infra_passenger.core.cli import create_app
 
         result = runner.invoke(create_app(), ["--help"])
         assert result.exit_code == 0
-        assert "Infra Pilot CLI" in result.output
+        assert "infra-passenger - touch every pod personally" in result.output
 
     def test_callback_sets_output_and_profile(self, runner, monkeypatch):
         import typer
 
-        from cli.ipilot.core.cli import create_app
+        from cli.infra_passenger.core.cli import create_app
 
         app = create_app()
 
@@ -70,9 +70,9 @@ class TestCreateApp:
 
         import typer
 
-        from cli.ipilot.core.cli import create_app
+        from cli.infra_passenger.core.cli import create_app
 
-        config_dir = tmp_path / ".ipilot"
+        config_dir = tmp_path / ".infra-passenger"
         config_dir.mkdir(exist_ok=True)
         (config_dir / "config.json").write_text(json.dumps({"output_format": "yaml"}))
 
@@ -90,7 +90,7 @@ class TestCreateApp:
 
 class TestGetClient:
     def test_builds_client_from_config(self, runner, monkeypatch):
-        from cli.ipilot.core import cli as core_cli
+        from cli.infra_passenger.core import cli as core_cli
 
         captured = {}
 
@@ -99,9 +99,9 @@ class TestGetClient:
                 captured["base_url"] = base_url
                 captured["token"] = token
 
-        monkeypatch.setattr("cli.ipilot.core.cli.ApiClient", FakeClient)
+        monkeypatch.setattr("cli.infra_passenger.core.cli.ApiClient", FakeClient)
         monkeypatch.setattr(
-            "cli.ipilot.core.cli.load_config",
+            "cli.infra_passenger.core.cli.load_config",
             lambda profile=None: {
                 "api_url": "https://api.example.com",
                 "token": "secret-token",
@@ -119,8 +119,8 @@ class TestGetClient:
 
     def test_fallback_url_matches_config_default(self, runner, monkeypatch):
         """The client fallback must never diverge from the config default."""
-        from cli.ipilot.config import DEFAULT_API_URL
-        from cli.ipilot.core import cli as core_cli
+        from cli.infra_passenger.config import DEFAULT_API_URL
+        from cli.infra_passenger.core import cli as core_cli
 
         captured = {}
 
@@ -129,9 +129,9 @@ class TestGetClient:
                 captured["base_url"] = base_url
                 captured["token"] = token
 
-        monkeypatch.setattr("cli.ipilot.core.cli.ApiClient", FakeClient)
+        monkeypatch.setattr("cli.infra_passenger.core.cli.ApiClient", FakeClient)
         monkeypatch.setattr(
-            "cli.ipilot.core.cli.load_config",
+            "cli.infra_passenger.core.cli.load_config",
             lambda profile=None: {},
         )
 

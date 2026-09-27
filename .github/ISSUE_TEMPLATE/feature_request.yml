@@ -32,7 +32,7 @@ body:
       options:
         - management-panel
         - orchestrator-agent
-        - cli (ipilot)
+        - cli (infra-passenger)
         - discord-service
         - helm / infra
         - docs

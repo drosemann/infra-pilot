@@ -1,4 +1,4 @@
-# Infra Pilot Wiki
+# infra-passenger Wiki
 
 - [Home](Home)
 - [Installation](01-Installation)
@@ -17,24 +17,24 @@
 
 | Feature | CLI Command |
 |---------|-------------|
-| GitOps | `ipilot gitops *` |
-| SSH | `ipilot ssh *` |
-| Inventory | `ipilot inventory *` |
-| Secrets | `ipilot secrets *` |
-| Templates | `ipilot templates *` |
-| Plugins | `ipilot plugins *` |
-| Webhooks | `ipilot webhooks *` |
-| API Keys | `ipilot apikeys *` |
-| Runbooks | `ipilot runbook *` |
-| Doctor | `ipilot doctor` |
-| TUI | `ipilot tui *` |
-| Rollback | `ipilot rollback *` |
+| GitOps | `infra-passenger gitops *` |
+| SSH | `infra-passenger ssh *` |
+| Inventory | `infra-passenger inventory *` |
+| Secrets | `infra-passenger secrets *` |
+| Templates | `infra-passenger templates *` |
+| Plugins | `infra-passenger plugins *` |
+| Webhooks | `infra-passenger webhooks *` |
+| API Keys | `infra-passenger apikeys *` |
+| Runbooks | `infra-passenger runbook *` |
+| Doctor | `infra-passenger doctor` |
+| TUI | `infra-passenger tui *` |
+| Rollback | `infra-passenger rollback *` |
 
 ---
 
 **Links**
 
-- [GitHub](https://github.com/drosemann/infra-pilot)
-- [Issues](https://github.com/drosemann/infra-pilot/issues)
-- [Discussions](https://github.com/drosemann/infra-pilot/discussions)
-- [MIT License](https://github.com/drosemann/infra-pilot/blob/main/LICENSE)
+- [GitHub](https://github.com/drosemann/infra-passenger)
+- [Issues](https://github.com/drosemann/infra-passenger/issues)
+- [Discussions](https://github.com/drosemann/infra-passenger/discussions)
+- [MIT License](https://github.com/drosemann/infra-passenger/blob/main/LICENSE)

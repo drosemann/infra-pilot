@@ -8,22 +8,22 @@ from unittest.mock import MagicMock
 import pytest
 from typer.testing import CliRunner
 
-DOCTOR = "cli.ipilot.commands.doctor"
+DOCTOR = "cli.infra_passenger.commands.doctor"
 
 
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 
@@ -90,7 +90,7 @@ class TestDoctorCommand:
         )
         monkeypatch.setattr(
             DOCTOR + ".shutil.which",
-            lambda name: "/usr/bin/ipilot" if name == "ipilot" else None,
+            lambda name: "/usr/bin/infra-passenger" if name == "infra-passenger" else None,
         )
         monkeypatch.setattr(DOCTOR + ".os.path.exists", lambda p: False)
         monkeypatch.setattr(
@@ -134,7 +134,7 @@ class TestDoctorCommand:
         assert result.exit_code == 0
         assert "issue(s) that need attention" in result.output
         assert "Attempting fixes..." in result.output
-        assert "Reinstall ipilot" in result.output
+        assert "Reinstall infra-passenger" in result.output
         assert "Ensure the API server is running" in result.output
 
     def test_memory_unavailable_is_warn(self, invoke, monkeypatch):
@@ -190,10 +190,10 @@ class TestBenchmarkCommand:
     def test_benchmark_server(self, monkeypatch):
         client = MagicMock()
         client.benchmark_server.return_value = {"result": "ok"}
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         monkeypatch.setattr(doctor_mod, "_get_client", lambda ctx: client)
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(
             main_app,
@@ -205,10 +205,10 @@ class TestBenchmarkCommand:
     def test_benchmark_system(self, monkeypatch):
         client = MagicMock()
         client.benchmark_system.return_value = {"result": "ok"}
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         monkeypatch.setattr(doctor_mod, "_get_client", lambda ctx: client)
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["doctor", "benchmark"])
         assert result.exit_code == 0
@@ -219,10 +219,10 @@ class TestDiagnoseCommand:
     def test_diagnose_server(self, monkeypatch):
         client = MagicMock()
         client.diagnose_server.return_value = {"diagnosis": "ok"}
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         monkeypatch.setattr(doctor_mod, "_get_client", lambda ctx: client)
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(
             main_app,
@@ -234,10 +234,10 @@ class TestDiagnoseCommand:
     def test_diagnose_system(self, monkeypatch):
         client = MagicMock()
         client.diagnose_system.return_value = {"diagnosis": "ok"}
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         monkeypatch.setattr(doctor_mod, "_get_client", lambda ctx: client)
-        from cli.ipilot.main import app as main_app
+        from cli.infra_passenger.main import app as main_app
 
         result = CliRunner().invoke(main_app, ["doctor", "diagnose"])
         assert result.exit_code == 0
@@ -248,7 +248,7 @@ class TestMemoryUsage:
     def test_linux_meminfo_path(self, monkeypatch):
         import io
 
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         meminfo = (
             "MemTotal:       16384000 kB\n"
@@ -270,7 +270,7 @@ class TestMemoryUsage:
     def test_meminfo_without_available(self, monkeypatch):
         import io
 
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         meminfo = "MemTotal: 1048576 kB\nMemFree: 262144 kB\n"
         real_open = open
@@ -287,7 +287,7 @@ class TestMemoryUsage:
     def test_windows_memory_status_success_path(self, monkeypatch):
         import ctypes
 
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         def fail_open(path, *args, **kwargs):
             raise FileNotFoundError(path)
@@ -316,7 +316,7 @@ class TestMemoryUsage:
     def test_windows_unavailable_falls_back(self, monkeypatch):
         import ctypes
 
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         def fail_open(path, *args, **kwargs):
             raise FileNotFoundError(path)
@@ -332,7 +332,7 @@ class TestMemoryUsage:
 
 class TestLoadAverage:
     def test_returns_rounded_values(self, monkeypatch):
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         fake_os = types.ModuleType("os")
         fake_os.getloadavg = lambda: (1.234, 2.345, 3.456)
@@ -341,7 +341,7 @@ class TestLoadAverage:
         assert result == {"1m": 1.23, "5m": 2.35, "15m": 3.46}
 
     def test_os_error_returns_none(self, monkeypatch):
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         fake_os = types.ModuleType("os")
 
@@ -353,7 +353,7 @@ class TestLoadAverage:
         assert doctor_mod._load_average() is None
 
     def test_unavailable_platform_returns_none(self, monkeypatch):
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         fake_os = types.ModuleType("os")
         monkeypatch.setattr(doctor_mod, "os", fake_os)
@@ -362,7 +362,7 @@ class TestLoadAverage:
 
 class TestDiskUsage:
     def test_returns_usage_dict(self):
-        import cli.ipilot.commands.doctor as doctor_mod
+        import cli.infra_passenger.commands.doctor as doctor_mod
 
         result = doctor_mod._disk_usage(".")
         assert result["path"] == "."
@@ -426,11 +426,11 @@ def _install_fake_textual(
 
 def _real_path_invoke(monkeypatch, tmp_path, args):
     monkeypatch.setattr(DOCTOR + ".ApiClient", lambda *a, **k: MagicMock())
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot"))
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger"))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
     )
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return CliRunner().invoke(main_app, args)
 

@@ -8,7 +8,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="$ROOT_DIR/.env"
 EXAMPLE="$ROOT_DIR/.env.example"
 
-PLACEHOLDERS='CHANGE_ME|your_discord_bot_token_here|your_jwt_secret_key_here|your_pterodactyl_api_key_here|infra_pilot_dev_password|local-dev-anon-key'
+PLACEHOLDERS='CHANGE_ME|your_discord_bot_token_here|your_jwt_secret_key_here|your_pterodactyl_api_key_here|infra_passenger_dev_password|local-dev-anon-key'
 
 gen_secret() {
   openssl rand -base64 32 | tr -d '+/='

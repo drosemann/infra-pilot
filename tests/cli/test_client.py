@@ -5,7 +5,7 @@ import json
 import pytest
 import requests
 
-from cli.ipilot.client import API_PREFIX, ApiClient
+from cli.infra_passenger.client import API_PREFIX, ApiClient
 
 
 class FakeResponse:

@@ -1,4 +1,4 @@
-"""Declarative manifest engine — GitOps for infra-pilot.
+"""Declarative manifest engine — GitOps for infra-passenger.
 
 Define your infrastructure as an ``infra.yaml`` file committed to a Git
 repository.  The engine reads the desired state, diffs it against

@@ -25,19 +25,19 @@ def client():
 @pytest.fixture
 def runner(client, monkeypatch, tmp_path):
     for mod_name in MODULES:
-        module = importlib.import_module(f"cli.ipilot.commands.{mod_name}")
+        module = importlib.import_module(f"cli.infra_passenger.commands.{mod_name}")
         monkeypatch.setattr(module, "_get_client", lambda ctx: client)
-    config_dir = tmp_path / ".ipilot"
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / ".infra-passenger"
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(config_dir / "config.json")
     )
     return CliRunner()
 
 
 @pytest.fixture
 def invoke(runner):
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return lambda args, **kwargs: runner.invoke(main_app, args, **kwargs)
 
@@ -45,13 +45,13 @@ def invoke(runner):
 def _real_path_invoke(monkeypatch, tmp_path, module, args):
     """Invoke a command without the patched _get_client, covering the real one."""
     monkeypatch.setattr(
-        f"cli.ipilot.commands.{module}.ApiClient", lambda *a, **k: MagicMock()
+        f"cli.infra_passenger.commands.{module}.ApiClient", lambda *a, **k: MagicMock()
     )
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(tmp_path / ".ipilot"))
+    monkeypatch.setattr("cli.infra_passenger.config.CONFIG_DIR", str(tmp_path / ".infra-passenger"))
     monkeypatch.setattr(
-        "cli.ipilot.config.CONFIG_FILE", str(tmp_path / ".ipilot" / "config.json")
+        "cli.infra_passenger.config.CONFIG_FILE", str(tmp_path / ".infra-passenger" / "config.json")
     )
-    from cli.ipilot.main import app as main_app
+    from cli.infra_passenger.main import app as main_app
 
     return CliRunner().invoke(main_app, args)
 

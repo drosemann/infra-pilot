@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: Infra Pilot
+  - name: infra-passenger
     orgId: 1
-    folder: Infra Pilot
+    folder: infra-passenger
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

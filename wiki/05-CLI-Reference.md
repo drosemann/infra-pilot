@@ -3,7 +3,7 @@
 ## Usage
 
 ```bash
-ipilot [global-flags] <command> [subcommand] [flags]
+infra-passenger [global-flags] <command> [subcommand] [flags]
 ```
 
 Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--no-color`
@@ -165,4 +165,4 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 
 ---
 
-*Source: `ipilot <command> --help` for each command*
+*Source: `infra-passenger <command> --help` for each command*

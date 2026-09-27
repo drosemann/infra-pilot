@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Build Docker images for all Infra Pilot services on Windows.
+Build Docker images for all infra-passenger services on Windows.
 .PARAMETER Push
 Push images to registry after build
 .PARAMETER Registry
@@ -38,7 +38,7 @@ foreach ($service in $Services) {
     $df = Join-Path $servicePath "Dockerfile"
     if (!(Test-Path $df)) { Warn "Dockerfile not found for $name, skipping"; continue }
 
-    $imageName = "infra-pilot-$name"
+    $imageName = "infra-passenger-$name"
     $imageTag = $version
     if ($Registry) { $imageName = "$Registry/$imageName" }
 

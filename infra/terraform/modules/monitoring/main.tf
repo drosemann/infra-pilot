@@ -140,7 +140,7 @@ resource "aws_sns_topic" "alerts" {
 resource "aws_sns_topic_subscription" "alerts_email" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
-  endpoint  = "alerts@infra-pilot.example.com"
+  endpoint  = "alerts@infra-passenger.example.com"
 }
 
 resource "aws_cloudwatch_metric_alarm" "rds_connections" {

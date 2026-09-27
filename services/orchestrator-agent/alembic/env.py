@@ -22,11 +22,11 @@ def build_database_url() -> str:
     if database_url:
         return database_url.replace("postgres://", "postgresql://")
     return "postgresql://{user}:{password}@{host}:{port}/{name}".format(
-        user=os.getenv("DB_USER", "infra_pilot"),
+        user=os.getenv("DB_USER", "infra_passenger"),
         password=os.getenv("DB_PASSWORD", "CHANGE_ME"),
         host=os.getenv("DB_HOST", "localhost"),
         port=os.getenv("DB_PORT", "5432"),
-        name=os.getenv("DB_NAME", "infra_pilot"),
+        name=os.getenv("DB_NAME", "infra_passenger"),
     )
 
 

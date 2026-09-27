@@ -11,8 +11,8 @@
 ## Full local stack
 
 ```bash
-git clone https://github.com/drosemann/infra-pilot.git
-cd infra-pilot
+git clone https://github.com/drosemann/infra-passenger.git
+cd infra-passenger
 cp .env.example .env
 bash scripts/generate-env.sh
 docker compose up -d
@@ -48,11 +48,11 @@ make load-smoke
 
 ```bash
 pip install ./cli
-ipilot --version
-ipilot --help
+infra-passenger --version
+infra-passenger --help
 ```
 
-For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at `http://localhost:3001`; configure credentials with `ipilot login <api-key>`.
+For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at `http://localhost:3001`; configure credentials with `infra-passenger login <api-key>`.
 
 ## Updating and stopping
 

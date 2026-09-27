@@ -19,21 +19,21 @@ rather than committing an `.env` file.
 
 ## CLI configuration and precedence
 
-The CLI stores its default configuration in `~/.ipilot/config.json` and named profiles in `~/.ipilot/config-<profile>.json`. It uses `http://localhost:3001` when no API URL is configured.
+The CLI stores its default configuration in `~/.infra-passenger/config.json` and named profiles in `~/.infra-passenger/config-<profile>.json`. It uses `http://localhost:3001` when no API URL is configured.
 
 ```bash
 # Authenticate; the returned token is stored in the selected profile/default config
-ipilot login <api-key>
+infra-passenger login <api-key>
 
 # One-command overrides
-IPILOT_API_URL=https://panel.example.test ipilot server list
-IPILOT_TOKEN=<token> ipilot server list
-IPILOT_OUTPUT=json ipilot server list
+INFRA_PASSENGER_API_URL=https://panel.example.test infra-passenger server list
+INFRA_PASSENGER_TOKEN=<token> infra-passenger server list
+INFRA_PASSENGER_OUTPUT=json infra-passenger server list
 ```
 
 Configuration is resolved in this order: built-in defaults, default config
-file, selected profile file, then `IPILOT_API_URL`, `IPILOT_TOKEN`, and
-`IPILOT_OUTPUT` environment variables. Use `ipilot --help` to see how to
+file, selected profile file, then `INFRA_PASSENGER_API_URL`, `INFRA_PASSENGER_TOKEN`, and
+`INFRA_PASSENGER_OUTPUT` environment variables. Use `infra-passenger --help` to see how to
 select a profile and output format in the current CLI build.
 
 ## Network and authentication boundaries

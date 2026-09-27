@@ -3,8 +3,8 @@
 ## Development Setup
 
 ```bash
-git clone https://github.com/drosemann/infra-pilot.git
-cd infra-pilot
+git clone https://github.com/drosemann/infra-passenger.git
+cd infra-passenger
 pip install -r requirements.txt
 cd services/management-panel && npm install && cd ../..
 cd services/discord-service && npm install && cd ../..
@@ -39,4 +39,4 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): 
 
 ---
 
-*See [CONTRIBUTING.md](https://github.com/drosemann/infra-pilot/blob/main/CONTRIBUTING.md) for full details.*
+*See [CONTRIBUTING.md](https://github.com/drosemann/infra-passenger/blob/main/CONTRIBUTING.md) for full details.*

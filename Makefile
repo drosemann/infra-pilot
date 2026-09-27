@@ -21,7 +21,7 @@ test:            ## Run all tests
 	@pytest tests/ -v
 
 test-coverage:   ## Run tests with coverage report
-	@pytest tests/ --cov=cli/ipilot --cov=services
+	@pytest tests/ --cov=cli/infra-passenger --cov=services
 
 # ── Linting & Formatting ─────────────────────────────────────────────
 

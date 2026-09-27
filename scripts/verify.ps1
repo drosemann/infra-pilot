@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Run verification stages across the Infra Pilot project on Windows.
+Run verification stages across the infra-passenger project on Windows.
 .PARAMETER Offline
 Skip network-dependent checks
 .PARAMETER Json

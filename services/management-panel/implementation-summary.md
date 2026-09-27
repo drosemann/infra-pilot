@@ -2,7 +2,7 @@
 
 ## transformation complete
 
-the infra-pilot repository has been successfully transformed into a clean, self-hosted docker panel with **personal mode as the default** and **hosting business mode as an optional feature**.
+the infra-passenger repository has been successfully transformed into a clean, self-hosted docker panel with **personal mode as the default** and **hosting business mode as an optional feature**.
 
 ## what was built
 

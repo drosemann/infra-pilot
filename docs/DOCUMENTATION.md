@@ -9,7 +9,7 @@ in the same pull request that introduces it.
 | Area | Primary implementation | Documentation to update when it changes |
 |---|---|---|
 | Local stack, ports, profiles, required secrets | `docker-compose.yml`, `.env.example` | `README.md`, `wiki/01-Installation.md`, `wiki/03-Configuration.md` |
-| CLI commands, global options, profiles | `cli/ipilot/main.py`, `cli/ipilot/commands/`, `cli/ipilot/config.py` | `cli/README.md`, `wiki/05-CLI-Reference.md` |
+| CLI commands, global options, profiles | `cli/infra-passenger/main.py`, `cli/infra-passenger/commands/`, `cli/infra-passenger/config.py` | `cli/README.md`, `wiki/05-CLI-Reference.md` |
 | Panel routes and user-facing features | `services/management-panel/server/index.ts`, `src/` | `services/management-panel/README.md`, OpenAPI at `/api/openapi.json` |
 | Orchestrator routes, manifests, providers, RBAC | `services/orchestrator-agent/webhook_server.py`, `manifest/`, `compute/`, `rbac/` | `services/orchestrator-agent/README.md`, `wiki/06-Architecture.md`, `wiki/11-Auth-Matrix.md` |
 | Discord integration | `services/discord-service/index.js`, `modules/`, `.env.example` | `services/discord-service/README.md` |
@@ -17,7 +17,7 @@ in the same pull request that introduces it.
 | Panel screenshots and visual docs | `services/management-panel/src/pages/`, `src/components/` | `docs/screenshots/`, root `README.md` |
 | Architecture invariants | `docker-compose.yml`, service routers, `helm/` | `docs/ARCHITECTURE.md`, `wiki/06-Architecture.md` |
 
-Generated interfaces take precedence over prose: use `ipilot --help`
+Generated interfaces take precedence over prose: use `infra-passenger --help`
 for the installed CLI, `/api/openapi.json` for panel requests, and the
 orchestrator's `api_docs/openapi.yaml` for its contract.
 

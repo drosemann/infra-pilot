@@ -1,9 +1,9 @@
 {
-  "name": "infra-pilot-management-panel",
+  "name": "infra-passenger-management-panel",
   "private": true,
   "version": "0.1.0",
-  "description": "Infra Pilot Management Panel - Web dashboard for managing Docker infrastructure, servers, and deployments",
-  "author": "Infra Pilot Team",
+  "description": "infra-passenger Management Panel - touch every pod personally",
+  "author": "infra-passenger Team",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -81,5 +81,11 @@
     "typescript": "~7.0.2",
     "typescript-eslint": "^8.70.0",
     "vite": "^8.3.0"
-  }
+  },
+  "keywords": [
+    "infrastructure",
+    "docker",
+    "kubernetes",
+    "operations"
+  ]
 }

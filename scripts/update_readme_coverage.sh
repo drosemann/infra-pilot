@@ -53,7 +53,7 @@ if [ "$changes" -eq 0 ]; then
   exit 0
 fi
 
-git config user.name "InfraPilot CI Bot"
+git config user.name "InfraPassenger CI Bot"
 git config user.email "ci-bot@example.com"
 git add README.md
 git commit -m "ci: update README coverage badge" || true

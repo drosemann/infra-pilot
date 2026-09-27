@@ -78,7 +78,7 @@ export const Dashboard = () => {
             The self-driving infra cockpit
           </h1>
           <p className="mt-7 max-w-3xl text-xl leading-8 text-white/70 sm:text-2xl sm:leading-9">
-            Infra Pilot keeps deployments, monitoring, and remediation moving
+            infra-passenger keeps deployments, monitoring, and remediation moving
             without constant prompts.
           </p>
 

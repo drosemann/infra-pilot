@@ -17,7 +17,7 @@ error() { echo -e "${RED}${1}${NC}" >&2; }
 
 usage() {
   cat <<EOF
-Build Docker images for all Infra Pilot services.
+Build Docker images for all infra-passenger services.
 
 Usage: $(basename "$0") [OPTIONS]
 
@@ -71,7 +71,7 @@ for service in "${SERVICES[@]}"; do
     continue
   fi
 
-  IMAGE_NAME="infra-pilot-$SERVICE_NAME"
+  IMAGE_NAME="infra-passenger-$SERVICE_NAME"
   IMAGE_TAG="$VERSION"
 
   if [ -n "$REGISTRY" ]; then

@@ -1,6 +1,8 @@
-# Infra Pilot
+# infra-passenger
 
-[![CI](https://github.com/drosemann/infra-pilot/actions/workflows/ci.yml/badge.svg)](https://github.com/drosemann/infra-pilot/actions/workflows/ci.yml)
+> putting you back in control, touch every pod personally
+
+[![CI](https://github.com/drosemann/infra-passenger/actions/workflows/ci.yml/badge.svg)](https://github.com/drosemann/infra-passenger/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![Node 22+](https://img.shields.io/badge/node-22%2B-green)](https://nodejs.org)
 [![Docker](https://img.shields.io/badge/docker-compose-blue)](./docker-compose.yml)
@@ -8,10 +10,10 @@
 
 > Docker-native infrastructure control plane: a React/Express
 > management panel, a Python orchestrator agent with GitOps
-> reconciliation, a Typer-based `ipilot` CLI, and optional
+> reconciliation, a Typer-based `infra-passenger` CLI, and optional
 > Discord and monitoring profiles.
 
-Infra Pilot manages your own VPS and container fleet — deployments,
+infra-passenger manages your own VPS and container fleet — deployments,
 monitoring, backups, and remediation — without a heavyweight PaaS.
 It is an internal operations tool, not a public hosting platform.
 
@@ -19,6 +21,8 @@ It is an internal operations tool, not a public hosting platform.
 
 ## Table of contents
 
+- [Why passenger not pilot?](#why-passenger-not-pilot)
+- [Philosophy](#philosophy)
 - [What you get](#what-you-get)
 - [Screenshots](#screenshots)
 - [Architecture](#architecture)
@@ -40,6 +44,28 @@ It is an internal operations tool, not a public hosting platform.
 
 ---
 
+## Why passenger not pilot?
+
+A pilot automates everything and makes the route feel like magic. A passenger
+touches every pod personally: you keep the map open, inspect the state, and
+drive from the backseat. infra-passenger puts you back in control with visible
+commands, documented APIs, and no mystery hand waving. Automation remains a
+tool—not the person in charge.
+
+## Philosophy
+
+**The Middle Man** is our architecture filter. Pick GLB over GLA/GLE: useful
+middle, no luxury abstraction. Pick Fitness First over McFit/Kieser: dependable
+everyday operations, neither bare-minimum nor premium ceremony. Pick the
+Deutschlandticket over Hessenticket/1. Klasse: broadly useful and predictable.
+Pick `nano`, not pico/lite: small, readable tools for real humans. And choose
+the 4.50€ Kantine: solid value between suspiciously cheap and needless flex.
+
+Read the full [Middle Man principle](./docs/philosophy.md) and our
+[manifesto](./docs/manifesto.md).
+
+---
+
 ## What you get
 
 | Capability | Where | Notes |
@@ -47,7 +73,7 @@ It is an internal operations tool, not a public hosting platform.
 | Container fleet UI | Management panel `:5173` | Apps, logs, metrics, terminals |
 | Panel API + Swagger | Management panel `:3001` | `/api/openapi.json`, `/api/docs` |
 | GitOps reconciliation | Orchestrator `:8500` | Signed webhooks, manifests |
-| Scriptable operations | `ipilot` CLI | Same control plane as the UI |
+| Scriptable operations | `infra-passenger` CLI | Same control plane as the UI |
 | Metrics stack | `monitoring` profile | Prometheus `:9090`, Grafana `:3000` |
 | ChatOps integration | `discord` profile | Discord service `:3002` |
 
@@ -63,7 +89,7 @@ Core principles:
   on every service.
 
 Non-goals: public multi-tenant hosting, abuse handling, and
-billing for third parties. Infra Pilot operates infrastructure
+billing for third parties. infra-passenger operates infrastructure
 you already own.
 
 ---
@@ -92,7 +118,7 @@ you already own.
 | CLI and GitOps |
 | --- |
 | ![CLI and GitOps](./docs/screenshots/05-cli-gitops.png) |
-| `ipilot`, signed webhooks, and the request path. |
+| `infra-passenger`, signed webhooks, and the request path. |
 
 ---
 
@@ -100,7 +126,7 @@ you already own.
 
 ```mermaid
 flowchart LR
-  CLI["ipilot CLI"] --> PanelAPI["Panel API :3001"]
+  CLI["infra-passenger CLI"] --> PanelAPI["Panel API :3001"]
   UI["React UI :5173"] --> PanelAPI
   PanelAPI --> PG[("PostgreSQL :5432")]
   PanelAPI --> RD[("Redis :6379")]
@@ -139,8 +165,8 @@ Details: [wiki/06-Architecture](./wiki/06-Architecture.md),
 ### Full local stack (recommended)
 
 ```bash
-git clone https://github.com/drosemann/infra-pilot.git
-cd infra-pilot
+git clone https://github.com/drosemann/infra-passenger.git
+cd infra-passenger
 cp .env.example .env
 bash scripts/generate-env.sh
 docker compose up -d
@@ -176,8 +202,8 @@ make load-smoke
 
 ```bash
 pip install ./cli
-ipilot --help
-ipilot login <api-key>
+infra-passenger --help
+infra-passenger login <api-key>
 ```
 
 For editable installs: `pip install -e ./cli`.
@@ -210,9 +236,9 @@ Run `bash scripts/generate-env.sh` to fill empty secrets.
 | Monitoring | `PROMETHEUS_PORT`, `GRAFANA_PORT`, `K6_*` | If used |
 | Discord | `DISCORD_TOKEN`, `PTERODACTYL_API_KEY` | If used |
 
-CLI precedence: built-in defaults, then `~/.ipilot/config.json`,
-then named profile file, then `IPILOT_API_URL`, `IPILOT_TOKEN`,
-and `IPILOT_OUTPUT` environment variables.
+CLI precedence: built-in defaults, then `~/.infra-passenger/config.json`,
+then named profile file, then `INFRA_PASSENGER_API_URL`, `INFRA_PASSENGER_TOKEN`,
+and `INFRA_PASSENGER_OUTPUT` environment variables.
 
 Details: [wiki/03-Configuration](./wiki/03-Configuration.md),
 [`.env.example`](./.env.example).
@@ -233,14 +259,14 @@ Details: [wiki/03-Configuration](./wiki/03-Configuration.md),
 ### CLI workflow
 
 ```bash
-export IPILOT_API_URL=http://localhost:3001
-ipilot login <your-api-key>
+export INFRA_PASSENGER_API_URL=http://localhost:3001
+infra-passenger login <your-api-key>
 
-ipilot server create my-first-server --image nginx:latest --memory 2048
-ipilot server status <server-id>
-ipilot server start <server-id>
-ipilot logs fetch <server-id> --lines 50
-ipilot server delete <server-id>
+infra-passenger server create my-first-server --image nginx:latest --memory 2048
+infra-passenger server status <server-id>
+infra-passenger server start <server-id>
+infra-passenger logs fetch <server-id> --lines 50
+infra-passenger server delete <server-id>
 ```
 
 More examples: [wiki/04-Usage-Examples](./wiki/04-Usage-Examples.md),
@@ -272,7 +298,7 @@ Generated contracts take precedence over prose:
 
 - Panel: `GET /api/openapi.json`, Swagger at `/api/docs`
 - Orchestrator: `services/orchestrator-agent/api_docs/openapi.yaml`
-- CLI: `ipilot --help`, `ipilot <group> --help`
+- CLI: `infra-passenger --help`, `infra-passenger <group> --help`
 
 | Surface | Auth | Purpose |
 | --- | --- | --- |
@@ -299,11 +325,11 @@ health checks, and `unless-stopped` restart policies.
 ### Helm
 
 ```bash
-helm lint helm/infra-pilot
-helm template helm/infra-pilot -f helm/infra-pilot/values.yaml
+helm lint helm/infra-passenger
+helm template helm/infra-passenger -f helm/infra-passenger/values.yaml
 ```
 
-Chart sources: [helm/infra-pilot](./helm/infra-pilot).
+Chart sources: [helm/infra-passenger](./helm/infra-passenger).
 Require real secrets via your release pipeline; fail fast on
 placeholders.
 
@@ -377,11 +403,11 @@ See [.github/workflows/ci.yml](./.github/workflows/ci.yml).
 ## Project structure
 
 ```text
-cli/                      ipilot Typer CLI
+cli/                      infra-passenger Typer CLI
 services/management-panel React UI + Express API + WebSocket
 services/orchestrator-agent Python agent, manifests, RBAC, webhooks
 services/discord-service  Optional Discord and Pterodactyl bridge
-helm/infra-pilot          Kubernetes chart
+helm/infra-passenger          Kubernetes chart
 infra/monitoring          Prometheus and Grafana provisioning
 infra/terraform           Base infrastructure modules
 scripts/                  Env, backup, health, release helpers
@@ -451,7 +477,10 @@ branches.
 
 MIT. See [LICENSE](./LICENSE).
 
-Started as `dmh-hosting` in March 2025, evolved into `infra-pilot`
+Started as `dmh-hosting` in March 2025, evolved into `infra-passenger`
 as an internal tool for lean VPS and game-server operations.
 Built during FISI training; maintained as a learning project with
 production-grade hygiene.
+
+Built by the Mitte Man in Hanau. GLB. Fitness First. Deutschlandticket. nano. 4.50€.
+Status: 50% pilot, 50% passenger. Like all our repos. Solide Mitte.

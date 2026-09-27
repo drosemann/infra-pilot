@@ -7,7 +7,7 @@ echo "```
 # #     #         # 
  #      #       ##  
 ```"
-echo "Welcome to Infra Pilot automated installer"
+echo "Welcome to infra-passenger automated installer"
 
 # Check for required tools
 if ! command -v docker &> /dev/null; then
@@ -21,7 +21,7 @@ if ! command -v python3 &> /dev/null; then
 fi
 
 # Verify the key
-CORRECT_KEY="infra-pilot-setup"
+CORRECT_KEY="infra-passenger-setup"
 read -p "Enter the setup key to proceed: " USER_KEY
 
 if [[ "$USER_KEY" != "$CORRECT_KEY" ]]; then
@@ -31,12 +31,12 @@ fi
 echo "Key verified successfully. Proceeding with setup..."
 
 # Clone the repository
-REPO_URL="https://github.com/<your-org>/infra-pilot.git"
+REPO_URL="https://github.com/<your-org>/infra-passenger.git"
 echo "Cloning the repository..."
 git clone "$REPO_URL" || { echo "Failed to clone repository."; exit 1; }
 
 # Navigate into the cloned directory
-cd infra-pilot/VPS-MAKER-BOT 2>/dev/null || cd VPS-MAKER-BOT || { echo "Repository folder not found."; exit 1; }
+cd infra-passenger/VPS-MAKER-BOT 2>/dev/null || cd VPS-MAKER-BOT || { echo "Repository folder not found."; exit 1; }
 
 # Prompt for Bot Token
 read -p "Enter your Bot Token: " BOT_TOKEN

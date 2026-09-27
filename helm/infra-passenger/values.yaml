@@ -1,0 +1,237 @@
+# Default values for infra-passenger Helm chart
+
+# replicaCount is used when autoscaling.enabled=false. When HPA is enabled
+# (default) the HPA controls replicas (minReplicas 2). Use 1 for
+# non-HPA to avoid duplicate ManifestEngine reconciliation without
+# distributed coordination; see templates/deployment.yaml.
+replicaCount: 1
+
+global:
+  environment: production
+  imageRegistry: ghcr.io/drosemann
+
+image:
+  repository: infra-passenger
+  pullPolicy: IfNotPresent
+  # Empty tag defaults to Chart.AppVersion for reproducible deployments
+  tag: ""
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8500
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  hosts:
+    - host: api.infra-passenger.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infra-passenger-tls
+      hosts:
+        - api.infra-passenger.example.com
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+postgresql:
+  enabled: true
+  auth:
+    database: infra-passenger
+    username: infra-passenger
+    # Prefer existingSecret (stable infra-passenger-secrets via secretName helper) over inline password.
+    # See templates/secrets.yaml and _helpers.tpl – credentials are mounted from that Secret.
+    # When secrets.create=true, the generated Secret uses adminPasswordKey for the
+    # POSTGRES_PASSWORD administrator credential. With secrets.create=false, this
+    # key must exist in the externally managed existingSecret.
+    existingSecret: infra-passenger-secrets
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: db-password
+    password: ""  # Leave empty when using existingSecret; for dev only
+  primary:
+    persistence:
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    # Use canonical stable secret infra-passenger-secrets (see _helpers.tpl secretName) – Bitnami Redis expects existingSecretPasswordKey.
+    existingSecret: infra-passenger-secrets
+    existingSecretPasswordKey: redis-password
+    password: ""  # Leave empty when using existingSecret; for dev only
+  architecture: replication
+  replica:
+    replicaCount: 2
+  metrics:
+    enabled: true
+
+orchestrator:
+  enabled: true
+  image:
+    repository: ghcr.io/drosemann/infra-passenger-orchestrator-agent
+    tag: ""
+  config:
+    logLevel: INFO
+    workerCount: 4
+  env:
+    - name: DB_HOST
+      value: "infra-passenger-postgresql"
+    - name: REDIS_HOST
+      value: "infra-passenger-redis-master"
+    - name: ENVIRONMENT
+      value: production
+
+managementPanel:
+  enabled: true
+  image:
+    repository: ghcr.io/drosemann/infra-passenger-management-panel
+    tag: ""
+  service:
+    port: 3001
+  # Optional externally managed Secret holding `orchestrator-api-token`.
+  # Unset by default: the panel only forwards deployments when configured.
+  existingSecret: ""
+  resources: {}
+  env:
+    - name: ORCHESTRATOR_URL
+      value: "http://infra-passenger-orchestrator:8500"
+    # ORCHESTRATOR_API_TOKEN is intentionally unset here: the panel only
+    # forwards deployments when it is configured. Set it via a Kubernetes
+    # Secret reference (e.g. secretKeyRef from a generated secret) instead
+    # of committing a placeholder token.
+    - name: SUPABASE_URL
+      value: ""
+    - name: SUPABASE_ANON_KEY
+      value: ""
+
+discordService:
+  enabled: false
+  image:
+    repository: ghcr.io/drosemann/infra-passenger-discord-service
+    tag: ""
+  env:
+    - name: DISCORD_TOKEN
+      value: ""
+    - name: DB_HOST
+      value: "infra-passenger-postgresql"
+
+prometheus:
+  enabled: true
+  alertmanager:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+  nodeExporter:
+    enabled: true
+  pushgateway:
+    enabled: false
+
+grafana:
+  enabled: true
+  # Admin password: do not pass via --set or plain Helm values in production – use existingSecret or external-secrets.
+  # See https://github.com/grafana/helm-charts/blob/main/charts/grafana/README.md#admin-credentials
+  # Example:
+  #   admin:
+  #     existingSecret: grafana-admin-secret
+  #     userKey: admin-user
+  #     passwordKey: admin-password
+  adminPassword: ""  # Leave empty when using existingSecret; provide via external secret in production
+  dashboards:
+    enabled: true
+  datasources:
+    enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+configMaps:
+  create: true
+  data:
+    LOG_LEVEL: INFO
+    MAX_CONNECTIONS: "100"
+    CACHE_TTL: "300"
+
+secrets:
+  create: true
+  # WARNING: In production, use external-secrets or a vault provider instead of plain values
+  # Secret is created as infra-passenger-secrets (stable name via secretName helper) consumed by postgresql/redis/deployment.
+  data:
+    DB_PASSWORD: ""  # REQUIRED in production
+    POSTGRES_PASSWORD: ""  # REQUIRED in production; PostgreSQL administrator credential
+    REDIS_PASSWORD: ""  # REQUIRED in production
+    API_KEY: ""  # REQUIRED in production - generate via: openssl rand -hex 32
+
+networkPolicies:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - port: 8500
+        - port: 3001
+  egress:
+    enabled: true
+
+serviceMesh:
+  enabled: false
+  sidecar: true
+  mtls: true

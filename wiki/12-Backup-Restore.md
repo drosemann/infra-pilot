@@ -1,6 +1,6 @@
 # Backup & Restore
 
-All Infra Pilot services share a single PostgreSQL database (`infra_pilot` by
+All infra-passenger services share a single PostgreSQL database (`infra_passenger` by
 default), so one backup covers the orchestrator (Alembic-managed schema),
 Discord service (`server_limits`, statistics), and management panel data.
 
@@ -11,7 +11,7 @@ Discord service (`server_limits`, statistics), and management panel data.
 ```
 
 This creates a `pg_dump` custom-format backup at
-`backups/infra-pilot_<timestamp>.dump` and keeps only the 10 most recent files.
+`backups/infra-passenger_<timestamp>.dump` and keeps only the 10 most recent files.
 
 Options:
 
@@ -26,7 +26,7 @@ is not running.
 ## Restore
 
 ```bash
-./scripts/db-restore.sh backups/infra-pilot_20260701_091500.dump
+./scripts/db-restore.sh backups/infra-passenger_20260701_091500.dump
 ```
 
 What happens:
@@ -58,7 +58,7 @@ brought up to date automatically after a restore.
 
 ```bash
 # docker-compose.yml gets a backup job, or on the host:
-0 3 * * * /path/to/infra-pilot/scripts/db-backup.sh --keep 14 >> /var/log/infra-pilot-backup.log 2>&1
+0 3 * * * /path/to/infra-passenger/scripts/db-backup.sh --keep 14 >> /var/log/infra-passenger-backup.log 2>&1
 ```
 
 ## Restoring a fresh database
@@ -67,6 +67,6 @@ After `docker compose down -v`, start `postgres`, then restore:
 
 ```bash
 docker compose up -d postgres
-./scripts/db-restore.sh backups/infra-pilot_<timestamp>.dump --yes
+./scripts/db-restore.sh backups/infra-passenger_<timestamp>.dump --yes
 docker compose up -d
 ```

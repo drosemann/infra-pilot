@@ -1,5 +1,5 @@
 <# .SYNOPSIS
-Run health checks on the Infra Pilot project infrastructure on Windows.
+Run health checks on the infra-passenger project infrastructure on Windows.
 .PARAMETER Json
 Output results as JSON
 .PARAMETER Strict
@@ -50,11 +50,11 @@ if (CheckFile "services/management-panel/.env.example" "management-panel .env.ex
 
 Write-Host ""
 Write-Host "--- Docker Service Checks ---"
-if (CheckDockerService "infra-pilot-postgres" "PostgreSQL") { $OkCount++ } else { $WarnCount++ }
-if (CheckDockerService "infra-pilot-redis" "Redis") { $OkCount++ } else { $WarnCount++ }
-if (CheckDockerService "infra-pilot-management-panel" "Management Panel") { $OkCount++ } else { $WarnCount++ }
-if (CheckDockerService "infra-pilot-orchestrator" "Orchestrator Agent") { $OkCount++ } else { $WarnCount++ }
-if (CheckDockerService "infra-pilot-discord" "Discord Service") { $OkCount++ } else { $WarnCount++ }
+if (CheckDockerService "infra-passenger-postgres" "PostgreSQL") { $OkCount++ } else { $WarnCount++ }
+if (CheckDockerService "infra-passenger-redis" "Redis") { $OkCount++ } else { $WarnCount++ }
+if (CheckDockerService "infra-passenger-management-panel" "Management Panel") { $OkCount++ } else { $WarnCount++ }
+if (CheckDockerService "infra-passenger-orchestrator" "Orchestrator Agent") { $OkCount++ } else { $WarnCount++ }
+if (CheckDockerService "infra-passenger-discord" "Discord Service") { $OkCount++ } else { $WarnCount++ }
 
 if ($Json) {
     Write-Host "{""script"":""healthcheck"",""ok"":$OkCount,""warn"":$WarnCount}"

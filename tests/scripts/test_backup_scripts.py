@@ -112,9 +112,9 @@ def backup_tools(tmp_path):
         "docker",
         r"""printf 'docker %s\n' "$*" >> "$TOOL_LOG"
 case "$*" in
-  'compose ls') echo infra-pilot ;;
+  'compose ls') echo infra-passenger ;;
   *pg_dump*) echo dump ;;
-  'volume inspect infra-pilot_grafana_data') exit "${VOLUME_STATUS:-0}" ;;
+  'volume inspect infra-passenger_grafana_data') exit "${VOLUME_STATUS:-0}" ;;
   'run '*) ;;
   *) exit 99 ;;
 esac
@@ -175,7 +175,7 @@ def test_missing_grafana_volume_does_not_start_archive(tmp_path, backup_tools):
     )
     assert proc.returncode == 0, proc.stderr
     log = Path(backup_tools["TOOL_LOG"]).read_text()
-    assert "docker volume inspect infra-pilot_grafana_data" in log
+    assert "docker volume inspect infra-passenger_grafana_data" in log
     assert "docker run" not in log
     assert "Grafana volume not found" in proc.stdout
 

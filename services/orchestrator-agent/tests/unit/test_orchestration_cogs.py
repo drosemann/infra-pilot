@@ -54,7 +54,7 @@ class TestConfigDefaults:
 
     def test_default_db_user(self):
         c = Config()
-        assert c.DB_USER == "infra_pilot"
+        assert c.DB_USER == "infra_passenger"
 
     def test_resource_limits(self):
         c = Config()

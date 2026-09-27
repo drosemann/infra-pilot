@@ -1,4 +1,4 @@
-const CACHE_NAME = 'infrapilot-v1';
+const CACHE_NAME = 'infra-passenger-v1';
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {

@@ -99,7 +99,11 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
  */
 export default function App() {
   const [mode, setMode] = useState<SetupMode>('personal');
-  const [authenticated, setAuthenticated] = useState(false);
+  // Read the token synchronously so deep links (e.g. /monitoring) do not
+  // bounce through the unauthenticated "*" route to /dashboard while the
+  // setup-status request is still in flight. The effect below re-confirms
+  // once the backend status arrives.
+  const [authenticated, setAuthenticated] = useState(() => getAccessToken() !== null);
   const [locale, setLocaleState] = useState<SupportedLocale>(detectBrowserLocale());
 
   const { data: status, loading } = useEffectful(

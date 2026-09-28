@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Stream as StreamType } from 'effect';
 import { Effect, Stream, Schedule, either, pipe, Option, Fiber, Runtime } from 'effect';
 
@@ -18,25 +18,23 @@ export function useEffectful<A, E>(
     loading: true,
   });
 
-  const fetchRef = useRef<(() => void) | null>(null);
-
   const run = useCallback(() => {
     let cancelled = false;
     setState(s => ({ ...s, loading: true }));
 
-    const cancel = Effect.runCallback(effect(), {
-      onSuccess: (data) => {
+    // NOTE: Effect.runCallback only supports `onExit` in the installed
+    // Effect version, so use runPromise to reliably settle the state.
+    Effect.runPromise(effect()).then(
+      (data) => {
         if (!cancelled) setState({ data, error: null, loading: false });
       },
-      onFailure: (error) => {
+      (error) => {
         if (!cancelled) setState({ data: null, error: error as E, loading: false });
       },
-    });
+    );
 
-    fetchRef.current = cancel;
     return () => {
       cancelled = true;
-      fetchRef.current?.();
     };
   }, deps);
 
@@ -100,10 +98,10 @@ export function useEffectStream<A, E>(
       })
     );
 
-    Effect.runCallback(subscription, {
-      onSuccess: () => { if (!cancelled) setRunning(false); },
-      onFailure: (e) => { if (!cancelled) { setError(e as E); setRunning(false); } },
-    });
+    Effect.runPromise(subscription).then(
+      () => { if (!cancelled) setRunning(false); },
+      (e) => { if (!cancelled) { setError(e as E); setRunning(false); } },
+    );
 
     return () => { cancelled = true; };
   }, deps);

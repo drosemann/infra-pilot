@@ -70,29 +70,26 @@ you already own.
 
 ## Screenshots
 
-> Status: conceptual preview. The images below are mockups with demo
-> data, faithful to the current `services/management-panel`
-> implementation — illustrations, not captures of a running release.
-> They will be replaced by real captures plus a CI smoke test; see
+> Status: real captures from a running demo stack (panel v0.1.0,
+> captured 2026-09-28, logged in as demo admin with seeded demo data:
+> 3 apps, metrics, backup jobs). No real hostnames or secrets; see
 > [docs/screenshots](./docs/screenshots) for the capture log and
 > regeneration instructions.
-
-![Product tour](./docs/screenshots/tour.gif)
 
 | Dashboard | Monitoring |
 | --- | --- |
 | ![Dashboard](./docs/screenshots/01-dashboard.png) | ![Monitoring](./docs/screenshots/02-monitoring.png) |
-| Fleet overview, key metrics, and launch actions. | Throughput, health checks, and live logs. |
+| Fleet overview, key metrics, and launch actions. | Throughput, health checks, and live charts. |
 
 | Applications | Backups and restore |
 | --- | --- |
 | ![Applications](./docs/screenshots/03-applications.png) | ![Backups](./docs/screenshots/04-backups.png) |
-| Status, resources, uptime, and ports per app. | Retention policy and recent runs. |
+| Status, resources, uptime, and ports per app. | Retention stats and recent runs. |
 
-| CLI and GitOps |
+| Settings |
 | --- |
-| ![CLI and GitOps](./docs/screenshots/05-cli-gitops.png) |
-| `ipilot`, signed webhooks, and the request path. |
+| ![Settings](./docs/screenshots/05-cli-gitops.png) |
+| General settings, 2FA, and metrics integration. |
 
 ---
 

@@ -81,10 +81,14 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
       Effect.ensuring(Effect.sync(() => setLoading(false)))
     );
 
-    const cancel = Effect.runCallback(program, {
-      onInterrupt: () => setLoading(false),
-    });
-    return cancel;
+    // NOTE: Effect.runCallback only supports `onExit`; runPromise is used
+    // so the program (including its ensuring-finalizer) reliably runs.
+    let cancelled = false;
+    Effect.runPromise(program).then(
+      () => undefined,
+      () => { if (!cancelled) setLoading(false); },
+    );
+    return () => { cancelled = true; };
   }, [app.id]);
 
   const cloneServer = () => {

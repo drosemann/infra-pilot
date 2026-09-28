@@ -26,6 +26,17 @@ class APIClient {
         'Content-Type': 'application/json',
       },
     });
+    // Pick up a persisted session synchronously so the first requests fired
+    // by deep-linked routes already carry auth. Without this, pages mounted
+    // before the setup-status roundtrip fetch without a token (401) and
+    // bounce back to /dashboard. Guarded for non-browser runtimes (tests).
+    try {
+      const stored =
+        typeof localStorage !== 'undefined' ? localStorage.getItem('sb_access_token') : null;
+      if (stored) this.setToken(stored);
+    } catch {
+      // storage unavailable (private mode, tests) — remain unauthenticated
+    }
   }
 
   setToken(token: string) {
@@ -1159,121 +1170,6 @@ class APIClient {
   }
   async getTopologyEdges(): Promise<any[]> {
     return this.get('/api/v3/topology/edges');
-  }
-
-  // Geolocation Heatmap
-  async getHeatmapData(params?: any): Promise<any> {
-    return this.get('/api/v3/geo/heatmap', params);
-  }
-  async getGeoRegions(params?: any): Promise<any[]> {
-    return this.get('/api/v3/geo/regions', params);
-  }
-  async getTopCities(params?: any): Promise<any[]> {
-    return this.get('/api/v3/geo/cities', params);
-  }
-  async getGeoFilterOptions(): Promise<any> {
-    return this.get('/api/v3/geo/filters');
-  }
-  async getGeoTimelapse(params?: any): Promise<any[]> {
-    return this.get('/api/v3/geo/timelapse', params);
-  }
-
-  // Cost Analytics
-  async getCostBreakdown(): Promise<any> {
-    return this.get('/api/v3/costs/breakdown');
-  }
-  async getCostTrends(): Promise<any[]> {
-    return this.get('/api/v3/costs/trends');
-  }
-  async getUnitEconomics(): Promise<any> {
-    return this.get('/api/v3/costs/unit-economics');
-  }
-  async getBudgets(): Promise<any[]> {
-    return this.get('/api/v3/costs/budgets');
-  }
-  async getSavingsRecommendations(): Promise<any[]> {
-    return this.get('/api/v3/costs/savings');
-  }
-  async getCostForecast(): Promise<any[]> {
-    return this.get('/api/v3/costs/forecast');
-  }
-  async createBudget(data: any): Promise<any> {
-    return this.post('/api/v3/costs/budgets', data);
-  }
-
-  // BI Dashboard
-  async getKpiSummary(): Promise<any> {
-    return this.get('/api/v3/bi/kpi-summary');
-  }
-  async getMRR(): Promise<any[]> {
-    return this.get('/api/v3/bi/mrr');
-  }
-  async getARR(): Promise<any> {
-    return this.get('/api/v3/bi/arr');
-  }
-  async getChurnAnalysis(): Promise<any> {
-    return this.get('/api/v3/bi/churn');
-  }
-  async getLTVSegments(): Promise<any[]> {
-    return this.get('/api/v3/bi/ltv');
-  }
-  async getCACMetrics(): Promise<any> {
-    return this.get('/api/v3/bi/cac');
-  }
-  async getAcquisitionChannels(): Promise<any[]> {
-    return this.get('/api/v3/bi/acquisition');
-  }
-  async getRevenueBreakdown(): Promise<any[]> {
-    return this.get('/api/v3/bi/revenue');
-  }
-  async getRevenueForecasts(): Promise<any[]> {
-    return this.get('/api/v3/bi/forecasts');
-  }
-  async getCohortData(): Promise<any[]> {
-    return this.get('/api/v3/bi/cohorts');
-  }
-
-  // Dependency Graph
-  async getDependencyGraph(): Promise<any> {
-    return this.get('/api/v3/dependencies/graph');
-  }
-  async getImpactAnalysis(nodeId: string): Promise<any[]> {
-    return this.get(`/api/v3/dependencies/impact/${nodeId}`);
-  }
-  async discoverDependencies(): Promise<any> {
-    return this.post('/api/v3/dependencies/discover');
-  }
-
-  // Custom Report Builder
-  async listReportDesigns(): Promise<any[]> {
-    return this.get('/api/v3/reports/designs');
-  }
-  async createReportDesign(data: any): Promise<any> {
-    return this.post('/api/v3/reports/designs', data);
-  }
-  async updateReportDesign(id: string, data: any): Promise<any> {
-    return this.put(`/api/v3/reports/designs/${id}`, data);
-  }
-  async deleteReportDesign(id: string): Promise<void> {
-    return this.delete(`/api/v3/reports/designs/${id}`);
-  }
-  async generateReportNow(designId: string, channels?: string[]): Promise<any> {
-    return this.post(`/api/v3/reports/designs/${designId}/generate`, { channels });
-  }
-  async listReportSchedules(): Promise<any[]> {
-    return this.get('/api/v3/reports/schedules');
-  }
-  async createReportSchedule(data: any): Promise<any> {
-    return this.post('/api/v3/reports/schedules', data);
-  }
-  async deleteReportSchedule(id: string): Promise<void> {
-    return this.delete(`/api/v3/reports/schedules/${id}`);
-  }
-  async listReportDeliveries(): Promise<any[]> {
-    return this.get('/api/v3/reports/deliveries');
-  }
-  async getReportTemplates(): Promise<any[]> {
-    return this.get('/api/v3/reports/templates');
   }
 
   // === v3 Marketplace API Methods ===

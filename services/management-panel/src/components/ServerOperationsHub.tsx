@@ -33,6 +33,13 @@ interface ServerOperationsHubProps {
   onCloned?: (clone: DockerApp) => void;
 }
 
+/**
+ * Loads and renders server operations, including clones, snapshots, roles,
+ * billing, recommendations, plugins, and workspaces. Reports API failures via toasts.
+ *
+ * @param props - The target app and an optional callback invoked with a successful clone.
+ * @returns The loading indicator or server operations controls.
+ */
 export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps) {
   const [cloneName, setCloneName] = useState(`${app.name}-clone`);
   const [snapshots, setSnapshots] = useState<ServerSnapshot[]>([]);
@@ -81,10 +88,14 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
       Effect.ensuring(Effect.sync(() => setLoading(false)))
     );
 
-    const cancel = Effect.runCallback(program, {
-      onInterrupt: () => setLoading(false),
-    });
-    return cancel;
+    // NOTE: Effect.runCallback only supports `onExit`; runPromise is used
+    // so the program (including its ensuring-finalizer) reliably runs.
+    let cancelled = false;
+    Effect.runPromise(program).then(
+      () => undefined,
+      () => { if (!cancelled) setLoading(false); },
+    );
+    return () => { cancelled = true; };
   }, [app.id]);
 
   const cloneServer = () => {

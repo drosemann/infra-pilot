@@ -1,6 +1,13 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-primary: #6c5ce7;
+  --color-brand-primary-dark: #5a46cd;
+  --color-brand-secondary: #ec4899;
+  --color-brand-accent: #22d3ee;
+}
 
 :root {
   --color-light: #ffffff;
@@ -45,8 +52,8 @@
   @apply text-slate-600;
 }
 
-.button {
-  @apply bg-gradient-to-b from-blue-400 to-blue-600;
+@utility button {
+  @apply bg-linear-to-b from-blue-400 to-blue-600;
 }
 
 body {

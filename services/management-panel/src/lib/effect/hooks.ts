@@ -8,6 +8,15 @@ export interface EffectState<A, E> {
   loading: boolean;
 }
 
+/**
+ * Runs an Effect on mount and when dependencies change, storing its result or
+ * promise rejection in state. Cleanup suppresses updates from that automatic
+ * run without interrupting the underlying Effect.
+ *
+ * @param effect - Factory invoked for each automatic run or manual refresh.
+ * @param deps - React dependencies that trigger a new run; defaults to mount only.
+ * @returns Data, error, loading state, and a refresh function that starts a new run.
+ */
 export function useEffectful<A, E>(
   effect: () => Effect.Effect<A, E, never>,
   deps: any[] = []
@@ -78,6 +87,15 @@ export function useMutation<A, E, P extends any[] = []>(
   return { execute, state, reset };
 }
 
+/**
+ * Collects stream emissions in order, resetting data and errors on each run.
+ * Completion or promise rejection clears the running state. Cleanup suppresses
+ * further state updates without interrupting the underlying subscription.
+ *
+ * @param streamFactory - Creates the stream on mount and when dependencies change.
+ * @param deps - React dependencies that restart collection; defaults to mount only.
+ * @returns Collected data, any rejection, and matching loading and running flags.
+ */
 export function useEffectStream<A, E>(
   streamFactory: () => StreamType.Stream<A, E, never>,
   deps: any[] = []

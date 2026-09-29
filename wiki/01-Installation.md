@@ -57,11 +57,19 @@ For editable development installation, use `pip install -e ./cli`. The CLI defau
 ## Updating and stopping
 
 ```bash
-git pull
-docker compose up -d --build
+# Recommended: backup first, then fast-forward pull, rebuild, health check.
+# Keeps all named volumes (Postgres, Redis, Prometheus, Grafana).
+bash scripts/update.sh --yes
+
+# Validate without changing anything:
+bash scripts/update.sh --check-only
+
+# Stop (keeps volumes). Start again with 'docker compose up -d'.
 docker compose down
 ```
 
-`docker compose down` preserves named volumes. Use `docker compose down -v`
-only when you intend to remove local PostgreSQL, Redis, Prometheus, and
-Grafana data.
+Never use `docker compose down -v` on an existing install —
+it deletes local PostgreSQL, Redis, Prometheus, and Grafana
+data. `scripts/update.sh` refuses `-v` / `--volumes` for this
+reason. Full flow, rollback, and self-hosted backup options:
+[13-Update-Flow](./13-Update-Flow.md).

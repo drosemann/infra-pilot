@@ -15,6 +15,7 @@
 | Container keeps restarting     | Missing `.env` settings — copy `.env.example` |
 | `port is already allocated`    | Stop other programs or change ports |
 | PostgreSQL won't connect       | Check `docker compose logs postgres` |
+| Update failed health check     | See `docker compose logs -f management-panel orchestrator-agent`; roll back via `git checkout <prev>` + `up -d --build` or `bash scripts/db-restore.sh backups/<stamp>.dump --yes` (details: [13-Update-Flow](./13-Update-Flow.md)) |
 
 ## Discord Bot
 

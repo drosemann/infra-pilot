@@ -12,6 +12,7 @@
 - [FAQ](09-FAQ)
 - [Troubleshooting](10-Troubleshooting)
 - [Backup & Restore](12-Backup-Restore)
+- [Update Flow](13-Update-Flow)
 
 ## Quick Links
 

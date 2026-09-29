@@ -8,6 +8,13 @@ Pre-1.0: no tagged releases yet; entries track `main`.
 
 ### Added
 
+- 2FA auth-app flow: TOTP setup/login/backup-code recovery tested
+  across standard authenticator apps (Google, Microsoft, Authy,
+  1Password, Bitwarden, Aegis, andOTP). New unit tests
+  (`two-factor-auth-flow.test.ts`), extended API contract tests,
+  `verify2FABackup` client helper, and `wiki/14-Two-Factor-Auth.md`.
+  Auth matrix corrected (setup paths behind `verifyAuth`,
+  verify paths rate-limited pre-auth).
 - Enterprise README with screenshots, architecture diagram,
   and operator guides.
 - `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md` as

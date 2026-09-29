@@ -12,6 +12,7 @@
 - [FAQ](09-FAQ)
 - [Troubleshooting](10-Troubleshooting)
 - [Backup & Restore](12-Backup-Restore)
+- [Two-Factor Auth](14-Two-Factor-Auth)
 
 ## Quick Links
 

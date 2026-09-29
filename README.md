@@ -89,7 +89,8 @@ you already own.
 | Settings |
 | --- |
 | ![Settings](./docs/screenshots/05-cli-gitops.png) |
-| General settings, 2FA, and metrics integration. |
+| General settings, 2FA (TOTP + backup codes), and metrics integration. |
+| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). |
 
 ---
 

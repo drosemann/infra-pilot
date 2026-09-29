@@ -26,6 +26,20 @@ None. The tool does not track you. No data is sent home.
 
 JWT auth · RBAC · 2FA/TOTP · WebAuthn/Passkeys · PAM (JIT access) · Audit trail
 
+## Two-Factor Authentication
+
+TOTP second factor (RFC 6238, 6 digits, 30 s) with single-use
+backup codes. Works with Google/Microsoft Authenticator, Authy,
+1Password, Bitwarden, Aegis, andOTP, and any standard TOTP app.
+
+- Setup / disable in Settings; codes verified via
+  `/api/auth/2fa/*` (setup paths need a session, verify paths
+  are the rate-limited pre-auth login step).
+- Always store backup codes offline — they are the only recovery
+  without the device.
+- Full flow, app list, and troubleshooting:
+  [14-Two-Factor-Auth](./14-Two-Factor-Auth.md).
+
 ## Deploy Chain & API Auth
 
 The deployment chain is **CLI → Management Panel (3001) → Orchestrator (8500)**:

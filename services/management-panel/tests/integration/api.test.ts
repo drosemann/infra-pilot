@@ -50,6 +50,22 @@ describe('management-panel API integration contract', () => {
     }
   });
 
+  it('requires auth to read 2FA backup codes', async () => {
+    const response = await request(server, 'GET', '/api/auth/2fa/backup-codes');
+    assert.equal(response.status, 401);
+  });
+
+  it('exposes pre-auth 2FA verify endpoints (rate-limited login step)', async () => {
+    // verify + verify-backup are public by design (pre-auth login step,
+    // guarded by loginLimiter, forwarded to the integration service).
+    // Without the integration service they answer 502, never 404/401.
+    for (const path of ['/api/auth/2fa/verify', '/api/auth/2fa/verify-backup']) {
+      const response = await request(server, 'POST', path, {});
+      assert.notEqual(response.status, 404, `${path} should exist`);
+      assert.notEqual(response.status, 401, `${path} is pre-auth, not bearer-guarded`);
+    }
+  });
+
   it('filters apps by the authenticated owner', async () => {
     const response = await request(server, 'GET', '/api/apps', undefined, 'token');
     assert.equal(response.status, 200);

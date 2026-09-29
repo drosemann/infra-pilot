@@ -33,7 +33,7 @@ Prefixes: `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`, `perf/`, `st
 
 Write clear commit messages. Use this format:
 
-```
+```text
 <type>(<scope>): <short description>
 ```
 

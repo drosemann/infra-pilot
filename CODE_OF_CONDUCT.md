@@ -10,6 +10,7 @@ We promise to act in ways that build an open, friendly, and healthy community.
 ## Our Standards
 
 **Expected behavior:**
+
 - Be kind and understanding
 - Respect different opinions and experiences
 - Give and accept helpful feedback
@@ -17,6 +18,7 @@ We promise to act in ways that build an open, friendly, and healthy community.
 - Think about what's best for the whole community
 
 **Unacceptable behavior:**
+
 - Sexual language, images, or unwanted attention
 - Trolling, insults, or personal attacks
 - Harassment in public or private
@@ -26,6 +28,7 @@ We promise to act in ways that build an open, friendly, and healthy community.
 ## Our Responsibility
 
 Project leaders will:
+
 - Explain what good behavior looks like
 - Take fair action when someone breaks the rules
 - Remove, edit, or reject comments, code, and issues that don't follow this policy

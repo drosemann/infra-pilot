@@ -11,7 +11,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Core Commands
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `login <api_key>` | Authenticate |
 | `logout` | Clear auth token |
 | `version` | Show version |
@@ -22,7 +22,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Server Management
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `server list` | List servers |
 | `server create <name> --image <image> [--memory MB]` | Create server (`--type` is a deprecated alias for `--image`) |
 | `server delete <id>` | Delete server |
@@ -34,7 +34,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Backup & Snapshots
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `backup list [server]` | List backups |
 | `backup create <server> [--s3 bucket:path]` | Create backup |
 | `backup schedule <server> [--interval] [--retention] [--s3]` | Schedule backups |
@@ -45,7 +45,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Deployment
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `deploy deploy <server> <branch> [--repo-url] [--template]` | Deploy branch |
 | `deploy list [--server]` | List deployments |
 | `deploy status <id>` | Deployment status |
@@ -54,13 +54,13 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Logs
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `logs fetch <server> [--lines] [--follow]` | Fetch server logs |
 
 ## GitOps (Infrastructure as Code)
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `gitops export [-o file.yaml] [-s server]` | Export current infra as YAML |
 | `gitops plan [-f file.yaml]` | Show diff between current state and YAML |
 | `gitops apply [-f file.yaml] [--dry-run] [-y]` | Apply YAML config to infra |
@@ -70,7 +70,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## SSH Session Management
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `ssh list [--status active\|closed]` | List SSH sessions |
 | `ssh connect <server> [-u user] [-j jump] [-p port]` | Connect via SSH |
 | `ssh jump_hosts [--create --host --user]` | Manage jump hosts |
@@ -81,7 +81,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Server Inventory
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `inventory list [--tag] [--environment] [--region] [--owner] [--provider]` | List with filters |
 | `inventory show <server>` | Show server metadata |
 | `inventory update <server> [--owner] [--environment] [--region] [--provider] [--os] [--cost] [--tags]` | Update metadata |
@@ -90,7 +90,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Secret Management
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `secrets list [--path]` | List secrets |
 | `secrets get <key> [--version]` | Get secret value |
 | `secrets set <key> <value> [--rotate] [--rotation-days]` | Store a secret |
@@ -102,7 +102,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Deployment Templates
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `templates list [--type node\|python\|docker-compose\|nginx\|postgres\|redis\|traefik]` | List templates |
 | `templates show <template>` | Show template details |
 | `templates deploy <template> <name> [--server] [--vars] [--dry-run]` | Deploy from template |
@@ -111,7 +111,7 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 ## Plugin System
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `plugins list [--installed]` | List available plugins |
 | `plugins install <name> [--source] [--version]` | Install a plugin |
 | `plugins uninstall <name>` | Uninstall a plugin |
@@ -123,7 +123,7 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 ## Webhooks
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `webhooks list` | List webhooks |
 | `webhooks create <name> <url> [--events] [--secret]` | Create webhook |
 | `webhooks delete <id>` | Delete webhook |
@@ -133,7 +133,7 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 ## API Keys
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `apikeys list` | List API keys |
 | `apikeys create <name> [--role] [--expire]` | Create API key |
 | `apikeys revoke <id>` | Revoke API key |
@@ -141,7 +141,7 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 ## Undo / Rollback
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `rollback list [--resource] [--limit]` | Recent changes |
 | `rollback undo <change-id> [--dry-run]` | Undo a change |
 | `rollback rollback <resource-type> <resource-id> [--version]` | Rollback resource |
@@ -150,7 +150,7 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 ## TUI (Terminal UI)
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `tui dashboard` | Interactive dashboard |
 | `tui monitor [server]` | Real-time monitoring |
 | `tui logs [server]` | Log viewer |
@@ -158,7 +158,7 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 ## Developer Tools
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `doctor doctor [--fix] [--verbose]` | System diagnostics |
 | `benchmark [--server]` | Performance benchmarks (alias for `doctor benchmark`) |
 | `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis (alias for `doctor diagnose`) |

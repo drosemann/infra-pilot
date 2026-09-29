@@ -14,7 +14,8 @@ docker compose --profile discord up -d discord-service
 docker compose logs -f discord-service
 ```
 
-The health endpoint is published on `http://localhost:3002/health` by default. The service mounts the host Docker socket in Compose; run it only on a trusted host.
+The health endpoint is published on `http://localhost:3002/health` by default. The service mounts the host
+Docker socket in Compose; run it only on a trusted host.
 
 ### Standalone development
 
@@ -28,7 +29,7 @@ node index.js
 ## Configuration
 
 | Variables | Purpose |
-|---|---|
+| --- | --- |
 | `DISCORD_TOKEN` | Discord bot token. |
 | `PTERODACTYL_API_URL`, `PTERODACTYL_API_KEY`, `LOCATION_ID` | Pterodactyl provisioning connection and location. |
 | `SERVER_CREATION_CHANNEL_ID`, `SERVER_CREATOR_ROLE_ID` | Discord access points for provisioning. |

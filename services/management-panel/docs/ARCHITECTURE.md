@@ -2,7 +2,7 @@
 
 ## system diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                       User Browser                              │
 ├─────────────────────────────────────────────────────────────────┤
@@ -141,7 +141,7 @@
 
 the management panel has an optional zero-native shell alongside the browser-hosted vite app:
 
-```
+```text
 ┌───────────────────────────┐
 │ zero-native Zig shell     │
 │ native/src/main.zig       │
@@ -160,20 +160,22 @@ the management panel has an optional zero-native shell alongside the browser-hos
 └───────────────────────────┘
 ```
 
-the shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the vite dev server when launched through `zero-native dev`. the backend stays as an express service so docker control, supabase/postgresql access, and integration tests keep the same boundaries as the web deployment.
+the shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the vite dev
+server when launched through `zero-native dev`. the backend stays as an express service so docker control,
+supabase/postgresql access, and integration tests keep the same boundaries as the web deployment.
 
 ## data flow: setup & authentication
 
-```
+```text
 ┌─────────┐
 │ Browser │
 └────┬────┘
      │ GET /
      ▼
-┌──────────────────────┐
-│ Check setup status   │
-│ GET /api/setup/statu │
-└───────────┬──────────┘
+┌───────────────────────┐
+│ Check setup status    │
+│ GET /api/setup/status │
+└───────────┬───────────┘
             │
        ┌────┴─────────────────────┐
        │                          │
@@ -243,7 +245,7 @@ the shell is configured by `app.zon`, loads `dist/index.html` for packaged build
 
 ## data flow: docker app crud
 
-```
+```text
 User clicks "New App"
         │
         ▼
@@ -315,7 +317,7 @@ User clicks "New App"
 
 ## feature gate checking
 
-```
+```text
 Component wants to render business feature
         │
         ▼
@@ -347,7 +349,7 @@ Component wants to render business feature
 
 ## mode decision tree
 
-```
+```text
 Setup Wizard
     │
     ├─ Select Personal Mode
@@ -381,7 +383,7 @@ Setup Wizard
 
 ## deployment architecture (production)
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │  User's Internet                                         │
 └────────────────────┬─────────────────────────────────────┘

@@ -8,6 +8,12 @@ Pre-1.0: no tagged releases yet; entries track `main`.
 
 ### Added
 
+- Safe update flow: `scripts/update.sh` (backup first,
+  `git pull --ff-only`, rebuild, health + volume verification;
+  refuses `-v` / `--volumes`). Tested by
+  `tests/scripts/test_update_flow.py`. Docs in
+  `wiki/13-Update-Flow.md`, `wiki/01-Installation.md`,
+  `docs/OPERATIONS.md`, and README.
 - Enterprise README with screenshots, architecture diagram,
   and operator guides.
 - `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md` as

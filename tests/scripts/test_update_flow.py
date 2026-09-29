@@ -16,6 +16,7 @@ BASH = shutil.which("bash")
 
 
 def run(*args: str, env=None, cwd=None) -> subprocess.CompletedProcess:
+    """Run update.sh with the supplied options and capture its output and status."""
     return subprocess.run(
         [BASH, str(UPDATE), *args],
         capture_output=True,
@@ -27,6 +28,7 @@ def run(*args: str, env=None, cwd=None) -> subprocess.CompletedProcess:
 
 
 def make_tools(tmp_path: Path) -> dict:
+    """Create logging tool stubs in tmp_path and return an isolated environment."""
     tool_dir = tmp_path / "bin"
     tool_dir.mkdir()
     for tool in ("dirname", "grep", "readlink", "basename", "bash", "sh"):
@@ -36,6 +38,7 @@ def make_tools(tmp_path: Path) -> dict:
     log = tmp_path / "tools.log"
 
     def stub(name: str, body: str):
+        """Write an executable Bash stub with the given name and script body."""
         path = tool_dir / name
         path.write_text(f"#!{BASH}\nset -eu\n" + body)
         path.chmod(0o755)
@@ -78,6 +81,7 @@ exit 0
 
 class TestUpdateHelp:
     def test_help_mentions_data_retention(self):
+        """Check that help describes update options, volume retention, and restore."""
         proc = run("--help")
         assert proc.returncode == 0
         assert "--check-only" in proc.stdout
@@ -86,10 +90,12 @@ class TestUpdateHelp:
         assert "db-restore.sh" in proc.stdout
 
     def test_unknown_flag_fails(self):
+        """Verify that an unsupported option returns a nonzero exit status."""
         proc = run("--nope")
         assert proc.returncode != 0
 
     def test_refuses_volume_deletion_flags(self, tmp_path):
+        """Verify that volume deletion flags fail with a data retention warning."""
         env = make_tools(tmp_path)
         for flag in ("--volumes", "-v"):
             proc = run(flag, env=env)
@@ -97,6 +103,7 @@ class TestUpdateHelp:
             assert "never delete volumes" in proc.stderr
 
     def test_refuses_volumes_in_compose_args(self, tmp_path):
+        """Reject volume deletion requested through extra Compose arguments."""
         env = make_tools(tmp_path)
         proc = run("--compose-args", "down -v", "--yes", env=env)
         assert proc.returncode == 2
@@ -105,6 +112,7 @@ class TestUpdateHelp:
 
 class TestUpdateCheckOnly:
     def test_check_only_makes_no_changes(self, tmp_path):
+        """Check that validation invokes Git, skips backup, and reports success."""
         env = make_tools(tmp_path)
         proc = run("--check-only", env=env)
         assert proc.returncode == 0, proc.stderr
@@ -114,6 +122,7 @@ class TestUpdateCheckOnly:
         assert "Update check passed" in proc.stdout
 
     def test_check_only_skips_git_when_requested(self, tmp_path):
+        """Verify that --skip-git suppresses Git calls during validation."""
         env = make_tools(tmp_path)
         proc = run("--check-only", "--skip-git", env=env)
         assert proc.returncode == 0, proc.stderr
@@ -123,6 +132,7 @@ class TestUpdateCheckOnly:
 
 class TestUpdateFullFlow:
     def test_full_flow_backups_pulls_rebuilds_and_verifies(self, tmp_path):
+        """Check that an update calls backup, Git, Compose, and health tools."""
         env = make_tools(tmp_path)
         proc = run("--yes", env=env)
         assert proc.returncode == 0, proc.stderr
@@ -134,6 +144,7 @@ class TestUpdateFullFlow:
         assert "volumes were kept" in proc.stdout
 
     def test_skip_backup_avoids_backup_call(self, tmp_path):
+        """Verify that --skip-backup bypasses the backup tool and warns the user."""
         env = make_tools(tmp_path)
         proc = run("--yes", "--skip-backup", env=env)
         assert proc.returncode == 0, proc.stderr
@@ -142,6 +153,7 @@ class TestUpdateFullFlow:
         assert "Skipping pre-update backup" in proc.stdout
 
     def test_missing_docker_fails_fast(self, tmp_path):
+        """Verify that missing Docker causes a clear preflight failure."""
         tool_dir = tmp_path / "bin"
         tool_dir.mkdir()
         (tool_dir / "dirname").symlink_to(shutil.which("dirname"))

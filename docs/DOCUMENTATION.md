@@ -7,7 +7,7 @@ in the same pull request that introduces it.
 ## Source of truth
 
 | Area | Primary implementation | Documentation to update when it changes |
-|---|---|---|
+| --- | --- | --- |
 | Local stack, ports, profiles, required secrets | `docker-compose.yml`, `.env.example` | `README.md`, `wiki/01-Installation.md`, `wiki/03-Configuration.md` |
 | CLI commands, global options, profiles | `cli/ipilot/main.py`, `cli/ipilot/commands/`, `cli/ipilot/config.py` | `cli/README.md`, `wiki/05-CLI-Reference.md` |
 | Panel routes and user-facing features | `services/management-panel/server/index.ts`, `src/` | `services/management-panel/README.md`, OpenAPI at `/api/openapi.json` |

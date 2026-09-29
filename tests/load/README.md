@@ -7,11 +7,11 @@ Docker containers are ever created by a load test.
 
 ## Scenarios
 
-| File        | Purpose                                                             | Default load           |
-|-------------|---------------------------------------------------------------------|------------------------|
-| `smoke.js`  | Every endpoint under minimal traffic; tight thresholds. Runs in CI on every PR touching `tests/load/**`. | 2 VUs, 45s |
-| `soak.js`   | Sustained medium traffic to surface memory leaks and pool exhaustion. | 50 VUs, 30m |
-| `spike.js`  | Ramp 0 -> N VUs in 1 minute to find timeouts and crashes.           | 500 VUs peak, 4m |
+| File | Purpose | Default load |
+| ------------- | --------------------------------------------------------------------- | ------------------------ |
+| `smoke.js` | Every endpoint under minimal traffic; tight thresholds. Runs in CI on every PR touching `tests/load/**`. | 2 VUs, 45s |
+| `soak.js` | Sustained medium traffic to surface memory leaks and pool exhaustion. | 50 VUs, 30m |
+| `spike.js` | Ramp 0 -> N VUs in 1 minute to find timeouts and crashes. | 500 VUs peak, 4m |
 
 All scenarios fail (non-zero exit) when a threshold is exceeded, which
 makes them usable as CI gates. Thresholds live at the top of each file
@@ -20,16 +20,16 @@ makes them usable as CI gates. Thresholds live at the top of each file
 
 ## Environment variables
 
-| Variable                  | Default               | Use                                                        |
-|---------------------------|-----------------------|------------------------------------------------------------|
-| `K6_TARGET_ORCHESTRATOR`  | `http://localhost:8500` | Orchestrator base URL                                    |
-| `K6_TARGET_PANEL`         | `http://localhost:3001` | Panel backend base URL; empty disables panel checks      |
-| `K6_FEDERATION_TOKEN`     | *(empty)*             | Bearer token for `/api/` routes. Must match the server's `FEDERATION_API_TOKEN` |
-| `K6_GITOPS_WEBHOOK_TOKEN` | *(empty)*             | HMAC key for signed `/webhook/gitops` POSTs. Must match `GITOPS_WEBHOOK_TOKEN` |
-| `K6_MANIFEST_COUNT`       | `1`                   | Instances per deployment manifest                        |
-| `K6_SOAK_VUS`             | `50`                  | Soak concurrent users                                     |
-| `K6_SOAK_DURATION`        | `30m`                 | Soak run length (k6 duration, e.g. `30m`, `2h`)           |
-| `K6_SPIKE_MAX_VU`         | `500`                 | Spike peak virtual users                                  |
+| Variable | Default | Use |
+| --------------------------- | ----------------------- | ------------------------------------------------------------ |
+| `K6_TARGET_ORCHESTRATOR` | `http://localhost:8500` | Orchestrator base URL |
+| `K6_TARGET_PANEL` | `http://localhost:3001` | Panel backend base URL; empty disables panel checks |
+| `K6_FEDERATION_TOKEN` | *(empty)* | Bearer token for `/api/` routes. Must match the server's `FEDERATION_API_TOKEN` |
+| `K6_GITOPS_WEBHOOK_TOKEN` | *(empty)* | HMAC key for signed `/webhook/gitops` POSTs. Must match `GITOPS_WEBHOOK_TOKEN` |
+| `K6_MANIFEST_COUNT` | `1` | Instances per deployment manifest |
+| `K6_SOAK_VUS` | `50` | Soak concurrent users |
+| `K6_SOAK_DURATION` | `30m` | Soak run length (k6 duration, e.g. `30m`, `2h`) |
+| `K6_SPIKE_MAX_VU` | `500` | Spike peak virtual users |
 
 ## Running locally (Docker Compose)
 

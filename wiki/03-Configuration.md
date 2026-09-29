@@ -6,7 +6,7 @@ Copy `.env.example` to `.env` and keep `.env` out of version control. The root
 example is the authoritative list of values used by the default Compose stack.
 
 | Group | Important variables | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | PostgreSQL | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` | Database service and service connection strings. |
 | Panel | `MANAGEMENT_FRONTEND_PORT`, `MANAGEMENT_BACKEND_PORT`, `VITE_API_URL`, `CORS_ORIGINS` | Browser/UI and Express API exposure. |
 | Orchestrator | `ORCHESTRATOR_WEBHOOK_PORT`, `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN`, `FEDERATION_API_TOKEN` | Webhook/API listener and request authentication. |
@@ -19,7 +19,8 @@ rather than committing an `.env` file.
 
 ## CLI configuration and precedence
 
-The CLI stores its default configuration in `~/.ipilot/config.json` and named profiles in `~/.ipilot/config-<profile>.json`. It uses `http://localhost:3001` when no API URL is configured.
+The CLI stores its default configuration in `~/.ipilot/config.json` and named profiles in
+`~/.ipilot/config-<profile>.json`. It uses `http://localhost:3001` when no API URL is configured.
 
 ```bash
 # Authenticate; the returned token is stored in the selected profile/default config

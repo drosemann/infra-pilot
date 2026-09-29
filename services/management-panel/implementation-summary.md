@@ -2,7 +2,8 @@
 
 ## transformation complete
 
-the infra-pilot repository has been successfully transformed into a clean, self-hosted docker panel with **personal mode as the default** and **hosting business mode as an optional feature**.
+the infra-pilot repository has been successfully transformed into a clean, self-hosted docker panel with
+**personal mode as the default** and **hosting business mode as an optional feature**.
 
 ## what was built
 
@@ -18,6 +19,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 - **configuration**: dynamic mode switching
 
 **key features:**
+
 - jwt token validation on all endpoints
 - row-level security (rls) via supabase policies
 - proper error handling and status codes
@@ -36,6 +38,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 • additional business mode tables (stubbed for phase 2)
 
 **security:**
+
 - row-level security (rls) policies on all user tables
 - users can only access their own resources
 - admin role support for future multi-user features
@@ -43,6 +46,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 ### 3. frontend pages
 
 #### **setup wizard** (`src/pages/Setup.tsx`)
+
 - warm, welcoming interface with cosmic infra branding
 - **step 1**: mode selection (personal vs business)
 - **step 2**: admin account creation
@@ -50,6 +54,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 - automatic redirect to dashboard on success
 
 #### **dashboard** (`src/pages/Dashboard.tsx`)
+
 - real-time app statistics (total, running, stopped, errors)
 - app grid with status badges
 - quick-launch "new app" button
@@ -57,6 +62,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 - click-to-manage app cards
 
 #### **app form** (`src/pages/AppForm.tsx`)
+
 - create and edit docker applications
 - **port mapping**: host/container ports with protocols
 - **environment variables**: key-value configuration
@@ -65,6 +71,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 - form validation and success feedback
 
 #### **app detail** (`src/pages/AppDetail.tsx`)
+
 - 5 tabs: overview, logs, environment, volumes, settings
 - **overview tab**: container id, creation date, resource limits
 - **logs tab**: real-time paginated log viewer with refresh
@@ -74,6 +81,7 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 - **controls**: start/stop/restart buttons based on status
 
 #### **main layout** (`src/components/MainLayout.tsx`)
+
 - persistent header with branding
 - navigation bar (dashboard, new app)
 - user greeting and logout button
@@ -82,18 +90,21 @@ the infra-pilot repository has been successfully transformed into a clean, self-
 ### 4. utilities & libraries
 
 #### **api client** (`src/lib/api.ts`)
+
 - centralized http client with axios
 - all backend endpoints exposed as methods
 - token management
 - error handling
 
 #### **auth helpers** (`src/lib/auth.ts`)
+
 - supabase auth integration
 - session management
 - localstorage token persistence
 - logout utility
 
 #### **types & feature gates** (`src/lib/types.ts`)
+
 ```typescript
 featureGates = {
   // Personal mode (always available)
@@ -113,7 +124,9 @@ featureGates = {
 ### 5. documentation
 
 #### **personal_mode.md**
+
 comprehensive 400+ line architecture guide covering:
+
 - mode selection process
 - personal mode features & limitations
 - business mode features (roadmap)
@@ -125,7 +138,9 @@ comprehensive 400+ line architecture guide covering:
 - faq
 
 #### **readme-docker-panel.md**
+
 getting started guide with:
+
 - installation steps (3 commands to dev environment)
 - environment configuration
 - database setup instructions
@@ -136,7 +151,9 @@ getting started guide with:
 - troubleshooting guide
 
 #### **database_setup.md**
+
 step-by-step supabase configuration:
+
 - docker compose setup
 - jwt configuration
 - schema migration
@@ -149,7 +166,7 @@ step-by-step supabase configuration:
 ### stack choices
 
 | component | technology | why |
-|-----------|-----------|-----|
+| ----------- | ----------- | ----- |
 | frontend | react 19 + typescript | latest stable, with hooks |
 | styling | tailwind css | utility-first, dark mode support |
 | routing | react router v6 | industry standard, nested routes |
@@ -160,13 +177,15 @@ step-by-step supabase configuration:
 
 ### mode architecture
 
-**personal mode (default)**
+### personal mode (default)
+
 - single-admin focus
 - simple, focused ui
 - no customer/billing concepts
 - perfect for self-hosters
 
-**business mode (future)**
+### business mode (future)
+
 - multi-customer platform
 - all personal features +
 - customer management
@@ -175,7 +194,8 @@ step-by-step supabase configuration:
 - white-label branding
 - team management
 
-**feature gates**
+### feature gates
+
 - checked at ui level (prevent rendering)
 - validated at api level (403 forbidden)
 - extensible for custom business features
@@ -183,11 +203,13 @@ step-by-step supabase configuration:
 ### security model
 
 **authentication:**
+
 - supabase auth (email + password)
 - jwt tokens in authorization header
 - tokens stored in localstorage
 
 **authorization:**
+
 - row-level security on all user tables
 - users only see their own resources
 - admin role support for future expansion
@@ -196,7 +218,8 @@ step-by-step supabase configuration:
 ## files created/modified
 
 ### new files created (12)
-```
+
+```text
 src/lib/api.ts                    # API client
 src/lib/auth.ts                   # Auth helpers
 src/lib/types.ts                  # Types & feature gates
@@ -213,7 +236,8 @@ README-DOCKER-PANEL.md            # Getting started
 ```
 
 ### files modified (5)
-```
+
+```text
 package.json                      # Dependencies (Convex → Supabase)
 src/App.tsx                       # Router + mode initialization
 src/main.tsx                      # Removed Convex provider
@@ -222,7 +246,8 @@ tsconfig.json                     # Path aliases (if needed)
 ```
 
 ### files removed (from convex)
-```
+
+```text
 convex/auth.ts                    (replaced by src/lib/auth.ts)
 convex/pterodactyl.ts             (replaced by API backend)
 convex/schema.ts                  (replaced by db/schema.sql)
@@ -255,7 +280,7 @@ this will:
 
 ### first-time setup
 
-• visit http://localhost:5173
+• visit <http://localhost:5173>
 • **mode selection**: choose personal mode or business mode
 • **create admin**: enter name, email, password
 • **dashboard appears**: you're ready to create apps!
@@ -266,18 +291,20 @@ the framework is ready, but actual docker interaction is stubbed. to add docker 
 
 • install `dockerode` npm package
 • update backend routes to call docker api
-• see [docker integration](docs/DOCKER_INTEGRATION.md) (todo)
+• write the docker integration guide (`docs/DOCKER_INTEGRATION.md`, todo)
 
 ## api endpoints
 
 ### setup
-```
+
+```text
 GET  /api/setup/status              Check initialization
 POST /api/setup/init                Initialize with mode
 ```
 
 ### docker apps
-```
+
+```text
 GET    /api/apps                    List apps
 POST   /api/apps                    Create app
 GET    /api/apps/:appId             Get app details
@@ -291,7 +318,8 @@ GET    /api/apps/:appId/logs        Get logs (paginated)
 ```
 
 ### user
-```
+
+```text
 GET    /api/user                    Current user profile
 GET    /api/config/mode             Get setup mode
 GET    /health                      API health check
@@ -300,7 +328,7 @@ GET    /health                      API health check
 ## feature matrix
 
 | feature | personal | business |
-|---------|----------|----------|
+| --------- | ---------- | ---------- |
 | docker app crud | ✅ | ✅ |
 | container controls | ✅ | ✅ |
 | logs streaming | ✅ | ✅ |
@@ -320,6 +348,7 @@ GET    /health                      API health check
 ## roadmap
 
 ### phase 1 (complete)
+
 - [x] switch from convex to supabase
 - [x] build setup wizard with mode selection
 - [x] create docker app crud (backend + frontend)
@@ -328,6 +357,7 @@ GET    /health                      API health check
 - [x] document mode architecture
 
 ### phase 2 (business mode mvp)
+
 - [ ] customer account management ui
 - [ ] plans and pricing configuration
 - [ ] billing integration hooks
@@ -335,6 +365,7 @@ GET    /health                      API health check
 - [ ] team/staff role management
 
 ### phase 3 (docker integration)
+
 - [ ] live container creation (dockerode integration)
 - [ ] real-time status updates (websocket)
 - [ ] image pull/push workflows
@@ -342,6 +373,7 @@ GET    /health                      API health check
 - [ ] resource usage metrics
 
 ### phase 4 (advanced)
+
 - [ ] white-label branding system
 - [ ] advanced rbac (multi-tenant)
 - [ ] multi-region deployment
@@ -353,6 +385,7 @@ GET    /health                      API health check
 ### manual testing checklist
 
 **setup flow:**
+
 - [ ] load /setup page → mode selection appears
 - [ ] select personal mode → admin form shows
 - [ ] create admin account → redirected to /dashboard
@@ -360,6 +393,7 @@ GET    /health                      API health check
 - [ ] reload page → dashboard shows (no re-setup)
 
 **app management:**
+
 - [ ] click "new app" → form appears
 - [ ] create app with minimal fields → succeeds
 - [ ] add ports/env/volumes → persisted correctly
@@ -367,6 +401,7 @@ GET    /health                      API health check
 - [ ] delete app → removed from dashboard
 
 **feature gates:**
+
 - [ ] "business mode" ui elements hidden in personal mode
 - [ ] can't access `/api/customers` in personal mode
 - [ ] mode shown in dashboard (personal mode badge)
@@ -383,12 +418,14 @@ GET    /health                      API health check
 ## notes for developers
 
 ### adding a new personal mode feature
+
 • add feature gate to `lib/types.ts`
 • check gate in component: `if (!featureGates.myFeature(mode)) return ...`
 • add api endpoint in `server/index.ts` (optional blocking if business-only)
 • test in setupflow with mode = 'personal'
 
 ### adding a business mode feature
+
 • add feature gate: `canNewFeature: (mode) => mode === 'business'`
 • check gate in component (same pattern)
 • add schema table if needed in `db/schema.sql`
@@ -396,6 +433,7 @@ GET    /health                      API health check
 • test with mode = 'business'
 
 ### debugging
+
 - **api errors**: check backend logs in terminal
 - **auth issues**: check localstorage `sb_access_token`
 - **db issues**: verify schema applied (`select * from docker_apps`)

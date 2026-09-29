@@ -3,7 +3,7 @@
 ## Prerequisites
 
 | Tool | Required for | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Docker Engine with Compose v2 | Full local stack | `docker compose version` should succeed. |
 | Python 3.10+ | CLI and orchestrator development | The CLI package declares Python 3.10 as its minimum. |
 | Node.js and npm | Management-panel development | Not required when using the panel's Compose image. |
@@ -18,7 +18,9 @@ bash scripts/generate-env.sh
 docker compose up -d
 ```
 
-The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at `http://localhost:8500`.
+The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI
+is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at
+`http://localhost:8500`.
 
 Preview the panel in `docs/screenshots/` before starting if you want to know what awaits you.
 
@@ -52,7 +54,8 @@ ipilot --version
 ipilot --help
 ```
 
-For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at `http://localhost:3001`; configure credentials with `ipilot login <api-key>`.
+For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at
+`http://localhost:3001`; configure credentials with `ipilot login <api-key>`.
 
 ## Updating and stopping
 

@@ -25,7 +25,7 @@ get a fix before any other work.
 
 ### Components and trust boundaries
 
-```
+```text
                       ┌────────────────────────────┐
    Public Internet ──▶│ Orchestrator Agent          │
                       │  - webhook server (:8500)   │
@@ -38,7 +38,7 @@ get a fix before any other work.
 ```
 
 | # | Boundary | Assets | Trust |
-|---|----------|--------|-------|
+| --- | ---------- | -------- | ------- |
 | B1 | Internet → webhook server | Container lifecycle, deploy pipeline | Untrusted by default; only HMAC/Bearer-authenticated requests pass |
 | B2 | Discord API → bot | Command execution, secrets, VPS lifecycle | Discord session tokens; app commands are scoped by RBAC role checks |
 | B3 | Orchestrator → Docker daemon | Host access (socket = root equivalent) | Highest privilege in the system; must be minimized per operation |
@@ -49,7 +49,7 @@ get a fix before any other work.
 ### Who can do what via which API
 
 | Interface | Who | What they can do | Guard |
-|-----------|-----|------------------|-------|
+| ----------- | ----- | ------------------ | ------- |
 | `GET /health`, `GET /api/health` | Anyone | Check liveness (no DB) | No sensitive data returned |
 | `GET /ready`, `GET /api/ready` | K8s / load-balancer | Readiness (DB check) | 503 if DB down; used as `readinessProbe` |
 | `GET /metrics` | Anyone (network-restricted) | Read operational metrics | Must not leak secrets/container internals; restrict at network layer |
@@ -139,7 +139,7 @@ Regression tests assert these properties on every CI run
 ### Known hardening history
 
 | Date | Issue |
-|------|-------|
+| ------ | ------- |
 | 2026-07 | Docker command injection closed; privileged container flags removed |
 | 2026-07 | GitHub/GitOps webhooks now verified (HMAC/Bearer), fail closed |
 | 2026-07 | Wide-open CORS restricted to configured origins |
@@ -148,10 +148,7 @@ Regression tests assert these properties on every CI run
 | 2026-08 | Health-check command injection fixed (allow-list + list exec) and resource limits enforced; federation auth now fail-closed by default (`ALLOW_INSECURE_FEDERATION`) |
 | 2026-08 | RBAC revocation persistence fixed (DELETE routes + `rbac_store`); Helm secrets now required (fail-fast), readiness probe `/ready` added; discord-service hardened (read_only, no-new-privileges, cap_drop ALL, :ro) |
 | 2026-08 | CI hardened: promtool config check, postgres 16-alpine alignment, coverage gates (orchestrator 50%, panel 35%, discord 20%), bandit/ESLint warnings promoted |
-| 2026-09 | P0 production hardening: compose prod-default + dev override, panel
-  Express defaults (bounded JSON, security headers, no fingerprint),
-  strict manifest/spawn validation, bounded webhook bodies, per-IP rate
-  limits on `/api/*` + `/webhook/gitops` |
+| 2026-09 | P0 production hardening: compose prod-default + dev override, panel Express defaults (bounded JSON, security headers, no fingerprint), strict manifest/spawn validation, bounded webhook bodies, per-IP rate limits on `/api/*` + `/webhook/gitops` |
 
 ## Security Best Practices (for contributors)
 
@@ -164,15 +161,15 @@ Regression tests assert these properties on every CI run
 
 ## Tools
 
-| Language   | Tools                           | Gate  |
-|------------|---------------------------------|-------|
-| Python     | `bandit`, `pip-audit`, `pytest-cov` | CI fails on findings / coverage drop |
-| JavaScript | `npm audit`, `node --test`      | CI fails on high+ vulns |
-| Everything | `gitleaks` (full history)       | CI fails on leaked secrets |
+| Language | Tools | Gate |
+| ------------ | --------------------------------- | ------- |
+| Python | `bandit`, `pip-audit`, `pytest-cov` | CI fails on findings / coverage drop |
+| JavaScript | `npm audit`, `node --test` | CI fails on high+ vulns |
+| Everything | `gitleaks` (full history) | CI fails on leaked secrets |
 
 ## Supported Versions
 
-| Version        | Support                       |
-|----------------|-------------------------------|
+| Version | Support |
+| ---------------- | ------------------------------- |
 | Pre-1.0 (main) | Patch fixes, no stability promise |
-| 1.0+ (planned) | Full security patches         |
+| 1.0+ (planned) | Full security patches |

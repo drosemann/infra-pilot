@@ -34,11 +34,11 @@ ipilot server delete <server-id>
 
 ## Via the Web Panel
 
-Open http://localhost:5173 and click **"Server erstellen"**.
+Open <http://localhost:5173> and click **"Server erstellen"**.
 
 Not sure what to expect? Preview the dashboard, monitoring, and
 application views in `docs/screenshots/` of the repository.
 
 ---
 
-*See [CLI Reference](05-CLI-Reference) for full command details.*
+*See [CLI Reference](05-CLI-Reference.md) for full command details.*

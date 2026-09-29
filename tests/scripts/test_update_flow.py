@@ -9,6 +9,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 UPDATE = ROOT / "scripts" / "update.sh"
 
@@ -31,7 +33,7 @@ def make_tools(tmp_path: Path) -> dict:
     """Create logging tool stubs in tmp_path and return an isolated environment."""
     tool_dir = tmp_path / "bin"
     tool_dir.mkdir()
-    for tool in ("dirname", "grep", "readlink", "basename", "bash", "sh"):
+    for tool in ("dirname", "grep", "readlink", "basename", "bash", "sh", "sed"):
         real = shutil.which(tool)
         if real:
             (tool_dir / tool).symlink_to(real)
@@ -48,8 +50,12 @@ def make_tools(tmp_path: Path) -> dict:
         r"""printf 'docker %s\n' "$*" >> "$TOOL_LOG"
 case "$*" in
   'compose -f '*' config') exit 0 ;;
-  'volume inspect infra-pilot_postgres_data') exit 0 ;;
-  'volume inspect infra-pilot_redis_data') exit 0 ;;
+  'compose -f '*' config --environment')
+    printf 'COMPOSE_PROJECT_NAME=%s\n' "${TEST_PROJECT_NAME:-infra-pilot}"
+    exit 0 ;;
+  'volume inspect '*)
+    [[ "${3}" != "${TEST_MISSING_VOLUME:-}" ]]
+    exit $? ;;
   'compose -f '*' up -d --build'*) exit 0 ;;
   'compose -f '*' up -d --build '*) exit 0 ;;
   *) exit 0 ;;
@@ -117,7 +123,7 @@ class TestUpdateCheckOnly:
         proc = run("--check-only", env=env)
         assert proc.returncode == 0, proc.stderr
         log = Path(env["TOOL_LOG"]).read_text()
-        assert "git" in log
+        assert any(line.startswith("git ") for line in log.splitlines())
         assert "backup" not in log
         assert "Update check passed" in proc.stdout
 
@@ -127,7 +133,7 @@ class TestUpdateCheckOnly:
         proc = run("--check-only", "--skip-git", env=env)
         assert proc.returncode == 0, proc.stderr
         log = Path(env["TOOL_LOG"]).read_text()
-        assert "git" not in log
+        assert not any(line.startswith("git ") for line in log.splitlines())
 
 
 class TestUpdateFullFlow:
@@ -140,8 +146,49 @@ class TestUpdateFullFlow:
         assert "backup" in log
         assert "git -C" in log or "git pull" in log or "pull --ff-only" in log
         assert "docker compose" in log
-        assert "health" in log
-        assert "volumes were kept" in proc.stdout
+        assert "health --strict" in log
+        assert "--dry-run" not in log
+        assert "All checked named volumes are present" in proc.stdout
+
+    def test_health_failure_stops_update_and_preserves_output(self, tmp_path):
+        env = make_tools(tmp_path)
+        Path(env["IPILOT_HEALTH_SCRIPT"]).write_text(
+            f"#!{BASH}\necho 'unhealthy service'\necho 'health error' >&2\nexit 1\n"
+        )
+        proc = run("--yes", env=env)
+        assert proc.returncode == 1
+        assert "unhealthy service" in proc.stdout
+        assert "health error" in proc.stderr
+        assert "Update failed: health check failed" in proc.stderr
+        assert "Update complete" not in proc.stdout
+        assert "volume inspect" not in Path(env["TOOL_LOG"]).read_text()
+
+    @pytest.mark.parametrize("project", ["custom-stack", "123"])
+    def test_volumes_use_resolved_compose_project(self, tmp_path, project):
+        env = make_tools(tmp_path)
+        env["TEST_PROJECT_NAME"] = project
+        proc = run("--yes", env=env)
+        assert proc.returncode == 0, proc.stderr
+        log = Path(env["TOOL_LOG"]).read_text()
+        for volume in ("postgres_data", "redis_data"):
+            assert f"docker volume inspect {project}_{volume}" in log
+            assert f"Volume present: {project}_{volume}" in proc.stdout
+        assert "volume inspect infra-pilot_" not in log
+        assert "All checked named volumes are present" in proc.stdout
+
+    @pytest.mark.parametrize("missing_volume", ["postgres_data", "redis_data"])
+    def test_missing_volume_does_not_report_all_present(self, tmp_path, missing_volume):
+        env = make_tools(tmp_path)
+        env["TEST_MISSING_VOLUME"] = f"infra-pilot_{missing_volume}"
+        proc = run("--yes", env=env)
+        assert proc.returncode == 0, proc.stderr
+        log = Path(env["TOOL_LOG"]).read_text()
+        for volume in ("postgres_data", "redis_data"):
+            assert f"docker volume inspect infra-pilot_{volume}" in log
+        assert f"Volume missing: infra-pilot_{missing_volume}" in proc.stdout
+        assert "one or more checked volumes are missing" in proc.stdout
+        assert "All checked named volumes are present" not in proc.stdout
+        assert "All named volumes were kept" not in proc.stdout
 
     def test_skip_backup_avoids_backup_call(self, tmp_path):
         """Verify that --skip-backup bypasses the backup tool and warns the user."""

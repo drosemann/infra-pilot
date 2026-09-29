@@ -49,7 +49,7 @@ Data retention:
 Examples:
   $(basename "$0") --check-only
   $(basename "$0") --yes
-  $(basename "$0") --backup-args "--borg-repo /mnt/backup/borg" --yes
+  $(basename "$0") --backup-args "--out /mnt/backup --keep 10" --yes
 
 Rollback:
   git log --oneline -5
@@ -148,16 +148,30 @@ info "Step 3/4: rebuilding and restarting the stack (volumes kept) ..."
 docker compose -f "$ROOT_DIR/docker-compose.yml" up -d --build $COMPOSE_ARGS
 
 info "Step 4/4: verifying health and data volumes ..."
-bash "$HEALTH_SCRIPT" --dry-run > /dev/null
+if ! bash "$HEALTH_SCRIPT" --strict; then
+  error "Update failed: health check failed."
+  exit 1
+fi
+PROJECT_NAME="$(docker compose -f "$ROOT_DIR/docker-compose.yml" config --environment | sed -n 's/^COMPOSE_PROJECT_NAME=//p')"
+if [[ -z "$PROJECT_NAME" ]]; then
+  error "Update failed: could not resolve the Compose project name."
+  exit 1
+fi
+MISSING_VOLUMES=false
 for vol in postgres_data redis_data; do
-  if docker volume inspect "infra-pilot_${vol}" > /dev/null 2>&1; then
-    success "Volume present: infra-pilot_${vol}"
+  if docker volume inspect "${PROJECT_NAME}_${vol}" > /dev/null 2>&1; then
+    success "Volume present: ${PROJECT_NAME}_${vol}"
   else
-    warn "Volume missing: infra-pilot_${vol} (fresh install? restore a backup if data is expected)."
+    MISSING_VOLUMES=true
+    warn "Volume missing: ${PROJECT_NAME}_${vol} (fresh install? restore a backup if data is expected)."
   fi
 done
 
-success "Update complete. All named volumes were kept."
+if [[ "$MISSING_VOLUMES" == false ]]; then
+  success "Update complete. All checked named volumes are present."
+else
+  warn "Update complete, but one or more checked volumes are missing."
+fi
 info "If something is wrong, roll back with:"
 info "  git log --oneline -5"
 info "  bash scripts/db-restore.sh backups/<stamp>.dump --yes"

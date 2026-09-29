@@ -13,9 +13,9 @@ bash scripts/update.sh --check-only
 # Full update, keep all data
 bash scripts/update.sh --yes
 
-# Self-hosted offsite backup as part of the update
+# Choose the backup directory and retention count
 bash scripts/update.sh \
-  --backup-args "--borg-repo /mnt/backup/borg" --yes
+  --backup-args "--out /mnt/backup --keep 10" --yes
 ```
 
 ## What happens step by step
@@ -25,7 +25,7 @@ bash scripts/update.sh \
 2. **Pre-update backup.** Runs `scripts/db-backup.sh` (Postgres
    dump + Redis snapshot + Grafana archive). Skip only with
    `--skip-backup` (not recommended). Extra backup flags go via
-   `--backup-args "..."` (e.g. `--borg-repo`, `--rclone-remote`,
+   `--backup-args "..."` (e.g. `--out`, `--keep`, `--s3`,
    `--encrypt-to`).
 3. **Git pull.** `git pull --ff-only` so a diverged checkout never
    auto-merges. Skip with `--skip-git` if you already updated.
@@ -34,9 +34,12 @@ bash scripts/update.sh \
    The script refuses `-v` / `--volumes` / `down -v` — updates
    never delete `postgres_data`, `redis_data`, `prometheus_data`,
    or `grafana_data`.
-5. **Verify.** Runs `scripts/healthcheck.sh --dry-run` and checks
-   `infra-pilot_postgres_data` / `infra-pilot_redis_data` with
-   `docker volume inspect`. The orchestrator runs
+5. **Verify.** Runs `scripts/healthcheck.sh --strict` with live
+   output and stops the update on failure. Checks `postgres_data`
+   and `redis_data` with `docker volume inspect`, using the
+   effective Compose project name as the prefix. Reports success
+   only when both checked volumes are present; otherwise warns
+   that one or more checked volumes are missing. The orchestrator runs
    `alembic upgrade head` on startup, so the schema migrates
    forward automatically.
 
@@ -48,8 +51,8 @@ bash scripts/update.sh \
 - Alembic migrations run forward on orchestrator start; restores
   also converge via `alembic upgrade head`.
 - Tests: `tests/scripts/test_update_flow.py` covers help text,
-  volume-deletion refusal, check-only purity, full backup →
-  pull → rebuild → health ordering, and missing-docker fail-fast.
+  volume-deletion refusal, check-only purity, full-flow operation logging
+  (backup, pull, rebuild, health), and missing-docker fail-fast.
 
 ## Rollback
 
@@ -72,10 +75,8 @@ output before rolling back.
 ## Automation
 
 ```bash
-# Weekly unattended update with borg offsite (example cron, Sun 04:00)
-0 4 * * 0 /opt/infra-pilot/scripts/update.sh \
-  --yes --backup-args "--borg-repo /mnt/backup/borg" \
-  >> /var/log/infra-pilot-update.log 2>&1
+# Weekly unattended update (example cron, Sun 04:00)
+0 4 * * 0 /opt/infra-pilot/scripts/update.sh --yes >> /var/log/infra-pilot-update.log 2>&1
 ```
 
 Unattended updates still need a clean git checkout (no local

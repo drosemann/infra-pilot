@@ -53,14 +53,21 @@ bash scripts/db-backup.sh
 bash scripts/db-backup.sh --s3 s3://my-bucket/infra-pilot \
   --encrypt-to ops@example.com --no-plaintext
 
+# Self-hosted: borg dedup + rclone to Storage Box / NAS / MinIO (no S3)
+bash scripts/db-backup.sh --borg-repo /mnt/backup/borg \
+  --rclone-remote hetzner-box:infra-pilot
+
 # Restore (decrypts .gpg automatically; confirm prompt unless --yes)
 bash scripts/db-restore.sh backups/infra-pilot_<stamp>.dump --yes
 ```
 
 Retention defaults: daily 7, weekly 4, monthly 6.
+`--keep N` controls local prune and `borg prune --keep-last N`.
 Keep an off-host copy. Test restores regularly.
 Redis/Grafana artifacts restore by copying back into the `redis_data` /
 `grafana_data` volumes while the stack is stopped.
+`BORG_PASSPHRASE` / `BORG_REPO` and `BACKUP_BORG_REPO` /
+`BACKUP_RCLONE_REMOTE` env fallbacks are supported.
 Details: [wiki/12-Backup-Restore](../wiki/12-Backup-Restore.md).
 
 ---

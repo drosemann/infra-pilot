@@ -35,6 +35,14 @@ class TestDbBackupHelp:
         for flag in ("--s3", "--encrypt-to", "--no-plaintext", "--keep"):
             assert flag in proc.stdout
 
+    def test_help_lists_selfhosted_options(self):
+        proc = run(BACKUP, "--help")
+        assert proc.returncode == 0
+        for flag in ("--borg-repo", "--rclone-remote"):
+            assert flag in proc.stdout
+        assert "borgbackup" in proc.stdout.lower() or "borg" in proc.stdout.lower()
+        assert "rclone" in proc.stdout.lower()
+
     def test_unknown_flag_fails(self):
         proc = run(BACKUP, "--nope")
         assert proc.returncode != 0
@@ -61,6 +69,36 @@ class TestDbBackupHelp:
         assert not proc.stdout
         assert not marker.exists()
         assert not output_dir.exists()
+
+    def test_missing_borg_fails_fast(self, tmp_path):
+        tool_dir = tmp_path / "bin"
+        tool_dir.mkdir()
+        (tool_dir / "dirname").symlink_to(shutil.which("dirname"))
+        proc = run(
+            BACKUP,
+            "--borg-repo",
+            "/mnt/backup/borg",
+            "--out",
+            str(tmp_path / "backups"),
+            env={"PATH": str(tool_dir), "HOME": str(tmp_path)},
+        )
+        assert proc.returncode == 1
+        assert "borg not found in PATH (required for --borg-repo)" in proc.stderr
+
+    def test_missing_rclone_fails_fast(self, tmp_path):
+        tool_dir = tmp_path / "bin"
+        tool_dir.mkdir()
+        (tool_dir / "dirname").symlink_to(shutil.which("dirname"))
+        proc = run(
+            BACKUP,
+            "--rclone-remote",
+            "myremote:infra-pilot",
+            "--out",
+            str(tmp_path / "backups"),
+            env={"PATH": str(tool_dir), "HOME": str(tmp_path)},
+        )
+        assert proc.returncode == 1
+        assert "rclone not found in PATH (required for --rclone-remote)" in proc.stderr
 
 
 class TestDbRestoreHelp:
@@ -195,3 +233,68 @@ def test_grafana_mount_uses_absolute_output_path(tmp_path, backup_tools, relativ
     log = Path(backup_tools["TOOL_LOG"]).read_text()
     assert log.index("docker volume inspect") < log.index("docker run")
     assert f"-v {output_dir}:/out" in log
+
+
+@pytest.fixture
+def selfhosted_tools(tmp_path, backup_tools):
+    """Extend backup_tools with borg and rclone stubs for self-hosted tests."""
+    tool_dir = Path(backup_tools["PATH"])
+    env = dict(backup_tools)
+
+    def stub(name, body):
+        path = tool_dir / name
+        path.write_text(f"#!{BASH}\nset -eu\n" + body)
+        path.chmod(0o755)
+
+    stub(
+        "borg",
+        r"""printf 'borg %s\n' "$*" >> "$TOOL_LOG"
+exit 0
+""",
+    )
+    stub(
+        "rclone",
+        r"""printf 'rclone %s\n' "$*" >> "$TOOL_LOG"
+[[ "$1" == "copyto" && -f "$2" ]]
+""",
+    )
+    return env
+
+
+def test_borg_and_rclone_called_for_selfhosted_offsite(tmp_path, selfhosted_tools):
+    proc = run(
+        BACKUP,
+        "--out",
+        str(tmp_path / "backups"),
+        "--skip-redis",
+        "--skip-grafana",
+        "--borg-repo",
+        "/mnt/backup/borg",
+        "--rclone-remote",
+        "myremote:infra-pilot",
+        env=selfhosted_tools,
+    )
+    assert proc.returncode == 0, proc.stderr
+    log = Path(selfhosted_tools["TOOL_LOG"]).read_text()
+    assert "borg create" in log
+    assert "borg prune" in log
+    assert "infra-pilot-" in log
+    assert "rclone copyto" in log
+    assert "myremote:infra-pilot" in log
+    assert "Borg archive created" in proc.stdout
+
+
+def test_borg_repo_env_fallback(tmp_path, selfhosted_tools):
+    env = dict(selfhosted_tools)
+    env["BACKUP_BORG_REPO"] = "/mnt/backup/borg"
+    proc = run(
+        BACKUP,
+        "--out",
+        str(tmp_path / "backups"),
+        "--skip-redis",
+        "--skip-grafana",
+        env=env,
+    )
+    assert proc.returncode == 0, proc.stderr
+    log = Path(env["TOOL_LOG"]).read_text()
+    assert "borg create" in log

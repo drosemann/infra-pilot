@@ -334,6 +334,10 @@ bash scripts/db-restore.sh
 - Default retention: daily 7, weekly 4, monthly 6.
 - Verify restores with `--dry-run` before production use.
 - Store off-host copies outside Docker named volumes.
+- Self-hosted offsite without S3: borgbackup dedup archives
+  (`--borg-repo /mnt/backup/borg`) plus rclone copies to any
+  configured remote (`--rclone-remote hetzner-box:infra-pilot`,
+  NAS, MinIO, WebDAV). Encrypted repos use `BORG_PASSPHRASE`.
 
 Details: [wiki/12-Backup-Restore](./wiki/12-Backup-Restore.md).
 

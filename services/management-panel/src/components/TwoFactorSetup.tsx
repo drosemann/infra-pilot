@@ -5,6 +5,9 @@ import { BrandButton } from './BrandButton';
 
 type State = 'initial' | 'loading' | 'setup' | 'verify_backup' | 'enabled';
 
+/**
+ * Render TOTP enrollment, backup-code saving, and password-confirmed 2FA disablement.
+ */
 export const TwoFactorSetup = () => {
   const [state, setState] = useState<State>('loading');
   const [secret, setSecret] = useState('');

@@ -10,11 +10,13 @@ let nextResponse: { ok: boolean; status: number; body: any } = {
   body: {},
 };
 
+/** Record auth requests and return the response configured by the current test. */
 (globalThis as any).fetch = async (url: string, options: any) => {
   calls.push({ url: String(url), options });
   return {
     ok: nextResponse.ok,
     status: nextResponse.status,
+    /** Return the configured response body without parsing or network access. */
     json: async () => nextResponse.body,
   };
 };

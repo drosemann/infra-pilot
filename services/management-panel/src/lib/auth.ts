@@ -52,6 +52,25 @@ export async function verify2FA(tempToken: string, code: string): Promise<string
   return data.token;
 }
 
+/**
+ * Complete the second login step using a backup code.
+ *
+ * @param tempToken - Temporary token issued by the initial login step.
+ * @param code - Single-use backup code to submit for verification.
+ * @returns The session token returned by the verification endpoint.
+ * @throws {Error} If verification fails, with the API error or a fallback message.
+ */
+export async function verify2FABackup(tempToken: string, code: string): Promise<string> {
+  const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/verify-backup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ temp_token: tempToken, backup_code: code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Backup code verification failed');
+  return data.token;
+}
+
 export async function setup2FA(userId: string): Promise<{ secret: string; uri: string; qr_code_url: string }> {
   const res = await fetch(`${INTEGRATION_API}/api/auth/2fa/setup`, {
     method: 'POST',

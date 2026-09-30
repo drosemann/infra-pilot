@@ -62,9 +62,6 @@ requests (matches `validate_secrets` convention in `config.py`).
 | Route | Method | Issue | Severity |
 | ------- | -------- | ------- | ---------- |
 | `/api/runbooks` | GET | Reads all runbooks incl. user-created ones without `verifyAuth`; its POST siblings require auth | high |
-| `/api/auth/2fa/setup` | POST | No auth; should require an authenticated session (setting up 2FA presumes login) | medium |
-| `/api/auth/2fa/verify-setup` | POST | No auth; should require an authenticated session | medium |
-| `/api/auth/2fa/disable` | POST | No auth; anyone could disable 2FA if they reach the proxy | medium |
 
 ### Protected (`verifyAuth`)
 
@@ -72,11 +69,26 @@ All `/api/apps*`, `/api/customers*`, `/api/metrics*`, `/api/backup*`,
 `/api/alert-*`, `/api/scheduled-tasks*`, `/api/maintenance-windows*`,
 `/api/workspaces`, `/api/secrets*`, `/api/webhooks*`, `/api/apikeys*`,
 `/api/inventory*`, `/api/templates*`, `/api/runbooks` (POST/execute),
-`/api/assistant/*`, `/api/graphql`, `/api/auth/2fa/backup-codes` — all
+`/api/assistant/*`, `/api/graphql`, `/api/auth/2fa/setup`,
+`/api/auth/2fa/verify-setup`, `/api/auth/2fa/disable`,
+`/api/auth/2fa/backup-codes` — all
 checked at last audit (170 routes).
+
+### Pre-auth by design (rate-limited, no bearer)
+
+| Route | Method | Guard | Notes |
+|-------|--------|-------|-------|
+| `/api/auth/2fa/verify` | POST | `loginLimiter` | TOTP login step `{ temp_token, totp_code }` |
+| `/api/auth/2fa/verify-backup` | POST | `loginLimiter` | Backup-code login step `{ temp_token, backup_code }` |
+
+Full user flow: [14-Two-Factor-Auth](./14-Two-Factor-Auth.md).
 
 ## Update History
 
+- 2026-09-29: 2FA setup/verify-setup/disable confirmed behind
+  `verifyAuth`, verify/verify-backup confirmed pre-auth with
+  `loginLimiter`; added unit (`two-factor-auth-flow`) and
+  integration contract tests.
 - 2026-08-08: initial matrix; federated `/api/` made fail-closed in
   production; runbooks GET and 2FA setup/verify-setup/disable flagged
   and fixed; audit payloads centrally sanitized (no tokens, secrets,

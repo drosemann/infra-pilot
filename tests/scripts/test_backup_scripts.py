@@ -19,6 +19,7 @@ BASH = shutil.which("bash")
 
 
 def run(script: Path, *args: str, **kwargs) -> subprocess.CompletedProcess:
+    """Run a helper script with captured text output and a 30-second timeout."""
     return subprocess.run(
         [BASH, str(script), *args],
         capture_output=True,
@@ -30,12 +31,14 @@ def run(script: Path, *args: str, **kwargs) -> subprocess.CompletedProcess:
 
 class TestDbBackupHelp:
     def test_help_lists_offsite_options(self):
+        """Verify backup help lists S3, encryption, and retention options."""
         proc = run(BACKUP, "--help")
         assert proc.returncode == 0
         for flag in ("--s3", "--encrypt-to", "--no-plaintext", "--keep"):
             assert flag in proc.stdout
 
     def test_help_lists_selfhosted_options(self):
+        """Verify backup help lists Borg and rclone destinations."""
         proc = run(BACKUP, "--help")
         assert proc.returncode == 0
         for flag in ("--borg-repo", "--rclone-remote"):
@@ -44,10 +47,12 @@ class TestDbBackupHelp:
         assert "rclone" in proc.stdout.lower()
 
     def test_unknown_flag_fails(self):
+        """Verify an unsupported option causes the script to fail."""
         proc = run(BACKUP, "--nope")
         assert proc.returncode != 0
 
     def test_missing_cli_dependency_fails_fast(self, tmp_path):
+        """Verify missing AWS CLI fails before Docker runs or output is created."""
         tool_dir = tmp_path / "bin"
         tool_dir.mkdir()
         (tool_dir / "dirname").symlink_to(shutil.which("dirname"))
@@ -71,6 +76,7 @@ class TestDbBackupHelp:
         assert not output_dir.exists()
 
     def test_missing_borg_fails_fast(self, tmp_path):
+        """Verify requesting Borg without its CLI reports the missing dependency."""
         tool_dir = tmp_path / "bin"
         tool_dir.mkdir()
         (tool_dir / "dirname").symlink_to(shutil.which("dirname"))
@@ -86,6 +92,7 @@ class TestDbBackupHelp:
         assert "borg not found in PATH (required for --borg-repo)" in proc.stderr
 
     def test_missing_rclone_fails_fast(self, tmp_path):
+        """Verify requesting rclone without its CLI reports the missing dependency."""
         tool_dir = tmp_path / "bin"
         tool_dir.mkdir()
         (tool_dir / "dirname").symlink_to(shutil.which("dirname"))
@@ -103,16 +110,19 @@ class TestDbBackupHelp:
 
 class TestDbRestoreHelp:
     def test_help_mentions_gpg_and_volumes(self):
+        """Verify restore help describes encrypted files and Redis artifacts."""
         proc = run(RESTORE, "--help")
         assert proc.returncode == 0
         assert ".gpg" in proc.stdout
         assert "redis" in proc.stdout.lower()
 
     def test_missing_file_fails(self):
+        """Verify restoring a nonexistent dump fails."""
         proc = run(RESTORE, "/tmp/does-not-exist.dump", "--yes")
         assert proc.returncode != 0
 
     def test_unknown_flag_fails(self):
+        """Verify an unsupported option causes the script to fail."""
         proc = run(RESTORE, "--nope")
         assert proc.returncode != 0
 
@@ -142,6 +152,7 @@ def backup_tools(tmp_path):
     }
 
     def stub(name, body):
+        """Write an executable Bash stub with the supplied name and body."""
         path = tool_dir / name
         path.write_text(f"#!{BASH}\nset -eu\n" + body)
         path.chmod(0o755)
@@ -180,6 +191,7 @@ printf encrypted > "$2"
 def test_upload_selects_only_requested_artifact(
     tmp_path, backup_tools, encrypted, no_plaintext
 ):
+    """Verify S3 receives the selected artifact and plaintext retention is honored."""
     args = [
         "--out",
         str(tmp_path / "backups"),
@@ -207,6 +219,7 @@ def test_upload_selects_only_requested_artifact(
 
 
 def test_missing_grafana_volume_does_not_start_archive(tmp_path, backup_tools):
+    """Verify an absent Grafana volume skips archiving without failing backup."""
     backup_tools["VOLUME_STATUS"] = "1"
     proc = run(
         BACKUP, "--out", str(tmp_path / "backups"), "--skip-redis", env=backup_tools
@@ -220,6 +233,7 @@ def test_missing_grafana_volume_does_not_start_archive(tmp_path, backup_tools):
 
 @pytest.mark.parametrize("relative", [True, False])
 def test_grafana_mount_uses_absolute_output_path(tmp_path, backup_tools, relative):
+    """Verify Grafana archiving resolves relative and absolute output paths."""
     output_dir = tmp_path / "backup files"
     proc = run(
         BACKUP,
@@ -242,6 +256,7 @@ def selfhosted_tools(tmp_path, backup_tools):
     env = dict(backup_tools)
 
     def stub(name, body):
+        """Write an executable Bash stub with the supplied name and body."""
         path = tool_dir / name
         path.write_text(f"#!{BASH}\nset -eu\n" + body)
         path.chmod(0o755)
@@ -262,6 +277,7 @@ exit 0
 
 
 def test_borg_and_rclone_called_for_selfhosted_offsite(tmp_path, selfhosted_tools):
+    """Verify backup invokes Borg create/prune and rclone for offsite storage."""
     proc = run(
         BACKUP,
         "--out",
@@ -285,6 +301,7 @@ def test_borg_and_rclone_called_for_selfhosted_offsite(tmp_path, selfhosted_tool
 
 
 def test_borg_repo_env_fallback(tmp_path, selfhosted_tools):
+    """Verify BACKUP_BORG_REPO enables Borg archiving without a CLI option."""
     env = dict(selfhosted_tools)
     env["BACKUP_BORG_REPO"] = "/mnt/backup/borg"
     proc = run(

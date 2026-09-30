@@ -26,6 +26,14 @@ Options:
   --out DIR         Backup output directory (default: \$ROOT_DIR/backups)
   --s3 URI          Additionally upload finished artifacts to S3
                     (e.g. s3://my-bucket/infra-pilot); requires the aws CLI
+  --borg-repo REPO  Additionally archive finished artifacts with borgbackup
+                    (e.g. /mnt/backup/borg or ssh://user@host/./infra-pilot);
+                    requires borg. Repo must exist or be initialisable;
+                    encryption via BORG_PASSPHRASE / BORG_REPO env.
+  --rclone-remote REMOTE
+                    Additionally copy finished artifacts with rclone
+                    (e.g. myremote:infra-pilot or minio:backups/infra-pilot);
+                    requires rclone with a configured remote.
   --encrypt-to KEY  Additionally encrypt artifacts with GPG for KEY
                     (key id, fingerprint or email); requires gpg.
                     Encrypted copies get a .gpg suffix; plaintext is kept
@@ -35,8 +43,16 @@ Options:
   --skip-grafana    Skip the Grafana data archive
   --help            Show this help message
 
-Scheduling (example cron, daily 02:00, offsite via S3):
-  0 2 * * *  /opt/infra-pilot/scripts/db-backup.sh --s3 s3://my-bucket/infra-pilot >> /var/log/infra-pilot-backup.log 2>&1
+Self-hosted offsite (no S3 needed):
+  /opt/infra-pilot/scripts/db-backup.sh --borg-repo /mnt/backup/borg
+  /opt/infra-pilot/scripts/db-backup.sh --rclone-remote hetzner-box:infra-pilot
+  /opt/infra-pilot/scripts/db-backup.sh --borg-repo /mnt/backup/borg \\
+    --rclone-remote hetzner-box:infra-pilot --encrypt-to ops@example.com
+
+  Env fallbacks: BACKUP_BORG_REPO / BORG_REPO, BACKUP_RCLONE_REMOTE.
+
+Scheduling (example cron, daily 02:00, self-hosted via borg):
+  0 2 * * *  /opt/infra-pilot/scripts/db-backup.sh --borg-repo /mnt/backup/borg >> /var/log/infra-pilot-backup.log 2>&1
 
 Restore: see scripts/db-restore.sh (supports .gpg artifacts).
 EOF
@@ -46,6 +62,8 @@ EOF
 KEEP=10
 OUT_DIR="$ROOT_DIR/backups"
 S3_URI=""
+BORG_REPO="${BACKUP_BORG_REPO:-${BORG_REPO:-}}"
+RCLONE_REMOTE="${BACKUP_RCLONE_REMOTE:-${RCLONE_REMOTE:-}}"
 ENCRYPT_TO=""
 NO_PLAINTEXT=false
 WITH_REDIS=true
@@ -56,6 +74,8 @@ while [[ $# -gt 0 ]]; do
     --keep) KEEP="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --s3) S3_URI="$2"; shift 2 ;;
+    --borg-repo) BORG_REPO="$2"; shift 2 ;;
+    --rclone-remote) RCLONE_REMOTE="$2"; shift 2 ;;
     --encrypt-to) ENCRYPT_TO="$2"; shift 2 ;;
     --no-plaintext) NO_PLAINTEXT=true; shift ;;
     --skip-redis) WITH_REDIS=false; shift ;;
@@ -68,18 +88,28 @@ done
 POSTGRES_USER="${POSTGRES_USER:-infra_pilot}"
 POSTGRES_DB="${POSTGRES_DB:-infra_pilot}"
 
-if ! command -v docker &> /dev/null; then
-  error "docker not found in PATH"
-  exit 1
-fi
-
 if [[ -n "$S3_URI" ]] && ! command -v aws &> /dev/null; then
   error "aws CLI not found in PATH (required for --s3)"
   exit 1
 fi
 
+if [[ -n "$BORG_REPO" ]] && ! command -v borg &> /dev/null; then
+  error "borg not found in PATH (required for --borg-repo)"
+  exit 1
+fi
+
+if [[ -n "$RCLONE_REMOTE" ]] && ! command -v rclone &> /dev/null; then
+  error "rclone not found in PATH (required for --rclone-remote)"
+  exit 1
+fi
+
 if [[ -n "$ENCRYPT_TO" ]] && ! command -v gpg &> /dev/null; then
   error "gpg not found in PATH (required for --encrypt-to)"
+  exit 1
+fi
+
+if ! command -v docker &> /dev/null; then
+  error "docker not found in PATH"
   exit 1
 fi
 
@@ -118,6 +148,10 @@ maybe_encrypt_and_upload() {
   if [[ -n "$S3_URI" ]]; then
     info "Uploading $upload_file to $S3_URI ..."
     aws s3 cp "$upload_file" "$S3_URI/$(basename "$upload_file")"
+  fi
+  if [[ -n "$RCLONE_REMOTE" ]]; then
+    info "Copying $upload_file to $RCLONE_REMOTE with rclone ..."
+    rclone copyto "$upload_file" "$RCLONE_REMOTE/$(basename "$upload_file")"
   fi
 }
 
@@ -184,6 +218,23 @@ if [[ "$WITH_GRAFANA" == true ]]; then
   fi
   prune "grafana_*.tgz" "$KEEP"
   prune "grafana_*.tgz.gpg" "$KEEP"
+fi
+
+# --- Borg self-hosted deduplicated archive (optional) ---
+if [[ -n "$BORG_REPO" ]]; then
+  info "Archiving ${#ARTIFACTS[@]} artifact(s) to borg repo $BORG_REPO ..."
+  if [[ -z "${BORG_PASSPHRASE:-}" ]]; then
+    warn "BORG_PASSPHRASE is unset; borg init/create may prompt or fail for encrypted repos."
+  fi
+  if ! borg info "$BORG_REPO" > /dev/null 2>&1; then
+    info "Borg repo not found, initialising $BORG_REPO ..."
+    borg init --encryption=repokey-blake2 "$BORG_REPO"
+  fi
+  # shellcheck disable=SC2068
+  borg create --stats --compression lz4 \
+    "$BORG_REPO::infra-pilot-${stamp}" ${ARTIFACTS[@]}
+  borg prune --list --keep-last="$KEEP" "$BORG_REPO"
+  success "Borg archive created: infra-pilot-${stamp}"
 fi
 
 success "Done. Artifacts:"

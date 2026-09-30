@@ -3,7 +3,7 @@
 ## Prerequisites
 
 | Tool | Required for | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Docker Engine with Compose v2 | Full local stack | `docker compose version` should succeed. |
 | Python 3.10+ | CLI and orchestrator development | The CLI package declares Python 3.10 as its minimum. |
 | Node.js and npm | Management-panel development | Not required when using the panel's Compose image. |
@@ -18,7 +18,9 @@ bash scripts/generate-env.sh
 docker compose up -d
 ```
 
-The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at `http://localhost:8500`.
+The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI
+is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at
+`http://localhost:8500`.
 
 Preview the panel in `docs/screenshots/` before starting if you want to know what awaits you.
 
@@ -52,16 +54,25 @@ ipilot --version
 ipilot --help
 ```
 
-For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at `http://localhost:3001`; configure credentials with `ipilot login <api-key>`.
+For editable development installation, use `pip install -e ./cli`. The CLI defaults to the panel API at
+`http://localhost:3001`; configure credentials with `ipilot login <api-key>`.
 
 ## Updating and stopping
 
 ```bash
-git pull
-docker compose up -d --build
+# Recommended: backup first, then fast-forward pull, rebuild, health check.
+# Keeps all named volumes (Postgres, Redis, Prometheus, Grafana).
+bash scripts/update.sh --yes
+
+# Validate without changing anything:
+bash scripts/update.sh --check-only
+
+# Stop (keeps volumes). Start again with 'docker compose up -d'.
 docker compose down
 ```
 
-`docker compose down` preserves named volumes. Use `docker compose down -v`
-only when you intend to remove local PostgreSQL, Redis, Prometheus, and
-Grafana data.
+Never use `docker compose down -v` on an existing install —
+it deletes local PostgreSQL, Redis, Prometheus, and Grafana
+data. `scripts/update.sh` refuses `-v` / `--volumes` for this
+reason. Full flow, rollback, and self-hosted backup options:
+[13-Update-Flow](./13-Update-Flow.md).

@@ -302,4 +302,4 @@ ipilot backup config \
 
 ---
 
-*See [CLI Reference](05-CLI-Reference) for all available commands.*
+*See [CLI Reference](05-CLI-Reference.md) for all available commands.*

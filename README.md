@@ -184,13 +184,15 @@ Full guide: [wiki/01-Installation](./wiki/01-Installation.md).
 ### Update and stop
 
 ```bash
-git pull
-docker compose up -d --build
+bash scripts/update.sh --yes
 docker compose down
 ```
 
-`down` keeps named volumes. Use `down -v` only when you intend
-to delete local database and metrics data.
+`update.sh` backs up first, pulls `--ff-only`, rebuilds, and
+verifies health. Named volumes are always kept; `-v` / `--volumes`
+are refused. `down` keeps named volumes. Use `down -v` only when
+you intend to delete local database and metrics data.
+Details: [wiki/13-Update-Flow](./wiki/13-Update-Flow.md).
 
 ---
 

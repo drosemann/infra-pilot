@@ -10,7 +10,7 @@ finding and must be fixed or explicitly accepted.
 ## Conventions
 
 | Term | Meaning |
-|------|---------|
+| ------ | --------- |
 | `verifyAuth` | Express middleware: Supabase JWT, falls back to scrypt-hashed API key |
 | federation token | Bearer token, constant-time compare, **fails closed in production** |
 | HMAC-SHA256 | GitHub webhook signature, fails closed (503) when secret unset |
@@ -19,7 +19,7 @@ finding and must be fixed or explicitly accepted.
 ## Orchestrator Agent (`services/orchestrator-agent`, port 8500)
 
 | Route | Method | Auth | Status | Notes |
-|-------|--------|------|--------|-------|
+| ------- | -------- | ------ | -------- | ------- |
 | `/health` | GET | public | ok | Docker healthcheck |
 | `/api/health` | GET | public | ok | CLI compatibility |
 | `/metrics` | GET | public | ok | Prometheus scrape, no sensitive data |
@@ -43,7 +43,7 @@ requests (matches `validate_secrets` convention in `config.py`).
 ### Public (by design)
 
 | Route | Method | Status | Notes |
-|-------|--------|--------|-------|
+| ------- | -------- | -------- | ------- |
 | `/health` | GET | ok | Docker healthcheck |
 | `/api/health` | GET | ok | CLI compatibility |
 | `/api/setup/status` | GET | ok | First-run check |
@@ -60,7 +60,7 @@ requests (matches `validate_secrets` convention in `config.py`).
 ### Findings (open)
 
 | Route | Method | Issue | Severity |
-|-------|--------|-------|----------|
+| ------- | -------- | ------- | ---------- |
 | `/api/runbooks` | GET | Reads all runbooks incl. user-created ones without `verifyAuth`; its POST siblings require auth | high |
 
 ### Protected (`verifyAuth`)

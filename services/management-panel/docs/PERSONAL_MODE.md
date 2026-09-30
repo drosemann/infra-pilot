@@ -15,7 +15,7 @@ the mode is selected during initial setup and controls which features are availa
 
 when the panel is first accessed, users see the **setup wizard**:
 
-```
+```text
 Step 1: Mode Selection
 ├─ Personal Mode (default, recommended)
 │   └─ Simple Docker app management for self-hosters
@@ -37,9 +37,10 @@ subsequent logins display the panel based on the configured mode. settings may a
 
 ## personal mode features
 
-**focused on individual self-hosters and hobby projects**
+focused on individual self-hosters and hobby projects
 
 ### core features
+
 - docker app creation and management
 - port mapping and environment variables
 - volume/mount configuration
@@ -50,6 +51,7 @@ subsequent logins display the panel based on the configured mode. settings may a
 - basic settings and configuration
 
 ### hidden features
+
 - customer account management
 - plans and pricing
 - billing integration
@@ -60,6 +62,7 @@ subsequent logins display the panel based on the configured mode. settings may a
 - advanced multi-user rbac
 
 ### ui/ux
+
 - minimal, focused navigation
 - "docker panel" branding
 - simple dashboard with app list
@@ -68,13 +71,15 @@ subsequent logins display the panel based on the configured mode. settings may a
 
 ## hosting business mode features
 
-**full hosting control panel for managing multiple customers**
+full hosting control panel for managing multiple customers
 
 ### core features (from personal mode)
+
 - all personal mode features
 - docker infrastructure abstraction
 
 ### business-specific features
+
 - customer account creation and management
 - plans and pricing tiers
 - resource quotas per customer
@@ -87,6 +92,7 @@ subsequent logins display the panel based on the configured mode. settings may a
 - dashboard with business analytics
 
 ### ui/ux
+
 - expanded navigation with business features
 - customizable branding
 - multi-user and team management
@@ -155,12 +161,14 @@ app.get('/api/customers', verifyAuth, async (req, res) => {
 ## database schema - mode segregation
 
 ### shared tables (all modes)
+
 - `user_profiles` - user account info and roles
 - `docker_apps` - docker applications and containers
 - `app_logs` - application logs
 - `setup_config` - mode and initialization state
 
 ### business mode tables (todo)
+
 - `customers` - customer accounts
 - `plans` - pricing plans
 - `resource_quotas` - per-customer resource limits
@@ -174,6 +182,7 @@ app.get('/api/customers', verifyAuth, async (req, res) => {
 in personal mode, all `docker_apps` belong to a single admin user.
 
 in business mode (future), `docker_apps` can be scoped to customers:
+
 ```sql
 ALTER TABLE docker_apps ADD COLUMN customer_id UUID REFERENCES customers(id);
 ```
@@ -184,7 +193,7 @@ ALTER TABLE docker_apps ADD COLUMN customer_id UUID REFERENCES customers(id);
 
 create `.env.local` based on `.env.local.example`:
 
-```
+```dotenv
 # Supabase
 VITE_SUPABASE_URL=http://localhost:54321
 VITE_SUPABASE_ANON_KEY=<your-anon-key>
@@ -200,7 +209,7 @@ DOCKER_HOST=unix:///var/run/docker.sock
 
 suggested environment variables:
 
-```
+```dotenv
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=<production-key>
 VITE_API_URL=https://api.yourdomain.com
@@ -210,7 +219,7 @@ NODE_ENV=production
 
 ## data flow: setup initialization
 
-```
+```text
 User arrives at /
     ↓
 checkSetupStatus() → setup_config table
@@ -237,7 +246,7 @@ If initialized:
 
 ## data flow: feature access
 
-```
+```text
 Component renders
     ↓
 useConfig() → { mode, loading }
@@ -257,20 +266,21 @@ If gate is true:
 
 if a user wants to upgrade personal mode to business mode:
 
-• **admin flag in ui**: "upgrade to business mode" button (disabled/hidden in first release)
-• **data migration**: run migration script to:
-   - create business mode tables
-   - map existing admin user to a staff member
-   - create default plan for existing docker_apps
-   - initial audit log entries
-• **mode flag update**: `update setup_config set mode = 'business'`
-• **redirect**: refresh ui to show new business features
+- **admin flag in ui**: "upgrade to business mode" button (disabled/hidden in first release)
+- **data migration**: run migration script to:
+  - create business mode tables
+  - map existing admin user to a staff member
+  - create default plan for existing docker_apps
+  - initial audit log entries
+- **mode flag update**: `update setup_config set mode = 'business'`
+- **redirect**: refresh ui to show new business features
 
 implementation deferred to phase 2.
 
 ## testing the modes
 
 ### personal mode test scenario
+
 • start fresh setup
 • select "personal mode"
 • create admin account
@@ -279,6 +289,7 @@ implementation deferred to phase 2.
 • verify docker app crud works
 
 ### business mode test scenario
+
 • start fresh setup
 • select "hosting business mode"
 • create admin account
@@ -290,6 +301,7 @@ implementation deferred to phase 2.
 ### row-level security (rls)
 
 all tables use supabase rls policies to ensure:
+
 - users can only see their own docker_apps
 - users can only see their own user_profile
 - in business mode (future): customers see only their owned resources
@@ -310,6 +322,7 @@ all tables use supabase rls policies to ensure:
 ## roadmap
 
 ### phase 1 (current)
+
 - personal mode fully functional
 - setup wizard with mode selection
 - docker app crud
@@ -317,6 +330,7 @@ all tables use supabase rls policies to ensure:
 - feature gate framework
 
 ### phase 2 (business mode mvp)
+
 - customer management ui
 - plans and pricing configuration
 - billing integration hooks
@@ -324,6 +338,7 @@ all tables use supabase rls policies to ensure:
 - team/staff management
 
 ### phase 3 (advanced business)
+
 - white-label branding
 - advanced rbac
 - multi-region deployment
@@ -335,13 +350,16 @@ all tables use supabase rls policies to ensure:
 a: yes (planned for phase 2). your docker_apps and user data will be preserved.
 
 **q: does personal mode limit me to one server?**
-a: no. personal mode supports unlimited docker_apps on one (or multiple) servers. it's just a single-user panel without business/customer management.
+a: no. personal mode supports unlimited docker_apps on one (or multiple) servers. it's just a single-user
+panel without business/customer management.
 
 **q: where is the business mode code?**
-a: business mode tables and routes are stubbed in the database schema. routes return `{ error: 'not available in personal mode' }` for now. full implementation is phase 2.
+a: business mode tables and routes are stubbed in the database schema. routes return
+`{ error: 'not available in personal mode' }` for now. full implementation is phase 2.
 
 **q: how does authentication work?**
-a: supabase auth (email/password) creates the user account. a jwt is issued and stored locally. the api validates the token on each request.
+a: supabase auth (email/password) creates the user account. a jwt is issued and stored locally. the api
+validates the token on each request.
 
 **q: can i make my own custom feature gates?**
 a: yes. add new gates to `lib/types.ts` featuregates object. use them in components with `featureGates.yourNewGate(mode)`.

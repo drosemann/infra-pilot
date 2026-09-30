@@ -25,12 +25,14 @@ npm install
 npm run dev
 ```
 
-`npm run dev` starts Vite on `http://localhost:5173` and the backend on `http://localhost:3001`. The first visit uses the setup flow. For the complete dependency stack, start the repository root with `docker compose up -d` instead.
+`npm run dev` starts Vite on `http://localhost:5173` and the backend on `http://localhost:3001`. The first
+visit uses the setup flow. For the complete dependency stack, start the repository root with `docker compose
+up -d` instead.
 
 ## API and authentication
 
 | Surface | URL | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Health | `GET /health`, `GET /api/health` | Used by Compose health checks. |
 | OpenAPI | `GET /api/openapi.json` | Current panel API contract. |
 | Swagger UI | `GET /api/docs` | Interactive API documentation. |
@@ -47,7 +49,7 @@ route list.
 Copy `.env.example` to `.env.local` for standalone development. The root `.env.example` controls Compose deployments.
 
 | Variable | Purpose |
-|---|---|
+| --- | --- |
 | `PORT` | Backend listener (default `3001`). |
 | `VITE_API_URL`, `VITE_ENVIRONMENT` | Frontend API target and environment label. |
 | `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
@@ -57,7 +59,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 ## Code map
 
 | Path | Responsibility |
-|---|---|
+| --- | --- |
 | `src/` | React UI, routes, components, hooks, and browser API clients. |
 | `server/index.ts` | Express routes, authentication, WebSocket integration, and service startup. |
 | `server/openapi.ts` | Panel OpenAPI specification. |

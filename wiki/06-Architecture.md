@@ -2,7 +2,7 @@
 
 ## Runtime topology
 
-```
+```text
 CLI (ipilot) ───────────────► Management panel API (:3001) ◄── React UI (:5173)
                                       │
                                       ├── PostgreSQL (:5432)
@@ -17,12 +17,14 @@ Discord (optional profile) ──────────► Discord service (:3
 Monitoring (optional profile) ───────► Prometheus (:9090) ──────► Grafana (:3000)
 ```
 
-The panel and orchestrator are separate services. The CLI's default URL is the panel API (`http://localhost:3001`); it does not directly target the orchestrator by default. The Discord and monitoring services are disabled unless their Compose profiles are requested.
+The panel and orchestrator are separate services. The CLI's default URL is the panel API (`http://localhost:3001`); it
+does not directly target the orchestrator by default. The Discord and monitoring services are disabled unless their
+Compose profiles are requested.
 
 ## Service responsibilities
 
 | Service | Implementation | Public interface | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Management panel | `services/management-panel` | UI `:5173`, API `:3001` | React frontend with Express/WebSocket backend; exposes OpenAPI and Swagger UI. |
 | Orchestrator agent | `services/orchestrator-agent` | HTTP `:8500` | aiohttp server for probes, signed GitOps callbacks, federation/RBAC APIs, and manifest reconciliation. |
 | Discord service | `services/discord-service` | HTTP health `:3002` | Optional Node.js service for Discord/Pterodactyl workflows. |
@@ -34,7 +36,7 @@ The panel and orchestrator are separate services. The CLI's default URL is the p
 The agent's maintained modules are deliberately small and independently testable:
 
 | Path | Responsibility |
-|---|---|
+| --- | --- |
 | `compute/` | `ComputeProvider` abstraction, registry, and Docker provider implementation. |
 | `manifest/` | YAML infra-file schema and reconciliation engine. |
 | `rbac/`, `rbac_store.py` | Role/organization model, permission evaluation, and persistence helpers. |
@@ -57,7 +59,7 @@ verified by the agent test suite and is the route-level source of truth.
 ## Authentication and security
 
 | Surface | Mechanism |
-|---|---|
+| --- | --- |
 | Panel operational API | Panel authentication middleware (`verifyAuth`). |
 | Orchestrator `/api/` | `Authorization: Bearer <FEDERATION_API_TOKEN>`; fails closed if the token is not configured. |
 | GitOps webhook | HMAC signature and replay-protection headers using `GITOPS_WEBHOOK_TOKEN`. |

@@ -1,6 +1,7 @@
 # Orchestrator Agent
 
-Python/aiohttp service for Docker-backed compute-provider operations, YAML manifest reconciliation, RBAC primitives, and authenticated GitOps/federation HTTP routes. Discord integration is implemented separately in `../discord-service/`.
+Python/aiohttp service for Docker-backed compute-provider operations, YAML manifest reconciliation, RBAC primitives, and
+authenticated GitOps/federation HTTP routes. Discord integration is implemented separately in `../discord-service/`.
 
 ## Run locally
 
@@ -12,14 +13,15 @@ cp .env.example .env
 python main.py
 ```
 
-For the repository's supported local stack, prefer `docker compose up -d` from the repository root. It starts this service on `http://localhost:8500` and supplies its database connection through Compose.
+For the repository's supported local stack, prefer `docker compose up -d` from the repository root. It starts this
+service on `http://localhost:8500` and supplies its database connection through Compose.
 
 ## HTTP contract and authentication
 
 `api_docs/openapi.yaml` is the maintained HTTP contract and is checked by `tests/unit/test_openapi_contract.py`.
 
 | Route group | Auth | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `GET /health`, `GET /metrics` | Public | Readiness/health information and Prometheus metrics. |
 | `/api/…` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Federation status, RBAC, provider discovery, and manifest deployment operations. |
 | `/webhook/gitops` | `GITOPS_WEBHOOK_TOKEN` HMAC signature with timestamp/replay validation | Trigger a GitOps manifest reconciliation. |
@@ -33,7 +35,7 @@ The root `.env.example` is authoritative for the Compose deployment; this
 directory's `.env.example` lists standalone defaults.
 
 | Variable | Purpose |
-|---|---|
+| --- | --- |
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | PostgreSQL connection settings. |
 | `GITOPS_WEBHOOK_PORT` | Listener port; Compose sets it to `8500`. |
 | `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN` | Signed webhook verification. |
@@ -44,7 +46,7 @@ directory's `.env.example` lists standalone defaults.
 ## Code map
 
 | Path | Responsibility |
-|---|---|
+| --- | --- |
 | `compute/` | Provider interface, registry, and Docker implementation. |
 | `manifest/` | Infra-file schema and reconciliation engine. |
 | `rbac/`, `rbac_store.py` | Role/organization model and persistence helpers. |

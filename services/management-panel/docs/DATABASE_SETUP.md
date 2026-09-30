@@ -24,13 +24,14 @@ docker compose up -d
 ```
 
 this starts:
-- api: http://localhost:8000
-- supabase dashboard: http://localhost:3000
+
+- api: <http://localhost:8000>
+- supabase dashboard: <http://localhost:3000>
 - postgresql: localhost:5432
 
 ### step 4: access dashboard
 
-• go to http://localhost:3000
+• go to <http://localhost:3000>
 • email: `supabase@example.com`
 • password: `password`
 
@@ -39,7 +40,8 @@ this starts:
 • in supabase dashboard, go to **settings → api**
 • copy the `anon` public key
 • add to `.env.local`:
-   ```
+
+   ```text
    VITE_SUPABASE_ANON_KEY=eyJhbGc...
    ```
 
@@ -61,6 +63,7 @@ psql -h localhost -U postgres -d postgres < db/schema.sql
 ### step 7: enable jwt auth
 
 in supabase dashboard → settings → auth, ensure:
+
 - email/password enabled
 - email confirmation disabled (for dev)
 
@@ -84,15 +87,17 @@ DOCKER_HOST=unix:///var/run/docker.sock
 
 ### using managed supabase
 
-• sign up at https://supabase.com
+• sign up at <https://supabase.com>
 • create a new project
 • go to settings → api
 • copy your `url` and `anon key`
 • set in production environment:
-   ```
+
+   ```text
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=<your-key>
    ```
+
 • run schema migration on your production database
 
 ### self-hosted postgresql
@@ -108,6 +113,7 @@ if not using supabase, you need to:
 ## troubleshooting
 
 ### port 54321 already in use
+
 ```bash
 lsof -i :54321
 kill -9 <PID>
@@ -115,12 +121,14 @@ kill -9 <PID>
 ```
 
 ### can't connect to postgresql
+
 ```bash
 docker compose logs postgres
 # Check credentials in docker/.env
 ```
 
 ### schema migration fails
+
 ```bash
 # Check DB logs
 docker compose logs postgres
@@ -130,6 +138,7 @@ psql -h localhost -U postgres -d postgres
 ```
 
 ### jwt secret format invalid
+
 must be minimum 32 characters. generate with:
 
 ```bash
@@ -144,4 +153,4 @@ once setup is complete:
 npm run dev
 ```
 
-then visit http://localhost:5173 to initialize the panel.
+then visit <http://localhost:5173> to initialize the panel.

@@ -82,7 +82,7 @@ if [ "$OFFLINE" = true ]; then
 fi
 
 for suite in "${TEST_SUITES[@]}"; do
-  IFS=":" read -r SUITE_TYPE SUITE_PATH SUITE_RUNNER <<< "$suite"
+  IFS=":" read -r SUITE_TYPE SUITE_PATH _ <<< "$suite"
 
   if [ ! -d "$SUITE_PATH" ]; then
     warn "Test suite path not found: $SUITE_PATH"

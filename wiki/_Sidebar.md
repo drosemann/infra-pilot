@@ -1,22 +1,22 @@
 # Infra Pilot Wiki
 
-- [Home](Home)
-- [Installation](01-Installation)
-- [First Deployment](02-First-Deployment)
-- [Configuration](03-Configuration)
-- [Usage Examples](04-Usage-Examples)
-- [CLI Reference](05-CLI-Reference)
-- [Architecture](06-Architecture)
-- [Contributing](07-Contributing)
-- [Security](08-Security)
-- [FAQ](09-FAQ)
-- [Troubleshooting](10-Troubleshooting)
-- [Backup & Restore](12-Backup-Restore)
+- [Home](Home.md)
+- [Installation](01-Installation.md)
+- [First Deployment](02-First-Deployment.md)
+- [Configuration](03-Configuration.md)
+- [Usage Examples](04-Usage-Examples.md)
+- [CLI Reference](05-CLI-Reference.md)
+- [Architecture](06-Architecture.md)
+- [Contributing](07-Contributing.md)
+- [Security](08-Security.md)
+- [FAQ](09-FAQ.md)
+- [Troubleshooting](10-Troubleshooting.md)
+- [Backup & Restore](12-Backup-Restore.md)
 
 ## Quick Links
 
 | Feature | CLI Command |
-|---------|-------------|
+| --------- | ------------- |
 | GitOps | `ipilot gitops *` |
 | SSH | `ipilot ssh *` |
 | Inventory | `ipilot inventory *` |
@@ -32,7 +32,7 @@
 
 ---
 
-**Links**
+## Links
 
 - [GitHub](https://github.com/drosemann/infra-pilot)
 - [Issues](https://github.com/drosemann/infra-pilot/issues)

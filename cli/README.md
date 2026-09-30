@@ -1,6 +1,7 @@
 # Infra Pilot CLI (`ipilot`)
 
-Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and supports table or JSON-oriented output.
+Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and supports table
+or JSON-oriented output.
 
 ## Installation and login
 
@@ -18,7 +19,7 @@ command.
 ## Command groups
 
 | Command | Responsibility |
-|---|---|
+| --- | --- |
 | `server`, `backup`, `deploy`, `logs` | Core infrastructure lifecycle, backups, deployments, and logs. |
 | `gitops`, `ssh`, `inventory`, `secrets` | Declarative operations, remote-access records, metadata, and secret workflows. |
 | `plugins`, `templates`, `webhooks`, `apikeys` | Extensibility and automation configuration. |

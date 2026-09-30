@@ -64,7 +64,8 @@ instead of blocking the API, and persistence failures are surfaced as
 
 ## Reporting Issues
 
-**Do not** open public issues. Email the maintainers (see [`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). Expect a reply within 48 hours.
+**Do not** open public issues. Email the maintainers (see
+[`SECURITY.md`](https://github.com/drosemann/infra-pilot/blob/main/SECURITY.md)). Expect a reply within 48 hours.
 
 ---
 

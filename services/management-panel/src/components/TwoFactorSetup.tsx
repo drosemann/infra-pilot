@@ -5,6 +5,9 @@ import { BrandButton } from './BrandButton';
 
 type State = 'initial' | 'loading' | 'setup' | 'verify_backup' | 'enabled';
 
+/**
+ * Render TOTP enrollment, backup-code saving, and password-confirmed 2FA disablement.
+ */
 export const TwoFactorSetup = () => {
   const [state, setState] = useState<State>('loading');
   const [secret, setSecret] = useState('');
@@ -134,7 +137,12 @@ export const TwoFactorSetup = () => {
       {state === 'setup' && (
         <div className="space-y-4">
           <p className="text-sm text-slate-400">
-            Scan the QR code with your authenticator app (e.g. Google Authenticator, Authy) or enter the setup key manually.
+            Scan the QR code with your authenticator app
+            (Google Authenticator, Microsoft Authenticator,
+            Authy, 1Password, Bitwarden, Aegis, andOTP — any
+            TOTP app works) or enter the setup key manually.
+            Codes are 6 digits, refresh every 30 seconds
+            (TOTP / RFC 6238, SHA-1).
           </p>
 
           <div className="flex justify-center">
@@ -150,12 +158,18 @@ export const TwoFactorSetup = () => {
             <label className="block text-sm text-slate-400 mb-1">Verification Code</label>
             <input
               type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               value={verifyCode}
               onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
               maxLength={6}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500 text-center tracking-widest font-mono"
             />
+            <p className="text-xs text-slate-500 mt-1">
+              Enter the current 6-digit code from your app.
+              If it just rolled over, wait for the next code.
+            </p>
           </div>
 
           <BrandButton label="Verify & Enable" onClick={handleVerifySetup} disabled={verifyCode.length !== 6} />

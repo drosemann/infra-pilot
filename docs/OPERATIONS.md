@@ -72,6 +72,25 @@ Details: [wiki/12-Backup-Restore](../wiki/12-Backup-Restore.md).
 
 ---
 
+## Updates (new version, keep all data)
+
+```bash
+# Validate without changing anything
+bash scripts/update.sh --check-only
+
+# Backup first, then pull --ff-only, rebuild, verify (volumes kept)
+bash scripts/update.sh --yes
+```
+
+`scripts/update.sh` never runs `down -v`; `-v` / `--volumes`
+are refused with exit code `2`. The orchestrator migrates the
+schema forward (`alembic upgrade head`) on startup.
+Rollback: `git checkout <previous-commit>` + `up -d --build`,
+or `bash scripts/db-restore.sh backups/<stamp>.dump --yes`.
+Details: [wiki/13-Update-Flow](../wiki/13-Update-Flow.md).
+
+---
+
 ## Production checklist (P0/P1 hardening)
 
 1. Deploy without the dev override:

@@ -25,8 +25,9 @@ npm install
 npm run dev
 ```
 
-`npm run dev` starts Vite on `http://localhost:5173` and the backend on `http://localhost:3001`. The first visit uses
-the setup flow. For the complete dependency stack, start the repository root with `docker compose up -d` instead.
+`npm run dev` starts Vite on `http://localhost:5173` and the backend on `http://localhost:3001`. The first
+visit uses the setup flow. For the complete dependency stack, start the repository root with `docker compose
+up -d` instead.
 
 ## API and authentication
 

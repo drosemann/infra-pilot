@@ -14,8 +14,8 @@ docker compose --profile discord up -d discord-service
 docker compose logs -f discord-service
 ```
 
-The health endpoint is published on `http://localhost:3002/health` by default. The service mounts the host Docker socket
-in Compose; run it only on a trusted host.
+The health endpoint is published on `http://localhost:3002/health` by default. The service mounts the host
+Docker socket in Compose; run it only on a trusted host.
 
 ### Standalone development
 

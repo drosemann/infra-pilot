@@ -1,7 +1,7 @@
 # Infra Pilot
 
-Infra Pilot is a learning project for operating Docker-backed infrastructure through a Python CLI, a React/Express
-management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
+Infra Pilot is a learning project for operating Docker-backed infrastructure through a Python CLI, a
+React/Express management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
 
 ## Start here
 

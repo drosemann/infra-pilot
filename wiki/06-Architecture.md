@@ -17,9 +17,9 @@ Discord (optional profile) ──────────► Discord service (:3
 Monitoring (optional profile) ───────► Prometheus (:9090) ──────► Grafana (:3000)
 ```
 
-The panel and orchestrator are separate services. The CLI's default URL is the panel API (`http://localhost:3001`); it
-does not directly target the orchestrator by default. The Discord and monitoring services are disabled unless their
-Compose profiles are requested.
+The panel and orchestrator are separate services. The CLI's default URL is the panel API
+(`http://localhost:3001`); it does not directly target the orchestrator by default. The Discord and monitoring
+services are disabled unless their Compose profiles are requested.
 
 ## Service responsibilities
 

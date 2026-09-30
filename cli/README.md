@@ -1,7 +1,7 @@
 # Infra Pilot CLI (`ipilot`)
 
-Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and supports table
-or JSON-oriented output.
+Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and
+supports table or JSON-oriented output.
 
 ## Installation and login
 

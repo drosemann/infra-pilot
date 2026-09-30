@@ -18,8 +18,9 @@ bash scripts/generate-env.sh
 docker compose up -d
 ```
 
-The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI is at
-`http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at `http://localhost:8500`.
+The default Compose project starts PostgreSQL, Redis, the management panel, and the orchestrator. The panel UI
+is at `http://localhost:5173`; its API is at `http://localhost:3001`; the orchestrator is at
+`http://localhost:8500`.
 
 Preview the panel in `docs/screenshots/` before starting if you want to know what awaits you.
 
@@ -59,11 +60,19 @@ For editable development installation, use `pip install -e ./cli`. The CLI defau
 ## Updating and stopping
 
 ```bash
-git pull
-docker compose up -d --build
+# Recommended: backup first, then fast-forward pull, rebuild, health check.
+# Keeps all named volumes (Postgres, Redis, Prometheus, Grafana).
+bash scripts/update.sh --yes
+
+# Validate without changing anything:
+bash scripts/update.sh --check-only
+
+# Stop (keeps volumes). Start again with 'docker compose up -d'.
 docker compose down
 ```
 
-`docker compose down` preserves named volumes. Use `docker compose down -v`
-only when you intend to remove local PostgreSQL, Redis, Prometheus, and
-Grafana data.
+Never use `docker compose down -v` on an existing install —
+it deletes local PostgreSQL, Redis, Prometheus, and Grafana
+data. `scripts/update.sh` refuses `-v` / `--volumes` for this
+reason. Full flow, rollback, and self-hosted backup options:
+[13-Update-Flow](./13-Update-Flow.md).

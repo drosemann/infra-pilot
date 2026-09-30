@@ -89,7 +89,8 @@ you already own.
 | Settings |
 | --- |
 | ![Settings](./docs/screenshots/05-cli-gitops.png) |
-| General settings, 2FA, and metrics integration. |
+| General settings, 2FA (TOTP + backup codes), and metrics integration. |
+| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). |
 
 ---
 
@@ -183,13 +184,15 @@ Full guide: [wiki/01-Installation](./wiki/01-Installation.md).
 ### Update and stop
 
 ```bash
-git pull
-docker compose up -d --build
+bash scripts/update.sh --yes
 docker compose down
 ```
 
-`down` keeps named volumes. Use `down -v` only when you intend
-to delete local database and metrics data.
+`update.sh` backs up first, pulls `--ff-only`, rebuilds, and
+verifies health. Named volumes are always kept; `-v` / `--volumes`
+are refused. `down` keeps named volumes. Use `down -v` only when
+you intend to delete local database and metrics data.
+Details: [wiki/13-Update-Flow](./wiki/13-Update-Flow.md).
 
 ---
 

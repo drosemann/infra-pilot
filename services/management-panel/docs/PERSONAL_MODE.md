@@ -37,7 +37,7 @@ subsequent logins display the panel based on the configured mode. settings may a
 
 ## personal mode features
 
-focused on individual self-hosters and hobby projects.
+focused on individual self-hosters and hobby projects
 
 ### core features
 
@@ -71,7 +71,7 @@ focused on individual self-hosters and hobby projects.
 
 ## hosting business mode features
 
-full hosting control panel for managing multiple customers.
+full hosting control panel for managing multiple customers
 
 ### core features (from personal mode)
 
@@ -193,7 +193,7 @@ ALTER TABLE docker_apps ADD COLUMN customer_id UUID REFERENCES customers(id);
 
 create `.env.local` based on `.env.local.example`:
 
-```text
+```dotenv
 # Supabase
 VITE_SUPABASE_URL=http://localhost:54321
 VITE_SUPABASE_ANON_KEY=<your-anon-key>
@@ -209,7 +209,7 @@ DOCKER_HOST=unix:///var/run/docker.sock
 
 suggested environment variables:
 
-```text
+```dotenv
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=<production-key>
 VITE_API_URL=https://api.yourdomain.com
@@ -350,16 +350,16 @@ all tables use supabase rls policies to ensure:
 a: yes (planned for phase 2). your docker_apps and user data will be preserved.
 
 **q: does personal mode limit me to one server?**
-a: no. personal mode supports unlimited docker_apps on one (or multiple) servers. it's just a single-user panel without
-business/customer management.
+a: no. personal mode supports unlimited docker_apps on one (or multiple) servers. it's just a single-user
+panel without business/customer management.
 
 **q: where is the business mode code?**
-a: business mode tables and routes are stubbed in the database schema. routes return `{ error: 'not available in
-personal mode' }` for now. full implementation is phase 2.
+a: business mode tables and routes are stubbed in the database schema. routes return
+`{ error: 'not available in personal mode' }` for now. full implementation is phase 2.
 
 **q: how does authentication work?**
-a: supabase auth (email/password) creates the user account. a jwt is issued and stored locally. the api validates the
-token on each request.
+a: supabase auth (email/password) creates the user account. a jwt is issued and stored locally. the api
+validates the token on each request.
 
 **q: can i make my own custom feature gates?**
 a: yes. add new gates to `lib/types.ts` featuregates object. use them in components with `featureGates.yourNewGate(mode)`.

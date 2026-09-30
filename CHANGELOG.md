@@ -8,12 +8,12 @@ Pre-1.0: no tagged releases yet; entries track `main`.
 
 ### Added
 
-- Self-hosted backup offsite: `scripts/db-backup.sh` now supports
-  `--borg-repo` (deduplicated borgbackup archives with prune) and
-  `--rclone-remote` (copy to any rclone remote like Hetzner
-  Storage Box, NAS, MinIO), with `BACKUP_BORG_REPO` /
-  `BACKUP_RCLONE_REMOTE` env fallbacks. Docs in
-  `wiki/12-Backup-Restore.md`, `docs/OPERATIONS.md`, and README.
+- Safe update flow: `scripts/update.sh` (backup first,
+  `git pull --ff-only`, rebuild, health + volume verification;
+  refuses `-v` / `--volumes`). Tested by
+  `tests/scripts/test_update_flow.py`. Docs in
+  `wiki/13-Update-Flow.md`, `wiki/01-Installation.md`,
+  `docs/OPERATIONS.md`, and README.
 - Enterprise README with screenshots, architecture diagram,
   and operator guides.
 - `docs/ARCHITECTURE.md` and `docs/OPERATIONS.md` as

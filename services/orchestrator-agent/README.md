@@ -1,7 +1,8 @@
 # Orchestrator Agent
 
-Python/aiohttp service for Docker-backed compute-provider operations, YAML manifest reconciliation, RBAC primitives, and
-authenticated GitOps/federation HTTP routes. Discord integration is implemented separately in `../discord-service/`.
+Python/aiohttp service for Docker-backed compute-provider operations, YAML manifest reconciliation, RBAC
+primitives, and authenticated GitOps/federation HTTP routes. Discord integration is implemented separately in
+`../discord-service/`.
 
 ## Run locally
 
@@ -13,8 +14,8 @@ cp .env.example .env
 python main.py
 ```
 
-For the repository's supported local stack, prefer `docker compose up -d` from the repository root. It starts this
-service on `http://localhost:8500` and supplies its database connection through Compose.
+For the repository's supported local stack, prefer `docker compose up -d` from the repository root. It starts
+this service on `http://localhost:8500` and supplies its database connection through Compose.
 
 ## HTTP contract and authentication
 

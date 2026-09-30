@@ -160,9 +160,9 @@ the management panel has an optional zero-native shell alongside the browser-hos
 └───────────────────────────┘
 ```
 
-the shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the vite dev server when
-launched through `zero-native dev`. the backend stays as an express service so docker control, supabase/postgresql
-access, and integration tests keep the same boundaries as the web deployment.
+the shell is configured by `app.zon`, loads `dist/index.html` for packaged builds, and uses the vite dev
+server when launched through `zero-native dev`. the backend stays as an express service so docker control,
+supabase/postgresql access, and integration tests keep the same boundaries as the web deployment.
 
 ## data flow: setup & authentication
 
@@ -172,10 +172,10 @@ access, and integration tests keep the same boundaries as the web deployment.
 └────┬────┘
      │ GET /
      ▼
-┌──────────────────────┐
-│ Check setup status   │
+┌───────────────────────┐
+│ Check setup status    │
 │ GET /api/setup/status │
-└───────────┬──────────┘
+└───────────┬───────────┘
             │
        ┌────┴─────────────────────┐
        │                          │

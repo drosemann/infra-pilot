@@ -12,6 +12,7 @@
 - [FAQ](09-FAQ.md)
 - [Troubleshooting](10-Troubleshooting.md)
 - [Backup & Restore](12-Backup-Restore.md)
+- [Update Flow](13-Update-Flow.md)
 
 ## Quick Links
 

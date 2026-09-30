@@ -2,8 +2,8 @@
 
 ## transformation complete
 
-the infra-pilot repository has been successfully transformed into a clean, self-hosted docker panel with **personal mode
-as the default** and **hosting business mode as an optional feature**.
+the infra-pilot repository has been successfully transformed into a clean, self-hosted docker panel with
+**personal mode as the default** and **hosting business mode as an optional feature**.
 
 ## what was built
 
@@ -291,7 +291,7 @@ the framework is ready, but actual docker interaction is stubbed. to add docker 
 
 • install `dockerode` npm package
 • update backend routes to call docker api
-• see [docker integration](docs/DOCKER_INTEGRATION.md) (todo)
+• write the docker integration guide (`docs/DOCKER_INTEGRATION.md`, todo)
 
 ## api endpoints
 

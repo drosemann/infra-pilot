@@ -32,9 +32,9 @@ EOF
 }
 
 TEST_SUITES=(
-  "python:.:pytest"
-  "node:services/discord-service:npm"
-  "node:services/management-panel:npm"
+  "python:."
+  "node:services/discord-service"
+  "node:services/management-panel"
 )
 
 SHOW_COVERAGE=false
@@ -82,7 +82,7 @@ if [ "$OFFLINE" = true ]; then
 fi
 
 for suite in "${TEST_SUITES[@]}"; do
-  IFS=":" read -r SUITE_TYPE SUITE_PATH _ <<< "$suite"
+  IFS=":" read -r SUITE_TYPE SUITE_PATH <<< "$suite"
 
   if [ ! -d "$SUITE_PATH" ]; then
     warn "Test suite path not found: $SUITE_PATH"

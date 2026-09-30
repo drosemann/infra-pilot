@@ -41,7 +41,7 @@ this starts:
 • copy the `anon` public key
 • add to `.env.local`:
 
-   ```text
+   ```dotenv
    VITE_SUPABASE_ANON_KEY=eyJhbGc...
    ```
 
@@ -93,7 +93,7 @@ DOCKER_HOST=unix:///var/run/docker.sock
 • copy your `url` and `anon key`
 • set in production environment:
 
-   ```text
+   ```dotenv
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=<your-key>
    ```

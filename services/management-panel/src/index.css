@@ -333,3 +333,20 @@ body::before {
     color 0.2s ease,
     border-color 0.2s ease;
 }
+
+/* Editorial accents: letterspaced kickers and hairline rules for page rhythm.
+   One-accent doctrine — emerald = ok/healthy, amber = beta/warning,
+   red = danger. No new accent colors without a status meaning. */
+.eyebrow {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 0.5rem;
+}
+
+.page-rule {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}

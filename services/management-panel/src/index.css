@@ -166,7 +166,7 @@ body {
 
 /* Ara-inspired premium shell */
 html {
-  background: #050506;
+  background: #080a10;
 }
 
 body {
@@ -182,7 +182,7 @@ body {
       rgba(99, 102, 241, 0.16),
       transparent 18rem
     ),
-    #050506;
+    #080a10;
 }
 
 body::before {
@@ -332,4 +332,30 @@ body::before {
     background-color 0.2s ease,
     color 0.2s ease,
     border-color 0.2s ease;
+}
+
+
+/* Shared product language: quiet surfaces, crisp hierarchy, deliberate status color. */
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 9999px;
+  background: rgba(251, 191, 36, 0.12);
+  color: rgb(253, 230, 138);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 0.28rem 0.45rem;
+  text-transform: uppercase;
+}
+
+main > div {
+  animation: page-enter 280ms ease-out both;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }

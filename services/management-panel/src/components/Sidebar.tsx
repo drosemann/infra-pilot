@@ -1,6 +1,5 @@
 import { useNavigate, useLocation } from "react-router";
 import { useState } from "react";
-import { useIntl } from "react-intl";
 import { useConfig } from "../lib/types";
 import { LanguageSelector } from "../i18n/LanguageSelector";
 
@@ -11,6 +10,7 @@ interface SidebarItem {
   route?: string;
   children?: SidebarItem[];
   attrs?: Record<string, string>;
+  beta?: boolean;
 }
 
 const SimpleLogo = ({ size = 32 }: { size?: number }) => (
@@ -32,7 +32,6 @@ export const Sidebar = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { mode } = useConfig();
-  const intl = useIntl();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpanded = (id: string) => {
@@ -53,12 +52,14 @@ export const Sidebar = ({
       label: "BI Dashboard",
       icon: "📈",
       route: "/bi-dashboard",
+      beta: true,
     },
     {
       id: "topology",
       label: "3D Topology",
       icon: "🌐",
       route: "/topology",
+      beta: true,
     },
     {
       id: "monitoring",
@@ -79,13 +80,14 @@ export const Sidebar = ({
       label: "Deployments",
       icon: "🚀",
       route: "/deployments",
+      beta: true,
     },
     {
       id: "logs",
       label: "Logs",
       icon: "📝",
       children: [
-        { id: "live-logs", label: "Live Logs", icon: "📋", route: "/logs" },
+        { id: "live-logs", label: "Live Logs", icon: "📋", route: "/logs", beta: true },
         {
           id: "access-logs",
           label: "Access Logs",
@@ -107,18 +109,21 @@ export const Sidebar = ({
             label: "Billing",
             icon: "💳",
             route: "/billing",
+            beta: true,
           },
           {
             id: "cost-analytics",
             label: "Cost Analytics",
             icon: "💰",
             route: "/cost-analytics",
+            beta: true,
           },
           {
             id: "teams",
             label: "Teams",
             icon: "👨‍💼",
             route: "/teams",
+            beta: true,
           },
         ]
       : []),
@@ -127,6 +132,7 @@ export const Sidebar = ({
       label: "Dependencies",
       icon: "🔗",
       route: "/dependencies",
+      beta: true,
     },
     {
       id: "backups",
@@ -151,6 +157,7 @@ export const Sidebar = ({
           label: "Report Builder",
           icon: "🛠️",
           route: "/reports/builder",
+          beta: true,
         },
       ],
     },
@@ -159,6 +166,7 @@ export const Sidebar = ({
       label: "Theme Studio",
       icon: "🎨",
       route: "/theme-studio",
+      beta: true,
     },
     {
       id: "knowledge-base",
@@ -177,18 +185,21 @@ export const Sidebar = ({
       label: "Dashboards",
       icon: "📐",
       route: "/dashboard-builder",
+      beta: true,
     },
     {
       id: "marketplace",
       label: "Marketplace",
       icon: "🧩",
       route: "/marketplace",
+      beta: true,
     },
     {
       id: "geo-heatmap",
       label: "Geo Heatmap",
       icon: "🗺️",
       route: "/geo-heatmap",
+      beta: true,
     },
     {
       id: "settings",
@@ -273,7 +284,10 @@ export const Sidebar = ({
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 space-y-1.5 p-4">
+        <nav className="flex-1 space-y-1.5 p-4" aria-label="Primary navigation">
+          <p className="px-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/35">
+            Workspace
+          </p>
           {sidebarItems.map((item) => (
             <div key={item.id}>
               <button
@@ -295,6 +309,7 @@ export const Sidebar = ({
                 <span className="text-sm font-medium flex-1 text-left">
                   {item.label}
                 </span>
+                {item.beta && <span className="beta-badge">Beta</span>}
                 {item.children && (
                   <span
                     className={`transition-transform ${
@@ -320,7 +335,8 @@ export const Sidebar = ({
                       }`}
                     >
                       <span>{child.icon}</span>
-                      <span>{child.label}</span>
+                      <span className="flex-1 text-left">{child.label}</span>
+                      {child.beta && <span className="beta-badge">Beta</span>}
                     </button>
                   ))}
                 </div>
@@ -328,6 +344,11 @@ export const Sidebar = ({
             </div>
           ))}
         </nav>
+
+        <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-3 py-2 text-xs leading-5 text-amber-100/75">
+          <span className="beta-badge shrink-0">Beta</span>
+          Beta features are in active testing and may change.
+        </div>
 
         {/* Docker Host Status */}
         <div className="space-y-3 border-t border-white/10 p-4">

@@ -37,27 +37,28 @@ const shots = [
 
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
 
 // Capture mode uses safe, representative demo responses and never requires a
 // running local backend or an authenticated account.
-await page.addInitScript(() => localStorage.setItem('sb_access_token', 'screenshot-demo-token'));
-await page.route(`${API_BASE}/**`, async (route) => {
-  const url = new URL(route.request().url());
-  const apps = [
-    { id: 'shop-api', name: 'shop-api', image: 'ghcr.io/acme/shop-api:stable', status: 'running', ports: ['8080:8080'] },
-    { id: 'web', name: 'customer-portal', image: 'ghcr.io/acme/customer-portal:stable', status: 'running', ports: ['3000:3000'] },
-    { id: 'worker', name: 'jobs-worker', image: 'ghcr.io/acme/jobs-worker:stable', status: 'stopped', ports: [] },
-  ];
-  let data = {};
-  if (url.pathname === '/health') data = { status: 'ok' };
-  else if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
-  else if (url.pathname === '/api/user') data = { id: 'demo-admin', email: 'admin@example.com', display_name: 'Demo Admin', role: 'Admin' };
-  else if (url.pathname === '/api/apps') data = apps;
-  else if (url.pathname.startsWith('/api/apps/')) data = apps[0];
-  else if (url.pathname.includes('/metrics') || url.pathname.includes('/backups') || url.pathname.includes('/logs')) data = [];
-  await route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
-});
+async function mockDemoApi(context) {
+  await context.addInitScript(() => localStorage.setItem('sb_access_token', 'screenshot-demo-token'));
+  await context.route(`${API_BASE}/**`, async (route) => {
+    const url = new URL(route.request().url());
+    const apps = [
+      { id: 'shop-api', name: 'shop-api', image: 'ghcr.io/acme/shop-api:stable', status: 'running', ports: ['8080:8080'] },
+      { id: 'web', name: 'customer-portal', image: 'ghcr.io/acme/customer-portal:stable', status: 'running', ports: ['3000:3000'] },
+      { id: 'worker', name: 'jobs-worker', image: 'ghcr.io/acme/jobs-worker:stable', status: 'stopped', ports: [] },
+    ];
+    let data = {};
+    if (url.pathname === '/health') data = { status: 'ok' };
+    else if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
+    else if (url.pathname === '/api/user') data = { id: 'demo-admin', email: 'admin@example.com', display_name: 'Demo Admin', role: 'Admin' };
+    else if (url.pathname === '/api/apps') data = apps;
+    else if (url.pathname.startsWith('/api/apps/')) data = apps[0];
+    else if (url.pathname.includes('/metrics') || url.pathname.includes('/backups') || url.pathname.includes('/logs')) data = [];
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
+  });
+}
 
 async function gotoWithRetry(page, url) {
   for (let attempt = 1; attempt <= NAVIGATION_ATTEMPTS; attempt += 1) {
@@ -79,11 +80,32 @@ async function gotoWithRetry(page, url) {
   }
 }
 
+// A fresh browser context per shot keeps mocks, storage, and UI state hermetic:
+// reusing one page across navigations breaks API interception on later shots,
+// and the onboarding tour overlay would otherwise block sidebar interaction.
 for (const s of shots) {
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+  await mockDemoApi(context);
+  const page = await context.newPage();
   await gotoWithRetry(page, `${BASE}${s.route}`);
+  // Dismiss the first-run tour so captures show the UI, then expand sidebar
+  // groups so beta badges on nested items are visible.
+  try {
+    await page.getByRole('button', { name: 'Skip' }).click({ timeout: 3000 });
+  } catch {
+    // No tour overlay on this route.
+  }
+  for (const group of ['Logs', 'Reports', 'Settings']) {
+    try {
+      await page.getByRole('button', { name: group }).first().click({ timeout: 2000 });
+    } catch {
+      // Group already expanded or not rendered on this route.
+    }
+  }
   await sleep(1500);
   await page.screenshot({ path: path.join(OUT, s.file) });
   console.log(`captured ${s.file}`);
+  await context.close();
 }
 
 await browser.close();

@@ -12,8 +12,16 @@ export const MainLayout = () => {
   const navigate = useNavigate();
   const { mode } = useConfig();
   const [user, setUser] = useState<any>(null);
+  const [healthy, setHealthy] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    apiClient.health().then(
+      () => setHealthy(true),
+      () => setHealthy(false),
+    );
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -52,8 +60,14 @@ export const MainLayout = () => {
               {/* Organization Selector & Search */}
               <div className="flex items-center gap-4 flex-1">
                 <div className="hidden items-center gap-2 text-xs font-medium text-white/45 xl:flex">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-                  All systems operational
+                  <span
+                    className={
+                      healthy
+                        ? "h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                        : "h-2 w-2 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.8)]"
+                    }
+                  />
+                  {healthy ? "All systems operational" : "Degraded — check monitoring"}
                 </div>
                 <button
                   onClick={() => setSidebarOpen(true)}

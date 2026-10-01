@@ -50,7 +50,8 @@ await page.route(`${API_BASE}/**`, async (route) => {
     { id: 'worker', name: 'jobs-worker', image: 'ghcr.io/acme/jobs-worker:stable', status: 'stopped', ports: [] },
   ];
   let data = {};
-  if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
+  if (url.pathname === '/health') data = { status: 'ok' };
+  else if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
   else if (url.pathname === '/api/user') data = { id: 'demo-admin', email: 'admin@example.com', display_name: 'Demo Admin', role: 'Admin' };
   else if (url.pathname === '/api/apps') data = apps;
   else if (url.pathname.startsWith('/api/apps/')) data = apps[0];

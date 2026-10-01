@@ -11,6 +11,7 @@ export const Backups = () => {
           <p className="text-slate-400">Database and server backup automation</p>
         </div>
       </div>
+      <div className="page-rule" />
 
       <BackupStatus />
       <BackupManager />

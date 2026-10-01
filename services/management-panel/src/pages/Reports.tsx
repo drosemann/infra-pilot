@@ -48,6 +48,7 @@ export const Reports = () => {
           <p className="text-slate-400">Resource usage reports and analytics</p>
         </div>
       </div>
+      <div className="page-rule" />
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Generate Report</h2>

@@ -173,6 +173,7 @@ export const AppDetail = () => {
           ← Back
         </button>
       </div>
+      <div className="page-rule" />
 
       {/* Status and Actions */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">

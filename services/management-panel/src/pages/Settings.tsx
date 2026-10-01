@@ -26,6 +26,7 @@ export const SettingsPage = () => {
           </p>
         </div>
       </div>
+      <div className="page-rule" />
 
       {isAlerts ? (
         <>

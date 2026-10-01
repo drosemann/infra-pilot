@@ -86,6 +86,7 @@ export const Monitoring = () => {
           </button>
         </div>
       </div>
+      <div className="page-rule" />
 
       {showRealtime ? (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">

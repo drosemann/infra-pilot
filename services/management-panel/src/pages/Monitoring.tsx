@@ -8,6 +8,7 @@ import { PlayerCountChart } from '../components/PlayerCountChart';
 import { ResourceMonitor } from '../components/ResourceMonitor';
 import { HealthCheckDashboard } from '../components/HealthCheckDashboard';
 import RealtimeMetrics from '../components/RealtimeMetrics';
+import { PageHeader } from '../components/PageHeader';
 
 export const Monitoring = () => {
   const [apps, setApps] = useState<DockerApp[]>([]);
@@ -51,42 +52,42 @@ export const Monitoring = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="eyebrow">Observe</p>
-          <h1 className="text-3xl font-bold text-white mb-2">Monitoring</h1>
-          <p className="text-slate-400">Server performance and health monitoring</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={selectedApp}
-            onChange={(e) => setSelectedApp(e.target.value)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-blue-500"
-          >
-            <option value="">All servers</option>
-            {apps.map((app) => (
-              <option key={app.id} value={app.id}>{app.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowRealtime(!showRealtime)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showRealtime ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Realtime
-          </button>
-          <button
-            onClick={() => setShowHealth(!showHealth)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showHealth ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
-          >
-            Health Checks
-          </button>
-        </div>
-      </div>
-      <div className="page-rule" />
+      <PageHeader
+        eyebrow="Observe"
+        actions={
+          <div className="flex items-center gap-3">
+            <select
+              value={selectedApp}
+              onChange={(e) => setSelectedApp(e.target.value)}
+              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white outline-none focus:border-blue-500"
+            >
+              <option value="">All servers</option>
+              {apps.map((app) => (
+                <option key={app.id} value={app.id}>{app.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowRealtime(!showRealtime)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                showRealtime ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              Realtime
+            </button>
+            <button
+              onClick={() => setShowHealth(!showHealth)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                showHealth ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              Health Checks
+            </button>
+          </div>
+        }
+      >
+        <h1 className="text-3xl font-bold text-white mb-2">Monitoring</h1>
+        <p className="text-slate-400">Server performance and health monitoring</p>
+      </PageHeader>
 
       {showRealtime ? (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">

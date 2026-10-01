@@ -6,6 +6,7 @@ import { AlertHistory } from '../components/AlertHistory';
 import { TwoFactorSetup } from '../components/TwoFactorSetup';
 import MetricsConfig from '../components/MetricsConfig';
 import { LanguageSelector } from '../i18n/LanguageSelector';
+import { PageHeader } from '../components/PageHeader';
 
 export const SettingsPage = () => {
   const location = useLocation();
@@ -15,18 +16,14 @@ export const SettingsPage = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="eyebrow">Configure</p>
-          <h1 className="text-3xl font-bold text-white mb-2"><FormattedMessage id="settings.title" /></h1>
-          <p className="text-slate-400">
-            {isAlerts ? intl.formatMessage({ id: 'nav.alerts' }) :
-             isMaintenance ? intl.formatMessage({ id: 'nav.maintenance' }) :
-             intl.formatMessage({ id: 'settings.general' })}
-          </p>
-        </div>
-      </div>
-      <div className="page-rule" />
+      <PageHeader eyebrow="Configure">
+        <h1 className="text-3xl font-bold text-white mb-2"><FormattedMessage id="settings.title" /></h1>
+        <p className="text-slate-400">
+          {isAlerts ? intl.formatMessage({ id: 'nav.alerts' }) :
+           isMaintenance ? intl.formatMessage({ id: 'nav.maintenance' }) :
+           intl.formatMessage({ id: 'settings.general' })}
+        </p>
+      </PageHeader>
 
       {isAlerts ? (
         <>

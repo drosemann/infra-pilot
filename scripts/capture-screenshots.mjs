@@ -19,6 +19,8 @@ const require = createRequire(path.resolve(__dirname, '../services/management-pa
 const { chromium } = require('playwright');
 const OUT = path.resolve(__dirname, '../docs/screenshots');
 const BASE = process.env.PANEL_URL || 'http://localhost:5173';
+// Mirrors the frontend default (VITE_API_URL || 'http://localhost:3001' in src/lib/api.ts).
+const API_BASE = process.env.VITE_API_URL || 'http://localhost:3001';
 const NAVIGATION_ATTEMPTS = 5;
 const NAVIGATION_RETRY_DELAY_MS = 2000;
 const NAVIGATION_TIMEOUT_MS = 30_000;
@@ -38,7 +40,7 @@ const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, dev
 // Capture mode uses safe, representative demo responses and never requires a
 // running local backend or an authenticated account.
 await page.addInitScript(() => localStorage.setItem('sb_access_token', 'screenshot-demo-token'));
-await page.route('http://localhost:3001/**', async (route) => {
+await page.route(`${API_BASE}/**`, async (route) => {
   const url = new URL(route.request().url());
   const apps = [
     { id: 'shop-api', name: 'shop-api', image: 'ghcr.io/acme/shop-api:stable', status: 'running', ports: ['8080:8080'] },

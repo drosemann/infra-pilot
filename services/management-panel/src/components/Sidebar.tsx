@@ -285,7 +285,7 @@ export const Sidebar = ({
 
         {/* Navigation Items */}
         <nav className="flex-1 space-y-1.5 p-4" aria-label="Primary navigation">
-          <p className="px-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/35">
+          <p className="px-3 pb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/45">
             Workspace
           </p>
           {sidebarItems.map((item) => (
@@ -345,8 +345,8 @@ export const Sidebar = ({
           ))}
         </nav>
 
-        <div className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-3 py-2 text-xs leading-5 text-amber-100/75">
-          <span className="beta-badge shrink-0">Beta</span>
+        <div className="mx-4 mb-3 flex items-start gap-2 rounded-xl border border-amber-300/15 bg-amber-300/[0.06] px-3 py-2 text-xs leading-5 text-amber-100/75">
+          <span className="beta-badge mt-0.5 shrink-0">Beta</span>
           Beta features are in active testing and may change.
         </div>
 

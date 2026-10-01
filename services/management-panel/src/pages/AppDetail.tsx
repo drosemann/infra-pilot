@@ -11,6 +11,7 @@ import { ConfigVersionControl } from '../components/ConfigVersionControl';
 import { LiveLogs } from '../components/LiveLogs';
 import AlertConfig from '../components/AlertConfig';
 import { ServerOperationsHub } from '../components/ServerOperationsHub';
+import { PageHeader } from '../components/PageHeader';
 
 export const AppDetail = () => {
   const navigate = useNavigate();
@@ -157,21 +158,23 @@ export const AppDetail = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{app.name}</h1>
-          <p className="text-slate-600 dark:text-slate-300 font-mono">{app.image}</p>
-          {app.description && (
-            <p className="text-slate-500 dark:text-slate-400 mt-2">{app.description}</p>
-          )}
-        </div>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-        >
-          ← Back
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Applications"
+        actions={
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+          >
+            ← Back
+          </button>
+        }
+      >
+        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{app.name}</h1>
+        <p className="text-slate-600 dark:text-slate-300 font-mono">{app.image}</p>
+        {app.description && (
+          <p className="text-slate-500 dark:text-slate-400 mt-2">{app.description}</p>
+        )}
+      </PageHeader>
 
       {/* Status and Actions */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">

@@ -1,6 +1,5 @@
 import { Outlet, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { FormattedMessage } from "react-intl";
 import { apiClient } from "../lib/api";
 import { clearAccessToken } from "../lib/auth";
 import { useConfig } from "../lib/types";

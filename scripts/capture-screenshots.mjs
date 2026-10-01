@@ -25,6 +25,8 @@ const NAVIGATION_ATTEMPTS = 5;
 const NAVIGATION_RETRY_DELAY_MS = 2000;
 const NAVIGATION_TIMEOUT_MS = 30_000;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const shots = [
   { route: '/dashboard', file: '01-dashboard.png' },
   { route: '/monitoring', file: '02-monitoring.png' },
@@ -71,14 +73,14 @@ async function gotoWithRetry(page, url) {
       console.warn(
         `navigation attempt ${attempt} failed for ${url}; retrying in ${NAVIGATION_RETRY_DELAY_MS}ms`,
       );
-      await page.waitForTimeout(NAVIGATION_RETRY_DELAY_MS);
+      await sleep(NAVIGATION_RETRY_DELAY_MS);
     }
   }
 }
 
 for (const s of shots) {
   await gotoWithRetry(page, `${BASE}${s.route}`);
-  await page.waitForTimeout(1500);
+  await sleep(1500);
   await page.screenshot({ path: path.join(OUT, s.file) });
   console.log(`captured ${s.file}`);
 }

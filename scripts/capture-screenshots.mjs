@@ -45,9 +45,9 @@ async function mockDemoApi(context) {
   await context.route(`${API_BASE}/**`, async (route) => {
     const url = new URL(route.request().url());
     const apps = [
-      { id: 'shop-api', name: 'shop-api', image: 'ghcr.io/acme/shop-api:stable', status: 'running', ports: ['8080:8080'] },
-      { id: 'web', name: 'customer-portal', image: 'ghcr.io/acme/customer-portal:stable', status: 'running', ports: ['3000:3000'] },
-      { id: 'worker', name: 'jobs-worker', image: 'ghcr.io/acme/jobs-worker:stable', status: 'stopped', ports: [] },
+      { id: 'shop-api', name: 'shop-api', image: 'ghcr.io/acme/shop-api:stable', status: 'running', created_at: '2026-09-15T10:00:00Z', ports: [{ hostPort: 8080, containerPort: 8080, protocol: 'tcp' }] },
+      { id: 'web', name: 'customer-portal', image: 'ghcr.io/acme/customer-portal:stable', status: 'running', created_at: '2026-09-12T08:30:00Z', ports: [{ hostPort: 3000, containerPort: 3000, protocol: 'tcp' }] },
+      { id: 'worker', name: 'jobs-worker', image: 'ghcr.io/acme/jobs-worker:stable', status: 'stopped', created_at: '2026-09-10T14:00:00Z', ports: [] },
     ];
     let data = {};
     if (url.pathname === '/health') data = { status: 'ok' };

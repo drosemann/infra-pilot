@@ -53,6 +53,7 @@ export const Monitoring = () => {
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
+          <p className="eyebrow">Observe</p>
           <h1 className="text-3xl font-bold text-white mb-2">Monitoring</h1>
           <p className="text-slate-400">Server performance and health monitoring</p>
         </div>

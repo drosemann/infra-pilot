@@ -17,6 +17,7 @@ export const SettingsPage = () => {
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
+          <p className="eyebrow">Configure</p>
           <h1 className="text-3xl font-bold text-white mb-2"><FormattedMessage id="settings.title" /></h1>
           <p className="text-slate-400">
             {isAlerts ? intl.formatMessage({ id: 'nav.alerts' }) :

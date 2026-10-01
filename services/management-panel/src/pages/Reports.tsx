@@ -43,6 +43,7 @@ export const Reports = () => {
     <div className="space-y-8">
       <div className="flex items-start justify-between">
         <div>
+          <p className="eyebrow">Analyze</p>
           <h1 className="text-3xl font-bold text-white mb-2">Reports</h1>
           <p className="text-slate-400">Resource usage reports and analytics</p>
         </div>

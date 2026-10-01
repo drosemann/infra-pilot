@@ -159,6 +159,7 @@ export const AppDetail = () => {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
+          <p className="eyebrow">Applications</p>
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">{app.name}</h1>
           <p className="text-slate-600 dark:text-slate-300 font-mono">{app.image}</p>
           {app.description && (

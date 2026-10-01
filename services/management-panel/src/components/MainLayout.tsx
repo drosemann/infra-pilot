@@ -153,7 +153,7 @@ export const MainLayout = () => {
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto" id="main-content">
           <div className="p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-[1600px]">
+            <div className="page-enter mx-auto w-full max-w-[1600px]">
               <Outlet />
             </div>
           </div>

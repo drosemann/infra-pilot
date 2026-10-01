@@ -334,7 +334,6 @@ body::before {
     border-color 0.2s ease;
 }
 
-
 /* Shared product language: quiet surfaces, crisp hierarchy, deliberate status color. */
 .beta-badge {
   display: inline-flex;
@@ -351,7 +350,7 @@ body::before {
   text-transform: uppercase;
 }
 
-main > div {
+.page-enter {
   animation: page-enter 280ms ease-out both;
 }
 

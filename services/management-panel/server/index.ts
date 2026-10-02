@@ -2191,6 +2191,40 @@ app.get('/api/backup-jobs/:jobId/status', verifyAuth, async (req: Request, res: 
   }
 });
 
+// GET /api/backup-artifacts - Read-only list of db-backup.sh artifacts
+app.get('/api/backup-artifacts', verifyAuth, async (_req: Request, res: Response) => {
+  try {
+    const dir = process.env.BACKUP_DIR || path.resolve(__dirname, '..', '..', '..', 'backups');
+    let names: string[] = [];
+    try {
+      names = await fs.readdir(dir);
+    } catch {
+      return res.json({ artifacts: [], last_success_epoch: null });
+    }
+    const artifacts = [];
+    for (const name of names.filter((n) => !n.endsWith('.sha256') && !n.endsWith('.prom')).sort().reverse().slice(0, 50)) {
+      try {
+        const full = path.join(dir, name);
+        const st = await fs.stat(full);
+        if (!st.isFile()) continue;
+        let sha256Present = false;
+        try { await fs.stat(`${full}.sha256`); sha256Present = true; } catch { /* sidecar absent */ }
+        artifacts.push({ name, size_bytes: st.size, mtime_ms: st.mtimeMs, sha256_present: sha256Present });
+      } catch { /* skip unreadable entries */ }
+    }
+    artifacts.sort((a, b) => b.mtime_ms - a.mtime_ms);
+    let lastSuccessEpoch: number | null = null;
+    try {
+      const prom = await fs.readFile(path.join(dir, 'last_success.prom'), 'utf8');
+      const m = prom.match(/^backup_last_success_timestamp\s+(\d+)/m);
+      if (m) lastSuccessEpoch = Number(m[1]);
+    } catch { /* no prom file yet */ }
+    res.json({ artifacts, last_success_epoch: lastSuccessEpoch });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list backup artifacts' });
+  }
+});
+
 // POST /api/backup/config - S3/Backblaze backup storage configuration
 app.post('/api/backup/config', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;

@@ -336,6 +336,14 @@ const spec: Record<string, any> = {
         responses: { '200': { description: 'Backup status entries' } },
       },
     },
+    '/backup-artifacts': {
+      get: {
+        summary: 'Read-only list of db-backup.sh artifacts',
+        tags: ['Backups'],
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Backup artifacts with last success timestamp' } },
+      },
+    },
     '/alert-configs': {
       get: {
         summary: 'List alert configurations',

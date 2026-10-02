@@ -148,9 +148,10 @@ if [[ -n "$GRAFANA_FILE" ]]; then
     exit 1
   fi
   info "Restoring Grafana archive $GRAFANA_FILE into grafana_data ..."
+  GRAFANA_BASENAME="$(basename "$GRAFANA_FILE")"
   docker run --rm -v infra-pilot_grafana_data:/data \
     -v "$(cd "$(dirname "$GRAFANA_FILE")" && pwd):/in:ro" \
-    alpine sh -c "rm -rf /data/* && tar xzf /in/$(basename "$GRAFANA_FILE") -C /data"
+    alpine sh -c 'rm -rf /data/* && tar xzf "/in/$1" -C /data' sh "$GRAFANA_BASENAME"
   success "Grafana restore completed from: $GRAFANA_FILE"
 fi
 

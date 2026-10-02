@@ -38,8 +38,12 @@ const shots = [
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
 
-// Capture mode uses safe, representative demo responses and never requires a
-// running local backend or an authenticated account.
+/**
+ * Seed demo authentication and intercept API requests with screenshot fixtures.
+ * No running backend or authenticated account is required.
+ * @param {import('playwright').BrowserContext} context - Context to configure.
+ * @returns {Promise<void>} Resolves once initialization and routing are installed.
+ */
 async function mockDemoApi(context) {
   await context.addInitScript(() => localStorage.setItem('sb_access_token', 'screenshot-demo-token'));
   await context.route(`${API_BASE}/**`, async (route) => {
@@ -79,6 +83,14 @@ async function mockDemoApi(context) {
   });
 }
 
+/**
+ * Navigate to a URL, retrying failures with a fixed delay between attempts.
+ * @param {import('playwright').Page} page - Page to navigate.
+ * @param {string} url - Destination URL.
+ * @returns {Promise<import('playwright').Response|null>} Navigation response, or null
+ * for navigations such as same-page hash changes.
+ * @throws {Error} Rethrows the final navigation error when retries are exhausted.
+ */
 async function gotoWithRetry(page, url) {
   for (let attempt = 1; attempt <= NAVIGATION_ATTEMPTS; attempt += 1) {
     try {

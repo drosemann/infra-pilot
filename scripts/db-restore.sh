@@ -17,10 +17,11 @@ usage() {
   cat <<EOF
 Restore the Infra Pilot Postgres database from a backup file.
 
-Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes]
+Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes] [--dry-run]
 
 Options:
   --yes       Skip the confirmation prompt
+  --dry-run   Validate header and TOC without touching the database
   --help      Show this help message
 
 Notes:
@@ -41,11 +42,13 @@ EOF
 }
 
 ASSUME_YES=false
+DRY_RUN=false
 BACKUP_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes) ASSUME_YES=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
     --help) usage ;;
     -*)
       echo "Unknown option: $1" >&2
@@ -86,6 +89,19 @@ fi
 if [[ $(head -c 5 "$RESTORE_FILE") != "PGDMP" ]]; then
   error "Not a pg_dump custom-format backup: $BACKUP_FILE"
   exit 1
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+  if command -v pg_restore &> /dev/null; then
+    if ! pg_restore --list "$RESTORE_FILE" > /dev/null; then
+      error "pg_restore --list failed for: $BACKUP_FILE"
+      exit 1
+    fi
+  else
+    info "pg_restore not found; header check only."
+  fi
+  success "Dry-run OK: $BACKUP_FILE looks like a valid pg_dump archive."
+  exit 0
 fi
 
 if ! command -v docker &> /dev/null; then

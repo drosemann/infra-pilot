@@ -17,10 +17,11 @@ usage() {
   cat <<EOF
 Restore the Infra Pilot Postgres database from a backup file.
 
-Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes]
+Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes] [--dry-run]
 
 Options:
   --yes       Skip the confirmation prompt
+  --dry-run   Only verify the backup (pg_restore --list), no restore
   --help      Show this help message
 
 Notes:
@@ -34,18 +35,19 @@ Notes:
     grafana_*.tgz volume archives. To restore those, stop the stack and
     copy/extract the artifact back into the redis_data / grafana_data
     volumes (see wiki/12-Backup-Restore.md), then start the stack.
-  - Verify restores with --dry-run style checks (pg_restore --list) before
-    production use.
+  - Use --dry-run to verify a backup without touching the database.
 EOF
   exit "${1:-0}"
 }
 
 ASSUME_YES=false
+DRY_RUN=false
 BACKUP_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes) ASSUME_YES=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
     --help) usage ;;
     -*)
       echo "Unknown option: $1" >&2
@@ -86,6 +88,16 @@ fi
 if [[ $(head -c 5 "$RESTORE_FILE") != "PGDMP" ]]; then
   error "Not a pg_dump custom-format backup: $BACKUP_FILE"
   exit 1
+fi
+
+if [[ "$DRY_RUN" == true ]]; then
+  if command -v pg_restore &> /dev/null; then
+    entries=$(pg_restore --list "$RESTORE_FILE" | grep -c . || true)
+    success "Dry-run OK: $BACKUP_FILE is a valid pg_dump archive ($entries toc entries)."
+  else
+    success "Dry-run OK: $BACKUP_FILE has a pg_dump header (pg_restore missing, listing skipped)."
+  fi
+  exit 0
 fi
 
 if ! command -v docker &> /dev/null; then

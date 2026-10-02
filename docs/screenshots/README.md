@@ -48,7 +48,8 @@ API responses, so it can run without a separate backend or personal data.
 
 ### 1. Real browser captures (preferred)
 
-Requires Node.js 22+, Playwright Chromium, and the local Vite frontend:
+Requires Node.js 22+, Playwright Chromium, the local Vite frontend, and
+Python 3 with Pillow installed (`python3 -m pip install Pillow`) to rebuild the GIF:
 
 ```bash
 cd services/management-panel

@@ -350,6 +350,12 @@ body::before {
   text-transform: uppercase;
 }
 
+nav .bg-white .beta-badge {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
 .page-enter {
   animation: page-enter 280ms ease-out both;
 }

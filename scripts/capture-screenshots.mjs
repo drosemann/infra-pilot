@@ -74,7 +74,7 @@ async function mockDemoApi(context) {
   else if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
   else if (url.pathname === '/api/user') data = { id: 'demo-admin', email: 'admin@example.com', display_name: 'Demo Admin', role: 'Admin' };
   else if (url.pathname === '/api/apps') data = apps;
-  else if (url.pathname.startsWith('/api/apps/')) data = apps[0];
+  else if (/^\/api\/apps\/[^/]+$/.test(url.pathname)) data = apps[0];
   else if (url.pathname === '/api/backup-jobs') data = backupJobs;
   else if (url.pathname.startsWith('/api/backup-jobs/')) data = backupEntries[url.pathname.split('/')[3]] || [];
   else if (url.pathname === '/api/maintenance-windows') data = [];

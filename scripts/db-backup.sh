@@ -44,6 +44,8 @@ Options:
   --no-plaintext    With --encrypt-to: delete plaintext after encryption
   --skip-redis      Skip the Redis snapshot
   --skip-grafana    Skip the Grafana data archive
+  --dry-run         Print the resolved backup plan and exit without
+                    touching docker, volumes or remotes
   --help            Show this help message
 
 Self-hosted offsite (no S3 needed):
@@ -74,6 +76,7 @@ ENCRYPT_TO=""
 NO_PLAINTEXT=false
 WITH_REDIS=true
 WITH_GRAFANA=true
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -89,6 +92,7 @@ while [[ $# -gt 0 ]]; do
     --no-plaintext) NO_PLAINTEXT=true; shift ;;
     --skip-redis) WITH_REDIS=false; shift ;;
     --skip-grafana) WITH_GRAFANA=false; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
     --help) usage ;;
     *) echo "Unknown option: $1" >&2; usage 2 ;;
   esac
@@ -96,6 +100,22 @@ done
 
 POSTGRES_USER="${POSTGRES_USER:-infra_pilot}"
 POSTGRES_DB="${POSTGRES_DB:-infra_pilot}"
+
+if [[ "$DRY_RUN" == true ]]; then
+  info "Dry run: no backup will be created."
+  info "  out: $OUT_DIR (keep=$KEEP)"
+  info "  postgres: $POSTGRES_DB (user $POSTGRES_USER)"
+  info "  redis: $WITH_REDIS, grafana: $WITH_GRAFANA"
+  info "  s3: ${S3_URI:-disabled}"
+  info "  borg: ${BORG_REPO:-disabled}"
+  info "  rclone: ${RCLONE_REMOTE:-disabled}"
+  if [[ -n "${BORG_PASSPHRASE:-}" ]]; then
+    info "  borg passphrase: set (env)"
+  else
+    info "  borg passphrase: unset (env)"
+  fi
+  exit 0
+fi
 
 if [[ -n "$S3_URI" ]] && ! command -v aws &> /dev/null; then
   error "aws CLI not found in PATH (required for --s3)"
@@ -296,3 +316,15 @@ success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"
 done
+
+# Optional Prometheus textfile for backup_last_success_timestamp.
+# Set BACKUP_METRIC_FILE (e.g. a node-exporter textfile path) to enable;
+# secrets such as BORG_PASSPHRASE stay env-side and are never written.
+if [[ -n "${BACKUP_METRIC_FILE:-}" ]]; then
+  now="$(date +%s)"
+  {
+    echo "# HELP backup_last_success_timestamp Unix time of last successful backup."
+    echo "# TYPE backup_last_success_timestamp gauge"
+    echo "backup_last_success_timestamp $now"
+  } > "$BACKUP_METRIC_FILE.tmp" && mv "$BACKUP_METRIC_FILE.tmp" "$BACKUP_METRIC_FILE"
+fi

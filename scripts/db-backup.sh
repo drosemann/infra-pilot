@@ -218,7 +218,7 @@ prune() {
     info "Removing ${#old_files[@]} old file(s) of $pattern (keep=$kept)..."
     for f in "${old_files[@]}"; do
       info "  - $f"
-      rm -f "$f"
+      rm -f "$f" "$f.sha256"
     done
   fi
 }

@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
+import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, BackupArtifactsResponse, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -295,6 +295,11 @@ class APIClient {
 
   async getBackupStatus(jobId: string): Promise<BackupStatusEntry[]> {
     const res = await this.api.get(`/api/backup-jobs/${jobId}/status`);
+    return res.data;
+  }
+
+  async getBackupArtifacts(): Promise<BackupArtifactsResponse> {
+    const res = await this.api.get('/api/backup-artifacts');
     return res.data;
   }
 

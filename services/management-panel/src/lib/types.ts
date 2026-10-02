@@ -175,6 +175,18 @@ export interface BackupStatusEntry {
   completed_at: string;
 }
 
+export interface BackupArtifact {
+  name: string;
+  size_bytes: number;
+  mtime_ms: number;
+  sha256_present: boolean;
+}
+
+export interface BackupArtifactsResponse {
+  artifacts: BackupArtifact[];
+  last_success_epoch: number | null;
+}
+
 export interface AlertConfig {
   id: string;
   user_id: string;

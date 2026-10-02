@@ -166,6 +166,7 @@ def backup_tools(tmp_path):
         "tail",
         "rm",
         "basename",
+        "sha256sum",
     ):
         (tool_dir / tool).symlink_to(shutil.which(tool))
     env = {
@@ -338,3 +339,49 @@ def test_borg_repo_env_fallback(tmp_path, selfhosted_tools):
     assert proc.returncode == 0, proc.stderr
     log = Path(env["TOOL_LOG"]).read_text()
     assert "borg create" in log
+
+
+def test_writes_sha256_sidecar_and_success_prom(tmp_path, backup_tools):
+    """Verify backup writes a sha256 sidecar and last_success.prom metric."""
+    out = tmp_path / "backups"
+    proc = run(
+        BACKUP, "--out", str(out), "--skip-redis", "--skip-grafana", env=backup_tools
+    )
+    assert proc.returncode == 0, proc.stderr
+    dumps = list(out.glob("infra-pilot_*.dump"))
+    assert len(dumps) == 1
+    sidecar = dumps[0].parent / (dumps[0].name + ".sha256")
+    assert sidecar.exists()
+    check = subprocess.run(
+        [shutil.which("sha256sum"), "-c", sidecar.name],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        cwd=out,
+    )
+    assert check.returncode == 0, check.stderr
+    prom = out / "last_success.prom"
+    assert prom.exists()
+    assert "backup_last_success_timestamp" in prom.read_text()
+
+
+def test_prune_removes_checksum_sidecar(tmp_path, backup_tools):
+    """Verify retention pruning also drops the detached sha256 sidecar."""
+    out = tmp_path / "backups"
+    out.mkdir()
+    old = out / "infra-pilot_20000101_000000.dump"
+    old.write_text("old")
+    (out / (old.name + ".sha256")).write_text("old-sidecar")
+    proc = run(
+        BACKUP,
+        "--out",
+        str(out),
+        "--skip-redis",
+        "--skip-grafana",
+        "--keep",
+        "1",
+        env=backup_tools,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert not old.exists()
+    assert not (out / (old.name + ".sha256")).exists()

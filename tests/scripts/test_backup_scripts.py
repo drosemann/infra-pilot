@@ -34,7 +34,15 @@ class TestDbBackupHelp:
         """Verify backup help lists S3, encryption, and retention options."""
         proc = run(BACKUP, "--help")
         assert proc.returncode == 0
-        for flag in ("--s3", "--encrypt-to", "--no-plaintext", "--keep"):
+        for flag in (
+            "--s3",
+            "--encrypt-to",
+            "--no-plaintext",
+            "--keep",
+            "--keep-daily",
+            "--keep-weekly",
+            "--keep-monthly",
+        ):
             assert flag in proc.stdout
 
     def test_help_lists_selfhosted_options(self):
@@ -125,6 +133,21 @@ class TestDbRestoreHelp:
         """Verify an unsupported option causes the script to fail."""
         proc = run(RESTORE, "--nope")
         assert proc.returncode != 0
+
+    def test_dry_run_rejects_non_dump(self, tmp_path):
+        """Verify dry-run fails for files without a pg_dump header."""
+        bad = tmp_path / "bad.dump"
+        bad.write_text("not a dump")
+        proc = run(RESTORE, str(bad), "--dry-run")
+        assert proc.returncode != 0
+
+    def test_dry_run_accepts_dump_header_without_docker(self, tmp_path):
+        """Verify dry-run passes on header check alone (no daemon needed)."""
+        good = tmp_path / "good.dump"
+        good.write_bytes(b"PGDMPfake-toc")
+        proc = run(RESTORE, str(good), "--dry-run")
+        assert proc.returncode == 0
+        assert "Dry-run OK" in proc.stdout
 
 
 @pytest.fixture

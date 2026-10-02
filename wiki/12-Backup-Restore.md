@@ -15,10 +15,19 @@ This creates a `pg_dump` custom-format backup at
 
 Options:
 
-| Option        | Description                              |
-|---------------|------------------------------------------|
-| `--keep N`    | Keep only the N most recent backups      |
-| `--out DIR`   | Use a different output directory         |
+| Option            | Description                                          |
+|-------------------|------------------------------------------------------|
+| `--keep N`        | Keep only the N most recent local backups (default 10) |
+| `--keep-daily N`  | Borg daily retention (default 7)                     |
+| `--keep-weekly N` | Borg weekly retention (default 4)                    |
+| `--keep-monthly N`| Borg monthly retention (default 6)                   |
+| `--out DIR`       | Use a different output directory                     |
+
+Every artifact gets a `.sha256` sidecar, verified at the end of each
+run. Concurrent runs are guarded by a `flock` lock
+(`BACKUP_LOCK_FILE`, default `/tmp/infra-pilot-backup.lock`).
+A successful run writes `last_success.prom`
+(`backup_last_success_timestamp`) for Prometheus textfile scraping.
 
 The script starts the `postgres` container via `docker compose` if the stack
 is not running.
@@ -26,6 +35,9 @@ is not running.
 ## Restore
 
 ```bash
+# Validate first (no database touched, exits non-zero on bad header/TOC)
+./scripts/db-restore.sh backups/infra-pilot_20260701_091500.dump --dry-run
+
 ./scripts/db-restore.sh backups/infra-pilot_20260701_091500.dump
 ```
 
@@ -36,6 +48,14 @@ What happens:
 3. It restores into the running `postgres` container using
    `pg_restore --clean --if-exists --no-owner`, i.e. existing tables are
    dropped and recreated from the backup.
+
+Optional volume restores (Postgres-only by default):
+
+```bash
+./scripts/db-restore.sh backups/infra-pilot_<stamp>.dump --yes \
+  --redis-file backups/redis_<stamp>.rdb \
+  --grafana-file backups/grafana_<stamp>.tgz
+```
 
 ### Before restoring
 

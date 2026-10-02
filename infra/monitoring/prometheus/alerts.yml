@@ -37,3 +37,16 @@ groups:
         annotations:
           summary: "Low disk space on {{ $labels.instance }}"
           description: "Disk usage is above 90% on {{ $labels.mountpoint }}."
+
+      # Fires when no successful backup was reported for 26h (daily cron
+      # plus 2h slack). The metric is a Unix timestamp, e.g. written by
+      # scripts/db-backup.sh when BACKUP_METRIC_FILE points at a
+      # node-exporter textfile path (see wiki/12-Backup-Restore.md).
+      - alert: BackupStale
+        expr: (time() - backup_last_success_timestamp) > 93600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No successful backup for more than 26h"
+          description: "backup_last_success_timestamp is older than 26h. Check the backup cron job and wiki/12-Backup-Restore.md."

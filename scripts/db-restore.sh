@@ -17,11 +17,14 @@ usage() {
   cat <<EOF
 Restore the Infra Pilot Postgres database from a backup file.
 
-Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes]
+Usage: $(basename "$0") <backup-file.dump[.gpg]> [--yes] [--dry-run] [--redis-file FILE] [--grafana-file FILE]
 
 Options:
-  --yes       Skip the confirmation prompt
-  --help      Show this help message
+  --yes           Skip the confirmation prompt
+  --dry-run       Validate header and TOC without touching the database
+  --redis-file F  Additionally restore Redis RDB snapshot F into redis_data
+  --grafana-file F  Additionally restore Grafana tgz archive F into grafana_data
+  --help          Show this help message
 
 Notes:
   - The backup file must be a pg_dump custom-format dump (created by db-backup.sh).
@@ -30,22 +33,25 @@ Notes:
   - Stop the services that write to the database (orchestrator-agent, discord-service,
     management-panel) before restoring to avoid data loss.
   - The restore uses --clean --if-exists, so existing tables are dropped and recreated.
-  - Redis/Grafana: db-backup.sh also writes redis_*.rdb snapshots and
-    grafana_*.tgz volume archives. To restore those, stop the stack and
-    copy/extract the artifact back into the redis_data / grafana_data
-    volumes (see wiki/12-Backup-Restore.md), then start the stack.
-  - Verify restores with --dry-run style checks (pg_restore --list) before
-    production use.
+  - Redis/Grafana restores stop redis / grafana volumes briefly and copy the
+    artifact back (see wiki/12-Backup-Restore.md). Omit both flags for Postgres only.
+  - Verify restores with --dry-run (pg_restore --list) before production use.
 EOF
   exit "${1:-0}"
 }
 
 ASSUME_YES=false
+DRY_RUN=false
 BACKUP_FILE=""
+REDIS_FILE=""
+GRAFANA_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --yes) ASSUME_YES=true; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
+    --redis-file) REDIS_FILE="$2"; shift 2 ;;
+    --grafana-file) GRAFANA_FILE="$2"; shift 2 ;;
     --help) usage ;;
     -*)
       echo "Unknown option: $1" >&2
@@ -88,6 +94,19 @@ if [[ $(head -c 5 "$RESTORE_FILE") != "PGDMP" ]]; then
   exit 1
 fi
 
+if [[ "$DRY_RUN" == true ]]; then
+  if command -v pg_restore &> /dev/null; then
+    if ! pg_restore --list "$RESTORE_FILE" > /dev/null; then
+      error "pg_restore --list failed for: $BACKUP_FILE"
+      exit 1
+    fi
+  else
+    info "pg_restore not found; header check only."
+  fi
+  success "Dry-run OK: $BACKUP_FILE looks like a valid pg_dump archive."
+  exit 0
+fi
+
 if ! command -v docker &> /dev/null; then
   error "docker not found in PATH"
   exit 1
@@ -110,5 +129,30 @@ fi
 docker compose -f "$ROOT_DIR/docker-compose.yml" exec -T postgres \
   pg_restore --clean --if-exists --no-owner \
   -U "$POSTGRES_USER" -d "$POSTGRES_DB" - < "$RESTORE_FILE"
+
+if [[ -n "$REDIS_FILE" ]]; then
+  if [[ ! -f "$REDIS_FILE" ]]; then
+    error "Redis snapshot not found: $REDIS_FILE"
+    exit 1
+  fi
+  info "Restoring Redis snapshot $REDIS_FILE into redis_data ..."
+  docker compose -f "$ROOT_DIR/docker-compose.yml" stop redis > /dev/null
+  docker compose -f "$ROOT_DIR/docker-compose.yml" cp "$REDIS_FILE" redis:/data/dump.rdb
+  docker compose -f "$ROOT_DIR/docker-compose.yml" start redis > /dev/null
+  success "Redis restore completed from: $REDIS_FILE"
+fi
+
+if [[ -n "$GRAFANA_FILE" ]]; then
+  if [[ ! -f "$GRAFANA_FILE" ]]; then
+    error "Grafana archive not found: $GRAFANA_FILE"
+    exit 1
+  fi
+  info "Restoring Grafana archive $GRAFANA_FILE into grafana_data ..."
+  GRAFANA_BASENAME="$(basename "$GRAFANA_FILE")"
+  docker run --rm -v infra-pilot_grafana_data:/data \
+    -v "$(cd "$(dirname "$GRAFANA_FILE")" && pwd):/in:ro" \
+    alpine sh -c 'rm -rf /data/* && tar xzf "/in/$1" -C /data' sh "$GRAFANA_BASENAME"
+  success "Grafana restore completed from: $GRAFANA_FILE"
+fi
 
 success "Restore completed from: $BACKUP_FILE"

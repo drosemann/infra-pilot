@@ -1,3 +1,4 @@
+import { BackupArtifacts } from '../components/BackupArtifacts';
 import { BackupManager } from '../components/BackupManager';
 import { BackupStatus } from '../components/BackupStatus';
 import { PageHeader } from '../components/PageHeader';
@@ -11,6 +12,7 @@ export const Backups = () => {
       </PageHeader>
 
       <BackupStatus />
+      <BackupArtifacts />
       <BackupManager />
     </div>
   );

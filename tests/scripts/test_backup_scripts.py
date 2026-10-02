@@ -34,7 +34,15 @@ class TestDbBackupHelp:
         """Verify backup help lists S3, encryption, and retention options."""
         proc = run(BACKUP, "--help")
         assert proc.returncode == 0
-        for flag in ("--s3", "--encrypt-to", "--no-plaintext", "--keep"):
+        for flag in (
+            "--s3",
+            "--encrypt-to",
+            "--no-plaintext",
+            "--keep",
+            "--keep-daily",
+            "--keep-weekly",
+            "--keep-monthly",
+        ):
             assert flag in proc.stdout
 
     def test_help_lists_selfhosted_options(self):

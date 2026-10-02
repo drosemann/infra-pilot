@@ -22,7 +22,10 @@ Create backups of the Infra Pilot state (Postgres, Redis, Grafana data).
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --keep N          Keep only the N most recent backups per type (default: 10)
+  --keep N          Keep only the N most recent local backups per type (default: 10)
+  --keep-daily N    Borg daily retention (default: 7)
+  --keep-weekly N   Borg weekly retention (default: 4)
+  --keep-monthly N  Borg monthly retention (default: 6)
   --out DIR         Backup output directory (default: \$ROOT_DIR/backups)
   --s3 URI          Additionally upload finished artifacts to S3
                     (e.g. s3://my-bucket/infra-pilot); requires the aws CLI
@@ -60,6 +63,9 @@ EOF
 }
 
 KEEP=10
+KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
+KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-6}"
 OUT_DIR="$ROOT_DIR/backups"
 S3_URI=""
 BORG_REPO="${BACKUP_BORG_REPO:-${BORG_REPO:-}}"
@@ -72,6 +78,9 @@ WITH_GRAFANA=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) KEEP="$2"; shift 2 ;;
+    --keep-daily) KEEP_DAILY="$2"; shift 2 ;;
+    --keep-weekly) KEEP_WEEKLY="$2"; shift 2 ;;
+    --keep-monthly) KEEP_MONTHLY="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --s3) S3_URI="$2"; shift 2 ;;
     --borg-repo) BORG_REPO="$2"; shift 2 ;;
@@ -233,7 +242,8 @@ if [[ -n "$BORG_REPO" ]]; then
   # shellcheck disable=SC2068
   borg create --stats --compression lz4 \
     "$BORG_REPO::infra-pilot-${stamp}" ${ARTIFACTS[@]}
-  borg prune --list --keep-last="$KEEP" "$BORG_REPO"
+  borg prune --list --keep-daily="$KEEP_DAILY" --keep-weekly="$KEEP_WEEKLY" \
+    --keep-monthly="$KEEP_MONTHLY" "$BORG_REPO"
   success "Borg archive created: infra-pilot-${stamp}"
 fi
 

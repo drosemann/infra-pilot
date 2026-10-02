@@ -134,6 +134,21 @@ class TestDbRestoreHelp:
         proc = run(RESTORE, "--nope")
         assert proc.returncode != 0
 
+    def test_dry_run_rejects_non_dump(self, tmp_path):
+        """Verify dry-run fails for files without a pg_dump header."""
+        bad = tmp_path / "bad.dump"
+        bad.write_text("not a dump")
+        proc = run(RESTORE, str(bad), "--dry-run")
+        assert proc.returncode != 0
+
+    def test_dry_run_accepts_dump_header_without_docker(self, tmp_path):
+        """Verify dry-run passes on header check alone (no daemon needed)."""
+        good = tmp_path / "good.dump"
+        good.write_bytes(b"PGDMPfake-toc")
+        proc = run(RESTORE, str(good), "--dry-run")
+        assert proc.returncode == 0
+        assert "Dry-run OK" in proc.stdout
+
 
 @pytest.fixture
 def backup_tools(tmp_path):

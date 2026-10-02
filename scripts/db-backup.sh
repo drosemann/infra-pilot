@@ -141,17 +141,29 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 stamp=$(date +%Y%m%d_%H%M%S)
 ARTIFACTS=()
 
+write_checksum() {
+  local file="$1"
+  if command -v sha256sum &> /dev/null; then
+    sha256sum "$file" > "${file}.sha256"
+    ARTIFACTS+=("${file}.sha256")
+  else
+    warn "sha256sum not found; skipping checksum for $(basename "$file")"
+  fi
+}
+
 maybe_encrypt_and_upload() {
   local file="$1"
   local upload_file="$file"
+  write_checksum "$file"
   if [[ -n "$ENCRYPT_TO" ]]; then
     info "Encrypting $file for $ENCRYPT_TO ..."
     gpg --batch --yes --trust-model always --encrypt --recipient "$ENCRYPT_TO" \
       --output "${file}.gpg" "$file"
     upload_file="${file}.gpg"
     ARTIFACTS+=("${file}.gpg")
+    write_checksum "${file}.gpg"
     if [[ "$NO_PLAINTEXT" == true ]]; then
-      rm -f "$file"
+      rm -f "$file" "${file}.sha256"
     fi
   fi
   if [[ -n "$S3_URI" ]]; then
@@ -190,6 +202,8 @@ success "Postgres backup created ($size): $backup_file"
 maybe_encrypt_and_upload "$backup_file"
 prune "infra-pilot_*.dump" "$KEEP"
 prune "infra-pilot_*.dump.gpg" "$KEEP"
+prune "infra-pilot_*.dump.sha256" "$KEEP"
+prune "infra-pilot_*.dump.gpg.sha256" "$KEEP"
 
 # --- Redis (RDB snapshot; AOF persists in redis_data volume) ---
 if [[ "$WITH_REDIS" == true ]]; then
@@ -206,6 +220,8 @@ if [[ "$WITH_REDIS" == true ]]; then
   fi
   prune "redis_*.rdb" "$KEEP"
   prune "redis_*.rdb.gpg" "$KEEP"
+  prune "redis_*.rdb.sha256" "$KEEP"
+  prune "redis_*.rdb.gpg.sha256" "$KEEP"
 fi
 
 # --- Grafana data volume (dashboards provisioned from repo; archive covers
@@ -227,6 +243,8 @@ if [[ "$WITH_GRAFANA" == true ]]; then
   fi
   prune "grafana_*.tgz" "$KEEP"
   prune "grafana_*.tgz.gpg" "$KEEP"
+  prune "grafana_*.tgz.sha256" "$KEEP"
+  prune "grafana_*.tgz.gpg.sha256" "$KEEP"
 fi
 
 # --- Borg self-hosted deduplicated archive (optional) ---

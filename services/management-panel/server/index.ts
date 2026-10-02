@@ -12,6 +12,7 @@ import { promises as fs } from 'fs';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
 import { sanitizeAuditValue } from './audit-sanitize.ts';
 
 /**
@@ -2191,8 +2192,16 @@ app.get('/api/backup-jobs/:jobId/status', verifyAuth, async (req: Request, res: 
   }
 });
 
+// Rate limiter for file-system-heavy backup artifact listing
+const backupArtifactsLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // limit each IP to 60 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // GET /api/backup-artifacts - Read-only list of db-backup.sh artifacts
-app.get('/api/backup-artifacts', verifyAuth, async (_req: Request, res: Response) => {
+app.get('/api/backup-artifacts', verifyAuth, backupArtifactsLimiter, async (_req: Request, res: Response) => {
   try {
     const dir = process.env.BACKUP_DIR || path.resolve(__dirname, '..', '..', '..', 'backups');
     let names: string[] = [];

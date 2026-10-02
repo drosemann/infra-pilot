@@ -261,3 +261,15 @@ success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"
 done
+
+# Optional Prometheus textfile for backup_last_success_timestamp.
+# Set BACKUP_METRIC_FILE (e.g. a node-exporter textfile path) to enable;
+# secrets such as BORG_PASSPHRASE stay env-side and are never written.
+if [[ -n "${BACKUP_METRIC_FILE:-}" ]]; then
+  now="$(date +%s)"
+  {
+    echo "# HELP backup_last_success_timestamp Unix time of last successful backup."
+    echo "# TYPE backup_last_success_timestamp gauge"
+    echo "backup_last_success_timestamp $now"
+  } > "$BACKUP_METRIC_FILE.tmp" && mv "$BACKUP_METRIC_FILE.tmp" "$BACKUP_METRIC_FILE"
+fi

@@ -132,6 +132,28 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 stamp=$(date +%Y%m%d_%H%M%S)
 ARTIFACTS=()
 
+# Write a detached "<file>.sha256" sidecar so the panel can show verify
+# status without reading the artifact itself. Never fails the backup.
+write_checksum() {
+  local file="$1"
+  if command -v sha256sum &> /dev/null; then
+    (cd "$(dirname "$file")" && sha256sum "$(basename "$file")" > "$(basename "$file").sha256")
+  else
+    warn "sha256sum not found; skipping checksum for $file"
+  fi
+}
+
+# Refresh the Prometheus textfile the read-only panel tab displays.
+write_success_prom() {
+  local now
+  now=$(date +%s)
+  printf '%s\n' \
+    '# HELP backup_last_success_timestamp Unix time of the last successful backup.' \
+    '# TYPE backup_last_success_timestamp gauge' \
+    "backup_last_success_timestamp $now" \
+    > "$OUT_DIR/last_success.prom"
+}
+
 maybe_encrypt_and_upload() {
   local file="$1"
   local upload_file="$file"
@@ -142,7 +164,7 @@ maybe_encrypt_and_upload() {
     upload_file="${file}.gpg"
     ARTIFACTS+=("${file}.gpg")
     if [[ "$NO_PLAINTEXT" == true ]]; then
-      rm -f "$file"
+      rm -f "$file" "${file}.sha256"
     fi
   fi
   if [[ -n "$S3_URI" ]]; then
@@ -165,7 +187,7 @@ prune() {
     info "Removing ${#old_files[@]} old file(s) of $pattern (keep=$kept)..."
     for f in "${old_files[@]}"; do
       info "  - $f"
-      rm -f "$f"
+      rm -f "$f" "$f.sha256"
     done
   fi
 }
@@ -241,3 +263,17 @@ success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"
 done
+
+# Checksums + success textfile for the read-only panel tab.
+# Skips artifacts that no longer exist (--no-plaintext plaintexts).
+SUCCESS_FILE=""
+for a in "${ARTIFACTS[@]}"; do
+  [[ -f "$a" ]] || continue
+  write_checksum "$a"
+  if [[ -z "$SUCCESS_FILE" ]]; then
+    SUCCESS_FILE="$a"
+  fi
+done
+if [[ -n "$SUCCESS_FILE" ]]; then
+  write_success_prom
+fi

@@ -166,7 +166,7 @@ body {
 
 /* Ara-inspired premium shell */
 html {
-  background: #050506;
+  background: #080a10;
 }
 
 body {
@@ -182,7 +182,7 @@ body {
       rgba(99, 102, 241, 0.16),
       transparent 18rem
     ),
-    #050506;
+    #080a10;
 }
 
 body::before {

@@ -1,6 +1,5 @@
 import { Outlet, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { FormattedMessage } from "react-intl";
 import { apiClient } from "../lib/api";
 import { clearAccessToken } from "../lib/auth";
 import { useConfig } from "../lib/types";
@@ -13,8 +12,29 @@ export const MainLayout = () => {
   const navigate = useNavigate();
   const { mode } = useConfig();
   const [user, setUser] = useState<any>(null);
+  const [healthy, setHealthy] = useState<boolean | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const checkHealth = async () => {
+      try {
+        await apiClient.health();
+        if (active) setHealthy(true);
+      } catch {
+        if (active) setHealthy(false);
+      }
+      // Wait between completed checks to avoid overlapping requests.
+      if (active) timer = setTimeout(checkHealth, 30_000);
+    };
+    void checkHealth();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -47,11 +67,27 @@ export const MainLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col ara-surface">
         {/* Header */}
-        <header className="sticky top-0 z-20 border-b border-white/10 bg-black/45 backdrop-blur-2xl">
+        <header className="sticky top-0 z-20 border-b border-white/10 bg-[#080a10]/80 backdrop-blur-2xl">
           <div className="px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-6">
               {/* Organization Selector & Search */}
               <div className="flex items-center gap-4 flex-1">
+                <div className="hidden items-center gap-2 text-xs font-medium text-white/45 xl:flex">
+                  <span
+                    className={
+                      healthy === null
+                        ? "h-2 w-2 rounded-full bg-white/40"
+                        : healthy
+                          ? "h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
+                          : "h-2 w-2 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.8)]"
+                    }
+                  />
+                  {healthy === null
+                    ? "Checking management-panel API…"
+                    : healthy
+                      ? "Management-panel API operational"
+                      : "Degraded — check monitoring"}
+                </div>
                 <button
                   onClick={() => setSidebarOpen(true)}
                   className="md:hidden rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
@@ -149,7 +185,9 @@ export const MainLayout = () => {
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto" id="main-content">
           <div className="p-4 sm:p-6 lg:p-8">
-            <Outlet />
+            <div className="page-enter mx-auto w-full max-w-[1600px]">
+              <Outlet />
+            </div>
           </div>
         </main>
       </div>

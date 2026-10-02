@@ -3,6 +3,7 @@ import fnmatch
 import os
 import shutil
 import subprocess
+import time
 
 import typer
 
@@ -16,6 +17,16 @@ app = typer.Typer(help="Backup management")
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))
+
+
+def _age(path: str) -> str:
+    """Return a short human age (e.g. 5m, 3h, 2d) from a file mtime."""
+    secs = int(time.time() - os.path.getmtime(path))
+    if secs < 3600:
+        return f"{secs // 60}m"
+    if secs < 86400:
+        return f"{secs // 3600}h"
+    return f"{secs // 86400}d"
 
 
 def _backup_script() -> str:
@@ -93,13 +104,18 @@ def list(
                 ctx.obj.get("output", "table"),
             )
             return
-        rows = [
-            {"file": n, "size_bytes": os.path.getsize(os.path.join(out, n))}
-            for n in names
-            if fnmatch.fnmatch(n, "infra-pilot_*.dump*")
-            or fnmatch.fnmatch(n, "redis_*.rdb*")
-            or fnmatch.fnmatch(n, "grafana_*.tgz*")
-        ]
+        rows = []
+        for n in names:
+            if not (
+                fnmatch.fnmatch(n, "infra-pilot_*.dump*")
+                or fnmatch.fnmatch(n, "redis_*.rdb*")
+                or fnmatch.fnmatch(n, "grafana_*.tgz*")
+            ):
+                continue
+            p = os.path.join(out, n)
+            rows.append(
+                {"file": n, "size_bytes": os.path.getsize(p), "age": _age(p)}
+            )
         print_output(
             {"backups": rows, "out": out}, ctx.obj.get("output", "table")
         )

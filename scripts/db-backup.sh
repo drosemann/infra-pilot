@@ -276,6 +276,20 @@ if [[ -n "$BORG_REPO" ]]; then
   success "Borg archive created: infra-pilot-${stamp}"
 fi
 
+if command -v sha256sum &> /dev/null; then
+  info "Verifying ${#ARTIFACTS[@]} artifact checksum(s) ..."
+  for a in "${ARTIFACTS[@]}"; do
+    [[ "$a" == *.sha256 ]] && continue
+    if [[ -f "$a.sha256" ]]; then
+      (cd "$(dirname "$a")" && sha256sum -c "$(basename "$a.sha256")") || {
+        error "Checksum mismatch: $a"
+        exit 1
+      }
+    fi
+  done
+  success "All checksums verified."
+fi
+
 success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"

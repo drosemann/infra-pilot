@@ -122,8 +122,9 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
-LOCK_FILE="${BACKUP_LOCK_FILE:-/tmp/infra-pilot-backup.lock}"
+LOCK_FILE="${BACKUP_LOCK_FILE:-$ROOT_DIR/.infra-pilot-backup.lock}"
 if command -v flock &> /dev/null; then
+  umask 077
   exec 9>"$LOCK_FILE"
   if ! flock -n 9; then
     error "Another backup is already running (lock: $LOCK_FILE)"

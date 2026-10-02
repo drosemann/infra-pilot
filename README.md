@@ -334,8 +334,10 @@ bash scripts/db-backup.sh
 bash scripts/db-restore.sh
 ```
 
-- Default retention: daily 7, weekly 4, monthly 6.
+- Default retention: daily 7, weekly 4, monthly 6 (`--keep-daily/--weekly/--monthly`).
 - Verify restores with `--dry-run` before production use.
+- Every artifact gets a `.sha256` sidecar, verified per run; concurrent runs locked via `flock`.
+- `last_success.prom` exposes `backup_last_success_timestamp` for alerting.
 - Store off-host copies outside Docker named volumes.
 - Self-hosted offsite without S3: borgbackup dedup archives
   (`--borg-repo /mnt/backup/borg`) plus rclone copies to any

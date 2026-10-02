@@ -22,7 +22,10 @@ Create backups of the Infra Pilot state (Postgres, Redis, Grafana data).
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --keep N          Keep only the N most recent backups per type (default: 10)
+  --keep N          Keep only the N most recent local backups per type (default: 10)
+  --keep-daily N    Borg daily retention (default: 7)
+  --keep-weekly N   Borg weekly retention (default: 4)
+  --keep-monthly N  Borg monthly retention (default: 6)
   --out DIR         Backup output directory (default: \$ROOT_DIR/backups)
   --s3 URI          Additionally upload finished artifacts to S3
                     (e.g. s3://my-bucket/infra-pilot); requires the aws CLI
@@ -60,6 +63,9 @@ EOF
 }
 
 KEEP=10
+KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
+KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-6}"
 OUT_DIR="$ROOT_DIR/backups"
 S3_URI=""
 BORG_REPO="${BACKUP_BORG_REPO:-${BORG_REPO:-}}"
@@ -72,6 +78,9 @@ WITH_GRAFANA=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) KEEP="$2"; shift 2 ;;
+    --keep-daily) KEEP_DAILY="$2"; shift 2 ;;
+    --keep-weekly) KEEP_WEEKLY="$2"; shift 2 ;;
+    --keep-monthly) KEEP_MONTHLY="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --s3) S3_URI="$2"; shift 2 ;;
     --borg-repo) BORG_REPO="$2"; shift 2 ;;
@@ -113,6 +122,18 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
+LOCK_FILE="${BACKUP_LOCK_FILE:-$ROOT_DIR/.infra-pilot-backup.lock}"
+if command -v flock &> /dev/null; then
+  umask 077
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    error "Another backup is already running (lock: $LOCK_FILE)"
+    exit 1
+  fi
+else
+  warn "flock not found; skipping backup lock ($LOCK_FILE)"
+fi
+
 COMPOSE=(docker compose -f "$ROOT_DIR/docker-compose.yml")
 
 if ! docker compose ls 2>/dev/null | grep -q infra-pilot; then
@@ -132,17 +153,29 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 stamp=$(date +%Y%m%d_%H%M%S)
 ARTIFACTS=()
 
+write_checksum() {
+  local file="$1"
+  if command -v sha256sum &> /dev/null; then
+    sha256sum "$file" > "${file}.sha256"
+    ARTIFACTS+=("${file}.sha256")
+  else
+    warn "sha256sum not found; skipping checksum for $(basename "$file")"
+  fi
+}
+
 maybe_encrypt_and_upload() {
   local file="$1"
   local upload_file="$file"
+  write_checksum "$file"
   if [[ -n "$ENCRYPT_TO" ]]; then
     info "Encrypting $file for $ENCRYPT_TO ..."
     gpg --batch --yes --trust-model always --encrypt --recipient "$ENCRYPT_TO" \
       --output "${file}.gpg" "$file"
     upload_file="${file}.gpg"
     ARTIFACTS+=("${file}.gpg")
+    write_checksum "${file}.gpg"
     if [[ "$NO_PLAINTEXT" == true ]]; then
-      rm -f "$file"
+      rm -f "$file" "${file}.sha256"
     fi
   fi
   if [[ -n "$S3_URI" ]]; then
@@ -181,6 +214,8 @@ success "Postgres backup created ($size): $backup_file"
 maybe_encrypt_and_upload "$backup_file"
 prune "infra-pilot_*.dump" "$KEEP"
 prune "infra-pilot_*.dump.gpg" "$KEEP"
+prune "infra-pilot_*.dump.sha256" "$KEEP"
+prune "infra-pilot_*.dump.gpg.sha256" "$KEEP"
 
 # --- Redis (RDB snapshot; AOF persists in redis_data volume) ---
 if [[ "$WITH_REDIS" == true ]]; then
@@ -197,6 +232,8 @@ if [[ "$WITH_REDIS" == true ]]; then
   fi
   prune "redis_*.rdb" "$KEEP"
   prune "redis_*.rdb.gpg" "$KEEP"
+  prune "redis_*.rdb.sha256" "$KEEP"
+  prune "redis_*.rdb.gpg.sha256" "$KEEP"
 fi
 
 # --- Grafana data volume (dashboards provisioned from repo; archive covers
@@ -218,6 +255,8 @@ if [[ "$WITH_GRAFANA" == true ]]; then
   fi
   prune "grafana_*.tgz" "$KEEP"
   prune "grafana_*.tgz.gpg" "$KEEP"
+  prune "grafana_*.tgz.sha256" "$KEEP"
+  prune "grafana_*.tgz.gpg.sha256" "$KEEP"
 fi
 
 # --- Borg self-hosted deduplicated archive (optional) ---
@@ -233,10 +272,26 @@ if [[ -n "$BORG_REPO" ]]; then
   # shellcheck disable=SC2068
   borg create --stats --compression lz4 \
     "$BORG_REPO::infra-pilot-${stamp}" ${ARTIFACTS[@]}
-  borg prune --list --keep-last="$KEEP" "$BORG_REPO"
+  borg prune --list --keep-daily="$KEEP_DAILY" --keep-weekly="$KEEP_WEEKLY" \
+    --keep-monthly="$KEEP_MONTHLY" "$BORG_REPO"
   success "Borg archive created: infra-pilot-${stamp}"
 fi
 
+if command -v sha256sum &> /dev/null; then
+  info "Verifying ${#ARTIFACTS[@]} artifact checksum(s) ..."
+  for a in "${ARTIFACTS[@]}"; do
+    [[ "$a" == *.sha256 ]] && continue
+    if [[ -f "$a.sha256" ]]; then
+      (cd "$(dirname "$a")" && sha256sum -c "$(basename "$a.sha256")") || {
+        error "Checksum mismatch: $a"
+        exit 1
+      }
+    fi
+  done
+  success "All checksums verified."
+fi
+
+echo "backup_last_success_timestamp $(date +%s)" > "$OUT_DIR/last_success.prom"
 success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"

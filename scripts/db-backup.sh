@@ -122,6 +122,17 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
+LOCK_FILE="${BACKUP_LOCK_FILE:-/tmp/infra-pilot-backup.lock}"
+if command -v flock &> /dev/null; then
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    error "Another backup is already running (lock: $LOCK_FILE)"
+    exit 1
+  fi
+else
+  warn "flock not found; skipping backup lock ($LOCK_FILE)"
+fi
+
 COMPOSE=(docker compose -f "$ROOT_DIR/docker-compose.yml")
 
 if ! docker compose ls 2>/dev/null | grep -q infra-pilot; then

@@ -290,6 +290,7 @@ if command -v sha256sum &> /dev/null; then
   success "All checksums verified."
 fi
 
+echo "backup_last_success_timestamp $(date +%s)" > "$OUT_DIR/last_success.prom"
 success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"

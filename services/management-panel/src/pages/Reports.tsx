@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { apiClient } from '../lib/api';
 import { toast } from 'sonner';
+import { PageHeader } from '../components/PageHeader';
 
 export const Reports = () => {
   const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]);
@@ -41,12 +42,10 @@ export const Reports = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reports</h1>
-          <p className="text-slate-400">Resource usage reports and analytics</p>
-        </div>
-      </div>
+      <PageHeader eyebrow="Analyze">
+        <h1 className="text-3xl font-bold text-white mb-2">Reports</h1>
+        <p className="text-slate-400">Resource usage reports and analytics</p>
+      </PageHeader>
 
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Generate Report</h2>

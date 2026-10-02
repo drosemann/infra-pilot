@@ -334,33 +334,19 @@ body::before {
     border-color 0.2s ease;
 }
 
-/* Shared product language: quiet surfaces, crisp hierarchy, deliberate status color. */
-.beta-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  border-radius: 9999px;
-  background: rgba(251, 191, 36, 0.12);
-  color: rgb(253, 230, 138);
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  padding: 0.28rem 0.45rem;
+/* Editorial accents: letterspaced kickers and hairline rules for page rhythm.
+   One-accent doctrine — emerald = ok/healthy, amber = beta/warning,
+   red = danger. No new accent colors without a status meaning. */
+.eyebrow {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
-nav .bg-white .beta-badge {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fcd34d;
-}
-
-.page-enter {
-  animation: page-enter 280ms ease-out both;
-}
-
-@keyframes page-enter {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.page-rule {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }

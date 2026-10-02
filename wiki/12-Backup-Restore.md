@@ -15,10 +15,19 @@ This creates a `pg_dump` custom-format backup at
 
 Options:
 
-| Option        | Description                              |
-|---------------|------------------------------------------|
-| `--keep N`    | Keep only the N most recent backups      |
-| `--out DIR`   | Use a different output directory         |
+| Option            | Description                                          |
+|-------------------|------------------------------------------------------|
+| `--keep N`        | Keep only the N most recent local backups (default 10) |
+| `--keep-daily N`  | Borg daily retention (default 7)                     |
+| `--keep-weekly N` | Borg weekly retention (default 4)                    |
+| `--keep-monthly N`| Borg monthly retention (default 6)                   |
+| `--out DIR`       | Use a different output directory                     |
+
+Every artifact gets a `.sha256` sidecar, verified at the end of each
+run. Concurrent runs are guarded by a `flock` lock
+(`BACKUP_LOCK_FILE`, default `/tmp/infra-pilot-backup.lock`).
+A successful run writes `last_success.prom`
+(`backup_last_success_timestamp`) for Prometheus textfile scraping.
 
 The script starts the `postgres` container via `docker compose` if the stack
 is not running.
@@ -26,6 +35,9 @@ is not running.
 ## Restore
 
 ```bash
+# Validate first (no database touched, exits non-zero on bad header/TOC)
+./scripts/db-restore.sh backups/infra-pilot_20260701_091500.dump --dry-run
+
 ./scripts/db-restore.sh backups/infra-pilot_20260701_091500.dump
 ```
 
@@ -36,6 +48,14 @@ What happens:
 3. It restores into the running `postgres` container using
    `pg_restore --clean --if-exists --no-owner`, i.e. existing tables are
    dropped and recreated from the backup.
+
+Optional volume restores (Postgres-only by default):
+
+```bash
+./scripts/db-restore.sh backups/infra-pilot_<stamp>.dump --yes \
+  --redis-file backups/redis_<stamp>.rdb \
+  --grafana-file backups/grafana_<stamp>.tgz
+```
 
 ### Before restoring
 
@@ -53,6 +73,54 @@ docker compose start orchestrator-agent discord-service management-panel
 
 The orchestrator runs `alembic upgrade head` on startup, so the schema is
 brought up to date automatically after a restore.
+
+## CLI (ipilot backup)
+
+The `ipilot backup` group talks to the panel API with a server
+argument, and maps thinly onto `scripts/db-backup.sh` without one:
+
+```bash
+# Local backup via scripts/db-backup.sh:
+ipilot backup create --keep 14 --borg-repo /mnt/backup/borg
+ipilot backup create --dry-run   # print the script call, run nothing
+
+# List local artifacts in a directory:
+ipilot backup list --out backups/
+
+# Verify a dump (header + pg_restore --list, no docker needed):
+ipilot backup verify backups/infra-pilot_<stamp>.dump
+ipilot backup verify backups/infra-pilot_<stamp>.dump --dry-run
+```
+
+With a server argument the commands keep using the panel API:
+
+```bash
+ipilot backup create srv-1 --s3 bucket:path
+ipilot backup list srv-1
+```
+
+No secrets are accepted as CLI flags; `BORG_PASSPHRASE` stays env-side.
+
+## Monitoring (backup age alert)
+
+`scripts/db-backup.sh` can publish the last success as a Prometheus
+timestamp. Point `BACKUP_METRIC_FILE` at a node-exporter textfile path:
+
+```bash
+BACKUP_METRIC_FILE=/var/lib/node_exporter/textfile/backup.prom \
+  bash scripts/db-backup.sh --borg-repo /mnt/backup/borg
+```
+
+The `BackupStale` rule in `infra/monitoring/prometheus/alerts.yml`
+warns when `backup_last_success_timestamp` is older than 26h
+(daily cron plus 2h slack):
+
+```text
+(time() - backup_last_success_timestamp) > 93600
+```
+
+Without the metric the rule has no data and stays silent, so wire the
+textfile into the same cron job that runs the backup.
 
 ## Cron example
 

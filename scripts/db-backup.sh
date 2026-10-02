@@ -22,7 +22,10 @@ Create backups of the Infra Pilot state (Postgres, Redis, Grafana data).
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  --keep N          Keep only the N most recent backups per type (default: 10)
+  --keep N          Keep only the N most recent local backups per type (default: 10)
+  --keep-daily N    Borg daily retention (default: 7)
+  --keep-weekly N   Borg weekly retention (default: 4)
+  --keep-monthly N  Borg monthly retention (default: 6)
   --out DIR         Backup output directory (default: \$ROOT_DIR/backups)
   --s3 URI          Additionally upload finished artifacts to S3
                     (e.g. s3://my-bucket/infra-pilot); requires the aws CLI
@@ -41,6 +44,8 @@ Options:
   --no-plaintext    With --encrypt-to: delete plaintext after encryption
   --skip-redis      Skip the Redis snapshot
   --skip-grafana    Skip the Grafana data archive
+  --dry-run         Print the resolved backup plan and exit without
+                    touching docker, volumes or remotes
   --help            Show this help message
 
 Self-hosted offsite (no S3 needed):
@@ -60,6 +65,9 @@ EOF
 }
 
 KEEP=10
+KEEP_DAILY="${BACKUP_KEEP_DAILY:-7}"
+KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
+KEEP_MONTHLY="${BACKUP_KEEP_MONTHLY:-6}"
 OUT_DIR="$ROOT_DIR/backups"
 S3_URI=""
 BORG_REPO="${BACKUP_BORG_REPO:-${BORG_REPO:-}}"
@@ -68,10 +76,14 @@ ENCRYPT_TO=""
 NO_PLAINTEXT=false
 WITH_REDIS=true
 WITH_GRAFANA=true
+DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --keep) KEEP="$2"; shift 2 ;;
+    --keep-daily) KEEP_DAILY="$2"; shift 2 ;;
+    --keep-weekly) KEEP_WEEKLY="$2"; shift 2 ;;
+    --keep-monthly) KEEP_MONTHLY="$2"; shift 2 ;;
     --out) OUT_DIR="$2"; shift 2 ;;
     --s3) S3_URI="$2"; shift 2 ;;
     --borg-repo) BORG_REPO="$2"; shift 2 ;;
@@ -80,6 +92,7 @@ while [[ $# -gt 0 ]]; do
     --no-plaintext) NO_PLAINTEXT=true; shift ;;
     --skip-redis) WITH_REDIS=false; shift ;;
     --skip-grafana) WITH_GRAFANA=false; shift ;;
+    --dry-run) DRY_RUN=true; shift ;;
     --help) usage ;;
     *) echo "Unknown option: $1" >&2; usage 2 ;;
   esac
@@ -87,6 +100,22 @@ done
 
 POSTGRES_USER="${POSTGRES_USER:-infra_pilot}"
 POSTGRES_DB="${POSTGRES_DB:-infra_pilot}"
+
+if [[ "$DRY_RUN" == true ]]; then
+  info "Dry run: no backup will be created."
+  info "  out: $OUT_DIR (keep=$KEEP)"
+  info "  postgres: $POSTGRES_DB (user $POSTGRES_USER)"
+  info "  redis: $WITH_REDIS, grafana: $WITH_GRAFANA"
+  info "  s3: ${S3_URI:-disabled}"
+  info "  borg: ${BORG_REPO:-disabled}"
+  info "  rclone: ${RCLONE_REMOTE:-disabled}"
+  if [[ -n "${BORG_PASSPHRASE:-}" ]]; then
+    info "  borg passphrase: set (env)"
+  else
+    info "  borg passphrase: unset (env)"
+  fi
+  exit 0
+fi
 
 if [[ -n "$S3_URI" ]] && ! command -v aws &> /dev/null; then
   error "aws CLI not found in PATH (required for --s3)"
@@ -113,6 +142,18 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
+LOCK_FILE="${BACKUP_LOCK_FILE:-$ROOT_DIR/.infra-pilot-backup.lock}"
+if command -v flock &> /dev/null; then
+  umask 077
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    error "Another backup is already running (lock: $LOCK_FILE)"
+    exit 1
+  fi
+else
+  warn "flock not found; skipping backup lock ($LOCK_FILE)"
+fi
+
 COMPOSE=(docker compose -f "$ROOT_DIR/docker-compose.yml")
 
 if ! docker compose ls 2>/dev/null | grep -q infra-pilot; then
@@ -132,17 +173,29 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 stamp=$(date +%Y%m%d_%H%M%S)
 ARTIFACTS=()
 
+write_checksum() {
+  local file="$1"
+  if command -v sha256sum &> /dev/null; then
+    sha256sum "$file" > "${file}.sha256"
+    ARTIFACTS+=("${file}.sha256")
+  else
+    warn "sha256sum not found; skipping checksum for $(basename "$file")"
+  fi
+}
+
 maybe_encrypt_and_upload() {
   local file="$1"
   local upload_file="$file"
+  write_checksum "$file"
   if [[ -n "$ENCRYPT_TO" ]]; then
     info "Encrypting $file for $ENCRYPT_TO ..."
     gpg --batch --yes --trust-model always --encrypt --recipient "$ENCRYPT_TO" \
       --output "${file}.gpg" "$file"
     upload_file="${file}.gpg"
     ARTIFACTS+=("${file}.gpg")
+    write_checksum "${file}.gpg"
     if [[ "$NO_PLAINTEXT" == true ]]; then
-      rm -f "$file"
+      rm -f "$file" "${file}.sha256"
     fi
   fi
   if [[ -n "$S3_URI" ]]; then
@@ -165,7 +218,7 @@ prune() {
     info "Removing ${#old_files[@]} old file(s) of $pattern (keep=$kept)..."
     for f in "${old_files[@]}"; do
       info "  - $f"
-      rm -f "$f"
+      rm -f "$f" "$f.sha256"
     done
   fi
 }
@@ -181,6 +234,8 @@ success "Postgres backup created ($size): $backup_file"
 maybe_encrypt_and_upload "$backup_file"
 prune "infra-pilot_*.dump" "$KEEP"
 prune "infra-pilot_*.dump.gpg" "$KEEP"
+prune "infra-pilot_*.dump.sha256" "$KEEP"
+prune "infra-pilot_*.dump.gpg.sha256" "$KEEP"
 
 # --- Redis (RDB snapshot; AOF persists in redis_data volume) ---
 if [[ "$WITH_REDIS" == true ]]; then
@@ -197,6 +252,8 @@ if [[ "$WITH_REDIS" == true ]]; then
   fi
   prune "redis_*.rdb" "$KEEP"
   prune "redis_*.rdb.gpg" "$KEEP"
+  prune "redis_*.rdb.sha256" "$KEEP"
+  prune "redis_*.rdb.gpg.sha256" "$KEEP"
 fi
 
 # --- Grafana data volume (dashboards provisioned from repo; archive covers
@@ -218,6 +275,8 @@ if [[ "$WITH_GRAFANA" == true ]]; then
   fi
   prune "grafana_*.tgz" "$KEEP"
   prune "grafana_*.tgz.gpg" "$KEEP"
+  prune "grafana_*.tgz.sha256" "$KEEP"
+  prune "grafana_*.tgz.gpg.sha256" "$KEEP"
 fi
 
 # --- Borg self-hosted deduplicated archive (optional) ---
@@ -233,11 +292,39 @@ if [[ -n "$BORG_REPO" ]]; then
   # shellcheck disable=SC2068
   borg create --stats --compression lz4 \
     "$BORG_REPO::infra-pilot-${stamp}" ${ARTIFACTS[@]}
-  borg prune --list --keep-last="$KEEP" "$BORG_REPO"
+  borg prune --list --keep-daily="$KEEP_DAILY" --keep-weekly="$KEEP_WEEKLY" \
+    --keep-monthly="$KEEP_MONTHLY" "$BORG_REPO"
   success "Borg archive created: infra-pilot-${stamp}"
 fi
 
+if command -v sha256sum &> /dev/null; then
+  info "Verifying ${#ARTIFACTS[@]} artifact checksum(s) ..."
+  for a in "${ARTIFACTS[@]}"; do
+    [[ "$a" == *.sha256 ]] && continue
+    if [[ -f "$a.sha256" ]]; then
+      (cd "$(dirname "$a")" && sha256sum -c "$(basename "$a.sha256")") || {
+        error "Checksum mismatch: $a"
+        exit 1
+      }
+    fi
+  done
+  success "All checksums verified."
+fi
+
+echo "backup_last_success_timestamp $(date +%s)" > "$OUT_DIR/last_success.prom"
 success "Done. Artifacts:"
 for a in "${ARTIFACTS[@]}"; do
   info "  - $a"
 done
+
+# Optional Prometheus textfile for backup_last_success_timestamp.
+# Set BACKUP_METRIC_FILE (e.g. a node-exporter textfile path) to enable;
+# secrets such as BORG_PASSPHRASE stay env-side and are never written.
+if [[ -n "${BACKUP_METRIC_FILE:-}" ]]; then
+  now="$(date +%s)"
+  {
+    echo "# HELP backup_last_success_timestamp Unix time of last successful backup."
+    echo "# TYPE backup_last_success_timestamp gauge"
+    echo "backup_last_success_timestamp $now"
+  } > "$BACKUP_METRIC_FILE.tmp" && mv "$BACKUP_METRIC_FILE.tmp" "$BACKUP_METRIC_FILE"
+fi

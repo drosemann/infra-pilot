@@ -76,7 +76,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
           setBilling(billingData);
         })
       ),
-      Effect.catchAll((error) =>
+      Effect.catch((error) =>
         Effect.sync(() => {
           if (error instanceof NetworkError) {
             toast.error('Netzwerkfehler beim Laden der Server-Operationen');
@@ -106,7 +106,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
           toast.success(`Server ${clone.name} wurde dupliziert`);
           onCloned?.(clone);
         })),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Server konnte nicht dupliziert werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Server konnte nicht dupliziert werden')))
       )
     );
   };
@@ -119,7 +119,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
           setSnapshots((current) => [snapshot, ...current]);
           toast.success('Snapshot wurde erstellt');
         })),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Snapshot konnte nicht erstellt werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Snapshot konnte nicht erstellt werden')))
       )
     );
   };
@@ -129,7 +129,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
       pipe(
         apiClientEffect.restoreServerSnapshot(app.id, snapshotId),
         Effect.tap(() => Effect.sync(() => toast.success('Snapshot-Restore wurde eingeplant'))),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Snapshot konnte nicht wiederhergestellt werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Snapshot konnte nicht wiederhergestellt werden')))
       )
     );
   };
@@ -146,7 +146,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
           setRoles((current) => [assignment, ...current.filter((r) => r.id !== assignment.id)]);
           toast.success('Rollenrechte gespeichert');
         })),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Rollenrechte konnten nicht gespeichert werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Rollenrechte konnten nicht gespeichert werden')))
       )
     );
   };
@@ -159,7 +159,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
           setWorkspaces((current) => [workspace, ...current]);
           toast.success('Workspace wurde erstellt');
         })),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Workspace konnte nicht erstellt werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Workspace konnte nicht erstellt werden')))
       )
     );
   };
@@ -169,7 +169,7 @@ export function ServerOperationsHub({ app, onCloned }: ServerOperationsHubProps)
       pipe(
         apiClientEffect.installServerPlugin(app.id, pluginId),
         Effect.tap(() => Effect.sync(() => toast.success('Plugin/Mod wurde installiert'))),
-        Effect.catchAll(() => Effect.sync(() => toast.error('Plugin/Mod konnte nicht installiert werden')))
+        Effect.catch(() => Effect.sync(() => toast.error('Plugin/Mod konnte nicht installiert werden')))
       )
     );
   };

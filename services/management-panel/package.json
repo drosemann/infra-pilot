@@ -44,7 +44,7 @@
     "axios": "^1.20.0",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
-    "effect": "^3.22.2",
+    "effect": "^4.0.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "jdenticon": "^3.3.0",

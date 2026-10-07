@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Stream as StreamType } from 'effect';
-import { Effect, Stream, Schedule, either, pipe, Option, Fiber, Runtime } from 'effect';
+import { Effect, Stream } from 'effect';
 
 export interface EffectState<A, E> {
   data: A | null;
@@ -78,7 +78,7 @@ export function useMutation<A, E, P extends any[] = []>(
       setState({ data: null, error: error as E, loading: false });
       throw error;
     }
-  }, deps);
+  }, [effectFactory]);
 
   const reset = useCallback(() => {
     setState({ data: null, error: null, loading: false });

@@ -4,7 +4,7 @@ export {
   Schedule,
   pipe,
   Option,
-  Either,
+  Result,
   Cause,
   Exit,
   Layer,

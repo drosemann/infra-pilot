@@ -43,7 +43,7 @@ export class ValidationError extends Error {
 export type DomainError = ApiError | NetworkError | AuthError | NotFoundError | ValidationError;
 
 export const domainErrorFromCause = (cause: Cause.Cause<unknown>): DomainError | null => {
-  const failure = Cause.failureOption(cause);
+  const failure = Cause.findErrorOption(cause);
   if (failure._tag === 'None') return null;
   const err = failure.value;
   if (err instanceof ApiError) return err;

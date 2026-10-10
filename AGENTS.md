@@ -1,37 +1,81 @@
-# AGENTS.md — How to open a PR in infra-pilot
+# infra-pilot — Agent Guide
 
-This VM has **no GitHub login** (`gh auth` not configured, `origin` is HTTPS read-only).
-We use the repo-scoped **deploy key** for all pushes.
+Use this guide with [CONTRIBUTING.md](CONTRIBUTING.md), the relevant service
+guide, and [SECURITY.md](SECURITY.md). Keep the change focused, but follow the
+behavior through every component it affects.
 
-- Active push method: **deploy key + `deploy-ssh` remote**
-- Private key path (on this VM): `/home/dro/.ssh/infra-pilot-tmp` (`~/.ssh/infra-pilot-tmp`)
-- Public key path: `/home/dro/.ssh/infra-pilot-tmp.pub` — safe to share via link if owner must re-add it
+## How we build
+
+- Prefer the smallest production-ready change that solves the real problem.
+  Understand existing behavior before adding abstractions or configuration.
+- Finish the user-facing flow end to end. The CLI, management panel, agent,
+  Discord bridge, deployment files, and documentation may be separate parts
+  of the same feature.
+- Prefer working implementations over placeholders, fake integrations, or
+  unwired demo code. Remove obsolete paths when replacing them; do not build
+  new behavior on top of dead code.
+- Treat production operation, security boundaries, and existing user data as
+  first-class requirements. Upgrades, migrations, backup, and restore must
+  preserve data or clearly define a safe recovery path.
+- Add focused tests for changed behavior and regressions. Tests should verify
+  meaningful outcomes, not just mirror the implementation.
+- Update user, operator, API, or architecture documentation when the change
+  changes what those readers need to know. Follow
+  [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) rather than duplicating docs.
+
+## Where things live
+
+- `cli/` — `ipilot` command-line client
+- `services/management-panel/` — React UI, Express API, and WebSocket server
+- `services/orchestrator-agent/` — Python agent, manifests, RBAC, and webhooks
+- `services/discord-service/` — optional Discord and Pterodactyl integration
+- `helm/` and `infra/` — Kubernetes chart and infrastructure
+- `scripts/` — environment, backup, health, and release helpers
+- `tests/` — Python test suites and load-test scenarios
+- `docs/` and `wiki/` — developer documentation and user/operator guides
+
+Read the relevant service README and existing tests before changing a service.
+For cross-service behavior, verify the contract at each boundary rather than
+assuming one component's tests cover the complete flow.
+
+## GitHub workflow
+
+This VM has **no GitHub login** (`gh auth` is not configured, and `origin` is
+HTTPS read-only). Push branches with the repository deploy key; the owner opens
+pull requests from the web or mobile app.
+
 - Push remote: `deploy-ssh` = `git@github.com:drosemann/infra-pilot.git`
-- Deploy keys have no API scope, so agents **push the branch only** — the owner opens the PR from web/mobile.
+- Private key: `/home/dro/.ssh/infra-pilot-tmp`
+  (`~/.ssh/infra-pilot-tmp`) — never print, share, or commit it
+- Public key: `/home/dro/.ssh/infra-pilot-tmp.pub`
+  (`~/.ssh/infra-pilot-tmp.pub`) — share only by link if the owner needs to
+  re-add it
+- Deploy keys have no API scope. Do not use `gh pr create`.
 
-## 1. Preconditions (do not change)
+### Preconditions — do not change
 
 - Default branch: `main`
-- Remotes:
-  - `origin` = `https://github.com/drosemann/infra-pilot.git` (fetch only, no push auth)
-  - `deploy-ssh` = `git@github.com:drosemann/infra-pilot.git` (push via deploy key)
-- Key: `~/.ssh/infra-pilot-tmp` (private, never print/share/commit), `~/.ssh/infra-pilot-tmp.pub` (public)
-- If missing, restore with:
+- `origin` = `https://github.com/drosemann/infra-pilot.git` (fetch only)
+- `deploy-ssh` = `git@github.com:drosemann/infra-pilot.git` (deploy-key push)
 
-  ```bash
-  git remote get-url deploy-ssh || git remote add deploy-ssh git@github.com:drosemann/infra-pilot.git
-  ls -l ~/.ssh/infra-pilot-tmp
-  ```
+If the deploy remote is missing, restore it with:
 
-- Test auth (expect `Hi drosemann/infra-pilot! ... shell access`):
+```bash
+git remote get-url deploy-ssh || git remote add deploy-ssh git@github.com:drosemann/infra-pilot.git
+ls -l ~/.ssh/infra-pilot-tmp
+```
 
-  ```bash
-  ssh -i ~/.ssh/infra-pilot-tmp -o IdentitiesOnly=yes -T git@github.com
-  ```
+Test authentication without exposing the key (expect `Hi drosemann/infra-pilot! ... shell access`):
 
-## 2. Workflow
+```bash
+ssh -i ~/.ssh/infra-pilot-tmp -o IdentitiesOnly=yes -T git@github.com
+```
 
-1. Sync:
+### Branch and change workflow
+
+1. Check `git status --short --branch`. Do not switch branches or sync `main`
+   until any existing work is safe.
+2. When starting from the default branch, sync it:
 
    ```bash
    git fetch origin
@@ -40,45 +84,65 @@ We use the repo-scoped **deploy key** for all pushes.
    git status --short --branch
    ```
 
-2. Create branch from `main` (required prefixes per `CONTRIBUTING.md`):
-   `feat/`, `fix/`, `docs/`, `refactor/`, `test/`, `chore/`, `perf/`, `style/`
+3. Create a branch from `main` using a prefix required by
+   [CONTRIBUTING.md](CONTRIBUTING.md): `feat/`, `fix/`, `docs/`, `refactor/`,
+   `test/`, `chore/`, `perf/`, or `style/`.
 
    ```bash
    git checkout -b feat/short-desc
    ```
 
-3. Make changes. Follow `CONTRIBUTING.md` PR checklist:
-   - branch name + clear commits, tests pass, docs updated, no secrets.
-   - Commit format: `<type>(<scope>): <short description>`, <72 chars.
-     Types: `feat|fix|docs|refactor|test|chore|perf|style`.
-4. Verify before push:
-
-   ```bash
-   git status --short
-   git diff --check
-   pytest tests/ -q
-   # if touched services:
-   # bash scripts/test.sh --coverage
-   # cd services/management-panel && npm run lint && npm run test:coverage
-   ```
-
-   CI runs gitleaks, flake8/black/isort, pytest, shellcheck, terraform validate, markdownlint — keep diffs clean.
-5. Commit + push **only when user explicitly asked**:
+4. Make and verify the change. Follow the PR checklist in
+   [CONTRIBUTING.md](CONTRIBUTING.md).
+5. Commit and push **only when the user explicitly asks**. Stage intended
+   files only:
 
    ```bash
    git add <intended files only>
-   git commit -m "feat(scope): short desc"
+   git commit -m "feat(scope): short description"
    GIT_SSH_COMMAND="ssh -i ~/.ssh/infra-pilot-tmp -o IdentitiesOnly=yes" git push -u deploy-ssh <branch>
    ```
 
-6. Do NOT run `gh pr create` — it fails with deploy keys. Instead output:
-   - branch name, commit(s), test result, files changed
-   - Ask owner to open PR: repo page → `Compare & pull request` → base `main`.
+   Use the commit format `<type>(<scope>): <short description>` (under 72
+   characters) from [CONTRIBUTING.md](CONTRIBUTING.md). Historical commit
+   subjects are not fully consistent; follow the documented format for new
+   commits.
+6. Do not create the PR. Report the branch, commits, tests, and changed files;
+   the owner opens the PR against `main` using GitHub's `Compare & pull
+   request`.
 
-## 3. Rules
+## Verification
 
-- NEVER push to `main`, never force-push, never `git push --force`.
-- NEVER commit secrets, tokens, `.env`, private keys. CI blocks on gitleaks.
-- NEVER run `gh auth login`, change remotes, or delete `~/.ssh/infra-pilot-tmp*`.
-- NEVER print the private key. Public key may be shared via link if owner
-  must re-add Deploy key (`Settings > Deploy keys > Allow write access`).
+Run the smallest relevant checks for the code changed, then check the diff:
+
+```bash
+git status --short
+git diff --check
+pytest tests/ -q
+```
+
+For service changes, also run the corresponding checks:
+
+```bash
+bash scripts/test.sh --coverage
+cd services/management-panel && npm run lint && npm run test:coverage
+```
+
+Use the orchestrator's test command when its code changes:
+
+```bash
+cd services/orchestrator-agent && pytest -q
+```
+
+CI additionally checks gitleaks, flake8/black/isort, pytest, shellcheck,
+Terraform validation, markdownlint, and npm audit. Do not claim a check passed
+unless it was run.
+
+## Non-negotiable safety
+
+- Never push to `main`; never force-push.
+- Never commit secrets, tokens, `.env` files, passwords, or private keys.
+- Never run `gh auth login`, change the documented remotes, or delete
+  `~/.ssh/infra-pilot-tmp*`.
+- Never print the private key. Do not expose credentials or live user data in
+  logs, tests, screenshots, or documentation.

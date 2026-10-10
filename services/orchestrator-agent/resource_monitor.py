@@ -207,7 +207,22 @@ class ResourceMonitor:
         except Exception as e:
             logging.error(f"Error getting container history: {str(e)}")
             return None
+# VPS-Gesundheitsbericht in vps_health_monitoring.py
 
+# Ergänze eine Methode, die die gespeicherten Health-Checks eines Containers für einen Zeitraum zusammenfasst, zum Beispiel für die letzten 24 Stunden. Der Bericht könnte enthalten:
+
+# Anzahl erfolgreicher und fehlgeschlagener Checks
+# Erfolgsquote
+# durchschnittliche Antwortzeit
+# Zeitpunkt des letzten erfolgreichen Checks
+
+
+class HealthReport:
+    def __init__(self):
+        self.successful_checks = 0
+        self.failed_checks = 0
+        self.average_response_time = 0
+        self.last_successful_check = None
 
 if __name__ == "__main__":
     # Configure logging

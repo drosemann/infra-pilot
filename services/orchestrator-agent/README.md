@@ -52,7 +52,12 @@ directory's `.env.example` lists standalone defaults.
 | `manifest/` | Infra-file schema and reconciliation engine. |
 | `rbac/`, `rbac_store.py` | Role/organization model and persistence helpers. |
 | `webhook_server.py` | aiohttp routing, signatures, auth, and HTTP serialization. |
-| `vps_manager.py` | Docker container lifecycle and resource operations. |
+| `vps_manager.py` | Compatibility entry point for VPS manager imports. |
+| `vps_docker_support.py` | VPS configuration, validation, and shared Docker helpers. |
+| `vps_instance_persistence.py` | VPS inventory and database persistence. |
+| `vps_container_lifecycle.py` | Container creation, lifecycle, and resource management. |
+| `vps_backup_snapshots.py` | Backup and snapshot creation, rotation, and restoration. |
+| `vps_health_monitoring.py` | Container cloning/migration, health checks, metrics, and usage history. |
 | `db.py`, `secrets_manager.py` | Database and secret-management support. |
 
 ## Tests

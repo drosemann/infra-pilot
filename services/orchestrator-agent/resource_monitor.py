@@ -219,6 +219,7 @@ class ResourceMonitor:
 
 class HealthReport:
     def __init__(self):
+        """Initialize zero check counts and response time with no last success."""
         self.successful_checks = 0
         self.failed_checks = 0
         self.average_response_time = 0

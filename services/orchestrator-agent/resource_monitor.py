@@ -209,6 +209,17 @@ class ResourceMonitor:
             return None
 
 
+class HealthReport:
+    """Store container health-check counts, response time, and last success."""
+
+    def __init__(self):
+        """Initialize zero check counts and response time with no last success."""
+        self.successful_checks = 0
+        self.failed_checks = 0
+        self.average_response_time = 0
+        self.last_successful_check = None
+
+
 if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(

@@ -54,15 +54,14 @@ export const GitDeployManager = () => {
   };
 
   const getWebhookUrl = () => {
-    if (typeof window !== 'undefined' && window.location?.hostname) {
-      return `http://${window.location.hostname}:8500/webhook/gitops`;
-    }
-    return '/webhook/gitops (orchestrator :8500)';
+    return import.meta.env.VITE_PUBLIC_WEBHOOK_URL?.trim() || '';
   };
 
   const copyWebhookUrl = async () => {
+    const webhookUrl = getWebhookUrl();
+    if (!webhookUrl) return;
     try {
-      await navigator.clipboard.writeText(getWebhookUrl());
+      await navigator.clipboard.writeText(webhookUrl);
       toast.success('Webhook URL copied');
     } catch {
       toast.error('Copy failed — select the URL manually');
@@ -272,9 +271,10 @@ export const GitDeployManager = () => {
             <div className="flex justify-between items-center gap-2">
               <span className="text-slate-400">Webhook URL:</span>
               <span className="flex items-center gap-2 min-w-0">
-                <span className="text-green-400 font-mono text-xs break-all text-right">{getWebhookUrl()}</span>
+                <span className="text-green-400 font-mono text-xs break-all text-right">{getWebhookUrl() || 'Webhook URL not configured'}</span>
                 <button
                   onClick={copyWebhookUrl}
+                  disabled={!getWebhookUrl()}
                   aria-label="Copy webhook URL"
                   className="shrink-0 px-2 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors"
                 >

@@ -52,6 +52,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | --- | --- |
 | `PORT` | Backend listener (default `3001`). |
 | `VITE_API_URL`, `VITE_ENVIRONMENT` | Frontend API target and environment label. |
+| `VITE_PUBLIC_WEBHOOK_URL` | Full public HTTPS webhook URL shown and copied in Git Deployments. |
 | `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
 | `CORS_ORIGINS` | Comma-separated permitted browser origins. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional hosted-feature configuration. |
@@ -91,6 +92,22 @@ repositories to containers for GitOps auto-deploy:
 
 Pushes arrive via the orchestrator's `POST /webhook/gitops`
 (see the root README's GitOps example and `wiki/08-Security.md`).
+
+Set `VITE_PUBLIC_WEBHOOK_URL` to the HTTPS ingress host and public webhook
+route for your deployment. With the example Helm ingress, this is
+`https://api.infra-pilot.example.com/webhook/gitops`; replace the host with
+your configured ingress host and include any public path prefix. The panel
+shows this URL verbatim (after trimming whitespace). If unset, it shows
+"Webhook URL not configured" and disables Copy.
+
+Vite embeds this setting at build time. Set it in `.env.local` before
+starting Vite or building the standalone panel. For production Compose, set it in
+the root `.env` and rebuild the panel with
+`docker compose -f docker-compose.yml build management-panel`, then recreate
+its container with `docker compose -f docker-compose.yml up -d management-panel`.
+For a direct Docker build, pass `--build-arg VITE_PUBLIC_WEBHOOK_URL=<url>`.
+Changing only the environment of a production container does not update
+the built frontend.
 
 ## Development checks
 

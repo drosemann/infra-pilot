@@ -72,11 +72,14 @@ services:
       # (auto-loaded by `docker compose up`) which switches back to
       # `target: development`.
       target: production
+      args:
+        VITE_PUBLIC_WEBHOOK_URL: ${VITE_PUBLIC_WEBHOOK_URL:-}
     container_name: infra-pilot-management-panel
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      VITE_PUBLIC_WEBHOOK_URL: ${VITE_PUBLIC_WEBHOOK_URL:-}
       VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-production}
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-local-dev-anon-key}

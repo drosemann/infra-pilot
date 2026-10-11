@@ -16,8 +16,8 @@ in the images.
 | `03-applications.png` | verified | `/apps/:id` (shop-api detail), self-contained demo capture v0.1.0 | 2026-10-01 |
 | `04-backups.png` | verified | `/backups`, self-contained demo capture v0.1.0 | 2026-10-01 |
 | `05-cli-gitops.png` | verified | `/settings`, self-contained demo capture v0.1.0 | 2026-10-01 |
-| `06-deployments.png` | pending | `/deployments`, self-contained demo capture v0.1.0 | 2026-10-11 |
-| `tour.gif` | pending | generated from the six current captures | 2026-10-11 |
+| `06-deployments.png` | verified | `/deployments`, self-contained demo capture v0.1.0 | 2026-10-11 |
+| `tour.gif` | verified | generated from the six current captures | 2026-10-11 |
 
 Promoting a file to `verified` requires a browser capture via
 `scripts/capture-screenshots.mjs`, plus version, date, and environment filled

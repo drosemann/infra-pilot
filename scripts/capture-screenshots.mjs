@@ -82,6 +82,13 @@ async function mockDemoApi(context) {
   else if (/^\/api\/apps\/[^/]+$/.test(url.pathname)) data = apps[0];
   else if (url.pathname === '/api/backup-jobs') data = backupJobs;
   else if (url.pathname.startsWith('/api/backup-jobs/')) data = backupEntries[url.pathname.split('/')[3]] || [];
+  else if (url.pathname === '/api/backup-artifacts') data = {
+    artifacts: [
+      { name: 'infra-pilot-2026-10-01_030012.sql.gz', size_bytes: 302_514_176, mtime_ms: Date.parse('2026-10-01T03:04:12Z'), sha256_present: true },
+      { name: 'infra-pilot-2026-09-30_030010.sql.gz', size_bytes: 305_922_048, mtime_ms: Date.parse('2026-09-30T03:04:40Z'), sha256_present: true },
+    ],
+    last_success_epoch: Math.floor(Date.parse('2026-10-01T03:04:12Z') / 1000),
+  };
   else if (url.pathname === '/api/deployments') data = gitDeployments;
   else if (/^\/api\/deployments\/[^/]+\/history$/.test(url.pathname)) data = { history: gitDeployments[0].history };
   else if (url.pathname === '/api/maintenance-windows') data = [];

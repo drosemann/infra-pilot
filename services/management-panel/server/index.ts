@@ -50,7 +50,6 @@ function runCommand(command: string, args: string[]): Promise<{ stdout: string; 
   });
 }
 import os from 'os';
-import rateLimit from 'express-rate-limit';
 import { WebSocketServer, WebSocket } from 'ws';
 import { SERVER_PRESETS } from './presets.ts';
 import openapiSpec from './openapi.ts';

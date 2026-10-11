@@ -72,7 +72,8 @@ you already own.
 
 > Status: real captures from a running demo stack (panel v0.1.0,
 > captured 2026-09-28, logged in as demo admin with seeded demo data:
-> 3 apps, metrics, backup jobs). No real hostnames or secrets; see
+> 3 apps, metrics, backup jobs; Deployments capture added 2026-10-11).
+> No real hostnames or secrets; see
 > [docs/screenshots](./docs/screenshots) for the capture log and
 > regeneration instructions.
 
@@ -86,10 +87,10 @@ you already own.
 | ![Applications](./docs/screenshots/03-applications.png) | ![Backups](./docs/screenshots/04-backups.png) |
 | Status, resources, uptime, and ports per app. | Retention stats and recent runs. |
 
-| Settings |
-| --- |
-| ![Settings](./docs/screenshots/05-cli-gitops.png) |
-| General settings, 2FA (TOTP + backup codes), and metrics integration. |
+| Settings | Deployments |
+| --- | --- |
+| ![Settings](./docs/screenshots/05-cli-gitops.png) | ![Deployments](./docs/screenshots/06-deployments.png) |
+| General settings, 2FA (TOTP + backup codes), and metrics integration. | Git deployments: repos, branches, enable/disable, and push history. |
 | Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). |
 
 ---

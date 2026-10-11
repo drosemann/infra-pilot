@@ -12,8 +12,8 @@ Illustrations of the intended UI, not captures of a running release:
 See the root README's [Screenshots section](../../README.md#screenshots) for
 the Dashboard and Monitoring previews.
 
-Full set: dashboard, monitoring, applications, backups, and CLI/GitOps,
-plus an animated `tour.gif`. Regeneration instructions live in
+Full set: dashboard, monitoring, applications, backups, CLI/GitOps, and
+deployments, plus an animated `tour.gif`. Regeneration instructions live in
 `docs/screenshots/README.md`.
 
 ## Start locally
@@ -52,6 +52,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | --- | --- |
 | `PORT` | Backend listener (default `3001`). |
 | `VITE_API_URL`, `VITE_ENVIRONMENT` | Frontend API target and environment label. |
+| `VITE_PUBLIC_WEBHOOK_URL` | Full public HTTPS webhook URL shown and copied in Git Deployments. |
 | `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
 | `CORS_ORIGINS` | Comma-separated permitted browser origins. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional hosted-feature configuration. |
@@ -65,6 +66,48 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `server/openapi.ts` | Panel OpenAPI specification. |
 | `server/*.ts` | Focused backend helpers such as reports, GraphQL, assistant, doctor, and audit sanitisation. |
 | `docs/` | Longer-lived design and setup notes. |
+
+## Deployments
+
+Stable panel page at `/deployments` (no beta badge). Connects Git
+repositories to containers for GitOps auto-deploy:
+
+- Create a deployment with name, repository URL (`https://`, `http://`,
+  or `git@`), branch, target container, target directory, and optional
+  install/restart commands. Invalid URLs are rejected with a toast.
+- Enable/disable auto-deploy per deployment; delete with confirmation.
+- Select a deployment to see its webhook URL (with copy button),
+  HMAC auth note (`GITOPS_WEBHOOK_TOKEN` over `X-Timestamp` + body),
+  repository/branch/target details, and push history.
+- Every action maps to the panel API below; failures surface as toasts
+  and the list reloads from the server.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/deployments` | List the caller's deployments. |
+| `POST` | `/api/deployments` | Create (`name` + `repoUrl` required). |
+| `PATCH` | `/api/deployments/:id/toggle` | Flip `enabled`. |
+| `GET` | `/api/deployments/:id/history` | Push history for one deployment. |
+| `DELETE` | `/api/deployments/:id` | Remove a deployment. |
+
+Pushes arrive via the orchestrator's `POST /webhook/gitops`
+(see the root README's GitOps example and `wiki/08-Security.md`).
+
+Set `VITE_PUBLIC_WEBHOOK_URL` to the HTTPS ingress host and public webhook
+route for your deployment. With the example Helm ingress, this is
+`https://api.infra-pilot.example.com/webhook/gitops`; replace the host with
+your configured ingress host and include any public path prefix. The panel
+shows this URL verbatim (after trimming whitespace). If unset, it shows
+"Webhook URL not configured" and disables Copy.
+
+Vite embeds this setting at build time. Set it in `.env.local` before
+starting Vite or building the standalone panel. For production Compose, set it in
+the root `.env` and rebuild the panel with
+`docker compose -f docker-compose.yml build management-panel`, then recreate
+its container with `docker compose -f docker-compose.yml up -d management-panel`.
+For a direct Docker build, pass `--build-arg VITE_PUBLIC_WEBHOOK_URL=<url>`.
+Changing only the environment of a production container does not update
+the built frontend.
 
 ## Development checks
 

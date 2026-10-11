@@ -26,7 +26,8 @@ CMD ["sh", "-c", "npm run dev:backend & npm exec vite -- --host 0.0.0.0 --port 5
 
 FROM deps AS build
 COPY . .
-RUN npm run build
+ARG VITE_PUBLIC_WEBHOOK_URL=""
+RUN VITE_PUBLIC_WEBHOOK_URL="$VITE_PUBLIC_WEBHOOK_URL" npm run build
 
 FROM base AS production
 ENV NODE_ENV=production \

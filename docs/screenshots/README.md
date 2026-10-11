@@ -16,7 +16,8 @@ in the images.
 | `03-applications.png` | verified | `/apps/:id` (shop-api detail), self-contained demo capture v0.1.0 | 2026-10-01 |
 | `04-backups.png` | verified | `/backups`, self-contained demo capture v0.1.0 | 2026-10-01 |
 | `05-cli-gitops.png` | verified | `/settings`, self-contained demo capture v0.1.0 | 2026-10-01 |
-| `tour.gif` | verified | generated from the five current captures | 2026-10-01 |
+| `06-deployments.png` | verified | `/deployments`, self-contained demo capture v0.1.0 | 2026-10-11 |
+| `tour.gif` | verified | generated from the six current captures | 2026-10-11 |
 
 Promoting a file to `verified` requires a browser capture via
 `scripts/capture-screenshots.mjs`, plus version, date, and environment filled
@@ -34,7 +35,8 @@ workflow beats five more concepts.
 | `03-applications.png` | App detail with status and ports | Matches `src/pages/AppDetail.tsx` |
 | `04-backups.png` | Retention stats and demo backup jobs | Matches `src/pages/Backups.tsx` |
 | `05-cli-gitops.png` | Settings (general, 2FA, metrics) | Matches `src/pages/Settings.tsx` |
-| `tour.gif` | Rotating tour of the current UI captures | Generated from current PNGs, 800x450, under 500 KB |
+| `06-deployments.png` | Git deployments with demo repos | Matches `src/pages/Deployments.tsx` |
+| `tour.gif` | Rotating tour of the current UI captures | Generated from current PNGs, 800x450, under 1 MB |
 
 All PNG images are `1600x900`. The tour GIF is generated from the current captures and kept small
 enough to pass the `check-added-large-files` hook.
@@ -57,7 +59,7 @@ npm install --legacy-peer-deps
 npx playwright install chromium
 npm run dev:frontend &
 node ../../scripts/capture-screenshots.mjs
-python3 -c "from PIL import Image; from pathlib import Path; p=Path('../../docs/screenshots'); f=[Image.open(p / n).convert('RGB').resize((800, 450)).convert('P', palette=Image.Palette.ADAPTIVE) for n in ['01-dashboard.png', '02-monitoring.png', '03-applications.png', '04-backups.png', '05-cli-gitops.png']]; f[0].save(p / 'tour.gif', save_all=True, append_images=f[1:], duration=1800, loop=0, optimize=True)"
+python3 -c "from PIL import Image; from pathlib import Path; p=Path('../../docs/screenshots'); f=[Image.open(p / n).convert('RGB').resize((800, 450)).convert('P', palette=Image.Palette.ADAPTIVE) for n in ['01-dashboard.png', '02-monitoring.png', '03-applications.png', '04-backups.png', '05-cli-gitops.png', '06-deployments.png']]; f[0].save(p / 'tour.gif', save_all=True, append_images=f[1:], duration=1800, loop=0, optimize=True)"
 ```
 
 The script navigates the local panel with intercepted demo responses and
@@ -68,7 +70,7 @@ captures. Review diffs before committing; mask secrets and personal data.
 
 ## Contribution rules
 
-- Keep the same five filenames and dimensions.
+- Keep the same six filenames and dimensions.
 - Update this README when views change materially.
 - Do not commit screenshots with secrets, tokens, or
   personal data.

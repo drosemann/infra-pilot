@@ -14,6 +14,7 @@ import { AppDetail } from './pages/AppDetail';
 import { Monitoring } from './pages/Monitoring';
 import { AccessLogs } from './pages/AccessLogs';
 import { Backups } from './pages/Backups';
+import { Deployments } from './pages/Deployments';
 import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
 import { AuditLog } from './pages/AuditLog';
@@ -175,6 +176,7 @@ export default function App() {
                       <Route path="/apps/:appId/edit" element={<AppForm />} />
                       <Route path="/logs/access" element={<AccessLogs />} />
                       <Route path="/backups" element={<Backups />} />
+                      <Route path="/deployments" element={<Deployments />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/audit" element={<AuditLog />} />
                       <Route path="/activity" element={<ActivityFeed limit={50} />} />

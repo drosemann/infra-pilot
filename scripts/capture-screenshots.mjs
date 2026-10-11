@@ -33,6 +33,7 @@ const shots = [
   { route: '/apps/shop-api', file: '03-applications.png' },
   { route: '/backups', file: '04-backups.png' },
   { route: '/settings', file: '05-cli-gitops.png' },
+  { route: '/deployments', file: '06-deployments.png' },
 ];
 
 await mkdir(OUT, { recursive: true });
@@ -69,6 +70,10 @@ async function mockDemoApi(context) {
         { id: 6, backup_job_id: 'job-portal-weekly', status: 'success', size_mb: 398.1, error_message: '', started_at: '2026-09-21T04:00:00Z', completed_at: '2026-09-21T04:09:05Z' },
       ],
     };
+    const gitDeployments = [
+      { id: 'dep-shop-api', user_id: 'demo-admin', name: 'shop-api', repoUrl: 'https://github.com/acme/shop-api.git', repo: 'acme/shop-api', branch: 'main', containerId: 'shop-api', targetDir: '/app', installCommand: 'npm ci', restartCommand: 'npm start', enabled: true, webhookSecret: 'demo-secret', createdAt: '2026-09-15T10:00:00Z', history: [{ status: 'success', commits: 3, timestamp: '2026-10-01T08:12:00Z' }] },
+      { id: 'dep-portal', user_id: 'demo-admin', name: 'customer-portal', repoUrl: 'https://github.com/acme/customer-portal.git', repo: 'acme/customer-portal', branch: 'main', containerId: null, targetDir: '/app', installCommand: '', restartCommand: '', enabled: false, webhookSecret: 'demo-secret', createdAt: '2026-09-12T08:30:00Z', history: [] },
+    ];
   let data = {};
   if (url.pathname === '/health') data = { status: 'ok' };
   else if (url.pathname === '/api/setup/status') data = { initialized: true, mode: 'business' };
@@ -77,6 +82,8 @@ async function mockDemoApi(context) {
   else if (/^\/api\/apps\/[^/]+$/.test(url.pathname)) data = apps[0];
   else if (url.pathname === '/api/backup-jobs') data = backupJobs;
   else if (url.pathname.startsWith('/api/backup-jobs/')) data = backupEntries[url.pathname.split('/')[3]] || [];
+  else if (url.pathname === '/api/deployments') data = gitDeployments;
+  else if (/^\/api\/deployments\/[^/]+\/history$/.test(url.pathname)) data = { history: gitDeployments[0].history };
   else if (url.pathname === '/api/maintenance-windows') data = [];
     else if (url.pathname.includes('/metrics') || url.pathname.includes('/backups') || url.pathname.includes('/logs')) data = [];
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });

@@ -11,6 +11,11 @@ const USERS = {
   'other-token': { id: 'user-2', email: 'user2@example.test' },
 };
 
+/**
+ * Create a Supabase test client with shared_config upserts for deployment storage.
+ * @param db - In-memory database mutated by upserts, matching rows by key.
+ * @returns Mock client authenticated with USERS and supporting shared_config upserts.
+ */
 function makeDeploySupabase(db: Db) {
   const supabase: any = makeSupabase(db, USERS);
   const origFrom = supabase.from.bind(supabase);

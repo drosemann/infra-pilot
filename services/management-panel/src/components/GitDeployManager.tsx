@@ -44,13 +44,44 @@ export const GitDeployManager = () => {
     setShowForm(false);
   };
 
+  const isValidRepoUrl = (url: string) => {
+    const trimmed = url.trim();
+    return (
+      trimmed.startsWith('https://') ||
+      trimmed.startsWith('http://') ||
+      trimmed.startsWith('git@')
+    ) && trimmed.includes('.') && trimmed.length >= 10;
+  };
+
+  const getWebhookUrl = () => {
+    if (typeof window !== 'undefined' && window.location?.hostname) {
+      return `http://${window.location.hostname}:8500/webhook/gitops`;
+    }
+    return '/webhook/gitops (orchestrator :8500)';
+  };
+
+  const copyWebhookUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(getWebhookUrl());
+      toast.success('Webhook URL copied');
+    } catch {
+      toast.error('Copy failed — select the URL manually');
+    }
+  };
+
   const handleCreate = async () => {
-    if (!form.name || !form.repoUrl) {
+    const name = form.name.trim();
+    const repoUrl = form.repoUrl.trim();
+    if (!name || !repoUrl) {
       toast.error('Name and repository URL are required');
       return;
     }
+    if (!isValidRepoUrl(repoUrl)) {
+      toast.error('Repository URL must start with https://, http://, or git@');
+      return;
+    }
     try {
-      await apiClient.createDeployment(form);
+      await apiClient.createDeployment({ ...form, name, repoUrl });
       toast.success('Git deployment created');
       resetForm();
       loadDeployments();
@@ -193,6 +224,8 @@ export const GitDeployManager = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggle(dep.id); }}
+                      aria-label={dep.enabled ? `Disable ${dep.name}` : `Enable ${dep.name}`}
+                      title={dep.enabled ? 'Disable auto-deploy' : 'Enable auto-deploy'}
                       className={`text-sm px-2 py-0.5 rounded-full cursor-pointer transition-colors ${
                         dep.enabled ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' : 'bg-slate-600/20 text-slate-400 hover:bg-slate-600/30'
                       }`}
@@ -212,6 +245,7 @@ export const GitDeployManager = () => {
                 <div className="flex items-center gap-2 ml-3" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleDelete(dep.id)}
+                    aria-label={`Delete ${dep.name}`}
                     className="px-2 py-1 text-xs bg-red-600/20 text-red-400 hover:bg-red-600/40 rounded transition-colors"
                   >
                     Delete
@@ -235,9 +269,18 @@ export const GitDeployManager = () => {
             </button>
           </div>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center gap-2">
               <span className="text-slate-400">Webhook URL:</span>
-              <span className="text-green-400 font-mono text-xs break-all ml-2">http://your-host:8500/webhook/gitops</span>
+              <span className="flex items-center gap-2 min-w-0">
+                <span className="text-green-400 font-mono text-xs break-all text-right">{getWebhookUrl()}</span>
+                <button
+                  onClick={copyWebhookUrl}
+                  aria-label="Copy webhook URL"
+                  className="shrink-0 px-2 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition-colors"
+                >
+                  Copy
+                </button>
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Auth:</span>

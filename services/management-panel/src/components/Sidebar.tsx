@@ -80,7 +80,6 @@ export const Sidebar = ({
       label: "Deployments",
       icon: "🚀",
       route: "/deployments",
-      beta: true,
     },
     {
       id: "logs",

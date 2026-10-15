@@ -43,6 +43,7 @@ def connect(
 ):
     """Connect to a server via SSH (opens terminal session)."""
     client = _get_client(ctx)
+    # The server gets the final say on whether this connection is a good idea.
     result = client.ssh_connect(server, user=user, jump_host=jump_host, port=port)
     print_output(result, ctx.obj.get("output", "table"))
 
@@ -124,6 +125,7 @@ def saved(
     """Manage saved SSH hosts."""
     client = _get_client(ctx)
     if add:
+        # Parse the compact notation before it becomes a support ticket.
         parts = add.split("@")
         name = parts[0]
         host_port = parts[1] if len(parts) > 1 else parts[0]

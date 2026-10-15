@@ -8,6 +8,7 @@ let clientRef = null;
 let loopTask = null;
 
 // Alerts should be noisy only when the situation deserves the attention.
+// Alerts should be noisy only when the situation deserves the attention.
 function init(client) {
   clientRef = client;
   if (loopTask) return;

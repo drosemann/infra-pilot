@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 let _dbPool = null;
 
 // Keep database access boring; the data has enough plot twists already.
+// Keep database access boring; the data has enough plot twists already.
 function getDbPool() {
   if (!_dbPool) {
     _dbPool = new Pool({

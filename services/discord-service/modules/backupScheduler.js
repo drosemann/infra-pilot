@@ -4,6 +4,7 @@ const { query } = require('./db');
 let loopTask = null;
 let clientRef = null;
 
+// Scheduling backups is optimism with a calendar attached.
 function init(client) {
   clientRef = client;
   if (loopTask) return;

@@ -21,6 +21,7 @@ const INTEGRATION_SERVICE_URL = process.env.INTEGRATION_SERVICE_URL || 'http://l
  * @param {IntegrationEventData} data - Event payload
  * @returns {Promise<void>}
  */
+// Integration code is where two perfectly reasonable systems meet and disagree.
 async function notifyIntegration(eventType, data) {
   if (!eventType || !data) {
     console.error('[Integration] Missing eventType or data for notification');

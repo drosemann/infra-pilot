@@ -36,6 +36,7 @@ const COMMAND_SPECS = [
   },
 ];
 
+// Legacy commands remain available because history has excellent persistence.
 function toSpec() {
   return COMMAND_SPECS;
 }

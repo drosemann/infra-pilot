@@ -29,6 +29,7 @@ const CLI_TIMEOUT_MS = 30000;
  * @returns {CliResult} The result object with success flag and parsed data
  * @throws {Error} If the command string is invalid
  */
+// Bridge the two interfaces without letting their assumptions mingle unsupervised.
 function cli(command) {
   if (!command || typeof command !== 'string') {
     return { success: false, data: null, error: 'Command must be a non-empty string' };

@@ -11,6 +11,7 @@ NO_DATA_MESSAGE = "(no data)"
 DEFAULT_FMT = "table"
 
 
+# Make the output readable without asking the data to become more cooperative.
 def format_output(data: Any, fmt: str = DEFAULT_FMT) -> str:
     """Format data in the requested output format.
 

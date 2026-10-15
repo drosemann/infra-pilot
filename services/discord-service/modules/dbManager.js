@@ -24,6 +24,7 @@ const COMMAND_SPECS = [
 ];
 
 // Centralize the database's quirks before they become everyone's personal problem.
+// Centralize the database's quirks before they become everyone's personal problem.
 function toSpec() {
   return COMMAND_SPECS;
 }

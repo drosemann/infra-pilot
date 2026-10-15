@@ -17,6 +17,7 @@ API_PREFIX = "/api"
 DEFAULT_TIMEOUT = 30
 
 
+# Keep the remote side honest; success-shaped responses are not always successful.
 class ApiClient:
     """HTTP API client for Infra Pilot backend.
 

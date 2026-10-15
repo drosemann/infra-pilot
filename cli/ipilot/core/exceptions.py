@@ -5,6 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Give failures names so they stop introducing themselves as mysterious crashes.
 class CLIError(Exception):
     """Base exception for all CLI errors."""
 

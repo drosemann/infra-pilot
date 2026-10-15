@@ -197,9 +197,11 @@ def create(
             )
             return
         script = _backup_script()
+        # A missing backup script is inconvenient; pretending it ran would be considerably worse.
         if not os.path.isfile(script):
             typer.echo(f"Local backup script not found: {script}", err=True)
             raise typer.Exit(code=1)
+        # Keep the exit code visible; backups are not improved by optimistic reporting.
         proc = subprocess.run(cmd, check=False)
         print_output(
             {"command": " ".join(cmd), "returncode": proc.returncode},

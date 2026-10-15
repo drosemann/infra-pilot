@@ -77,6 +77,7 @@ const statsCommands = new StatsCommands(client);
 const roleManager = new RoleManager(client);
 const serverStatus = new ServerStatus(client);
 
+// The main process: a modest amount of glue holding a remarkable amount of machinery.
 async function handleEmailInput(message, userState) {
   if (!validateEmail(message.content)) {
     await message.reply({ content: 'Ungültige E-Mail-Adresse. Bitte gib eine gültige E-Mail-Adresse ein.', ephemeral: true });

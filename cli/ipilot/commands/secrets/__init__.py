@@ -12,6 +12,7 @@ from ...output.formatters import print_output
 app = typer.Typer(help="Secret management")
 
 
+# Secrets should travel less than gossip and with better supervision.
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))

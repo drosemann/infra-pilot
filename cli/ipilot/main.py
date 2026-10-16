@@ -20,6 +20,7 @@ attach_to_app(app)
 
 
 @app.command()
+# The entry point: where a small request acquires a surprising number of dependencies.
 def login(
     ctx: typer.Context,
     api_key: str = typer.Argument(..., help="Your API key"),

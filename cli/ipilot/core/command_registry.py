@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 _registry: Dict[str, Tuple[typer.Typer, str]] = {}
 
 
+# Keep command discovery predictable; surprises belong in release notes, not dispatch.
 def register(name: str, help_text: str = ""):
     """Decorator to register a Typer sub-app for auto-attachment.
 

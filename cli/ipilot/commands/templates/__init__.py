@@ -23,6 +23,7 @@ TEMPLATE_TYPES = {
 }
 
 
+# Templates save repetition; occasionally they also preserve it for generations.
 def _get_client(ctx: typer.Context) -> ApiClient:
     config = load_config(profile=ctx.obj.get("profile"))
     return ApiClient(config.get("api_url", DEFAULT_API_URL), config.get("token"))

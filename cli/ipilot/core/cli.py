@@ -11,6 +11,7 @@ from ..config import DEFAULT_API_URL, load_config
 logger = logging.getLogger(__name__)
 
 
+# Parse the command before the command parses our afternoon.
 def create_app() -> typer.Typer:
     """Create and configure the main Typer CLI application.
 

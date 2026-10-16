@@ -8,6 +8,7 @@ app = typer.Typer(help="Text-based terminal UI mode")
 
 
 @app.command()
+# A terminal interface: the graphical interface's slightly more honest cousin.
 def dashboard(
     ctx: typer.Context,
 ):

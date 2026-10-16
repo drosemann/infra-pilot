@@ -50,6 +50,7 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
         except (json.JSONDecodeError, IOError) as exc:
             logger.warning("Failed to load config from %s: %s", config_path, exc)
 
+    # Let an explicit profile win; configuration has enough ways to surprise us already.
     profile = profile or config.get("profile")
     if profile:
         config["profile"] = profile
@@ -62,6 +63,7 @@ def load_config(profile: Optional[str] = None) -> Dict[str, Any]:
             except (json.JSONDecodeError, IOError) as exc:
                 logger.warning("Failed to load profile %s: %s", profile, exc)
 
+    # Environment variables get the final word, as is tradition in configuration disputes.
     if os.environ.get(ENV_API_URL):
         config["api_url"] = os.environ[ENV_API_URL]
     if os.environ.get(ENV_TOKEN):

@@ -16,6 +16,7 @@ function init(client) {
 }
 
 async function reloadTasks() {
+  // Share the in-flight reload instead of inviting two schedulers to rearrange the furniture.
   if (reloadPromise) return reloadPromise;
   reloadPromise = (async () => {
     stopAll();
@@ -60,6 +61,7 @@ async function executeTask(taskId) {
   let status = 'success';
   let error = null;
 
+  // Record the attempt before handing control to the machinery that might fail.
   await query('UPDATE scheduled_tasks SET last_run_at = NOW(), last_run_status = $2 WHERE id = $1', [taskId, 'running']).catch(() => {});
 
   const vpsManager = require('./vpsManager');

@@ -1,5 +1,7 @@
 const { execFile } = require('child_process');
 
+// Docker usually does what we ask, after considering the request at length.
+// Docker usually does what we ask, after considering the request at length.
 function docker(args, { timeout = 60000, input } = {}) {
   return new Promise((resolve, reject) => {
     const child = execFile('docker', args, { timeout, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {

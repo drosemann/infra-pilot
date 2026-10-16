@@ -7,6 +7,8 @@ const ALERT_TYPES = ['cpu_usage', 'memory_usage', 'disk_usage'];
 let clientRef = null;
 let loopTask = null;
 
+// Alerts should be noisy only when the situation deserves the attention.
+// Alerts should be noisy only when the situation deserves the attention.
 function init(client) {
   clientRef = client;
   if (loopTask) return;

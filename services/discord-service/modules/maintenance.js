@@ -24,6 +24,7 @@ const COMMAND_SPECS = [
   },
 ];
 
+// Maintenance mode: the system equivalent of putting up a wet-floor sign.
 function toSpec() {
   return COMMAND_SPECS;
 }

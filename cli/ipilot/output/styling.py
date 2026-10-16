@@ -23,6 +23,7 @@ STYLE_WARNING = "yellow"
 STYLE_NO_DATA = "yellow"
 
 
+# Cosmetic improvements; the underlying problem remains tastefully untouched.
 def get_console() -> Console:
     """Return the shared Rich Console instance."""
     return _console

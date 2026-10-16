@@ -53,6 +53,7 @@ async function ensureTables() {
 }
 
 async function runLoop() {
+  // A second lap would make the database and the clock disagree about reality.
   if (loopRunning) return;
   loopRunning = true;
   try {
@@ -97,6 +98,7 @@ async function runHealthCheck(containerId, checkType, target = null) {
         result.status = 'failed';
         result.error = 'Invalid ping target';
       } else {
+        // A ping is a yes-or-no question; the network prefers answering in riddles.
         const ok = await execArgv(containerId, ['ping', '-c', '1', '-W', '2', pingTarget]).then(() => true).catch(() => false);
         result.status = ok ? 'passed' : 'failed';
       }
@@ -166,6 +168,7 @@ async function updateCheckStatus(checkId, status) {
 }
 
 async function recordResult(checkId, result) {
+  // No row to attach this result to; the database has misplaced its paperwork.
   if (!checkId) return;
   await query(
     `INSERT INTO health_check_results

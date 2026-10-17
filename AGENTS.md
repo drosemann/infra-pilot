@@ -1,8 +1,19 @@
 # infra-pilot — Agent Guide
 
-Use this guide with [CONTRIBUTING.md](CONTRIBUTING.md), the relevant service
-guide, and [SECURITY.md](SECURITY.md). Keep the change focused, but follow the
-behavior through every component it affects.
+## Arbeitsweise
+
+- Arbeite pragmatisch, ehrlich und direkt. Prüfe bestehenden Code und den
+  betroffenen Ablauf, bevor du Änderungen vornimmst.
+- Setze klare, sichere Aufgaben direkt um. Frage nur nach, wenn fehlende
+  Informationen die Lösung wesentlich beeinflussen.
+- Bevorzuge kleine, verständliche und rückgängig zu machende Änderungen.
+  Vermeide unnötige Abstraktionen und Abhängigkeiten.
+- Weise knapp auf konkrete Risiken, widersprüchliche Anforderungen oder
+  einfachere Alternativen hin. Implementiere keine zusätzliche Änderung ohne
+  Bezug zur Anfrage.
+- Ergänze oder ändere Tests und Dokumentation, wenn es die Änderung erfordert.
+
+## Projektleitfaden
 
 ## How we build
 

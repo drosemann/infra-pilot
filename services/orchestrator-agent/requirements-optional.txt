@@ -1,0 +1,16 @@
+# Optional dependencies for compute providers.
+#
+# The core orchestrator installs only requirements.txt.  These packages are
+# needed by specific providers; the provider itself raises a clear
+# ProviderUnavailableError when the package is missing, and its unit tests
+# skip instead of failing.
+#
+#   kubernetes  - compute/kubernetes_provider.py (official Kubernetes Python
+#                 client).  Without it the "kubernetes" provider is still
+#                 registered (so manifests referencing it validate) but any
+#                 cluster operation fails with ProviderUnavailableError.
+#
+# The cloud-VM provider (compute/cloud_vm_provider.py) deliberately needs
+# nothing extra: it drives the remote Docker CLI over the system ``ssh``
+# client, so only an SSH key pair and a reachable VM are required.
+kubernetes>=31.0.0,<34

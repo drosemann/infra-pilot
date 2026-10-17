@@ -257,6 +257,88 @@ class Config:
     K8S_NETWORK: str = os.getenv("K8S_NETWORK", "k3s-net")
     K8S_DATA_DIR: str = os.getenv("K8S_DATA_DIR", "data/k8s_clusters.json")
 
+    # ------------------------------------------------------------------
+    # Multi-provider compute
+    # ------------------------------------------------------------------
+    # Default backend for manifests that omit ``provider``.  The registry
+    # still decides what is actually available at runtime.
+    COMPUTE_DEFAULT_PROVIDER: str = os.getenv("COMPUTE_DEFAULT_PROVIDER", "docker")
+
+    # Kubernetes provider (official python client; lazily imported).
+    KUBECONFIG: str = os.getenv("KUBECONFIG", "")
+    K8S_CONTEXT: str = os.getenv("K8S_CONTEXT", "")
+    K8S_NAMESPACE: str = os.getenv("K8S_NAMESPACE", "default")
+    K8S_NAMESPACE_PER_APP: bool = os.getenv(
+        "K8S_NAMESPACE_PER_APP", "true"
+    ).strip().lower() in ("1", "true", "yes", "on")
+    K8S_IN_CLUSTER: bool = os.getenv("K8S_IN_CLUSTER", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    K8S_APP_LABEL_PREFIX: str = os.getenv(
+        "K8S_APP_LABEL_PREFIX", "infrapilot.io"
+    )
+    K8S_MANAGED_BY: str = os.getenv("K8S_MANAGED_BY", "infra-pilot")
+    K8S_WAIT_TIMEOUT_SECONDS: int = int(
+        os.getenv("K8S_WAIT_TIMEOUT_SECONDS", "120")
+    )
+    K8S_WAIT_ENABLED: bool = os.getenv("K8S_WAIT_ENABLED", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    K8S_DEFAULT_STORAGE_CLASS: str = os.getenv("K8S_DEFAULT_STORAGE_CLASS", "")
+    K8S_INGRESS_CLASS: str = os.getenv("K8S_INGRESS_CLASS", "")
+    K8S_INGRESS_HOST_SUFFIX: str = os.getenv("K8S_INGRESS_HOST_SUFFIX", "")
+
+    # Cloud VM provider (SSH-based remote Docker management).
+    CLOUD_VM_INVENTORY_FILE: str = os.getenv(
+        "CLOUD_VM_INVENTORY_FILE", "data/cloud_vms.json"
+    )
+    CLOUD_VM_INVENTORY_LOCK: str = os.getenv(
+        "CLOUD_VM_INVENTORY_LOCK", ""
+    )
+    CLOUD_VM_SSH_KEY: str = os.getenv("CLOUD_VM_SSH_KEY", "~/.ssh/id_ed25519")
+    CLOUD_VM_SSH_USER: str = os.getenv("CLOUD_VM_SSH_USER", "root")
+    CLOUD_VM_SSH_PORT: int = int(os.getenv("CLOUD_VM_SSH_PORT", "22"))
+    CLOUD_VM_KNOWN_HOSTS: str = os.getenv(
+        "CLOUD_VM_KNOWN_HOSTS", "~/.ssh/known_hosts"
+    )
+    # Host-key verification is ON by default.  Only an explicit opt-out
+    # (for throwaway lab hosts) disables StrictHostKeyChecking.
+    CLOUD_VM_STRICT_HOST_KEY: bool = os.getenv(
+        "CLOUD_VM_STRICT_HOST_KEY", "true"
+    ).strip().lower() in ("1", "true", "yes", "on")
+    CLOUD_VM_SSH_TIMEOUT: int = int(os.getenv("CLOUD_VM_SSH_TIMEOUT", "30"))
+    CLOUD_VM_SSH_CONNECT_TIMEOUT: int = int(
+        os.getenv("CLOUD_VM_SSH_CONNECT_TIMEOUT", "15")
+    )
+    CLOUD_VM_SSH_RETRIES: int = int(os.getenv("CLOUD_VM_SSH_RETRIES", "3"))
+    CLOUD_VM_SSH_RETRY_BACKOFF: float = float(
+        os.getenv("CLOUD_VM_SSH_RETRY_BACKOFF", "0.5")
+    )
+    CLOUD_VM_CONTROLMASTER: bool = os.getenv(
+        "CLOUD_VM_CONTROLMASTER", "true"
+    ).strip().lower() in ("1", "true", "yes", "on")
+    CLOUD_VM_CONTROL_PATH: str = os.getenv(
+        "CLOUD_VM_CONTROL_PATH", "/tmp/infra-pilot-ssh-%r@%h:%p"
+    )
+    CLOUD_VM_CONTROL_PERSIST: str = os.getenv("CLOUD_VM_CONTROL_PERSIST", "60s")
+    CLOUD_VM_DOCKER_BIN: str = os.getenv("CLOUD_VM_DOCKER_BIN", "docker")
+    CLOUD_VM_DEFAULT_USER: str = os.getenv("CLOUD_VM_DEFAULT_USER", "deploy")
+    CLOUD_VM_LOG_TAIL: int = int(os.getenv("CLOUD_VM_LOG_TAIL", "200"))
+    CLOUD_VM_COMMAND_TIMEOUT: int = int(
+        os.getenv("CLOUD_VM_COMMAND_TIMEOUT", "120")
+    )
+
+    # Persisted app/instance -> provider assignment (GitOps consistency).
+    MANIFEST_STORE_FILE: str = os.getenv(
+        "MANIFEST_STORE_FILE", "data/manifest_store.json"
+    )
+
     # Edge
     EDGE_PING_TIMEOUT_SECONDS: int = 10
     EDGE_DATA_FILE: str = os.getenv("EDGE_DATA_FILE", "data/edge_nodes.json")
@@ -312,7 +394,7 @@ class Config:
 
     def validate(self) -> list:
         """Fail fast on insecure configuration; returns insecure settings."""
-        return validate_secrets(
+        insecure = validate_secrets(
             environment=self.ENVIRONMENT,
             db_password=self.DB_PASSWORD,
             discord_bot_token=self.DISCORD_BOT_TOKEN,
@@ -320,6 +402,63 @@ class Config:
             federation_api_token=os.getenv("FEDERATION_API_TOKEN", ""),
             github_webhook_secret=os.getenv("GITHUB_WEBHOOK_SECRET", ""),
         )
+        validate_provider_config(
+            environment=self.ENVIRONMENT,
+            ssh_key=self.CLOUD_VM_SSH_KEY,
+            known_hosts=self.CLOUD_VM_KNOWN_HOSTS,
+            strict_host_key=self.CLOUD_VM_STRICT_HOST_KEY,
+            kubeconfig=self.KUBECONFIG,
+        )
+        return insecure
+
+
+def validate_provider_config(
+    environment: str,
+    ssh_key: str,
+    known_hosts: str,
+    strict_host_key: bool,
+    kubeconfig: str = "",
+) -> list:
+    """Validate multi-provider settings; returns a list of warnings.
+
+    In production, insecure host-key handling (``strict_host_key`` off) is
+    rejected outright.  Path existence is only checked in development: a
+    docker-only production deployment has no reason to carry an SSH key,
+    so a missing path is a warning there rather than a startup failure.
+    """
+    normalized_env = environment.strip().lower() if isinstance(environment, str) else ""
+    is_production = normalized_env == "production"
+    warnings: list = []
+
+    if not strict_host_key:
+        message = (
+            "CLOUD_VM_STRICT_HOST_KEY is disabled: SSH host keys are not "
+            "verified, which allows machine-in-the-middle attacks."
+        )
+        if is_production:
+            raise RuntimeError(message)
+        warnings.append("CLOUD_VM_STRICT_HOST_KEY")
+        logger.warning(message)
+
+    # Path existence checks are development-only advisories.
+    if not is_production:
+        from pathlib import Path
+
+        for label, raw_path in (
+            ("CLOUD_VM_SSH_KEY", ssh_key),
+            ("CLOUD_VM_KNOWN_HOSTS", known_hosts),
+            ("KUBECONFIG", kubeconfig),
+        ):
+            if not raw_path:
+                continue
+            path = Path(os.path.expanduser(raw_path))
+            if not path.exists():
+                warnings.append(label)
+                logger.warning(
+                    "%s path does not exist (development): %s", label, raw_path
+                )
+
+    return warnings
 
 
 config = Config()

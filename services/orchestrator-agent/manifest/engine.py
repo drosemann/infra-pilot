@@ -15,6 +15,7 @@ import yaml
 from compute.base import ComputeProvider, InstanceInfo, InstanceSpec, ProviderError
 from compute.registry import ProviderRegistry
 from manifest.schema import InfraFile, InfraInstance, InfraNetwork, InfraStorage
+from manifest.store import ManifestStore
 
 logger = logging.getLogger(__name__)
 
@@ -293,6 +294,8 @@ class ManifestEngine:
                 env_vars=inst.env,
                 labels=inst.labels,
                 region=inst.region or desired.metadata.region,
+                metadata=inst.metadata,
+                provider_options=inst.provider_options,
             )
 
             try:
@@ -387,4 +390,31 @@ class ManifestEngine:
                     logger.error(msg)
 
         result.completed_at = datetime.now(timezone.utc)
+        if not result.dry_run:
+            self._record_assignments(desired, result)
         return result
+
+    def _record_assignments(
+        self, desired: InfraFile, result: ReconcileResult
+    ) -> None:
+        """Persist instance -> provider decisions for later inspection.
+
+        Best-effort: a read-only filesystem or a locked store must never
+        fail a reconciliation that already succeeded.
+        """
+        assignments = {i.name: i.provider for i in desired.spec.instances}
+        if not assignments:
+            return
+        try:
+            store = ManifestStore()
+            store.record_manifest(
+                desired.metadata.name,
+                assignments,
+                error="; ".join(result.errors),
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning(
+                "Could not persist provider assignments for %s: %s",
+                desired.metadata.name,
+                exc,
+            )

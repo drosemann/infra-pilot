@@ -50,7 +50,16 @@ MAX_ENV_VALUE_LEN = 4096
 MAX_USER_DATA_LEN = 65536
 MAX_SSH_KEYS = 16
 MAX_SSH_KEY_LEN = 8192
+MAX_PROVIDER_OPTION_ENTRIES = 64
+MAX_PROVIDER_OPTION_VALUE_LEN = 8192
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
+# Provider names are lowercase identifiers: docker, kubernetes, cloud-vm.
+PROVIDER_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,62}$")
+# Providers shipped with the orchestrator.  Custom providers may still be
+# registered at runtime; known-value enforcement is opt-in via
+# ``InfraFile.validate(providers=...)`` so the schema stays a pure parser.
+BUILTIN_PROVIDERS = frozenset({"docker", "kubernetes", "cloud-vm"})
+DEFAULT_PROVIDER = "docker"
 IMAGE_PATTERN = re.compile(
     r"^[a-z0-9._/-]+(?::[A-Za-z0-9_.-]+)?(?:@[A-Za-z0-9_.-]+:[A-Fa-f0-9]+)?$"
 )
@@ -89,7 +98,7 @@ class HealthCheckSpec:
 @dataclass
 class InfraInstance:
     name: str
-    provider: str = "docker"
+    provider: str = DEFAULT_PROVIDER
     image: str = "ubuntu:22.04"
     cpu: float = 1.0
     memory_mb: int = 512
@@ -106,6 +115,9 @@ class InfraInstance:
     min_replicas: int = 1
     max_replicas: int = 1
     metadata: Dict[str, Any] = field(default_factory=dict)
+    # Backend-specific options (namespace, workload, ingress, storage_class,
+    # vm, ...). Interpreted by the selected provider; ignored elsewhere.
+    provider_options: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -176,7 +188,7 @@ class InfraFile:
             instances.append(
                 InfraInstance(
                     name=inst.get("name", ""),
-                    provider=inst.get("provider", "docker"),
+                    provider=inst.get("provider", DEFAULT_PROVIDER),
                     image=inst.get("image", "ubuntu:22.04"),
                     cpu=inst.get("cpu", 1.0),
                     memory_mb=inst.get("memory_mb", 512),
@@ -193,6 +205,7 @@ class InfraFile:
                     min_replicas=inst.get("min_replicas", 1),
                     max_replicas=inst.get("max_replicas", 1),
                     metadata=inst.get("metadata", {}),
+                    provider_options=inst.get("provider_options", {}) or {},
                 )
             )
 
@@ -210,14 +223,20 @@ class InfraFile:
             ),
         )
 
-    def validate(self, strict: bool = False) -> None:
+    def validate(self, strict: bool = False, providers=None) -> None:
         """Validate manifest content; raise ValueError on violation.
 
         Lenient checks always apply (types, sizes, image/port/env shape).
         With ``strict=True`` (untrusted API input) host ports < 1025 are
         additionally rejected – binding privileged ports requires an
         explicit operator override outside the manifest.
+
+        ``providers``, when given, is the iterable of provider names the
+        caller accepts (usually ``ProviderRegistry.names()``); instances
+        referencing anything else raise.  It defaults to ``None`` so pure
+        parsing and unit stubs keep working without a registry.
         """
+        allowed = set(providers) if providers is not None else None
         if not NAME_PATTERN.fullmatch(self.metadata.name):
             raise ValueError(f"invalid metadata.name: {self.metadata.name!r}")
         if len(self.spec.instances) > MAX_INSTANCES:
@@ -234,6 +253,11 @@ class InfraFile:
             )
         for inst in self.spec.instances:
             _validate_instance(inst, strict=strict)
+            if allowed is not None and inst.provider not in allowed:
+                raise ValueError(
+                    f"unknown provider {inst.provider!r} for instance {inst.name!r} "
+                    f"(known: {sorted(allowed)})"
+                )
         for network in self.spec.networks:
             _validate_network(network)
         for volume in self.spec.storage:
@@ -286,6 +310,7 @@ class InfraFile:
                         "min_replicas": i.min_replicas,
                         "max_replicas": i.max_replicas,
                         "metadata": i.metadata,
+                        "provider_options": i.provider_options,
                     }
                     for i in self.spec.instances
                 ],
@@ -359,6 +384,11 @@ def _validate_storage(volume: InfraStorage) -> None:
 def _validate_instance(inst: "InfraInstance", strict: bool) -> None:
     if not inst.name or not NAME_PATTERN.fullmatch(inst.name):
         raise ValueError(f"invalid instance name: {inst.name!r}")
+    if not isinstance(inst.provider, str) or not PROVIDER_PATTERN.fullmatch(
+        inst.provider
+    ):
+        raise ValueError(f"invalid provider for {inst.name!r}: {inst.provider!r}")
+    _validate_provider_options(inst)
     if not isinstance(inst.image, str) or len(inst.image) > 255:
         raise ValueError(f"invalid image: {inst.image!r}")
     if not IMAGE_PATTERN.fullmatch(inst.image):
@@ -405,3 +435,72 @@ def _validate_instance(inst: "InfraInstance", strict: bool) -> None:
     for ssh_key in inst.ssh_keys:
         if not isinstance(ssh_key, str) or len(ssh_key) > MAX_SSH_KEY_LEN:
             raise ValueError(f"invalid ssh_key for {inst.name!r}")
+
+
+def _validate_provider_options(inst: "InfraInstance") -> None:
+    """Validate the free-form ``provider_options`` mapping.
+
+    Options are deliberately schema-light (each provider documents its own
+    keys) but still bounded: a mapping with too many entries or oversized
+    scalar values is rejected to contain memory-DoS via crafted manifests.
+    Nested values are allowed one level deep and validated recursively.
+    """
+    options = inst.provider_options
+    if options is None:
+        return
+    if not isinstance(options, dict):
+        raise ValueError(f"invalid provider_options for {inst.name!r}")
+    if len(options) > MAX_PROVIDER_OPTION_ENTRIES:
+        raise ValueError(f"too many provider_options for {inst.name!r}")
+    for key, value in options.items():
+        if not isinstance(key, str) or not NAME_PATTERN.fullmatch(key):
+            raise ValueError(
+                f"invalid provider_options key for {inst.name!r}: {key!r}"
+            )
+        _validate_option_value(inst.name, key, value)
+
+
+def _validate_option_value(instance_name: str, key: str, value: Any) -> None:
+    if isinstance(value, dict):
+        if len(value) > MAX_PROVIDER_OPTION_ENTRIES:
+            raise ValueError(
+                f"provider_options.{key} has too many entries for {instance_name!r}"
+            )
+        for sub_key, sub_value in value.items():
+            if not isinstance(sub_key, str) or not NAME_PATTERN.fullmatch(sub_key):
+                raise ValueError(
+                    f"invalid provider_options.{key} key for {instance_name!r}"
+                )
+            _validate_option_value(instance_name, f"{key}.{sub_key}", sub_value)
+        return
+    if isinstance(value, list):
+        if len(value) > MAX_PROVIDER_OPTION_ENTRIES:
+            raise ValueError(
+                f"provider_options.{key} has too many items for {instance_name!r}"
+            )
+        for item in value:
+            _validate_option_value(instance_name, key, item)
+        return
+    if isinstance(value, str) and len(value) > MAX_PROVIDER_OPTION_VALUE_LEN:
+        raise ValueError(
+            f"provider_options.{key} value too large for {instance_name!r}"
+        )
+    if value is not None and not isinstance(value, (str, int, float, bool)):
+        raise ValueError(
+            f"invalid provider_options.{key} value for {instance_name!r}"
+        )
+
+
+def validate_providers(provider: str, allowed) -> str:
+    """Return ``provider`` when it is allowed, else raise ``ValueError``.
+
+    Convenience for callers that need to check a single value without
+    constructing an ``InfraFile``.
+    """
+    if not isinstance(provider, str) or not PROVIDER_PATTERN.fullmatch(provider):
+        raise ValueError(f"invalid provider: {provider!r}")
+    if allowed is not None and provider not in set(allowed):
+        raise ValueError(
+            f"unknown provider {provider!r} (known: {sorted(set(allowed))})"
+        )
+    return provider

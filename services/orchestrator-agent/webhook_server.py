@@ -17,11 +17,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Optional
 
+import compute.cloud_vm_provider  # noqa: F401  (self-registers cloud-vm)
 import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
+import compute.kubernetes_provider  # noqa: F401  (self-registers kubernetes)
 import psutil
 import rbac_store
 from aiohttp import web
 from compute.registry import ProviderRegistry
+from config import config
 from manifest.engine import ManifestEngine
 from manifest.schema import InfraFile
 from rate_limiter import RateLimitRegistry, RateLimitRule
@@ -38,6 +41,29 @@ LOCAL_DEVELOPMENT_ENVIRONMENTS = frozenset({"dev", "development", "local"})
 # aiohttp bounds buffered request bodies at the application level, including
 # chunked requests, before POST handlers parse or verify them.
 MAX_BODY_BYTES = int(os.getenv("MAX_BODY_BYTES", str(256 * 1024)))
+
+# Security rejection counters. Without them, rejections are only log lines;
+# without counters brute-force or token-misconfig stays invisible until
+# someone reads logs. Outcomes: federation_401/503, webhook_401/503, rbac_403.
+_auth_failure_counters: dict = {
+    "federation_401": 0,
+    "federation_503": 0,
+    "webhook_401": 0,
+    "webhook_503": 0,
+    "rbac_403": 0,
+}
+
+
+def _count_auth_failure(outcome: str) -> None:
+    """Increment a security-rejection counter (unknown outcomes ignored)."""
+    if outcome in _auth_failure_counters:
+        _auth_failure_counters[outcome] += 1
+
+
+def reset_auth_failure_counters() -> None:
+    """Reset counters (tests; not used in production paths)."""
+    for key in _auth_failure_counters:
+        _auth_failure_counters[key] = 0
 
 
 async def _read_json_body(request: web.Request) -> Any:
@@ -499,7 +525,9 @@ async def deployment_apply(request: web.Request) -> web.Response:
         )
     try:
         desired = InfraFile.from_dict(manifest_data)
-        desired.validate(strict=True)
+        # Reject manifests that reference a provider this deployment cannot
+        # serve (registry names) before handing the manifest to the engine.
+        desired.validate(strict=True, providers=ProviderRegistry.names())
     except ValueError as exc:
         return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
     except Exception as exc:
@@ -510,8 +538,21 @@ async def deployment_apply(request: web.Request) -> web.Response:
 
 
 async def deployment_providers(request: web.Request) -> web.Response:
-    """List registered compute providers (GET /api/v1/providers)."""
-    return web.json_response({"providers": ProviderRegistry.list_providers()})
+    """List registered compute providers (GET /api/v1/providers).
+
+    The response is derived from the registry at request time so new
+    providers appear without a route change.  ``providers`` maps each name
+    to its implementation path; ``capabilities`` carries the declared
+    capability matrix for each provider (with an ``error`` entry when a
+    provider cannot be instantiated, e.g. a missing optional dependency).
+    """
+    return web.json_response(
+        {
+            "providers": ProviderRegistry.list_providers(),
+            "default": config.COMPUTE_DEFAULT_PROVIDER,
+            "capabilities": ProviderRegistry.list_capabilities(),
+        }
+    )
 
 
 WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))

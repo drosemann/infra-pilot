@@ -9,6 +9,24 @@ SERVICE_ROOT = pathlib.Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
+from config import config  # noqa: E402  (needs SERVICE_ROOT on sys.path first)
+
+
+@pytest.fixture(autouse=True)
+def isolated_manifest_store(tmp_path, monkeypatch):
+    """Keep the persisted provider-assignment store out of the working tree.
+
+    Reconciliation writes ``manifest_store.json`` on apply; pointing it at
+    a temp directory keeps tests hermetic and avoids leaving artifacts in
+    the repository when a unit test exercises ``ManifestEngine.reconcile``.
+    """
+    monkeypatch.setattr(
+        config,
+        "MANIFEST_STORE_FILE",
+        str(tmp_path / "manifest_store.json"),
+    )
+    yield
+
 
 @pytest.fixture(autouse=True)
 def no_database(monkeypatch):

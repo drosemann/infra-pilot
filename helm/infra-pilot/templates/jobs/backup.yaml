@@ -1,0 +1,267 @@
+{{- if .Values.backup.enabled }}
+{{- if and (not .Values.backup.target.pvc.claimName) (not .Values.backup.target.s3.uri) (not .Values.backup.target.rclone.remote) }}
+{{- fail "backup.enabled=true requires one of backup.target.pvc.claimName, backup.target.s3.uri or backup.target.rclone.remote" }}
+{{- end }}
+{{- $pgHost := include "infra-pilot.pgHost" (dict "root" . "explicit" .Values.backup.postgres.host) -}}
+{{- $pgPort := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.backup.postgres.port "env" "DB_PORT" "auth" "" "fallback" "5432" "quoted" true) -}}
+{{- $pgUser := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.backup.postgres.user "env" "DB_USER" "auth" "username" "fallback" "infra_pilot" "quoted" true) -}}
+{{- $pgDatabase := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.backup.postgres.database "env" "DB_NAME" "auth" "database" "fallback" "infra_pilot" "quoted" true) -}}
+{{- $passwordSecret := .Values.backup.postgres.secretName | default (include "infra-pilot.secretName" .) -}}
+{{- $pvcMount := .Values.backup.target.pvc.mountPath -}}
+{{- $backupDir := $pvcMount | default "/tmp/backups" -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-backup
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  {{- with .Values.backup.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  concurrencyPolicy: {{ .Values.backup.concurrencyPolicy }}
+  startingDeadlineSeconds: {{ .Values.backup.startingDeadlineSeconds }}
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.backup.backoffLimit }}
+      activeDeadlineSeconds: {{ .Values.backup.activeDeadlineSeconds }}
+      {{- if .Values.backup.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ .Values.backup.ttlSecondsAfterFinished }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "infra-pilot.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "infra-pilot.jobsServiceAccount" . }}
+          securityContext:
+            {{- toYaml .Values.jobs.podSecurityContext | nindent 12 }}
+          containers:
+            - name: backup
+              image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+              imagePullPolicy: {{ .Values.backup.image.pullPolicy | default .Values.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.jobs.securityContext | nindent 16 }}
+              command:
+                - /bin/sh
+                - -ec
+              args:
+                - |
+                  set -eu
+                  umask 077
+                  stamp="$(date -u +%Y%m%d_%H%M%S)"
+                  out="${BACKUP_DIR:-/tmp/backups}"
+                  mkdir -p "$out"
+                  artifact=""
+                  log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
+                  notify() {
+                    status="$1"
+                    [ -n "${WEBHOOK_URL:-}" ] || return 0
+                    body=$(printf '{"status":"%s","release":"%s","database":"%s","artifact":"%s","timestamp":"%s"}' \
+                      "$status" "${RELEASE_NAME:-}" "${DB_NAME:-}" "${artifact:-}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+                    if command -v curl >/dev/null 2>&1; then
+                      curl -fsS -m 10 -X POST -H 'Content-Type: application/json' --data "$body" "$WEBHOOK_URL" \
+                        >/dev/null 2>&1 || log "WARN: webhook notification failed"
+                    elif command -v wget >/dev/null 2>&1; then
+                      wget -q -O- --header='Content-Type: application/json' --post-data="$body" "$WEBHOOK_URL" \
+                        >/dev/null 2>&1 || log "WARN: webhook notification failed"
+                    else
+                      log "WARN: curl/wget not found; skipping webhook"
+                    fi
+                  }
+                  fail() { log "ERROR: $*"; notify failure; exit 1; }
+                  checksum() {
+                    if command -v sha256sum >/dev/null 2>&1; then
+                      sha256sum "$1" > "$1.sha256"
+                    else
+                      log "WARN: sha256sum not found; skipping checksum for $1"
+                    fi
+                  }
+                  upload() {
+                    file="$1"
+                    if [ -n "${S3_URI:-}" ]; then
+                      command -v aws >/dev/null 2>&1 \
+                        || fail "S3_URI is set but the aws CLI is not in image ${BACKUP_IMAGE:-}"
+                      log "uploading $(basename "$file") to $S3_URI"
+                      aws s3 cp "$file" "$S3_URI/$(basename "$file")" || fail "aws s3 cp failed for $file"
+                    fi
+                    if [ -n "${RCLONE_REMOTE:-}" ]; then
+                      command -v rclone >/dev/null 2>&1 \
+                        || fail "RCLONE_REMOTE is set but rclone is not in image ${BACKUP_IMAGE:-}"
+                      log "copying $(basename "$file") to $RCLONE_REMOTE"
+                      rclone copyto "$file" "$RCLONE_REMOTE/$(basename "$file")" || fail "rclone copyto failed for $file"
+                    fi
+                  }
+                  prune_local() {
+                    pattern="$1"; keep="$2"
+                    [ -n "$keep" ] || return 0
+                    # shellcheck disable=SC2012,SC2086
+                    ls -1t $pattern 2>/dev/null | tail -n +"$((keep + 1))" | while read -r old; do
+                      log "pruning local $old"
+                      rm -f "$old" "$old.sha256"
+                    done
+                  }
+                  prune_remote() {
+                    keep="$1"
+                    [ -n "$keep" ] || return 0
+                    if [ -n "${S3_URI:-}" ] && command -v aws >/dev/null 2>&1; then
+                      aws s3 ls "$S3_URI/" 2>/dev/null | awk '{print $4}' \
+                        | grep -E '^(infra-pilot|appdata)_.*' | sort -r | tail -n +"$((keep + 1))" \
+                        | while read -r old; do
+                            log "pruning remote $old"
+                            aws s3 rm "$S3_URI/$old" || log "WARN: failed to prune $old"
+                          done
+                    fi
+                    if [ -n "${RCLONE_REMOTE:-}" ] && command -v rclone >/dev/null 2>&1; then
+                      rclone lsf --files-only "$RCLONE_REMOTE" 2>/dev/null \
+                        | grep -E '^(infra-pilot|appdata)_.*' | sort -r | tail -n +"$((keep + 1))" \
+                        | while read -r old; do
+                            log "pruning remote $old"
+                            rclone deletefile "$RCLONE_REMOTE/$old" || log "WARN: failed to prune $old"
+                          done
+                    fi
+                  }
+
+                  artifact="infra-pilot_${stamp}.dump"
+                  dump="$out/$artifact"
+                  log "pg_dump ${DB_NAME} from ${DB_HOST}:${DB_PORT} -> $dump"
+                  pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+                    --no-owner --format=custom --file "$dump" || fail "pg_dump failed"
+                  checksum "$dump"
+                  upload "$dump"
+                  upload "$dump.sha256"
+
+                  if [ "${APP_DATA_ENABLED:-false}" = "true" ] && [ -n "${APP_DATA_DIRS:-}" ]; then
+                    for dir in $APP_DATA_DIRS; do
+                      name="${dir%%:*}"; path="${dir#*:}"
+                      file="$out/appdata_${name}_${stamp}.tgz"
+                      log "archiving $path -> $file"
+                      tar czf "$file" -C "$path" . || fail "tar failed for $path"
+                      checksum "$file"
+                      upload "$file"
+                      upload "$file.sha256"
+                    done
+                  fi
+
+                  prune_local "$out/infra-pilot_*.dump*" "${KEEP_LOCAL:-}"
+                  prune_local "$out/appdata_*.tgz*" "${KEEP_LOCAL:-}"
+                  prune_remote "${KEEP_REMOTE:-}"
+
+                  printf 'backup_last_success_timestamp %s\n' "$(date +%s)" > "$out/last_success.prom"
+                  log "backup completed: $artifact"
+                  notify success
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: RELEASE_NAME
+                  value: {{ .Release.Name | quote }}
+                - name: BACKUP_IMAGE
+                  value: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag }}"
+                - name: BACKUP_DIR
+                  value: {{ $backupDir | quote }}
+                - name: DB_HOST
+                  value: {{ $pgHost | quote }}
+                - name: DB_PORT
+                  value: {{ $pgPort | quote }}
+                - name: DB_USER
+                  value: {{ $pgUser | quote }}
+                - name: DB_NAME
+                  value: {{ $pgDatabase | quote }}
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $passwordSecret }}
+                      key: {{ .Values.backup.postgres.passwordKey }}
+                - name: KEEP_LOCAL
+                  value: {{ .Values.backup.retention.keepLocal | quote }}
+                - name: KEEP_REMOTE
+                  value: {{ .Values.backup.retention.keepRemote | quote }}
+                - name: APP_DATA_ENABLED
+                  value: {{ .Values.backup.appData.enabled | quote }}
+                {{- if .Values.backup.appData.enabled }}
+                {{- $dirs := list }}
+                {{- range .Values.backup.appData.volumes }}
+                {{- $dirs = append $dirs (printf "%s:%s" .name .mountPath) }}
+                {{- end }}
+                - name: APP_DATA_DIRS
+                  value: {{ join " " $dirs | quote }}
+                {{- end }}
+                {{- with .Values.backup.target.s3.uri }}
+                - name: S3_URI
+                  value: {{ . | quote }}
+                {{- end }}
+                {{- with .Values.backup.target.s3.endpointUrl }}
+                - name: AWS_ENDPOINT_URL
+                  value: {{ . | quote }}
+                {{- end }}
+                {{- with .Values.backup.target.s3.region }}
+                - name: AWS_DEFAULT_REGION
+                  value: {{ . | quote }}
+                {{- end }}
+                {{- if .Values.backup.target.s3.existingSecret }}
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.backup.target.s3.existingSecret }}
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.backup.target.s3.existingSecret }}
+                      key: secret-access-key
+                {{- end }}
+                {{- with .Values.backup.target.rclone.remote }}
+                - name: RCLONE_REMOTE
+                  value: {{ . | quote }}
+                {{- end }}
+                {{- with .Values.backup.notify.webhookUrl }}
+                - name: WEBHOOK_URL
+                  value: {{ . | quote }}
+                {{- end }}
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                {{- if .Values.backup.target.pvc.claimName }}
+                - name: backup-data
+                  mountPath: {{ $pvcMount }}
+                {{- end }}
+                {{- range .Values.backup.appData.volumes }}
+                - name: appdata-{{ .name }}
+                  mountPath: {{ .mountPath }}
+                  readOnly: true
+                {{- end }}
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            {{- if .Values.backup.target.pvc.claimName }}
+            - name: backup-data
+              persistentVolumeClaim:
+                claimName: {{ .Values.backup.target.pvc.claimName }}
+            {{- end }}
+            {{- range .Values.backup.appData.volumes }}
+            - name: appdata-{{ .name }}
+              persistentVolumeClaim:
+                claimName: {{ .claimName }}
+            {{- end }}
+          {{- $nodeSelector := .Values.jobs.nodeSelector }}
+          {{- with $nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.jobs.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.jobs.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

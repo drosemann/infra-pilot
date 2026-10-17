@@ -21,6 +21,16 @@ spec:
   podSelector:
     matchLabels:
       {{- include "infra-pilot.selectorLabels" . | nindent 6 }}
+    # Job pods (migration, backup, restore) are governed by a dedicated
+    # least-privilege egress policy below instead of the broad deployment
+    # egress rules.
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: NotIn
+        values:
+          - migration
+          - backup
+          - restore
   ingress:
     {{- range .Values.networkPolicies.ingress }}
     - from:
@@ -104,4 +114,58 @@ spec:
         - port: 8500
           protocol: TCP
 {{- end }}
+---
+# Least-privilege egress for the operational Jobs: DNS, PostgreSQL and
+# HTTPS/HTTP (S3-compatible targets, webhook notifications). Job pods accept no
+# inbound traffic, so no ingress rules are added.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-jobs
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - {{ include "infra-pilot.name" . }}
+      - key: app.kubernetes.io/instance
+        operator: In
+        values:
+          - {{ .Release.Name }}
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - migration
+          - backup
+          - restore
+  policyTypes: [Egress]
+  egress:
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 80
+          protocol: TCP
+    {{- with .Values.networkPolicies.jobs.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 {{- end }}

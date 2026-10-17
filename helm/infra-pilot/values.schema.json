@@ -1,0 +1,728 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "infra-pilot chart values",
+  "description": "Schema for helm/infra-pilot/values.yaml. Validated by Helm on install, upgrade and template. Subchart value trees (postgresql, redis, prometheus, grafana) are intentionally open so their own defaults pass validation; chart-owned trees are closed with additionalProperties=false to catch typos early.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "image": {
+      "type": "object",
+      "description": "Container image reference; empty tag falls back to Chart.AppVersion.",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "description": "Image repository without tag."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag; empty uses Chart.AppVersion."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "description": "Kubernetes imagePullPolicy.",
+          "enum": ["", "Always", "IfNotPresent", "Never"]
+        }
+      }
+    },
+    "resourceRequirements": {
+      "type": "object",
+      "description": "Kubernetes resource requests/limits.",
+      "additionalProperties": false,
+      "properties": {
+        "limits": {
+          "type": "object",
+          "description": "Resource limits, e.g. {cpu: 500m, memory: 512Mi}.",
+          "additionalProperties": true
+        },
+        "requests": {
+          "type": "object",
+          "description": "Resource requests, e.g. {cpu: 100m, memory: 256Mi}.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "envVar": {
+      "type": "object",
+      "description": "A container environment variable entry.",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "description": "Environment variable name."},
+        "value": {
+          "type": ["string", "number", "boolean", "null"],
+          "description": "Literal value."
+        },
+        "valueFrom": {
+          "type": "object",
+          "description": "Value source (secretKeyRef, configMapKeyRef, fieldRef...).",
+          "additionalProperties": true
+        }
+      }
+    },
+    "volumeMountTarget": {
+      "type": "object",
+      "description": "An application-data PVC to archive with the backup CronJob.",
+      "additionalProperties": false,
+      "required": ["name", "claimName", "mountPath"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Short name used in the archive file name and volume name."
+        },
+        "claimName": {
+          "type": "string",
+          "description": "PVC to mount read-only."
+        },
+        "mountPath": {
+          "type": "string",
+          "description": "Mount path inside the backup pod."
+        }
+      }
+    },
+    "tlsEntry": {
+      "type": "object",
+      "description": "Ingress TLS entry.",
+      "additionalProperties": false,
+      "required": ["secretName"],
+      "properties": {
+        "secretName": {
+          "type": "string",
+          "description": "Secret holding the TLS certificate/key."
+        },
+        "hosts": {
+          "type": "array",
+          "description": "Hosts covered by the certificate.",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "ingressHost": {
+      "type": "object",
+      "description": "Ingress rule host with paths.",
+      "additionalProperties": false,
+      "required": ["host"],
+      "properties": {
+        "host": {"type": "string", "description": "DNS host name."},
+        "paths": {
+          "type": "array",
+          "description": "Path rules for this host.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path"],
+            "properties": {
+              "path": {"type": "string", "description": "URL path, e.g. /."},
+              "pathType": {
+                "type": "string",
+                "description": "Kubernetes path type.",
+                "enum": ["Prefix", "Exact", "ImplementationSpecific"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "securityContext": {
+      "type": "object",
+      "description": "Pod or container securityContext. Passed through to Kubernetes, so fields are not enumerated exhaustively.",
+      "additionalProperties": true,
+      "properties": {
+        "runAsNonRoot": {"type": "boolean", "description": "Require a non-root UID."},
+        "runAsUser": {"type": "integer", "description": "UID to run as."},
+        "runAsGroup": {"type": "integer", "description": "GID to run as."},
+        "allowPrivilegeEscalation": {"type": "boolean", "description": "Allow setuid/privilege escalation."},
+        "readOnlyRootFilesystem": {"type": "boolean", "description": "Mount the root filesystem read-only."},
+        "capabilities": {"type": "object", "description": "Linux capabilities, e.g. drop: [ALL].", "additionalProperties": true},
+        "seccompProfile": {"type": "object", "description": "seccomp profile selection.", "additionalProperties": true}
+      }
+    },
+    "postgresConnection": {
+      "type": "object",
+      "description": "PostgreSQL connection override. Empty values are derived from orchestrator.env DB_* and postgresql.auth.* when the database runs in-cluster.",
+      "additionalProperties": false,
+      "properties": {
+        "host": {"type": "string", "description": "Database host; empty derives from DB_HOST."},
+        "port": {"type": ["string", "integer"], "description": "Database port; empty derives from DB_PORT or 5432."},
+        "user": {"type": "string", "description": "Database role; empty derives from DB_USER or postgresql.auth.username."},
+        "database": {"type": "string", "description": "Database name; empty derives from DB_NAME or postgresql.auth.database."},
+        "secretName": {"type": "string", "description": "Secret holding the password; empty uses infra-pilot-secrets."},
+        "passwordKey": {"type": "string", "description": "Key inside the Secret holding the password."}
+      }
+    },
+    "jobPlacement": {
+      "type": "object",
+      "description": "Scheduling constraints shared by the operational Jobs.",
+      "additionalProperties": false,
+      "properties": {
+        "nodeSelector": {"type": "object", "description": "nodeSelector for Job pods.", "additionalProperties": true},
+        "tolerations": {"type": "array", "description": "Tolerations for Job pods.", "items": {"type": "object", "additionalProperties": true}},
+        "affinity": {"type": "object", "description": "Affinity for Job pods.", "additionalProperties": true}
+      }
+    },
+    "hooksOrRules": {
+      "type": "object",
+      "description": "Free-form list of Prometheus rules or extra egress rules.",
+      "additionalProperties": true
+    }
+  },
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Static replica count when autoscaling.enabled=false; HPA controls replicas otherwise."
+    },
+    "global": {
+      "type": "object",
+      "description": "Global values shared with subcharts.",
+      "additionalProperties": true,
+      "properties": {
+        "environment": {
+          "type": "string",
+          "description": "Deployment environment; 'production' enables fail-fast secret validation and stricter defaults."
+        },
+        "imageRegistry": {
+          "type": "string",
+          "description": "Registry prefix used by some subcharts."
+        }
+      }
+    },
+    "image": {"$ref": "#/definitions/image"},
+    "nameOverride": {"type": "string", "description": "Override the chart name."},
+    "fullnameOverride": {"type": "string", "description": "Override the fully qualified release name."},
+    "imagePullSecrets": {
+      "type": "array",
+      "description": "Image pull secrets for all chart Deployments.",
+      "items": {"type": "object", "additionalProperties": true}
+    },
+    "serviceAccount": {
+      "type": "object",
+      "description": "ServiceAccount for the orchestrator and panel Deployments.",
+      "additionalProperties": false,
+      "properties": {
+        "create": {"type": "boolean", "description": "Create the ServiceAccount."},
+        "annotations": {"type": "object", "description": "ServiceAccount annotations.", "additionalProperties": {"type": "string"}},
+        "name": {"type": "string", "description": "Name; empty uses the generated fullname."}
+      }
+    },
+    "podAnnotations": {
+      "type": "object",
+      "description": "Annotations added to application pod templates.",
+      "additionalProperties": {"type": "string"}
+    },
+    "podSecurityContext": {"$ref": "#/definitions/securityContext"},
+    "securityContext": {"$ref": "#/definitions/securityContext"},
+    "service": {
+      "type": "object",
+      "description": "Orchestrator Service.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {"type": "string", "description": "Service type.", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"]},
+        "port": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Service port."}
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "description": "Orchestrator Ingress and optional management-panel Ingress.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Create the orchestrator Ingress."},
+        "className": {"type": "string", "description": "Ingress class name."},
+        "annotations": {"type": "object", "description": "Ingress annotations.", "additionalProperties": {"type": "string"}},
+        "hosts": {"type": "array", "description": "Orchestrator Ingress rules.", "items": {"$ref": "#/definitions/ingressHost"}},
+        "tls": {"type": "array", "description": "Orchestrator Ingress TLS entries.", "items": {"$ref": "#/definitions/tlsEntry"}},
+        "panel": {
+          "type": "object",
+          "description": "Optional Ingress exposing the management panel; disabled by default.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Create the panel Ingress."},
+            "annotations": {"type": "object", "description": "Panel Ingress annotations.", "additionalProperties": {"type": "string"}},
+            "hosts": {"type": "array", "description": "Panel Ingress rules.", "items": {"$ref": "#/definitions/ingressHost"}},
+            "tls": {"type": "array", "description": "Panel Ingress TLS entries.", "items": {"$ref": "#/definitions/tlsEntry"}}
+          }
+        }
+      }
+    },
+    "resources": {"$ref": "#/definitions/resourceRequirements"},
+    "autoscaling": {
+      "type": "object",
+      "description": "Horizontal Pod Autoscaler for the orchestrator.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Create the HPA."},
+        "minReplicas": {"type": "integer", "minimum": 1, "description": "HPA minimum replicas."},
+        "maxReplicas": {"type": "integer", "minimum": 1, "description": "HPA maximum replicas."},
+        "targetCPUUtilizationPercentage": {"type": "integer", "minimum": 1, "maximum": 100, "description": "CPU target utilisation."},
+        "targetMemoryUtilizationPercentage": {"type": "integer", "minimum": 1, "maximum": 100, "description": "Memory target utilisation."}
+      }
+    },
+    "nodeSelector": {"type": "object", "description": "nodeSelector for application pods.", "additionalProperties": true},
+    "tolerations": {"type": "array", "description": "Tolerations for application pods.", "items": {"type": "object", "additionalProperties": true}},
+    "affinity": {"type": "object", "description": "Affinity for application pods.", "additionalProperties": true},
+    "postgresql": {
+      "type": "object",
+      "description": "Bitnami PostgreSQL subchart values (open tree).",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy PostgreSQL in-cluster."},
+        "auth": {"type": "object", "description": "Authentication settings.", "additionalProperties": true},
+        "primary": {"type": "object", "description": "Primary instance settings.", "additionalProperties": true}
+      }
+    },
+    "redis": {
+      "type": "object",
+      "description": "Bitnami Redis subchart values (open tree).",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy Redis in-cluster."},
+        "auth": {"type": "object", "description": "Authentication settings.", "additionalProperties": true}
+      }
+    },
+    "prometheus": {
+      "type": "object",
+      "description": "prometheus-community subchart values (open tree).",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy Prometheus."}
+      }
+    },
+    "grafana": {
+      "type": "object",
+      "description": "grafana subchart values (open tree).",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy Grafana."}
+      }
+    },
+    "orchestrator": {
+      "type": "object",
+      "description": "Orchestrator agent Deployment.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy the orchestrator."},
+        "image": {"$ref": "#/definitions/image"},
+        "config": {
+          "type": "object",
+          "description": "Orchestrator configuration rendered into the ConfigMap.",
+          "additionalProperties": false,
+          "properties": {
+            "logLevel": {"type": "string", "description": "Log level."},
+            "workerCount": {"type": "integer", "minimum": 1, "description": "Worker process count."}
+          }
+        },
+        "env": {"type": "array", "description": "Environment variables; DB_HOST/REDIS_HOST drive the Jobs' connection defaults.", "items": {"$ref": "#/definitions/envVar"}}
+      }
+    },
+    "managementPanel": {
+      "type": "object",
+      "description": "Management panel Deployment.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy the management panel."},
+        "image": {"$ref": "#/definitions/image"},
+        "service": {
+          "type": "object",
+          "description": "Panel Service.",
+          "additionalProperties": false,
+          "properties": {
+            "port": {"type": "integer", "minimum": 1, "maximum": 65535, "description": "Panel service port."}
+          }
+        },
+        "existingSecret": {"type": "string", "description": "Secret holding orchestrator-api-token."},
+        "resources": {"$ref": "#/definitions/resourceRequirements"},
+        "env": {"type": "array", "description": "Environment variables.", "items": {"$ref": "#/definitions/envVar"}}
+      }
+    },
+    "discordService": {
+      "type": "object",
+      "description": "Optional Discord service.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Deploy the Discord service."},
+        "image": {"$ref": "#/definitions/image"},
+        "env": {"type": "array", "description": "Environment variables.", "items": {"$ref": "#/definitions/envVar"}}
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "ServiceMonitor and PrometheusRule resources (require the Prometheus Operator CRDs).",
+      "additionalProperties": false,
+      "properties": {
+        "serviceMonitor": {
+          "type": "object",
+          "description": "ServiceMonitor for the orchestrator metrics endpoint.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Create the ServiceMonitor."},
+            "interval": {"type": "string", "description": "Scrape interval."},
+            "scrapeTimeout": {"type": "string", "description": "Scrape timeout."}
+          }
+        },
+        "prometheusRule": {
+          "type": "object",
+          "description": "PrometheusRule with recording rules and alerts.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Create the PrometheusRule."},
+            "labels": {"type": "object", "description": "Extra metadata labels.", "additionalProperties": {"type": "string"}},
+            "serviceDown": {"type": "object", "description": "ServiceDown alert toggle.", "additionalProperties": false, "properties": {"enabled": {"type": "boolean", "description": "Enable the rule."}}},
+            "highMemoryUsage": {"type": "object", "description": "HighMemoryUsage alert toggle.", "additionalProperties": false, "properties": {"enabled": {"type": "boolean", "description": "Enable the rule."}}},
+            "highCPUUsage": {"type": "object", "description": "HighCPUUsage alert toggle.", "additionalProperties": false, "properties": {"enabled": {"type": "boolean", "description": "Enable the rule."}}},
+            "diskSpaceLow": {"type": "object", "description": "DiskSpaceLow alert toggle.", "additionalProperties": false, "properties": {"enabled": {"type": "boolean", "description": "Enable the rule."}}},
+            "backupStale": {
+              "type": "object",
+              "description": "BackupStale alert (backup_last_success_timestamp).",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean", "description": "Enable the rule."},
+                "thresholdHours": {"type": "integer", "minimum": 1, "description": "Hours after which a missing backup alerts."}
+              }
+            },
+            "migrationJobFailed": {
+              "type": "object",
+              "description": "MigrationJobFailed alert (kube_job_status_failed).",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean", "description": "Enable the rule."},
+                "forMinutes": {"type": "integer", "minimum": 1, "description": "Pending duration before firing."}
+              }
+            },
+            "highPodRestarts": {
+              "type": "object",
+              "description": "HighPodRestarts alert.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean", "description": "Enable the rule."},
+                "threshold": {"type": "integer", "minimum": 1, "description": "Restart count threshold."},
+                "windowMinutes": {"type": "integer", "minimum": 1, "description": "Lookback window in minutes."},
+                "forMinutes": {"type": "integer", "minimum": 1, "description": "Pending duration before firing."}
+              }
+            },
+            "hpaAtMax": {
+              "type": "object",
+              "description": "HPAAtMax alert (only rendered when autoscaling.enabled).",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean", "description": "Enable the rule."},
+                "forMinutes": {"type": "integer", "minimum": 1, "description": "Pending duration before firing."}
+              }
+            },
+            "certificateExpiry": {
+              "type": "object",
+              "description": "CertificateExpiry alert; requires an exporter exposing certificate expiry.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {"type": "boolean", "description": "Enable the rule."},
+                "expr": {"type": "string", "description": "PromQL expression returning seconds to expiry."},
+                "forMinutes": {"type": "integer", "minimum": 1, "description": "Pending duration before firing."}
+              }
+            },
+            "extraRecordingRules": {
+              "type": "array",
+              "description": "Extra recording rules appended to the recording group.",
+              "items": {"$ref": "#/definitions/hooksOrRules"}
+            },
+            "extraRules": {
+              "type": "array",
+              "description": "Extra alerting rules appended to the alerts group.",
+              "items": {"$ref": "#/definitions/hooksOrRules"}
+            }
+          }
+        }
+      }
+    },
+    "configMaps": {
+      "type": "object",
+      "description": "Chart ConfigMap.",
+      "additionalProperties": false,
+      "properties": {
+        "create": {"type": "boolean", "description": "Create the ConfigMap."},
+        "data": {"type": "object", "description": "Extra ConfigMap data.", "additionalProperties": {"type": ["string", "number", "boolean"]}}
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "description": "Chart-managed Secret (infra-pilot-secrets). Prefer an external Secret in production.",
+      "additionalProperties": false,
+      "properties": {
+        "create": {"type": "boolean", "description": "Create the Secret from these values."},
+        "data": {
+          "type": "object",
+          "description": "Secret values; required in production when secrets.create=true.",
+          "additionalProperties": false,
+          "properties": {
+            "DB_PASSWORD": {"type": "string", "description": "Application role password."},
+            "POSTGRES_PASSWORD": {"type": "string", "description": "PostgreSQL administrator password."},
+            "REDIS_PASSWORD": {"type": "string", "description": "Redis password."},
+            "API_KEY": {"type": "string", "description": "API key (openssl rand -hex 32)."}
+          }
+        }
+      }
+    },
+    "networkPolicies": {
+      "type": "object",
+      "description": "Default-deny plus allow-list NetworkPolicies.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Create NetworkPolicies."},
+        "ingress": {"type": "array", "description": "Ingress rules for application pods.", "items": {"type": "object", "additionalProperties": true}},
+        "egress": {
+          "type": "object",
+          "description": "Egress toggles.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Allow panel-to-orchestrator egress."}
+          }
+        },
+        "jobs": {
+          "type": "object",
+          "description": "Egress policy for Job pods.",
+          "additionalProperties": false,
+          "properties": {
+            "extraEgress": {"type": "array", "description": "Extra egress rules appended to the jobs policy.", "items": {"type": "object", "additionalProperties": true}}
+          }
+        }
+      }
+    },
+    "serviceMesh": {
+      "type": "object",
+      "description": "Service mesh toggles (informational for the chart templates).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Enable mesh integration."},
+        "sidecar": {"type": "boolean", "description": "Inject sidecars."},
+        "mtls": {"type": "boolean", "description": "Require mTLS."}
+      }
+    },
+    "jobs": {
+      "type": "object",
+      "description": "Shared settings for the migration, backup and restore Jobs.",
+      "additionalProperties": false,
+      "properties": {
+        "serviceAccount": {
+          "type": "object",
+          "description": "ServiceAccount used by Job pods (no RBAC is granted).",
+          "additionalProperties": false,
+          "properties": {
+            "create": {"type": "boolean", "description": "Create the ServiceAccount."},
+            "name": {"type": "string", "description": "Use a pre-existing ServiceAccount (e.g. with an IRSA annotation)."},
+            "annotations": {"type": "object", "description": "ServiceAccount annotations.", "additionalProperties": {"type": "string"}}
+          }
+        },
+        "nodeSelector": {"type": "object", "description": "nodeSelector for Job pods.", "additionalProperties": true},
+        "tolerations": {"type": "array", "description": "Tolerations for Job pods.", "items": {"type": "object", "additionalProperties": true}},
+        "affinity": {"type": "object", "description": "Affinity for Job pods.", "additionalProperties": true},
+        "podSecurityContext": {"$ref": "#/definitions/securityContext"},
+        "securityContext": {"$ref": "#/definitions/securityContext"}
+      }
+    },
+    "migration": {
+      "type": "object",
+      "description": "Alembic migration Job (Helm hook and/or standalone).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Render the migration hook Job."},
+        "hook": {
+          "type": "object",
+          "description": "Helm hook settings.",
+          "additionalProperties": false,
+          "properties": {
+            "events": {"type": "string", "description": "Hook events; empty selects post-install,pre-upgrade for in-cluster PostgreSQL."},
+            "weight": {"type": "integer", "description": "Hook weight."},
+            "deletePolicy": {"type": "string", "description": "Hook delete policy."}
+          }
+        },
+        "standalone": {
+          "type": "object",
+          "description": "Render an extra non-hook Job for manual kubectl apply.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Render the standalone Job."}
+          }
+        },
+        "image": {"$ref": "#/definitions/image"},
+        "command": {"type": "array", "description": "Override the container command.", "items": {"type": "string"}},
+        "args": {"type": "array", "description": "Override the container args.", "items": {"type": "string"}},
+        "wait": {
+          "type": "object",
+          "description": "Database TCP readiness wait.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Wait for the database port before migrating."},
+            "timeoutSeconds": {"type": "integer", "minimum": 1, "description": "Maximum wait time."}
+          }
+        },
+        "backoffLimit": {"type": "integer", "minimum": 0, "description": "Job retry count."},
+        "activeDeadlineSeconds": {"type": "integer", "minimum": 1, "description": "Job deadline."},
+        "ttlSecondsAfterFinished": {"type": "integer", "minimum": 0, "description": "TTL before finished Jobs are garbage collected (0 keeps them)."},
+        "resources": {"$ref": "#/definitions/resourceRequirements"},
+        "env": {"type": "array", "description": "Extra environment variables.", "items": {"$ref": "#/definitions/envVar"}},
+        "nodeSelector": {"type": "object", "description": "nodeSelector override.", "additionalProperties": true},
+        "tolerations": {"type": "array", "description": "Tolerations override.", "items": {"type": "object", "additionalProperties": true}},
+        "affinity": {"type": "object", "description": "Affinity override.", "additionalProperties": true}
+      }
+    },
+    "backup": {
+      "type": "object",
+      "description": "Scheduled in-cluster PostgreSQL backup CronJob.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Create the backup CronJob; requires at least one target."},
+        "schedule": {"type": "string", "description": "Cron schedule."},
+        "timeZone": {"type": "string", "description": "IANA time zone (Kubernetes >= 1.27)."},
+        "concurrencyPolicy": {"type": "string", "description": "CronJob concurrency policy.", "enum": ["Allow", "Forbid", "Replace"]},
+        "startingDeadlineSeconds": {"type": "integer", "minimum": 0, "description": "CronJob starting deadline."},
+        "successfulJobsHistoryLimit": {"type": "integer", "minimum": 0, "description": "Retained successful Jobs."},
+        "failedJobsHistoryLimit": {"type": "integer", "minimum": 0, "description": "Retained failed Jobs."},
+        "backoffLimit": {"type": "integer", "minimum": 0, "description": "Job retry count."},
+        "activeDeadlineSeconds": {"type": "integer", "minimum": 1, "description": "Job deadline."},
+        "ttlSecondsAfterFinished": {"type": "integer", "minimum": 0, "description": "TTL for finished Jobs."},
+        "image": {"$ref": "#/definitions/image"},
+        "postgres": {"$ref": "#/definitions/postgresConnection"},
+        "target": {
+          "type": "object",
+          "description": "Backup targets.",
+          "additionalProperties": false,
+          "properties": {
+            "pvc": {
+              "type": "object",
+              "description": "PVC target.",
+              "additionalProperties": false,
+              "properties": {
+                "claimName": {"type": "string", "description": "PVC to write dumps into."},
+                "mountPath": {"type": "string", "description": "Mount path inside the backup pod."}
+              }
+            },
+            "s3": {
+              "type": "object",
+              "description": "S3-compatible target.",
+              "additionalProperties": false,
+              "properties": {
+                "uri": {"type": "string", "description": "s3://bucket/prefix target."},
+                "endpointUrl": {"type": "string", "description": "AWS_ENDPOINT_URL for MinIO/Ceph."},
+                "region": {"type": "string", "description": "AWS_DEFAULT_REGION."},
+                "existingSecret": {"type": "string", "description": "Secret with access-key-id/secret-access-key."}
+              }
+            },
+            "rclone": {
+              "type": "object",
+              "description": "rclone remote target.",
+              "additionalProperties": false,
+              "properties": {
+                "remote": {"type": "string", "description": "Configured rclone remote, e.g. minio:backups/infra-pilot."}
+              }
+            }
+          }
+        },
+        "retention": {
+          "type": "object",
+          "description": "Retention policy.",
+          "additionalProperties": false,
+          "properties": {
+            "keepLocal": {"type": "integer", "minimum": 0, "description": "Artifacts kept locally."},
+            "keepRemote": {"type": "integer", "minimum": 0, "description": "Artifacts kept at the remote target (best effort)."}
+          }
+        },
+        "appData": {
+          "type": "object",
+          "description": "Application data PVC archiving.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Also archive appData.volumes."},
+            "volumes": {"type": "array", "description": "PVCs to archive.", "items": {"$ref": "#/definitions/volumeMountTarget"}}
+          }
+        },
+        "notify": {
+          "type": "object",
+          "description": "Webhook notification.",
+          "additionalProperties": false,
+          "properties": {
+            "webhookUrl": {"type": "string", "description": "URL receiving a JSON success/failure body."}
+          }
+        },
+        "resources": {"$ref": "#/definitions/resourceRequirements"}
+      }
+    },
+    "restore": {
+      "type": "object",
+      "description": "Manual in-cluster restore Job (destructive; requires confirm).",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "description": "Render the restore Job."},
+        "confirm": {"type": "string", "description": "Must equal 'restore' to acknowledge the destructive operation.", "enum": ["", "restore"]},
+        "image": {"$ref": "#/definitions/image"},
+        "postgres": {"$ref": "#/definitions/postgresConnection"},
+        "source": {
+          "type": "object",
+          "description": "Restore source.",
+          "additionalProperties": false,
+          "properties": {
+            "type": {"type": "string", "description": "Source type.", "enum": ["pvc", "s3", "url"]},
+            "pvc": {
+              "type": "object",
+              "description": "PVC source.",
+              "additionalProperties": false,
+              "properties": {
+                "claimName": {"type": "string", "description": "PVC holding the dump."},
+                "mountPath": {"type": "string", "description": "Read-only mount path."},
+                "path": {"type": "string", "description": "Absolute path to the dump inside the pod."}
+              }
+            },
+            "s3": {
+              "type": "object",
+              "description": "S3 source.",
+              "additionalProperties": false,
+              "properties": {
+                "uri": {"type": "string", "description": "s3:// URI of the dump."}
+              }
+            },
+            "url": {"type": "string", "description": "HTTP(S) URL of the dump."}
+          }
+        },
+        "gpg": {
+          "type": "object",
+          "description": "Optional GPG decryption of the dump.",
+          "additionalProperties": false,
+          "properties": {
+            "existingSecret": {"type": "string", "description": "Secret with the private key."},
+            "keyFile": {"type": "string", "description": "Key file name inside the Secret."}
+          }
+        },
+        "clean": {"type": "boolean", "description": "pg_restore --clean --if-exists."},
+        "dryRun": {"type": "boolean", "description": "Validate the archive only (pg_restore --list)."},
+        "backoffLimit": {"type": "integer", "minimum": 0, "description": "Job retry count."},
+        "activeDeadlineSeconds": {"type": "integer", "minimum": 1, "description": "Job deadline."},
+        "ttlSecondsAfterFinished": {"type": "integer", "minimum": 0, "description": "TTL for finished Jobs."},
+        "resources": {"$ref": "#/definitions/resourceRequirements"}
+      }
+    },
+    "podDisruptionBudget": {
+      "type": "object",
+      "description": "PodDisruptionBudgets for the orchestrator and panel.",
+      "additionalProperties": false,
+      "properties": {
+        "orchestrator": {
+          "type": "object",
+          "description": "Orchestrator PDB.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Create the PDB."},
+            "minAvailable": {"type": ["integer", "string"], "description": "Minimum available pods (IntOrString)."},
+            "maxUnavailable": {"type": ["integer", "string"], "description": "Maximum unavailable pods (IntOrString)."}
+          }
+        },
+        "panel": {
+          "type": "object",
+          "description": "Panel PDB.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {"type": "boolean", "description": "Create the PDB."},
+            "minAvailable": {"type": ["integer", "string"], "description": "Minimum available pods (IntOrString)."},
+            "maxUnavailable": {"type": ["integer", "string"], "description": "Maximum unavailable pods (IntOrString)."}
+          }
+        }
+      }
+    }
+  }
+}

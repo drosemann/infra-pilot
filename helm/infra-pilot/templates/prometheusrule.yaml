@@ -1,0 +1,135 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+{{- $pr := .Values.monitoring.prometheusRule -}}
+{{- $ns := .Release.Namespace -}}
+{{- $fullname := include "infra-pilot.fullname" . -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    {{- with $pr.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    # Recording rules first: they are cheap, stable building blocks for
+    # dashboards and for the alerts below.
+    - name: infra-pilot.recording
+      interval: 30s
+      rules:
+        - record: infra_pilot:orchestrator:ready_replicas
+          expr: sum(kube_deployment_status_replicas_ready{namespace="{{ $ns }}", deployment="{{ $fullname }}-orchestrator"})
+        - record: infra_pilot:orchestrator:desired_replicas
+          expr: sum(kube_deployment_spec_replicas{namespace="{{ $ns }}", deployment="{{ $fullname }}-orchestrator"})
+        {{- if .Values.managementPanel.enabled }}
+        - record: infra_pilot:panel:ready_replicas
+          expr: sum(kube_deployment_status_replicas_ready{namespace="{{ $ns }}", deployment="{{ $fullname }}-panel"})
+        {{- end }}
+        - record: infra_pilot:orchestrator:restarts_increase_1h
+          expr: sum(increase(kube_pod_container_status_restarts_total{namespace="{{ $ns }}", container="orchestrator"}[1h]))
+        - record: infra_pilot:backup:age_seconds
+          expr: max(time() - backup_last_success_timestamp)
+        - record: infra_pilot:auth_failures:increase_1h
+          expr: sum by (outcome) (increase(orchestrator_auth_failures_total{namespace="{{ $ns }}"}[1h]))
+        {{- with $pr.extraRecordingRules }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+
+    - name: infra-pilot-alerts
+      interval: 30s
+      rules:
+        {{- if $pr.serviceDown.enabled }}
+        - alert: ServiceDown
+          expr: up{namespace="{{ $ns }}"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ "{{ $labels.instance }}" }} is down"
+            description: "{{ "{{ $labels.instance }}" }} has been unreachable for more than 1 minute."
+        {{- end }}
+        {{- if $pr.highMemoryUsage.enabled }}
+        - alert: HighMemoryUsage
+          expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 90
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage on {{ "{{ $labels.instance }}" }}"
+            description: "Memory usage is above 90% for more than 5 minutes."
+        {{- end }}
+        {{- if $pr.highCPUUsage.enabled }}
+        - alert: HighCPUUsage
+          expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage on {{ "{{ $labels.instance }}" }}"
+            description: "CPU usage is above 85% for more than 5 minutes."
+        {{- end }}
+        {{- if $pr.diskSpaceLow.enabled }}
+        - alert: DiskSpaceLow
+          expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Low disk space on {{ "{{ $labels.instance }}" }}"
+            description: "Disk usage is above 90% on {{ "{{ $labels.mountpoint }}" }}."
+        {{- end }}
+        {{- if $pr.backupStale.enabled }}
+        - alert: BackupStale
+          expr: (time() - max(backup_last_success_timestamp)) > {{ mul (int $pr.backupStale.thresholdHours) 3600 }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No successful backup for more than {{ $pr.backupStale.thresholdHours }}h"
+            description: "backup_last_success_timestamp is older than {{ $pr.backupStale.thresholdHours }}h. Check the backup CronJob and docs/OPERATIONS.md."
+        {{- end }}
+        {{- if $pr.migrationJobFailed.enabled }}
+        - alert: MigrationJobFailed
+          expr: kube_job_status_failed{namespace="{{ $ns }}", job_name=~"{{ $fullname }}-migrate.*"} > 0
+          for: {{ $pr.migrationJobFailed.forMinutes }}m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Database migration Job failed"
+            description: "A migration Job ({{ "{{ $labels.job_name }}" }}) has failed. Inspect its logs before allowing further upgrades; see docs/OPERATIONS.md (Running migrations as a Job)."
+        {{- end }}
+        {{- if $pr.highPodRestarts.enabled }}
+        - alert: HighPodRestarts
+          expr: sum by (pod, container) (increase(kube_pod_container_status_restarts_total{namespace="{{ $ns }}"}[{{ $pr.highPodRestarts.windowMinutes }}m])) > {{ $pr.highPodRestarts.threshold }}
+          for: {{ $pr.highPodRestarts.forMinutes }}m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ "{{ $labels.pod }}" }} is restarting"
+            description: "{{ "{{ $labels.pod }}" }} ({{ "{{ $labels.container }}" }}) restarted more than {{ $pr.highPodRestarts.threshold }} times in {{ $pr.highPodRestarts.windowMinutes }}m."
+        {{- end }}
+        {{- if and $pr.hpaAtMax.enabled .Values.autoscaling.enabled }}
+        - alert: HPAAtMax
+          expr: kube_horizontalpodautoscaler_status_current_replicas{namespace="{{ $ns }}", horizontalpodautoscaler="{{ $fullname }}-orchestrator"} >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="{{ $ns }}", horizontalpodautoscaler="{{ $fullname }}-orchestrator"}
+          for: {{ $pr.hpaAtMax.forMinutes }}m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Orchestrator HPA is at maxReplicas"
+            description: "The orchestrator HPA has been at {{ "{{ $labels.horizontalpodautoscaler }}" }} maxReplicas for {{ $pr.hpaAtMax.forMinutes }}m; consider raising autoscaling.maxReplicas or resource limits."
+        {{- end }}
+        {{- if $pr.certificateExpiry.enabled }}
+        - alert: CertificateExpiry
+          expr: {{ $pr.certificateExpiry.expr }}
+          for: {{ $pr.certificateExpiry.forMinutes }}m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TLS certificate expiring soon"
+            description: "{{ "{{ $labels.name }}" }} certificate expires within 7 days; renew it (cert-manager will normally do this automatically)."
+        {{- end }}
+        {{- with $pr.extraRules }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

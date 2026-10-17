@@ -1,0 +1,73 @@
+{{- $fullname := include "infra-pilot.fullname" . -}}
+{{- $ns := .Release.Namespace -}}
+infra-pilot {{ .Chart.Version }} (app {{ .Chart.AppVersion }}) installed as release "{{ .Release.Name }}" in namespace {{ $ns }}.
+
+Components
+{{- if .Values.orchestrator.enabled }}
+  - orchestrator:  deployment/{{ $fullname }}-orchestrator (service {{ $fullname }}-orchestrator:{{ .Values.service.port }})
+{{- end }}
+{{- if .Values.managementPanel.enabled }}
+  - management panel: deployment/{{ $fullname }}-panel (service {{ $fullname }}-panel:{{ .Values.managementPanel.service.port }})
+{{- end }}
+{{- if .Values.autoscaling.enabled }}
+  - autoscaling:   HPA {{ $fullname }}-orchestrator ({{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} replicas)
+{{- end }}
+
+Access
+{{- if .Values.ingress.enabled }}
+  kubectl -n {{ $ns }} get ingress {{ $fullname }}
+{{- else }}
+  Ingress is disabled. Reach the API with:
+  kubectl -n {{ $ns }} port-forward svc/{{ $fullname }}-orchestrator {{ .Values.service.port }}:{{ .Values.service.port }}
+{{- end }}
+{{- if and .Values.managementPanel.enabled (not .Values.ingress.panel.enabled) }}
+
+  NOTE: The management panel is only exposed through its ClusterIP Service.
+  For UI access either enable ingress.panel.enabled or port-forward:
+  kubectl -n {{ $ns }} port-forward svc/{{ $fullname }}-panel {{ .Values.managementPanel.service.port }}:{{ .Values.managementPanel.service.port }}
+{{- end }}
+
+Health
+  kubectl -n {{ $ns }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+  kubectl -n {{ $ns }} rollout status deployment/{{ $fullname }}-orchestrator
+
+Migrations
+{{- if .Values.migration.enabled }}
+  The migration Job runs automatically as a Helm hook ({{ include "infra-pilot.migrationHookEvents" . }}).
+  Inspect it with:
+    kubectl -n {{ $ns }} get jobs
+    kubectl -n {{ $ns }} logs job/{{ $fullname }}-migrate
+  Run it manually without Helm:
+    helm template {{ .Release.Name }} . -s templates/jobs/migrate.yaml --set migration.standalone.enabled=true \
+      | kubectl -n {{ $ns }} apply -f -
+{{- else }}
+  The migration hook is disabled (migration.enabled=false). The orchestrator
+  still applies "alembic upgrade head" on startup; make sure exactly one
+  process migrates the schema at a time.
+{{- end }}
+
+Backups
+{{- if .Values.backup.enabled }}
+  Backup CronJob "{{ $fullname }}-backup" runs with schedule "{{ .Values.backup.schedule }}".
+    kubectl -n {{ $ns }} get cronjob {{ $fullname }}-backup
+    kubectl -n {{ $ns }} create job --from=cronjob/{{ $fullname }}-backup {{ $fullname }}-backup-manual
+  Restore: see docs/OPERATIONS.md ("Helm backups and restore") and scripts/db-restore-cluster.sh.
+{{- else }}
+  In-cluster backups are disabled (backup.enabled=false). Enable the CronJob
+  (backup.target.pvc.claimName or backup.target.s3.uri) or run the host-side
+  scripts/db-backup-cluster.sh. Then gate upgrades with:
+    bash scripts/upgrade-preflight.sh --release {{ .Release.Name }} --namespace {{ $ns }}
+{{- end }}
+
+{{- if .Values.secrets.create }}
+{{- if eq .Values.global.environment "production" }}
+
+WARNING: secrets.create=true in production renders credentials from values.
+Prefer an externally managed Secret named "{{ include "infra-pilot.secretName" . }}"
+(secrets.create=false) or a secrets operator.
+{{- end }}
+{{- end }}
+
+Upgrades
+  bash scripts/upgrade-preflight.sh --release {{ .Release.Name }} --namespace {{ $ns }}
+  bash scripts/update-helm.sh --release {{ .Release.Name }} --namespace {{ $ns }} -f my-values.yaml

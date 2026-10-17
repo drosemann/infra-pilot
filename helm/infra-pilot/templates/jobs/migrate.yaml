@@ -1,0 +1,130 @@
+{{/* Reusable pod spec for the migration Job. Input: dict "root" . "serviceAccount" <name>. */}}
+{{- define "infra-pilot.migration.jobSpec" -}}
+{{- $root := .root -}}
+backoffLimit: {{ $root.Values.migration.backoffLimit }}
+activeDeadlineSeconds: {{ $root.Values.migration.activeDeadlineSeconds }}
+{{- if $root.Values.migration.ttlSecondsAfterFinished }}
+ttlSecondsAfterFinished: {{ $root.Values.migration.ttlSecondsAfterFinished }}
+{{- end }}
+template:
+  metadata:
+    labels:
+      {{- include "infra-pilot.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: migration
+  spec:
+    restartPolicy: Never
+    serviceAccountName: {{ .serviceAccount }}
+    securityContext:
+      {{- toYaml $root.Values.jobs.podSecurityContext | nindent 6 }}
+    containers:
+      - name: migrate
+        image: "{{ include "infra-pilot.migrationImage" $root }}"
+        imagePullPolicy: {{ $root.Values.migration.image.pullPolicy | default $root.Values.image.pullPolicy }}
+        securityContext:
+          {{- toYaml $root.Values.jobs.securityContext | nindent 10 }}
+        {{- if $root.Values.migration.command }}
+        command:
+          {{- toYaml $root.Values.migration.command | nindent 10 }}
+        {{- if $root.Values.migration.args }}
+        args:
+          {{- toYaml $root.Values.migration.args | nindent 10 }}
+        {{- end }}
+        {{- else }}
+        command:
+          - /bin/sh
+          - -ec
+        args:
+          - |
+            {{- if $root.Values.migration.wait.enabled }}
+            wait_seconds={{ $root.Values.migration.wait.timeoutSeconds }}
+            deadline=$(( $(date +%s) + wait_seconds ))
+            if [ -z "${DB_HOST:-}" ]; then
+              echo "DB_HOST is not set; configure orchestrator.env or migration.env" >&2
+              exit 1
+            fi
+            while ! python -c 'import os, socket; s = socket.create_connection((os.environ["DB_HOST"], int(os.environ.get("DB_PORT", "5432"))), 3); s.close()' 2>/dev/null; do
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                echo "database ${DB_HOST}:${DB_PORT:-5432} not reachable after ${wait_seconds}s" >&2
+                exit 1
+              fi
+              echo "waiting for database ${DB_HOST}:${DB_PORT:-5432} ..."
+              sleep 3
+            done
+            {{- end }}
+            exec alembic -c /app/alembic.ini upgrade head
+        {{- end }}
+        env:
+          {{- toYaml $root.Values.orchestrator.env | nindent 10 }}
+          {{- /* Same credentials as the orchestrator Deployment. */}}
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "infra-pilot.secretName" $root }}
+                key: db-password
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "infra-pilot.secretName" $root }}
+                key: redis-password
+          {{- with $root.Values.migration.env }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+        resources:
+          {{- toYaml $root.Values.migration.resources | nindent 10 }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+    volumes:
+      - name: tmp
+        emptyDir: {}
+    {{- $nodeSelector := $root.Values.migration.nodeSelector | default $root.Values.nodeSelector }}
+    {{- with $nodeSelector }}
+    nodeSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- $affinity := $root.Values.migration.affinity | default $root.Values.affinity }}
+    {{- with $affinity }}
+    affinity:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- $tolerations := $root.Values.migration.tolerations | default $root.Values.tolerations }}
+    {{- with $tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- if .Values.migration.enabled }}
+{{- if and .Values.postgresql.enabled (has "pre-install" (splitList "," (include "infra-pilot.migrationHookEvents" .))) }}
+{{- fail "migration.hook.events includes pre-install while postgresql.enabled=true: the release database and Secret do not exist during pre-install and the hook would deadlock. Leave migration.hook.events empty or set it to post-install,pre-upgrade." }}
+{{- end }}
+{{- if and (has "pre-install" (splitList "," (include "infra-pilot.migrationHookEvents" .))) (not .Values.postgresql.enabled) .Values.secrets.create }}
+{{- fail "migration.hook.events includes pre-install with an external database (postgresql.enabled=false) and secrets.create=true: the chart-managed Secret does not exist during pre-install. Set secrets.create=false with an externally managed Secret, or set migration.hook.events to post-install,pre-upgrade." }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-migrate
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    "helm.sh/hook": {{ include "infra-pilot.migrationHookEvents" . | quote }}
+    "helm.sh/hook-weight": {{ .Values.migration.hook.weight | quote }}
+    "helm.sh/hook-delete-policy": {{ .Values.migration.hook.deletePolicy | quote }}
+spec:
+  {{- include "infra-pilot.migration.jobSpec" (dict "root" . "serviceAccount" (include "infra-pilot.migrationServiceAccount" .)) | nindent 2 }}
+{{- end }}
+
+{{- if .Values.migration.standalone.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-migrate-manual-{{ .Release.Revision }}
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+spec:
+  {{- include "infra-pilot.migration.jobSpec" (dict "root" . "serviceAccount" (include "infra-pilot.jobsServiceAccount" .)) | nindent 2 }}
+{{- end }}

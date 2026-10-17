@@ -1,0 +1,41 @@
+{{- if .Values.podDisruptionBudget.orchestrator.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-orchestrator
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: orchestrator
+spec:
+  {{- with .Values.podDisruptionBudget.orchestrator.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with .Values.podDisruptionBudget.orchestrator.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "infra-pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: orchestrator
+{{- end }}
+{{- if .Values.podDisruptionBudget.panel.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-panel
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: management-panel
+spec:
+  {{- with .Values.podDisruptionBudget.panel.minAvailable }}
+  minAvailable: {{ . }}
+  {{- end }}
+  {{- with .Values.podDisruptionBudget.panel.maxUnavailable }}
+  maxUnavailable: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "infra-pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: management-panel
+{{- end }}

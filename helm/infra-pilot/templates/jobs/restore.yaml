@@ -1,0 +1,209 @@
+{{- if .Values.restore.enabled }}
+{{- if ne .Values.restore.confirm "restore" }}
+{{- fail "restore.enabled=true requires restore.confirm=restore — this is a destructive operation, set it explicitly to acknowledge the risk" }}
+{{- end }}
+{{- if and (eq .Values.restore.source.type "pvc") (not .Values.restore.source.pvc.claimName) }}
+{{- fail "restore.source.type=pvc requires restore.source.pvc.claimName" }}
+{{- end }}
+{{- if and (eq .Values.restore.source.type "s3") (not .Values.restore.source.s3.uri) }}
+{{- fail "restore.source.type=s3 requires restore.source.s3.uri" }}
+{{- end }}
+{{- if and (eq .Values.restore.source.type "url") (not .Values.restore.source.url) }}
+{{- fail "restore.source.type=url requires restore.source.url" }}
+{{- end }}
+{{- $pgHost := include "infra-pilot.pgHost" (dict "root" . "explicit" .Values.restore.postgres.host) -}}
+{{- $pgPort := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.restore.postgres.port "env" "DB_PORT" "auth" "" "fallback" "5432" "quoted" true) -}}
+{{- $pgUser := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.restore.postgres.user "env" "DB_USER" "auth" "username" "fallback" "infra_pilot" "quoted" true) -}}
+{{- $pgDatabase := include "infra-pilot.pgDetail" (dict "root" . "explicit" .Values.restore.postgres.database "env" "DB_NAME" "auth" "database" "fallback" "infra_pilot" "quoted" true) -}}
+{{- $passwordSecret := .Values.restore.postgres.secretName | default (include "infra-pilot.secretName" .) -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "infra-pilot.fullname" . }}-restore-{{ .Release.Revision }}
+  labels:
+    {{- include "infra-pilot.labels" . | nindent 4 }}
+    app.kubernetes.io/component: restore
+spec:
+  backoffLimit: {{ .Values.restore.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.restore.activeDeadlineSeconds }}
+  {{- if .Values.restore.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.restore.ttlSecondsAfterFinished }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "infra-pilot.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: restore
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "infra-pilot.jobsServiceAccount" . }}
+      securityContext:
+        {{- toYaml .Values.jobs.podSecurityContext | nindent 8 }}
+      containers:
+        - name: restore
+          image: "{{ .Values.restore.image.repository }}:{{ .Values.restore.image.tag }}"
+          imagePullPolicy: {{ .Values.restore.image.pullPolicy | default .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.jobs.securityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              set -eu
+              umask 077
+              workdir=/tmp/restore
+              mkdir -p "$workdir"
+              log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
+              fail() { log "ERROR: $*"; exit 1; }
+
+              case "${SOURCE_TYPE}" in
+                pvc)
+                  src="${SOURCE_PATH}"
+                  [ -f "$src" ] || fail "backup not found in volume: $src"
+                  ;;
+                s3)
+                  command -v aws >/dev/null 2>&1 || fail "SOURCE_TYPE=s3 requires the aws CLI in the image"
+                  [ -n "${S3_URI:-}" ] || fail "restore.source.s3.uri is empty"
+                  src="$workdir/$(basename "$S3_URI")"
+                  log "downloading ${S3_URI} -> $src"
+                  aws s3 cp "$S3_URI" "$src" || fail "aws s3 cp failed"
+                  ;;
+                url)
+                  [ -n "${URL:-}" ] || fail "restore.source.url is empty"
+                  src="$workdir/$(basename "$URL")"
+                  log "downloading ${URL} -> $src"
+                  if command -v curl >/dev/null 2>&1; then
+                    curl -fsSL -o "$src" "$URL" || fail "curl download failed"
+                  elif command -v wget >/dev/null 2>&1; then
+                    wget -q -O "$src" "$URL" || fail "wget download failed"
+                  else
+                    fail "SOURCE_TYPE=url requires curl or wget in the image"
+                  fi
+                  ;;
+                *)
+                  fail "unsupported restore.source.type: ${SOURCE_TYPE}"
+                  ;;
+              esac
+
+              if [ -f "${src}.sha256" ] && command -v sha256sum >/dev/null 2>&1; then
+                log "verifying checksum"
+                expected="$(awk '{print $1}' "${src}.sha256")"
+                actual="$(sha256sum "$src" | awk '{print $1}')"
+                [ "$expected" = "$actual" ] || fail "checksum mismatch for $src"
+              fi
+
+              if [ "${GPG_ENABLED:-false}" = "true" ]; then
+                command -v gpg >/dev/null 2>&1 || fail "gpg not available but restore.gpg.existingSecret is set"
+                [ -n "${GPG_KEY_FILE:-}" ] || fail "restore.gpg.keyFile is empty"
+                export GNUPGHOME="$workdir/gnupg"
+                mkdir -p "$GNUPGHOME"
+                chmod 700 "$GNUPGHOME"
+                log "importing GPG key"
+                gpg --batch --import "${GPG_KEY_FILE}" >/dev/null 2>&1 || fail "GPG key import failed"
+                decrypted="$workdir/$(basename "$src").decrypted"
+                log "decrypting $src"
+                gpg --batch --yes --decrypt --output "$decrypted" "$src" || fail "GPG decryption failed"
+                src="$decrypted"
+              fi
+
+              [ "$(head -c 5 "$src" 2>/dev/null || true)" = "PGDMP" ] \
+                || fail "$src is not a pg_dump custom-format archive"
+
+              export PGPASSWORD
+              if [ "${DRY_RUN:-false}" = "true" ]; then
+                log "dry run: validating archive with pg_restore --list"
+                pg_restore --list "$src" >/dev/null || fail "pg_restore --list failed"
+                log "dry run OK: $src is a valid pg_dump archive"
+                exit 0
+              fi
+
+              log "restoring $src into ${DB_NAME} at ${DB_HOST}:${DB_PORT} as ${DB_USER}"
+              set -- --no-owner
+              if [ "${CLEAN:-false}" = "true" ]; then
+                set -- --clean --if-exists "$@"
+              fi
+              pg_restore "$@" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" "$src" \
+                || fail "pg_restore failed"
+              log "restore completed from $src"
+          env:
+            - name: HOME
+              value: /tmp
+            - name: SOURCE_TYPE
+              value: {{ .Values.restore.source.type | quote }}
+            {{- if eq .Values.restore.source.type "pvc" }}
+            - name: SOURCE_PATH
+              value: {{ .Values.restore.source.pvc.path | quote }}
+            {{- end }}
+            {{- if eq .Values.restore.source.type "s3" }}
+            - name: S3_URI
+              value: {{ .Values.restore.source.s3.uri | quote }}
+            {{- end }}
+            {{- if eq .Values.restore.source.type "url" }}
+            - name: URL
+              value: {{ .Values.restore.source.url | quote }}
+            {{- end }}
+            - name: DRY_RUN
+              value: {{ .Values.restore.dryRun | quote }}
+            - name: CLEAN
+              value: {{ .Values.restore.clean | quote }}
+            - name: DB_HOST
+              value: {{ $pgHost | quote }}
+            - name: DB_PORT
+              value: {{ $pgPort | quote }}
+            - name: DB_USER
+              value: {{ $pgUser | quote }}
+            - name: DB_NAME
+              value: {{ $pgDatabase | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $passwordSecret }}
+                  key: {{ .Values.restore.postgres.passwordKey }}
+            {{- if .Values.restore.gpg.existingSecret }}
+            - name: GPG_ENABLED
+              value: "true"
+            - name: GPG_KEY_FILE
+              value: {{ printf "/tmp/gnupg-keys/%s" .Values.restore.gpg.keyFile | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.restore.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if eq .Values.restore.source.type "pvc" }}
+            - name: restore-source
+              mountPath: {{ .Values.restore.source.pvc.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.restore.gpg.existingSecret }}
+            - name: gnupg
+              mountPath: /tmp/gnupg-keys
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if eq .Values.restore.source.type "pvc" }}
+        - name: restore-source
+          persistentVolumeClaim:
+            claimName: {{ .Values.restore.source.pvc.claimName }}
+        {{- end }}
+        {{- if .Values.restore.gpg.existingSecret }}
+        - name: gnupg
+          secret:
+            secretName: {{ .Values.restore.gpg.existingSecret }}
+        {{- end }}
+      {{- with .Values.jobs.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.jobs.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.jobs.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

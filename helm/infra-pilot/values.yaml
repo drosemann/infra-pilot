@@ -59,6 +59,26 @@ ingress:
     - secretName: infra-pilot-tls
       hosts:
         - api.infra-pilot.example.com
+  # Optional Ingress that exposes the management panel (UI + API on port
+  # managementPanel.service.port). Disabled by default: the main Ingress above
+  # routes only to the orchestrator, preserving the original behavior. Enable
+  # when the panel should be reachable directly (usually behind the same
+  # ingress controller / cert-manager issuer). Path routing to a sub-path
+  # needs an explicit rewrite annotation, e.g.
+  #   nginx.ingress.kubernetes.io/rewrite-target: /
+  panel:
+    enabled: false
+    annotations: {}
+    hosts:
+      - host: panel.infra-pilot.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    # Reuse the ingress.tls pattern; keep empty to terminate TLS elsewhere.
+    tls:
+      - secretName: infra-pilot-panel-tls
+        hosts:
+          - panel.infra-pilot.example.com
 
 resources:
   limits:
@@ -200,6 +220,60 @@ monitoring:
     enabled: true
     interval: 30s
     scrapeTimeout: 10s
+  # PrometheusRule requires the Prometheus Operator CRDs, exactly like the
+  # ServiceMonitor above (install kube-prometheus-stack or the operator CRDs
+  # before enabling). Disable if you manage alerts outside the release.
+  prometheusRule:
+    enabled: true
+    # Extra labels merged onto the PrometheusRule metadata (some operators
+    # select rules by label, e.g. release: kube-prometheus-stack).
+    labels: {}
+    # Existing Compose alerts mirrored from
+    # infra/monitoring/prometheus/alerts.yml. Each rule can be toggled so
+    # operators with their own alert set do not get duplicates.
+    serviceDown:
+      enabled: true
+    highMemoryUsage:
+      enabled: true
+    highCPUUsage:
+      enabled: true
+    diskSpaceLow:
+      enabled: true
+    # BackupStale uses backup_last_success_timestamp. In Kubernetes the
+    # backup CronJob writes last_success.prom into the backup target; export
+    # it (or point BACKUP_METRIC_FILE at a node-exporter textfile) so the
+    # series exists. Threshold is configurable in hours (default 26h).
+    backupStale:
+      enabled: true
+      thresholdHours: 26
+    # Kubernetes-specific alerts (new in this chart).
+    migrationJobFailed:
+      enabled: true
+      # Failures are counted after this many minutes to ignore transient
+      # backoff retries.
+      forMinutes: 15
+    highPodRestarts:
+      enabled: true
+      threshold: 3
+      windowMinutes: 60
+      forMinutes: 15
+    hpaAtMax:
+      enabled: true
+      forMinutes: 15
+    # CertificateExpiry requires a metrics source that exposes certificate
+    # expiry (e.g. cert-manager via its ServiceMonitor, or x509-certificate-
+    # exporter). Adjust `expr` to match your exporter; disabled by default.
+    certificateExpiry:
+      enabled: false
+      # Must evaluate to the number of seconds until expiry for each cert.
+      expr: '(x509_certificate_expiry_seconds < 604800)'
+      forMinutes: 15
+    # Extra recording rules appended to the rule group (list of {record, expr,
+    # labels}). Useful for dashboards without editing the chart.
+    extraRecordingRules: []
+    # Extra alerting rules appended verbatim (list of {alert, expr, for,
+    # labels, annotations}).
+    extraRules: []
 
 configMaps:
   create: true
@@ -230,8 +304,252 @@ networkPolicies:
         - port: 3001
   egress:
     enabled: true
+  # Job pods (migration, backup, restore) are excluded from the broad
+  # deployment egress policy and get a dedicated least-privilege policy
+  # instead: DNS, PostgreSQL, and HTTPS/HTTP for S3-compatible targets and
+  # webhook notifications.
+  jobs:
+    # Extra egress rules appended verbatim for the job policy. Add entries
+    # when the database or the backup target lives on a private network
+    # (e.g. an RDS instance inside the VPC, a MinIO ClusterIP, an SFTP box).
+    extraEgress: []
 
 serviceMesh:
   enabled: false
   sidecar: true
   mtls: true
+
+# Shared settings for the operational Jobs (migration, backup, restore).
+jobs:
+  # Dedicated ServiceAccount for Job pods. The Jobs need no Kubernetes API
+  # access, so no Role/RoleBinding is created and token automounting is
+  # disabled: the least privilege that still lets kubectl/helm run them.
+  serviceAccount:
+    create: true
+    # Set to use a pre-existing ServiceAccount (e.g. with an IRSA annotation
+    # for S3 access). Setting a name disables chart creation.
+    name: ""
+    annotations: {}
+  # nodeSelector/tolerations/affinity default to the chart-wide values; set
+  # them here to place Jobs on dedicated nodes.
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  # Pod/container security context for Job pods. Jobs run as non-root with a
+  # read-only root filesystem and write only to /tmp (and mounted volumes).
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# Database migrations (alembic upgrade head) run as a Helm hook and can also
+# be rendered as a standalone Job.
+migration:
+  enabled: true
+  hook:
+    # Comma-separated Helm hook events. Leave empty for automatic selection:
+    #   - in-cluster PostgreSQL (postgresql.enabled=true): post-install,pre-upgrade
+    #     (a pre-install hook runs before the Bitnami PostgreSQL resources and
+    #     the chart Secret exist, which would deadlock)
+    #   - external database (postgresql.enabled=false): pre-install,pre-upgrade
+    #     (the database and its Secret must already exist)
+    # Manual override, e.g. "post-install,pre-upgrade" to always migrate after
+    # resources are applied.
+    events: ""
+    weight: 5
+    # Keep failed Jobs for debugging/alerts; delete succeeded ones.
+    deletePolicy: before-hook-creation,hook-succeeded
+  # Render an additional non-hook Job for manual `kubectl apply` (for example
+  # `helm template <release> helm/infra-pilot -s templates/jobs/migrate.yaml
+  # --set migration.standalone.enabled=true`). The name includes the release
+  # revision so repeated installs do not collide on immutable Job specs.
+  standalone:
+    enabled: false
+  image:
+    # Defaults to the orchestrator image, which ships Alembic and alembic/.
+    repository: ""
+    tag: ""
+    pullPolicy: ""
+  # Override the container command/args entirely (e.g. a custom migration
+  # tool). When empty, the chart runs `alembic -c /app/alembic.ini upgrade head`
+  # after waiting for the database TCP port.
+  command: []
+  args: []
+  wait:
+    # Wait for the database TCP port before running Alembic. Bounded by
+    # activeDeadlineSeconds; useful because post-install hooks can fire before
+    # the database reports ready.
+    enabled: true
+    timeoutSeconds: 600
+  backoffLimit: 6
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # Extra environment variables for the migration Job.
+  env: []
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Scheduled in-cluster PostgreSQL backups (pg_dump custom format) written to a
+# PVC and/or an S3-compatible bucket, with retention and an optional webhook
+# notification. Disabled by default: choose at least one target before
+# enabling (rendering fails otherwise).
+backup:
+  enabled: false
+  schedule: "17 2 * * *"
+  # Optional IANA time zone for the CronJob (Kubernetes >= 1.27).
+  timeZone: ""
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  # Number of pod retries per scheduled run.
+  backoffLimit: 2
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 604800
+  image:
+    # Must provide pg_dump (and tar for app-data volumes). For S3 uploads it
+    # must also contain the aws CLI or rclone; override the image if the
+    # default postgres:16-alpine does not match the server major version.
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  postgres:
+    # Empty values are derived: host from the orchestrator DB_HOST env (or
+    # <release>-postgresql), port/user/database from orchestrator.env DB_* and
+    # postgresql.auth.* when the database runs in-cluster.
+    host: ""
+    port: ""
+    user: ""
+    database: ""
+    # Secret key holding the application role password. Use the PostgreSQL
+    # administrator password only if the application role cannot read the
+    # schema (set passwordKey to the adminPasswordKey, e.g. postgres-password).
+    secretName: ""
+    passwordKey: "db-password"
+  target:
+    # PersistentVolumeClaim where dumps are written (mounted at mountPath).
+    # With both pvc and s3 unset the chart fails to render.
+    pvc:
+      claimName: ""
+      mountPath: /backups
+    # S3-compatible target, e.g. s3://my-bucket/infra-pilot. Requires aws (or
+    # rclone) in the image. Credentials come from backup.target.s3.existingSecret,
+    # IRSA via jobs.serviceAccount.annotations, or the node role.
+    s3:
+      uri: ""
+      # For MinIO/Ceph/etc. AWS_ENDPOINT_URL is forwarded to the uploader.
+      endpointUrl: ""
+      region: ""
+      # Optional Secret with keys access-key-id and secret-access-key.
+      existingSecret: ""
+    # rclone remote alternative, e.g. minio:backups/infra-pilot.
+    rclone:
+      remote: ""
+  retention:
+    # Keep this many most-recent artifacts in the PVC directory.
+    keepLocal: 10
+    # Keep this many artifacts at the S3/rclone target (best effort; skipped
+    # when the uploader is unavailable).
+    keepRemote: 30
+  # Optional tar.gz archives of application data PVCs (e.g. Grafana).
+  appData:
+    enabled: false
+    # List of {name, claimName, mountPath} entries.
+    volumes: []
+  notify:
+    # Optional webhook called on success/failure with a small JSON body.
+    # Requires curl or wget in the image.
+    webhookUrl: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Manual in-cluster restore Job. Disabled by default; enabling it requires the
+# explicit confirm value so an errant `--set restore.enabled=true` cannot run
+# a destructive restore.
+restore:
+  enabled: false
+  # Must be exactly "restore" when restore.enabled=true.
+  confirm: ""
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  postgres:
+    host: ""
+    port: ""
+    user: ""
+    database: ""
+    secretName: ""
+    passwordKey: "db-password"
+  source:
+    # pvc | s3 | url
+    type: pvc
+    pvc:
+      claimName: ""
+      # PVC is mounted read-only here; `path` is the absolute path of the dump
+      # inside the pod, e.g. /restore/infra-pilot_20260101_020000.dump
+      mountPath: /restore
+      path: ""
+    s3:
+      uri: ""
+    url: ""
+  # GPG support: mount a Secret containing the private key (keyring.gpg or an
+  # armored key) and set GNUPGHOME. Leave unset unless the dump is encrypted.
+  gpg:
+    existingSecret: ""
+    keyFile: "private.key"
+  # Pass --clean --if-exists to pg_restore (drops and recreates objects).
+  clean: true
+  # When true the Job only validates the archive (pg_restore --list) and
+  # exits without touching the database. Use this to smoke-test a restore
+  # source before a real run.
+  dryRun: false
+  # Number of retries; restores are usually better re-run manually after a
+  # failed first attempt, so the default is a single attempt.
+  backoffLimit: 0
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 86400
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# PodDisruptionBudgets. The orchestrator runs multiple replicas under the HPA,
+# so a PDB keeps one pod available during node drains. The panel defaults to a
+# single replica; a minAvailable=1 PDB would block every drain unless the panel
+# is scaled out, so it is opt-in.
+podDisruptionBudget:
+  orchestrator:
+    enabled: true
+    # Set either minAvailable or maxUnavailable (not both); empty omits the key.
+    minAvailable: 1
+    maxUnavailable: ""
+  panel:
+    enabled: false
+    minAvailable: 1
+    maxUnavailable: ""

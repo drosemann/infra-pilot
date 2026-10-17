@@ -13,6 +13,7 @@
 - [Troubleshooting](10-Troubleshooting.md)
 - [Backup & Restore](12-Backup-Restore.md)
 - [Update Flow](13-Update-Flow.md)
+- [WebSocket Gateway Protocol](15-WS-Auth.md)
 
 ## Quick Links
 

@@ -73,6 +73,12 @@ class QueryBuilder {
     return row ? makeResponse(row) : makeResponse(null, { code: 'PGRST116' });
   }
 
+  maybeSingle() {
+    if (this.pendingInsert || this.pendingUpdate) return this.single();
+    const row = this.rows().find((candidate) => this.matches(candidate));
+    return makeResponse(row ?? null);
+  }
+
   then(resolve: (value: any) => void, reject?: (reason?: any) => void) {
     return this.execute().then(resolve, reject);
   }

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal as TerminalIcon, Maximize2, Minimize2 } from 'lucide-react';
+import { useWebSocket } from '../hooks/useWebSocket.ts';
+import type { WsServerMessage } from '../hooks/useWebSocket.ts';
 
 interface WebTerminalProps {
   appId: string;
@@ -10,46 +12,67 @@ export function WebTerminal({ appId, containerId }: WebTerminalProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lines, setLines] = useState<string[]>(['Connecting to container...']);
   const [input, setInput] = useState('');
-  const wsRef = useRef<WebSocket | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const append = (line: string) => setLines((prev) => [...prev.slice(-500), line]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines]);
 
-  useEffect(() => {
-    if (!containerId) return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.hostname}:3001?appId=${appId}`);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'log') setLines(prev => [...prev.slice(-500), msg.data]);
-      } catch {
-        setLines(prev => [...prev.slice(-500), event.data]);
+  const { status, send } = useWebSocket({
+    appId,
+    mode: 'logs',
+    enabled: Boolean(containerId),
+    autoSubscribeLogs: true,
+    onMessage: (msg: WsServerMessage) => {
+      switch (msg.type) {
+        case 'log':
+          append(String(msg.data ?? ''));
+          break;
+        case 'log_end':
+          append('--- Log stream ended ---');
+          break;
+        case 'subscribed':
+          append('--- Log stream started ---');
+          break;
+        case 'exec_result': {
+          const output = String(msg.output ?? '');
+          for (const line of output.split('\n')) {
+            if (line.length > 0) append(line);
+          }
+          if (msg.error) append(`--- ${String(msg.error)} ---`);
+          break;
+        }
+        case 'error':
+          append(`--- ${String(msg.message ?? msg.code ?? 'error')} ---`);
+          break;
+        default:
+          break;
       }
-    };
-
-    ws.onclose = () => setLines(prev => [...prev, '--- Connection closed ---']);
-    ws.onerror = () => setLines(prev => [...prev, '--- Connection error ---']);
-
-    return () => ws.close();
-  }, [appId, containerId]);
+    },
+    onClose: ({ reason, willRetry }) => {
+      append(willRetry ? `--- Disconnected (${reason}); reconnecting... ---` : `--- ${reason} ---`);
+    },
+  });
 
   const sendCommand = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !wsRef.current) return;
-    setLines(prev => [...prev, `$ ${input}`]);
-    wsRef.current.send(JSON.stringify({ type: 'exec', command: input }));
+    const command = input.trim();
+    if (!command) return;
+    setLines((prev) => [...prev.slice(-500), `$ ${command}`]);
+    if (!send({ type: 'exec', appId, command })) {
+      append('--- Not connected ---');
+    }
     setInput('');
   };
 
   return (
     <div className={`rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
       <div className="flex items-center justify-between px-4 py-2 bg-gray-900 text-gray-300 text-xs">
-        <span className="flex items-center gap-2"><TerminalIcon className="w-3.5 h-3.5" /> Container Terminal</span>
+        <span className="flex items-center gap-2">
+          <TerminalIcon className="w-3.5 h-3.5" /> Container Terminal
+          <span className={`w-2 h-2 rounded-full ${status === 'open' ? 'bg-green-500' : status === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`} />
+        </span>
         <button onClick={() => setIsFullscreen(!isFullscreen)} className="hover:text-white">
           {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
         </button>

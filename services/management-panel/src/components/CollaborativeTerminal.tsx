@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Users, Share2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useWebSocket } from '../hooks/useWebSocket.ts';
+import type { WsServerMessage } from '../hooks/useWebSocket.ts';
 
 const generateRandomSuffix = (length = 4): string => {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -30,8 +32,8 @@ interface CollaborativeTerminalProps {
 }
 
 export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, displayName: initialName }: CollaborativeTerminalProps) => {
-  const [sessionId, setSessionId] = useState(initialSessionId || '');
-  const [connected, setConnected] = useState(false);
+  const [sessionId] = useState(initialSessionId || '');
+  const [started, setStarted] = useState(Boolean(initialSessionId));
   const [lines, setLines] = useState<string[]>(['Waiting for session...']);
   const [input, setInput] = useState('');
   const [users, setUsers] = useState<TerminalUser[]>([]);
@@ -39,9 +41,10 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
   const [chatInput, setChatInput] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [userName, setUserName] = useState(initialName || `User_${generateRandomSuffix(4)}`);
-  const wsRef = useRef<WebSocket | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const append = (line: string) => setLines((prev) => [...prev.slice(-500), line]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,77 +54,90 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  const connect = () => {
-    if (!sessionId && !appId) return;
-    const sid = sessionId || appId;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.hostname}:3001?sessionId=${sid}&displayName=${encodeURIComponent(userName)}&appId=${appId}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setConnected(true);
-      setLines(prev => [...prev, '--- Connected to collaborative terminal ---']);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-
-        if (msg.type === 'history') {
-          setLines(msg.lines);
-        } else if (msg.type === 'terminal-output') {
-          setLines(prev => [...prev.slice(-500), msg.line]);
-        } else if (msg.type === 'user-joined') {
-          setUsers(msg.users || []);
-          setLines(prev => [...prev, `--- ${msg.displayName} joined ---`]);
-        } else if (msg.type === 'user-left') {
-          setUsers(msg.users || []);
-          setLines(prev => [...prev, `--- ${msg.displayName} left ---`]);
-        } else if (msg.type === 'cursor-update') {
-          setUsers(prev => prev.map(u => u.userId === msg.userId ? { ...u, cursor: msg.cursor } : u));
-        } else if (msg.type === 'chat-message') {
-          setChatMessages(prev => [...prev, { userId: msg.userId, displayName: msg.displayName, text: msg.text, timestamp: msg.timestamp }]);
+  const { status, send } = useWebSocket({
+    appId,
+    sessionId: sessionId || appId,
+    displayName: userName,
+    mode: 'terminal',
+    enabled: started,
+    autoJoinRoom: true,
+    onMessage: (msg: WsServerMessage) => {
+      switch (msg.type) {
+        case 'history':
+          setLines(Array.isArray(msg.lines) ? (msg.lines as string[]) : []);
+          append('--- Connected to collaborative terminal ---');
+          break;
+        case 'terminal-output':
+          append(String(msg.line ?? ''));
+          break;
+        case 'user-joined':
+          setUsers((msg.users as TerminalUser[]) || []);
+          append(`--- ${String(msg.displayName)} joined ---`);
+          break;
+        case 'user-left':
+          setUsers((msg.users as TerminalUser[]) || []);
+          append(`--- ${String(msg.displayName)} left ---`);
+          break;
+        case 'cursor-update':
+          setUsers((prev) => prev.map((u) => (u.userId === msg.userId ? { ...u, cursor: msg.cursor as TerminalUser['cursor'] } : u)));
+          break;
+        case 'chat-message':
+          setChatMessages((prev) => [
+            ...prev,
+            { userId: String(msg.userId), displayName: String(msg.displayName), text: String(msg.text), timestamp: String(msg.timestamp) },
+          ]);
+          break;
+        case 'exec_result': {
+          const output = String(msg.output ?? '');
+          for (const line of output.split('\n')) {
+            if (line.length > 0) append(line);
+          }
+          if (msg.error) append(`--- ${String(msg.error)} ---`);
+          break;
         }
-      } catch {
-        setLines(prev => [...prev.slice(-500), event.data]);
+        case 'error':
+          append(`--- ${String(msg.message ?? msg.code ?? 'error')} ---`);
+          break;
+        default:
+          break;
       }
-    };
+    },
+    onClose: ({ reason, willRetry }) => {
+      append(willRetry ? `--- Disconnected (${reason}); reconnecting... ---` : `--- ${reason} ---`);
+    },
+  });
 
-    ws.onclose = () => {
-      setConnected(false);
-      setLines(prev => [...prev, '--- Disconnected ---']);
-    };
-
-    ws.onerror = () => {
-      setLines(prev => [...prev, '--- Connection error ---']);
-    };
+  const start = () => {
+    setStarted(true);
   };
-
-  useEffect(() => {
-    return () => wsRef.current?.close();
-  }, []);
 
   const sendCommand = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !wsRef.current) return;
-    wsRef.current.send(JSON.stringify({ type: 'exec', command: input }));
+    const command = input.trim();
+    if (!command) return;
+    if (!send({ type: 'exec', appId, command })) {
+      append('--- Not connected ---');
+    }
     setInput('');
   };
 
   const sendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !wsRef.current) return;
-    wsRef.current.send(JSON.stringify({ type: 'chat', text: chatInput }));
+    const text = chatInput.trim();
+    if (!text) return;
+    if (!send({ type: 'chat', appId, text })) {
+      append('--- Not connected ---');
+    }
     setChatInput('');
   };
 
   const copyShareLink = () => {
-    const link = `${window.location.origin}${window.location.pathname}?session=${sessionId}`;
+    const link = `${window.location.origin}${window.location.pathname}?session=${sessionId || appId}`;
     navigator.clipboard.writeText(link);
     toast.success('Session link copied');
   };
 
-  if (!connected && !sessionId) {
+  if (!started && !sessionId) {
     return (
       <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Collaborative Terminal</h3>
@@ -136,7 +152,7 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
             />
           </div>
           <button
-            onClick={connect}
+            onClick={start}
             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
           >
             Start Session
@@ -145,6 +161,8 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
       </div>
     );
   }
+
+  const connected = status === 'open';
 
   return (
     <div className="rounded-lg border border-slate-700 overflow-hidden">

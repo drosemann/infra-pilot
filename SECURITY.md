@@ -45,6 +45,7 @@ get a fix before any other work.
 | B4 | Orchestrator → PostgreSQL/Redis | Users, backups, rotation metadata | Service credentials only; no interactive logins |
 | B5 | Management panel ↔ Supabase | Panel data, auth | Supabase key must never leave the server side |
 | B6 | CLI ↔ orchestrator API | API keys, config profiles | TLS in production; token stored in `~/.ipilot/config.json` |
+| B7 | Browser → panel WebSocket gateway | Live logs, metrics, container terminals | Unauthenticated upgrade; requires a short-lived single-use HMAC ticket (`POST /api/ws-token`, <=5 min) plus per-app ACL on every action; `WS_TICKET_SECRET` is server-side only |
 
 ### Who can do what via which API
 
@@ -59,6 +60,7 @@ get a fix before any other work.
 | `/api/v1/rbac/*` | Federation token holders (platform admins), scoped per-actor | Manage roles/orgs/memberships (create + revoke) | RBAC engine + per-project scoping; `actor_user_id` (query/header/body) is asserted by the token holder for scoping/audit, not independently authenticated; deletions persist via `rbac_store` (store-first, 500 without in-memory mutation on DB failure) so revokes survive restart |
 | Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN`; health-check targets validated against allow-lists |
 | `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists; resource limits enforced against `RESOURCE_LIMITS` |
+| Panel WebSocket gateway (`ws://…:3001`) | Authenticated panel users | Tail app logs, stream metrics, run terminal commands in containers | Single-use HMAC ticket from `POST /api/ws-token`; per-app ACL (ownership/roles) on every action, deny by default; rate limits and violation escalation; audit events carry no ticket material (see `wiki/15-WS-Auth.md`) |
 
 ### Secrets and credentials
 

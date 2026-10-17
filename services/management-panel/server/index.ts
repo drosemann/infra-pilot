@@ -50,7 +50,15 @@ function runCommand(command: string, args: string[]): Promise<{ stdout: string; 
   });
 }
 import os from 'os';
-import { WebSocketServer, WebSocket } from 'ws';
+import {
+  createWsGateway,
+  createWsTokenRouter,
+  loadWsConfig,
+  resolveWsTicketSecret,
+  TicketService,
+  WsAuditLogger,
+} from './ws/index.ts';
+import type { WsAction } from './ws/index.ts';
 import { SERVER_PRESETS } from './presets.ts';
 import openapiSpec from './openapi.ts';
 import { analyzeConfiguration } from './config-advice-engine.ts';
@@ -3403,137 +3411,114 @@ app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, generalLim
 // See experimental/management-panel-expanded/v3-v4-routes.ts
 
 // ============================================================================
-// START SERVER
+// AUTHENTICATED WEBSOCKET GATEWAY
 // ============================================================================
+//
+// Every WebSocket connection must present a short-lived ticket minted by
+// `POST /api/ws-token`. Each per-app action (logs, metrics, terminal) is then
+// authorized against app ownership and role assignments before any Docker
+// command runs. See `server/ws/` and `wiki/15-WS-Auth.md`.
 
 const httpServer = http.createServer(app);
 
-const wss = new WebSocketServer({ server: httpServer });
-
-interface TerminalRoom {
-  sessionId: string;
-  appId: string;
-  clients: Map<WebSocket, { userId: string; displayName: string }>;
-  output: string[];
+/**
+ * True when the user owns the app (docker_apps.user_id).
+ * @param userId - Authenticated user id
+ * @param appId - App id from the message or ticket scope
+ */
+async function wsUserOwnsApp(userId: string, appId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('docker_apps')
+    .select('user_id')
+    .eq('id', appId)
+    .maybeSingle();
+  if (error || !data) return false;
+  return data.user_id === userId;
 }
 
-const terminalRooms = new Map<string, TerminalRoom>();
+/**
+ * Look up a user's role assignment for an app (in-memory model).
+ * @returns The assignment, or null when the user has no role on the app
+ */
+function wsRoleAssignment(userId: string, appId: string): any | null {
+  const roles = serverRoles.get(appId);
+  if (!roles) return null;
+  return roles.find((role) => role && role.principal === userId) ?? null;
+}
 
-wss.on('connection', (ws, req) => {
-  const url = new URL(req.url || '', 'http://localhost');
-  const appId = url.searchParams.get('appId');
-  const sessionId = url.searchParams.get('sessionId');
-  const displayName = url.searchParams.get('displayName') || 'Anonymous';
+/**
+ * Resolve whether a user may perform a WebSocket action on an app.
+ * Owners may do everything; role assignments gate on `permissions`:
+ * `logs:read` needs `console` or `files`, `metrics:read` needs any assignment,
+ * and terminal actions need `console`.
+ */
+async function resolveWsAppAccess(userId: string, appId: string, action: WsAction): Promise<boolean> {
+  const isOwner = await wsUserOwnsApp(userId, appId);
+  if (isOwner) return true;
+  const assignment = wsRoleAssignment(userId, appId);
+  if (!assignment) return false;
+  const permissions = assignment.permissions || {};
+  if (action === 'metrics:read') return true;
+  if (action === 'logs:read') return permissions.console === true || permissions.files === true;
+  return permissions.console === true;
+}
 
-  // Collaborative Terminal connection
-  if (sessionId) {
-    let room = terminalRooms.get(sessionId);
-    if (!room) {
-      room = { sessionId, appId: appId || '', clients: new Map(), output: [] };
-      terminalRooms.set(sessionId, room);
-    }
+/**
+ * Resolve the Docker container id for an app, validating its format before it
+ * is ever passed to `docker`.
+ * @returns The validated container id, or null when missing/invalid
+ */
+async function resolveWsContainerId(appId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('docker_apps')
+    .select('container_id')
+    .eq('id', appId)
+    .maybeSingle();
+  if (error || !data || !data.container_id) return null;
+  const containerId = String(data.container_id);
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(containerId)) return null;
+  return containerId;
+}
 
-    const userId = 'user-' + crypto.randomBytes(6).toString('hex');
-    room.clients.set(ws, { userId, displayName });
+/**
+ * Whether a user may request a ticket scoped to a specific app.
+ * Scoping is allowed for owners and for users with a role assignment; the
+ * ticket scope only narrows access, the gateway still re-checks every action.
+ */
+async function canScopeWsTicket(userId: string, appId: string): Promise<boolean> {
+  if (await wsUserOwnsApp(userId, appId)) return true;
+  return wsRoleAssignment(userId, appId) !== null;
+}
 
-    // Send join notification
-    const joinMsg = JSON.stringify({ type: 'user-joined', userId, displayName, users: Array.from(room.clients.values()).map(c => c) });
-    for (const [client] of room.clients) {
-      if (client.readyState === WebSocket.OPEN) client.send(joinMsg);
-    }
-
-    // Send existing output to new user
-    ws.send(JSON.stringify({ type: 'history', lines: room.output }));
-
-    ws.on('message', (data) => {
-      try {
-        const msg = JSON.parse(data.toString());
-
-        if (msg.type === 'terminal-input') {
-          const line = `[${displayName}] $ ${msg.text}`;
-          room!.output.push(line);
-          if (room!.output.length > 1000) room!.output.shift();
-
-          for (const [client] of room!.clients) {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ type: 'terminal-output', line, userId, displayName }));
-            }
-          }
-        } else if (msg.type === 'cursor') {
-          const cursorMsg = JSON.stringify({ type: 'cursor-update', userId, displayName, cursor: msg.cursor });
-          for (const [client, info] of room!.clients) {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-              client.send(cursorMsg);
-            }
-          }
-        } else if (msg.type === 'chat') {
-          const chatMsg = JSON.stringify({ type: 'chat-message', userId, displayName, text: msg.text, timestamp: new Date().toISOString() });
-          for (const [client] of room!.clients) {
-            if (client.readyState === WebSocket.OPEN) client.send(chatMsg);
-          }
-        } else if (msg.type === 'exec' && appId) {
-          // Forward command execution
-          const line = `[${displayName}] $ ${msg.command}`;
-          room!.output.push(line);
-          if (room!.output.length > 1000) room!.output.shift();
-
-          for (const [client] of room!.clients) {
-            if (client.readyState === WebSocket.OPEN) {
-              client.send(JSON.stringify({ type: 'terminal-output', line, userId, displayName }));
-            }
-          }
-        }
-      } catch {}
-    });
-
-    ws.on('close', () => {
-      if (room) {
-        room.clients.delete(ws);
-        const leaveMsg = JSON.stringify({ type: 'user-left', userId, displayName, users: Array.from(room.clients.values()).map(c => c) });
-        for (const [client] of room.clients) {
-          if (client.readyState === WebSocket.OPEN) client.send(leaveMsg);
-        }
-        if (room.clients.size === 0) {
-          terminalRooms.delete(sessionId);
-        }
-      }
-    });
-
-    return;
-  }
-
-  // Original log streaming (for backward compatibility)
-  if (!appId) { ws.close(); return; }
-
-  ws.on('message', async (data) => {
-    try {
-      const msg = JSON.parse(data.toString());
-      if (msg.type === 'subscribe' && msg.appId) {
-        const logStream = spawn('docker', ['logs', '--tail', '100', '-f', msg.appId]);
-        logStream.stdout.on('data', (chunk) => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'log', appId: msg.appId, data: chunk.toString() }));
-          }
-        });
-        logStream.on('close', () => {
-          ws.send(JSON.stringify({ type: 'log_end', appId: msg.appId }));
-        });
-        ws.on('close', () => { logStream.kill(); });
-      }
-      if (msg.type === 'subscribe:metrics' && msg.appId) {
-        const interval = setInterval(async () => {
-          try {
-            const { stdout } = await runCommand('docker', ['stats', msg.appId, '--no-stream', '--format', '{{json .}}']);
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'metrics', appId: msg.appId, data: JSON.parse(stdout) }));
-            }
-          } catch {}
-        }, 2000);
-        ws.on('close', () => clearInterval(interval));
-      }
-    } catch {}
-  });
+const wsConfig = loadWsConfig(process.env);
+const wsTickets = new TicketService({
+  secret: resolveWsTicketSecret(process.env),
+  ttlSeconds: wsConfig.ticketTtlSeconds,
+  skewSeconds: wsConfig.ticketSkewSeconds,
 });
+const wsAudit = new WsAuditLogger({ log: logAudit });
+const wsGateway = createWsGateway({
+  config: wsConfig,
+  tickets: wsTickets,
+  audit: wsAudit,
+  resolveAppAccess: resolveWsAppAccess,
+  resolveContainerId: resolveWsContainerId,
+});
+wsGateway.attach(httpServer);
+
+app.use(
+  '/api/ws-token',
+  createWsTokenRouter({
+    verifyAuth,
+    tickets: wsTickets,
+    audit: wsAudit,
+    gateway: wsGateway,
+    ttlSeconds: wsConfig.ticketTtlSeconds,
+    validateAppAccess: canScopeWsTicket,
+  }),
+);
+
+export { httpServer, wsGateway };
 
 // ============================================================================
 // SSH Session Management API Routes

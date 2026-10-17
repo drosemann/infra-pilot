@@ -122,6 +122,89 @@ const spec: Record<string, any> = {
     },
   },
   paths: {
+    '/ws-token': {
+      post: {
+        summary: 'Mint a short-lived WebSocket handshake ticket',
+        description: 'Returns a single-use, short-lived ticket that authenticates a WebSocket connection to the realtime gateway. The ticket is bound to the caller and optionally scoped to a single app. Every per-app action is still re-authorized by the gateway.',
+        tags: ['WebSocket'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  appId: { type: 'string', description: 'Optional app to scope the ticket to' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Ticket minted',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ticket: { type: 'string' },
+                    expiresIn: { type: 'integer', description: 'Lifetime in seconds' },
+                    appScope: { type: 'string', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid appId', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'No access to the requested app', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
+    '/ws-token/revoke': {
+      post: {
+        summary: 'Revoke a WebSocket ticket (or all of the user\'s tickets)',
+        description: 'Revokes one ticket by value, or every ticket for the caller when `all` is true. Live sessions authenticated with a revoked ticket are closed.',
+        tags: ['WebSocket'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  ticket: { type: 'string', description: 'The ticket to revoke' },
+                  all: { type: 'boolean', description: 'Revoke every ticket for the caller' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Revocation result',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    revoked: { type: 'boolean' },
+                    scope: { type: 'string', enum: ['ticket', 'all'] },
+                    sessionsClosed: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Missing or invalid ticket', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Ticket belongs to another user', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
     '/setup/status': {
       get: {
         summary: 'Check setup initialization status',

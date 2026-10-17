@@ -1468,6 +1468,26 @@ class APIClient {
     const res = await this.api.post(`/api/bulk/${batchId}/undo`);
     return res.data;
   }
+
+  // Authenticated WebSocket gateway: short-lived handshake tickets
+  /**
+   * Mint a short-lived ticket for the WebSocket handshake.
+   * @param appId - Optional app to scope the ticket to
+   */
+  async createWsToken(appId?: string): Promise<{ ticket: string; expiresIn: number; appScope: string | null }> {
+    const res = await this.api.post('/api/ws-token', appId ? { appId } : {});
+    return res.data;
+  }
+
+  /**
+   * Revoke a single ticket, or every ticket for the current user.
+   * Pass `{ ticket }` to revoke one handshake credential, or `{ all: true }`
+   * to revoke the user's tickets (and close their live sessions).
+   */
+  async revokeWsToken(options: { ticket?: string; all?: boolean }): Promise<{ revoked: boolean; scope: string; sessionsClosed: number }> {
+    const res = await this.api.post('/api/ws-token/revoke', options);
+    return res.data;
+  }
 }
 
 export const apiClient = new APIClient();

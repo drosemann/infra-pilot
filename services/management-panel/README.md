@@ -36,13 +36,62 @@ up -d` instead.
 | Health | `GET /health`, `GET /api/health` | Used by Compose health checks. |
 | OpenAPI | `GET /api/openapi.json` | Current panel API contract. |
 | Swagger UI | `GET /api/docs` | Interactive API documentation. |
-| WebSocket | `ws://host:3001?appId=<id>` | Live application logs and metrics. |
+| WebSocket ticket | `POST /api/ws-token` | Mints a short-lived handshake ticket (authenticated). |
+| WebSocket | `ws://host:3001?ticket=<ticket>` | Authenticated logs, metrics, and terminal. |
 
 Setup, health, and documentation endpoints are intentionally reachable without
 an application session. Operational `/api/*` routes are protected by the
 backend's `verifyAuth` middleware unless explicitly documented otherwise.
 Treat the OpenAPI document and `server/index.ts` as the authoritative
 route list.
+
+## WebSocket authentication
+
+The realtime gateway (`server/ws/`) requires every WebSocket connection to
+authenticate with a short-lived, single-use ticket before any feature message
+is honored. Per-app actions (log streaming, metrics, terminal input/exec) are
+then authorized against app ownership and role assignments — deny by default.
+
+Handshake:
+
+1. `POST /api/ws-token` (same `verifyAuth` as the rest of the API) returns
+   `{ ticket, expiresIn, appScope }`. Pass `{ "appId": "..." }` to scope the
+   ticket to one app; scoping requires access to that app.
+2. Connect to `ws://host:3001/?ticket=<ticket>` (or connect without a ticket
+   and answer the `auth_challenge` frame with `{ "type": "auth", "ticket" }`
+   within `WS_AUTH_TIMEOUT_MS`).
+3. The server replies `{ "type": "ready", sessionId, userId, appScope, mode }`;
+   only then may the client send `subscribe`, `subscribe:metrics`, `join`,
+   `terminal-input`, `exec`, and related messages.
+
+Tickets are HMAC-signed, bound to the user (and optionally one app), expire
+within five minutes, and can be revoked:
+
+- `POST /api/ws-token/revoke` with `{ "ticket": "..." }` revokes one ticket.
+- `POST /api/ws-token/revoke` with `{ "all": true }` revokes every ticket for
+  the caller and closes their live sessions.
+
+Connections that fail authentication are closed with codes 4001-4003;
+authorization and policy failures use 4004, 4008, 4009, 4013, and 4014 (see
+`server/ws/types.ts` and `wiki/15-WS-Auth.md` for the full table). Tickets are
+single-use: reconnecting requires minting a new one. Ticket strings are never
+written to logs or audit records. Sessions idle for `WS_IDLE_TIMEOUT_SECONDS`
+(default 30 minutes) are terminated, and each user may hold at most
+`WS_MAX_SESSIONS_PER_USER` concurrent sessions.
+
+The gateway enforces per-connection and per-user rate limits with token
+buckets (`WS_MAX_MESSAGES_PER_MINUTE`, `WS_MAX_SUBSCRIBES_PER_MINUTE`);
+denied attempts receive a structured `rate_limited` error with `retryAfterMs`
+and repeated strikes close the connection. Every subscription, terminal
+action, denial, and rate-limit event is recorded through the panel's audit
+log (`ws:*` actions).
+
+Threat model notes: the ticket is a bearer credential for at most five
+minutes; compromise of `WS_TICKET_SECRET` allows ticket forgery, so keep it
+server-side only and rotate by restarting without the var or by redeploying.
+Ticket presentation is logged as an audit event without the ticket value.
+See `wiki/15-WS-Auth.md` for the protocol reference and `SECURITY.md` for the
+trust-boundary statement.
 
 ## Configuration
 
@@ -56,13 +105,20 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
 | `CORS_ORIGINS` | Comma-separated permitted browser origins. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional hosted-feature configuration. |
+| `WS_TICKET_SECRET` | HMAC key for WebSocket handshake tickets (min 32 chars; ephemeral when unset). |
+| `WS_TICKET_TTL_SECONDS`, `WS_TICKET_SKEW_SECONDS` | Ticket lifetime (max 300) and clock-skew tolerance. |
+| `WS_AUTH_TIMEOUT_MS`, `WS_IDLE_TIMEOUT_SECONDS`, `WS_HEARTBEAT_INTERVAL_SECONDS` | Connection lifecycle windows. |
+| `WS_MAX_SESSIONS_PER_USER`, `WS_SESSION_LIMIT_POLICY` | Per-user session cap and eviction policy. |
+| `WS_MAX_MESSAGES_PER_MINUTE`, `WS_MAX_SUBSCRIBES_PER_MINUTE` | Gateway rate limits. |
+| `WS_MAX_RATE_STRIKES`, `WS_MAX_VIOLATIONS`, `WS_MAX_MESSAGE_BYTES` | Escalation and frame-size limits. |
 
 ## Code map
 
 | Path | Responsibility |
 | --- | --- |
 | `src/` | React UI, routes, components, hooks, and browser API clients. |
-| `server/index.ts` | Express routes, authentication, WebSocket integration, and service startup. |
+| `server/index.ts` | Express routes, authentication, WebSocket gateway wiring, and service startup. |
+| `server/ws/` | Authenticated WebSocket gateway: tickets, ACL, sessions, rate limits, audit. |
 | `server/openapi.ts` | Panel OpenAPI specification. |
 | `server/*.ts` | Focused backend helpers such as reports, GraphQL, assistant, doctor, and audit sanitisation. |
 | `docs/` | Longer-lived design and setup notes. |

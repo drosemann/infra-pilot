@@ -71,8 +71,11 @@ All `/api/apps*`, `/api/customers*`, `/api/metrics*`, `/api/backup*`,
 `/api/inventory*`, `/api/templates*`, `/api/runbooks` (POST/execute),
 `/api/assistant/*`, `/api/graphql`, `/api/auth/2fa/setup`,
 `/api/auth/2fa/verify-setup`, `/api/auth/2fa/disable`,
-`/api/auth/2fa/backup-codes` — all
-checked at last audit (170 routes).
+`/api/auth/2fa/backup-codes`, `/api/ws-token` (POST),
+`/api/ws-token/revoke` (POST) — all
+checked at last audit (170 routes). The WebSocket upgrade itself carries a
+short-lived single-use ticket minted by `/api/ws-token`; see
+[15-WS-Auth](./15-WS-Auth.md).
 
 ### Pre-auth by design (rate-limited, no bearer)
 

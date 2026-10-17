@@ -477,3 +477,83 @@ class TestEndpoints:
         _, url, body, _ = session_calls[0]
         assert url == f"http://test.local{API_PREFIX}/apps"
         assert body == {"name": "web", "image": "node", "memoryLimit": "512m"}
+
+
+class TestIterPaginated:
+    """Tests for the offset/limit pagination helper."""
+
+    @staticmethod
+    def _pages(client, monkeypatch, pages):
+        """Serve ``pages`` responses in order, recording request URLs."""
+        urls = []
+        responses = iter(pages)
+
+        def fake_request(method, url, json=None, timeout=None):
+            urls.append(url)
+            return FakeResponse(payload=next(responses))
+
+        monkeypatch.setattr(client.session, "request", fake_request)
+        return urls
+
+    def test_yields_across_pages(self, client, monkeypatch):
+        """Walk multiple pages until total is reached."""
+        self._pages(
+            client,
+            monkeypatch,
+            [
+                {"data": [1, 2], "total": 4, "limit": 3, "offset": 0},
+                {"data": [3, 4], "total": 4, "limit": 2, "offset": 2},
+            ],
+        )
+        assert list(client.iter_paginated("/audit-log", page_size=3)) == [1, 2, 3, 4]
+
+    def test_respects_limit(self, client, monkeypatch):
+        """Stop yielding once the total limit is reached."""
+        urls = self._pages(
+            client,
+            monkeypatch,
+            [{"data": [1, 2, 3], "total": 3, "limit": 3, "offset": 0}],
+        )
+        assert list(client.iter_paginated("/audit-log", limit=2)) == [1, 2]
+        assert len(urls) == 1
+
+    def test_stops_on_short_page(self, client, monkeypatch):
+        """A page shorter than the request size ends iteration."""
+        urls = self._pages(
+            client,
+            monkeypatch,
+            [{"data": [1], "total": 100, "limit": 2, "offset": 0}],
+        )
+        assert list(client.iter_paginated("/audit-log", page_size=2)) == [1]
+        assert len(urls) == 1
+
+    def test_stops_on_error(self, client, monkeypatch):
+        """An error response ends iteration without raising."""
+        urls = self._pages(
+            client,
+            monkeypatch,
+            [{"error": "boom"}, {"data": [1], "total": 1, "limit": 1, "offset": 0}],
+        )
+        assert list(client.iter_paginated("/audit-log")) == []
+        assert len(urls) == 1
+
+    def test_alternate_key_and_params(self, client, monkeypatch):
+        """Honor a custom item key and merge extra query params."""
+        urls = self._pages(
+            client,
+            monkeypatch,
+            [{"items": [{"id": 1}], "total": 1, "limit": 1, "offset": 0}],
+        )
+        result = list(client.iter_paginated("/runbooks", key="items", params={"app": "web"}))
+        assert result == [{"id": 1}]
+        assert "app=web" in urls[0]
+
+    def test_existing_query_string(self, client, monkeypatch):
+        """Append pagination params with & when the path already has a query."""
+        urls = self._pages(
+            client,
+            monkeypatch,
+            [{"data": [1], "total": 1, "limit": 1, "offset": 0}],
+        )
+        list(client.iter_paginated("/audit-log?action=deploy", page_size=1))
+        assert "action=deploy&limit=1&offset=0" in urls[0]

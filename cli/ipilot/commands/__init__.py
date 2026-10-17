@@ -15,14 +15,24 @@ register("deploy", "Deployment")(deploy_app)
 register("logs", "Logs")(logs_app)
 
 from .apikeys import app as apikeys_app
+from .alerts import app as alerts_app
+from .audit import app as audit_app
+from .databases import app as databases_app
 from .doctor import app as doctor_app
 from .gitops import app as gitops_app
 from .inventory import app as inventory_app
+from .maintenance import app as maintenance_app
+from .metrics import app as metrics_app
+from .notifications import app as notifications_app
+from .orgs import app as orgs_app
 from .plugins import app as plugins_app
+from .reports import app as reports_app
 from .rollback import app as rollback_app
+from .runbooks import app as runbooks_app
 from .secrets import app as secrets_app
 from .ssh import app as ssh_app
 from .templates import app as templates_app
+from .two_factor import app as two_factor_app
 from .tui import app as tui_app
 from .webhooks import app as webhooks_app
 
@@ -37,6 +47,16 @@ register("apikeys", "API key management")(apikeys_app)
 register("templates", "Deployment templates")(templates_app)
 register("tui", "Terminal UI mode")(tui_app)
 register("rollback", "Undo/rollback changes")(rollback_app)
+register("metrics", "Resource metrics")(metrics_app)
+register("alerts", "Alert rules and incidents")(alerts_app)
+register("audit", "Audit log")(audit_app)
+register("runbooks", "Operational runbooks")(runbooks_app)
+register("maintenance", "Maintenance windows")(maintenance_app)
+register("notifications", "Notification channels")(notifications_app)
+register("orgs", "Organizations")(orgs_app)
+register("databases", "Managed databases")(databases_app)
+register("reports", "Usage reports")(reports_app)
+register("two-factor", "Two-factor authentication")(two_factor_app)
 
 __all__: list[str] = [
     "server_app",
@@ -54,4 +74,14 @@ __all__: list[str] = [
     "templates_app",
     "tui_app",
     "rollback_app",
+    "metrics_app",
+    "alerts_app",
+    "audit_app",
+    "runbooks_app",
+    "maintenance_app",
+    "notifications_app",
+    "orgs_app",
+    "databases_app",
+    "reports_app",
+    "two_factor_app",
 ]

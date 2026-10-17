@@ -5,7 +5,8 @@ Provides the ``ApiClient`` class with full coverage of all API endpoints.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
+from urllib.parse import urlencode
 
 import requests
 
@@ -147,6 +148,35 @@ class ApiClient:
             The parsed JSON response.
         """
         return self._request("DELETE", path)
+
+    def _download(self, path: str) -> Dict[str, Any]:
+        """Fetch a non-JSON (raw text) response body.
+
+        Args:
+            path: API endpoint path.
+
+        Returns:
+            ``{"content": text}`` on success or ``{"error": msg}``.
+        """
+        url = f"{self.base_url}{API_PREFIX}{path}"
+        try:
+            resp = self.session.request("GET", url, timeout=DEFAULT_TIMEOUT)
+            resp.raise_for_status()
+            return {"content": resp.text}
+        except requests.HTTPError as exc:
+            status = exc.response.status_code
+            try:
+                msg = exc.response.json().get("message", str(exc))
+            except (json.JSONDecodeError, AttributeError):
+                msg = str(exc)
+            logger.warning("HTTP error %s on %s: %s", status, path, msg)
+            return {"error": msg}
+        except requests.ConnectionError as exc:
+            logger.warning("Connection failed: %s", exc)
+            return {"error": f"Connection failed: {exc}"}
+        except requests.Timeout:
+            logger.warning("Request timed out: GET %s", path)
+            return {"error": "Request timed out"}
 
     # ------------------------------------------------------------------
     # Authentication
@@ -703,3 +733,730 @@ class ApiClient:
         qs = "&".join(params)
         path = f"/changes/history?{qs}" if qs else "/changes/history"
         return self._request("GET", path)
+
+    # ------------------------------------------------------------------
+    # Metrics
+    # ------------------------------------------------------------------
+
+    def metrics_realtime(self, app_id: Optional[str] = None) -> Any:
+        """Get real-time resource metrics.
+
+        Args:
+            app_id: Optional app ID for per-container stats.
+
+        Returns:
+            Real-time cpu/memory/disk/network snapshot.
+        """
+        path = "/metrics/realtime"
+        if app_id:
+            path += f"?appId={app_id}"
+        return self._request("GET", path)
+
+    def metrics_history(
+        self,
+        app_id: Optional[str] = None,
+        period: str = "1h",
+        resolution: str = "5m",
+        until: Optional[str] = None,
+    ) -> Any:
+        """Get historical time-series metrics.
+
+        Args:
+            app_id: Optional app ID to filter by.
+            period: Window length (1h, 6h, 24h, 7d).
+            resolution: Aggregation bucket (1m, 5m, 1h).
+            until: Optional ISO-8601 end of window (reserved for backends
+                that support closed ranges).
+
+        Returns:
+            Time-series points with cpu/memory/tps/players averages.
+        """
+        params: List[str] = [f"period={period}", f"resolution={resolution}"]
+        if app_id:
+            params.append(f"appId={app_id}")
+        if until:
+            params.append(f"until={until}")
+        return self._request("GET", f"/metrics/history?{'&'.join(params)}")
+
+    def metrics_aggregated(self) -> Any:
+        """Get aggregated metrics across all apps."""
+        return self._request("GET", "/metrics/aggregated")
+
+    def metrics_grafana_url(self) -> Any:
+        """Get the configured Grafana embed URL (if any)."""
+        return self._request("GET", "/metrics/grafana-url")
+
+    # ------------------------------------------------------------------
+    # Alert Rules & Incidents
+    # ------------------------------------------------------------------
+
+    def list_alert_configs(self) -> Any:
+        """List alert rule configurations."""
+        return self._request("GET", "/alert-configs")
+
+    def create_alert_config(
+        self,
+        metric_type: str,
+        operator: str,
+        threshold: float,
+        enabled: bool = True,
+        notify_email: bool = False,
+    ) -> Any:
+        """Create an alert rule.
+
+        Args:
+            metric_type: Metric to watch (e.g. cpu, memory, tps, players).
+            operator: Comparison operator (gt, lt, gte, lte, eq).
+            threshold: Threshold value.
+            enabled: Whether the rule starts enabled.
+            notify_email: Whether email notifications are requested.
+
+        Returns:
+            The created alert configuration.
+        """
+        return self._request(
+            "POST",
+            "/alert-configs",
+            {
+                "metric_type": metric_type,
+                "operator": operator,
+                "threshold": threshold,
+                "enabled": enabled,
+                "notify_email": notify_email,
+            },
+        )
+
+    def update_alert_config(self, config_id: str, **fields: Any) -> Any:
+        """Update an alert rule.
+
+        Args:
+            config_id: Alert configuration ID.
+            **fields: Fields to update (metric_type, operator, threshold,
+                enabled, notify_email).
+
+        Returns:
+            The updated alert configuration.
+        """
+        return self._request("PATCH", f"/alert-configs/{config_id}", fields)
+
+    def delete_alert_config(self, config_id: str) -> Any:
+        """Delete an alert rule.
+
+        Args:
+            config_id: Alert configuration ID.
+        """
+        return self._request("DELETE", f"/alert-configs/{config_id}")
+
+    def list_alert_history(self, limit: int = 100) -> Any:
+        """List triggered alert incidents.
+
+        Args:
+            limit: Maximum number of incidents to return.
+        """
+        return self._request("GET", f"/alert-history?limit={limit}")
+
+    def acknowledge_alert(self, alert_id: str) -> Any:
+        """Acknowledge a triggered alert.
+
+        Args:
+            alert_id: Alert history entry ID.
+        """
+        return self._request("POST", f"/alert-history/{alert_id}/acknowledge", {})
+
+    def resolve_alert(self, alert_id: str) -> Any:
+        """Resolve a triggered alert.
+
+        Args:
+            alert_id: Alert history entry ID.
+        """
+        return self._request("POST", f"/alert-history/{alert_id}/resolve", {})
+
+    # ------------------------------------------------------------------
+    # Audit Log
+    # ------------------------------------------------------------------
+
+    def list_audit_log(
+        self,
+        actor: Optional[str] = None,
+        action: Optional[str] = None,
+        resource: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> Any:
+        """List audit log entries (server-side paginated).
+
+        Args:
+            actor: Optional user ID filter (forwarded; backends that scope
+                the log to the token owner may ignore it).
+            action: Optional action filter (e.g. ``alert:create``).
+            resource: Optional entity type filter (e.g. ``alert_config``).
+            start_date: Optional ISO-8601 lower bound on ``created_at``.
+            end_date: Optional ISO-8601 upper bound on ``created_at``.
+            limit: Page size (panel caps this at 200).
+            offset: Pagination offset.
+
+        Returns:
+            ``{data, total, limit, offset}`` response.
+        """
+        params = [f"limit={limit}", f"offset={offset}"]
+        for key, value in (
+            ("user_id", actor),
+            ("action", action),
+            ("entity_type", resource),
+            ("start_date", start_date),
+            ("end_date", end_date),
+        ):
+            if value:
+                params.append(f"{key}={value}")
+        return self._request("GET", f"/audit-log?{'&'.join(params)}")
+
+    # ------------------------------------------------------------------
+    # Runbooks
+    # ------------------------------------------------------------------
+
+    def list_runbooks(self) -> Any:
+        """List runbooks (built-in and user-defined)."""
+        return self._request("GET", "/runbooks")
+
+    def create_runbook(
+        self, name: str, description: str, steps: List[Dict[str, Any]]
+    ) -> Any:
+        """Create a runbook.
+
+        Args:
+            name: Runbook name.
+            description: Human-readable description.
+            steps: Ordered step definitions (``action``/``target`` dicts).
+
+        Returns:
+            The created runbook.
+        """
+        return self._request(
+            "POST",
+            "/runbooks",
+            {"name": name, "description": description, "steps": steps},
+        )
+
+    def update_runbook(
+        self,
+        runbook_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        steps: Optional[List[Dict[str, Any]]] = None,
+    ) -> Any:
+        """Update a runbook.
+
+        Args:
+            runbook_id: Runbook ID.
+            name: Optional new name.
+            description: Optional new description.
+            steps: Optional replacement step list.
+
+        Returns:
+            The updated runbook.
+        """
+        data: Dict[str, Any] = {}
+        if name is not None:
+            data["name"] = name
+        if description is not None:
+            data["description"] = description
+        if steps is not None:
+            data["steps"] = steps
+        return self._request("PATCH", f"/runbooks/{runbook_id}", data)
+
+    def delete_runbook(self, runbook_id: str) -> Any:
+        """Delete a runbook.
+
+        Args:
+            runbook_id: Runbook ID.
+        """
+        return self._request("DELETE", f"/runbooks/{runbook_id}")
+
+    def execute_runbook(self, runbook_id: str) -> Any:
+        """Execute a runbook.
+
+        Args:
+            runbook_id: Runbook ID.
+
+        Returns:
+            Execution result with status, execution_id, and step outputs.
+        """
+        return self._request("POST", f"/runbooks/{runbook_id}/execute", {})
+
+    def get_runbook_execution(self, execution_id: str) -> Any:
+        """Get the status of a runbook execution.
+
+        Args:
+            execution_id: Execution ID returned by ``execute_runbook``.
+        """
+        return self._request("GET", f"/runbooks/executions/{execution_id}")
+
+    def list_runbook_executions(self, runbook_id: Optional[str] = None) -> Any:
+        """List runbook executions.
+
+        Args:
+            runbook_id: Optional runbook ID to filter by.
+        """
+        path = "/runbooks/executions"
+        if runbook_id:
+            path += f"?runbook_id={runbook_id}"
+        return self._request("GET", path)
+
+    # ------------------------------------------------------------------
+    # Maintenance Windows
+    # ------------------------------------------------------------------
+
+    def list_maintenance_windows(self) -> Any:
+        """List maintenance windows."""
+        return self._request("GET", "/maintenance-windows")
+
+    def create_maintenance_window(
+        self,
+        title: str,
+        starts_at: str,
+        ends_at: str,
+        description: Optional[str] = None,
+        app_id: Optional[str] = None,
+    ) -> Any:
+        """Create a maintenance window.
+
+        Args:
+            title: Window title.
+            starts_at: ISO-8601 start timestamp.
+            ends_at: ISO-8601 end timestamp.
+            description: Optional description.
+            app_id: Optional app the window applies to.
+
+        Returns:
+            The created maintenance window.
+        """
+        data: Dict[str, Any] = {
+            "title": title,
+            "starts_at": starts_at,
+            "ends_at": ends_at,
+        }
+        if description is not None:
+            data["description"] = description
+        if app_id is not None:
+            data["app_id"] = app_id
+        return self._request("POST", "/maintenance-windows", data)
+
+    def update_maintenance_window(self, window_id: str, **fields: Any) -> Any:
+        """Update a maintenance window.
+
+        Args:
+            window_id: Maintenance window ID.
+            **fields: Fields to update (title, description, app_id,
+                starts_at, ends_at, status).
+
+        Returns:
+            The updated maintenance window.
+        """
+        return self._request("PATCH", f"/maintenance-windows/{window_id}", fields)
+
+    def delete_maintenance_window(self, window_id: str) -> Any:
+        """Delete a maintenance window.
+
+        Args:
+            window_id: Maintenance window ID.
+        """
+        return self._request("DELETE", f"/maintenance-windows/{window_id}")
+
+    # ------------------------------------------------------------------
+    # Notification Channels
+    # ------------------------------------------------------------------
+
+    def list_notification_channels(self) -> Any:
+        """List notification channels."""
+        return self._request("GET", "/notification-channels")
+
+    def create_notification_channel(
+        self, name: str, channel_type: str, config: Dict[str, Any]
+    ) -> Any:
+        """Create a notification channel.
+
+        Args:
+            name: Channel name.
+            channel_type: One of email, webhook, telegram.
+            config: Channel-specific configuration payload.
+
+        Returns:
+            The created channel.
+        """
+        return self._request(
+            "POST",
+            "/notification-channels",
+            {"name": name, "type": channel_type, "config": config},
+        )
+
+    def update_notification_channel(self, channel_id: str, **fields: Any) -> Any:
+        """Update a notification channel.
+
+        Args:
+            channel_id: Channel ID.
+            **fields: Fields to update (name, config, enabled).
+
+        Returns:
+            The updated channel.
+        """
+        return self._request(
+            "PATCH", f"/notification-channels/{channel_id}", fields
+        )
+
+    def delete_notification_channel(self, channel_id: str) -> Any:
+        """Delete a notification channel.
+
+        Args:
+            channel_id: Channel ID.
+        """
+        return self._request("DELETE", f"/notification-channels/{channel_id}")
+
+    def test_notification_channel(self, channel_id: str) -> Any:
+        """Send a test notification through a channel.
+
+        Args:
+            channel_id: Channel ID.
+        """
+        return self._request("POST", f"/notification-channels/{channel_id}/test", {})
+
+    # ------------------------------------------------------------------
+    # Organizations
+    # ------------------------------------------------------------------
+
+    def list_organizations(self) -> Any:
+        """List organizations the current user owns or belongs to."""
+        return self._request("GET", "/organizations")
+
+    def create_organization(self, name: str, slug: str) -> Any:
+        """Create an organization.
+
+        Args:
+            name: Organization name.
+            slug: URL-safe organization slug.
+
+        Returns:
+            The created organization.
+        """
+        return self._request("POST", "/organizations", {"name": name, "slug": slug})
+
+    def list_organization_members(self, org_id: str) -> Any:
+        """List members of an organization.
+
+        Args:
+            org_id: Organization ID.
+        """
+        return self._request("GET", f"/organizations/{org_id}/members")
+
+    def invite_organization_member(
+        self, org_id: str, email: str, role: str = "member"
+    ) -> Any:
+        """Invite a user to an organization.
+
+        Args:
+            org_id: Organization ID.
+            email: Invitee email address.
+            role: Role to assign (member, admin, owner).
+
+        Returns:
+            The invitation/membership record.
+        """
+        return self._request(
+            "POST",
+            f"/organizations/{org_id}/members",
+            {"email": email, "role": role},
+        )
+
+    def remove_organization_member(self, org_id: str, user_id: str) -> Any:
+        """Remove a member from an organization.
+
+        Args:
+            org_id: Organization ID.
+            user_id: Member user ID.
+        """
+        return self._request("DELETE", f"/organizations/{org_id}/members/{user_id}")
+
+    def set_organization_member_role(
+        self, org_id: str, user_id: str, role: str
+    ) -> Any:
+        """Change a member's role in an organization.
+
+        Args:
+            org_id: Organization ID.
+            user_id: Member user ID.
+            role: New role (member, admin, owner).
+
+        Returns:
+            The updated membership record.
+        """
+        return self._request(
+            "PATCH",
+            f"/organizations/{org_id}/members/{user_id}",
+            {"role": role},
+        )
+
+    # ------------------------------------------------------------------
+    # Databases
+    # ------------------------------------------------------------------
+
+    def list_databases(self) -> Any:
+        """List managed databases for the current user."""
+        return self._request("GET", "/databases")
+
+    def create_database(self, name: str, app_id: Optional[str] = None) -> Any:
+        """Create a managed database.
+
+        Args:
+            name: Database name (alphanumeric plus underscores).
+            app_id: Optional app to associate.
+
+        Returns:
+            The created database (credentials partially masked).
+        """
+        data: Dict[str, Any] = {"name": name}
+        if app_id:
+            data["appId"] = app_id
+        return self._request("POST", "/databases", data)
+
+    def get_database(self, database_id: str) -> Any:
+        """Get details for a managed database.
+
+        Args:
+            database_id: Database ID.
+        """
+        return self._request("GET", f"/databases/{database_id}")
+
+    def delete_database(self, database_id: str) -> Any:
+        """Delete a managed database.
+
+        Args:
+            database_id: Database ID.
+        """
+        return self._request("DELETE", f"/databases/{database_id}")
+
+    # ------------------------------------------------------------------
+    # Reports
+    # ------------------------------------------------------------------
+
+    def get_report(
+        self, start_date: Optional[str] = None, end_date: Optional[str] = None
+    ) -> Any:
+        """Generate an on-demand usage report.
+
+        Args:
+            start_date: Optional ISO-8601 start of the report period.
+            end_date: Optional ISO-8601 end of the report period.
+
+        Returns:
+            The computed report payload.
+        """
+        params = []
+        if start_date:
+            params.append(f"start_date={start_date}")
+        if end_date:
+            params.append(f"end_date={end_date}")
+        qs = "&".join(params)
+        return self._request("GET", f"/reports?{qs}" if qs else "/reports")
+
+    def download_report(
+        self,
+        fmt: str = "csv",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> Any:
+        """Download a report in the given format.
+
+        Args:
+            fmt: Export format (csv, pdf, or json).
+            start_date: Optional ISO-8601 start of the report period.
+            end_date: Optional ISO-8601 end of the report period.
+
+        Returns:
+            ``{"content": str}`` on success or ``{"error": msg}``.
+        """
+        params = [f"format={fmt}"]
+        if start_date:
+            params.append(f"start_date={start_date}")
+        if end_date:
+            params.append(f"end_date={end_date}")
+        return self._download(f"/reports/export?{'&'.join(params)}")
+
+    def create_report_schedule(self, frequency: str = "daily") -> Any:
+        """Schedule a recurring report.
+
+        Args:
+            frequency: Recurrence frequency (daily or weekly).
+        """
+        return self._request("POST", "/reports/schedules", {"frequency": frequency})
+
+    # ------------------------------------------------------------------
+    # Two-Factor Authentication
+    # ------------------------------------------------------------------
+
+    def setup_2fa(self, user_id: str) -> Any:
+        """Begin 2FA setup for a user.
+
+        Args:
+            user_id: The user ID to provision 2FA for.
+
+        Returns:
+            ``{secret, uri, qr_code_url}`` for the authenticator app.
+        """
+        return self._request("POST", "/auth/2fa/setup", {"user_id": user_id})
+
+    def verify_2fa_setup(self, user_id: str, totp_code: str) -> Any:
+        """Confirm a 2FA setup with a TOTP code.
+
+        Args:
+            user_id: The user ID being provisioned.
+            totp_code: 6-digit TOTP code from the authenticator app.
+
+        Returns:
+            ``{success: bool}``.
+        """
+        return self._request(
+            "POST", "/auth/2fa/verify-setup", {"user_id": user_id, "totp_code": totp_code}
+        )
+
+    def verify_2fa(self, temp_token: str, totp_code: str) -> Any:
+        """Complete a login challenge with a TOTP code.
+
+        Args:
+            temp_token: Temporary token issued by the login step.
+            totp_code: 6-digit TOTP code.
+
+        Returns:
+            ``{token}`` session token on success.
+        """
+        return self._request(
+            "POST", "/auth/2fa/verify", {"temp_token": temp_token, "totp_code": totp_code}
+        )
+
+    def verify_2fa_backup(self, temp_token: str, backup_code: str) -> Any:
+        """Complete a login challenge with a backup code.
+
+        Args:
+            temp_token: Temporary token issued by the login step.
+            backup_code: Single-use backup code.
+
+        Returns:
+            ``{token}`` session token on success.
+        """
+        return self._request(
+            "POST",
+            "/auth/2fa/verify-backup",
+            {"temp_token": temp_token, "backup_code": backup_code},
+        )
+
+    def disable_2fa(self, user_id: str, password: str) -> Any:
+        """Disable 2FA for a user.
+
+        Args:
+            user_id: The user ID.
+            password: The user's password for confirmation.
+
+        Returns:
+            ``{success: bool}``.
+        """
+        return self._request(
+            "POST", "/auth/2fa/disable", {"user_id": user_id, "password": password}
+        )
+
+    def get_2fa_backup_codes(self, user_id: Optional[str] = None) -> Any:
+        """Get stored 2FA backup codes.
+
+        Args:
+            user_id: Optional user ID; the panel scopes this to the token
+                owner regardless of the value sent.
+        """
+        path = "/auth/2fa/backup-codes"
+        if user_id:
+            path += f"?user_id={user_id}"
+        return self._request("GET", path)
+
+    def get_current_user(self) -> Any:
+        """Get the authenticated user's profile."""
+        return self._request("GET", "/user")
+
+    # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
+
+    def global_search(self, query: str) -> Any:
+        """Search across apps, servers, backups, runbooks, secrets, hosts.
+
+        Args:
+            query: Search term (at least 2 characters on the panel side).
+
+        Returns:
+            ``{results: [{type, id, title, subtitle}]}``.
+        """
+        return self._request("GET", f"/global-search?{urlencode({'q': query})}")
+
+    def basic_search(self, query: str) -> Any:
+        """Search apps, audit actions, and backups (legacy endpoint).
+
+        Args:
+            query: Search term.
+
+        Returns:
+            ``{results: [{id, name, type}]}``.
+        """
+        return self._request("GET", f"/search?{urlencode({'q': query})}")
+
+    # ------------------------------------------------------------------
+    # Pagination helper
+    # ------------------------------------------------------------------
+
+    def iter_paginated(
+        self,
+        path: str,
+        key: str = "data",
+        params: Optional[Dict[str, Any]] = None,
+        page_size: int = 100,
+        limit: Optional[int] = None,
+    ) -> Iterator[Any]:
+        """Iterate through a paginated ``{data, total, limit, offset}`` API.
+
+        Args:
+            path: API endpoint path (may include existing query params).
+            key: Key in the response containing the item list.
+            params: Additional query params to send on every page.
+            page_size: Number of items requested per page.
+            limit: Maximum total items to yield across all pages.
+
+        Yields:
+            Individual items from paginated responses. Stops on errors,
+            empty pages, or when ``total`` is reached.
+        """
+        offset = 0
+        yielded = 0
+        while True:
+            qp: Dict[str, Any] = dict(params) if params else {}
+            remaining = limit - yielded if limit else None
+            qp["limit"] = min(page_size, remaining) if remaining else page_size
+            qp["offset"] = offset
+            sep = "&" if "?" in path else "?"
+            resp = self._request("GET", f"{path}{sep}{urlencode(qp)}")
+            if not isinstance(resp, dict) or "error" in resp:
+                return
+            items = resp.get(key)
+            if not isinstance(items, list):
+                for candidate in ("items", "results", "data"):
+                    if isinstance(resp.get(candidate), list):
+                        items = resp[candidate]
+                        break
+            if not items:
+                return
+            for item in items:
+                yield item
+                yielded += 1
+                if limit and yielded >= limit:
+                    return
+            total = resp.get("total")
+            if isinstance(total, int) and offset + len(items) >= total:
+                return
+            if len(items) < qp["limit"]:
+                return
+            offset += len(items)

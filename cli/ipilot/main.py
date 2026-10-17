@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import typer
 import yaml
@@ -164,6 +164,44 @@ def docs(
 ):
     """Generate CLI reference documentation."""
     _generate_docs(output)
+
+
+@app.command()
+def search(
+    ctx: typer.Context,
+    query: str = typer.Argument(..., help="Search term (at least 2 characters)"),
+    type_filter: Optional[str] = typer.Option(
+        None,
+        "--type",
+        "-t",
+        help="Only include results of this type (app, server, backup, runbook, secret, host, audit)",
+    ),
+    types: Optional[str] = typer.Option(
+        None,
+        "--types",
+        help="Comma-separated result types to include (e.g. app,server)",
+    ),
+    limit: int = typer.Option(50, "--limit", "-l", help="Maximum results to show"),
+):
+    """Search apps, servers, backups, runbooks, secrets, and hosts.
+
+    Queries the panel's global-search endpoint (falling back to the
+    legacy /api/search) and prints normalised, deduplicated results.
+    Use --type to restrict results to one kind, --types for several
+    kinds, and --limit to cap the number shown.
+
+    Examples:
+
+      ipilot search web
+
+      ipilot search backup --type backup
+
+      ipilot --output json search deploy --limit 10
+    """
+    from .commands.search import run_search
+
+    type_list = [t.strip() for t in types.split(",") if t.strip()] if types else None
+    run_search(ctx, query, type_filter=type_filter, limit=limit, types=type_list)
 
 
 def _run_interactive():

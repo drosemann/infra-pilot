@@ -620,6 +620,77 @@ const spec: Record<string, any> = {
         responses: { '200': { description: 'Channel deleted' } },
       },
     },
+    '/api-keys': {
+      get: {
+        summary: "List the caller's API keys (scoped key model)",
+        description: 'Includes scopes, key_class, last_used_at, expiry and a needs_rotation flag (legacy keys).',
+        tags: ['API Keys'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Keys',
+            content: { 'application/json': { schema: { type: 'object', properties: { api_keys: { type: 'array', items: { type: 'object', properties: {
+              id: { type: 'string', format: 'uuid' }, name: { type: 'string' }, key_prefix: { type: 'string' },
+              scopes: { type: 'array', items: { type: 'string' } }, key_class: { type: 'string', enum: ['live', 'test', 'legacy'] },
+              app_id: { type: 'string', format: 'uuid', nullable: true }, expires_at: { type: 'string', format: 'date-time', nullable: true },
+              last_used_at: { type: 'string', format: 'date-time', nullable: true }, needs_rotation: { type: 'boolean' },
+            } } } } } } },
+          },
+        },
+      },
+      post: {
+        summary: 'Create a scoped API key',
+        description: "Requires a fresh X-2FA-Token header when TOTP is enabled. Body: { name, key_class: 'live'|'test', scopes?: ['apps:read'|'<family>:<action>'|'<family>:*'|'*'], expire_days?: number, app_id?: uuid }. The raw key is returned once.",
+        tags: ['API Keys'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['name'],
+                properties: {
+                  name: { type: 'string' },
+                  key_class: { type: 'string', enum: ['live', 'test'] },
+                  scopes: { type: 'array', items: { type: 'string' } },
+                  expire_days: { type: 'integer' },
+                  app_id: { type: 'string', format: 'uuid', nullable: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Key created (key returned once)' },
+          '400': { description: 'Invalid body or scope syntax' },
+          '403': { description: 'Missing X-2FA-Token or RBAC denial' },
+        },
+      },
+    },
+    '/api-keys/{keyId}': {
+      delete: {
+        summary: 'Revoke an API key (requires fresh X-2FA-Token when TOTP is on)',
+        tags: ['API Keys'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'keyId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: { '200': { description: 'Revoked' }, '403': { description: 'Missing X-2FA-Token or RBAC denial' } },
+      },
+    },
+    '/api-keys/{keyId}/rotate': {
+      post: {
+        summary: 'Rotate an API key with managed overlap',
+        description: 'Issues a replacement immediately; the old key keeps working until the overlap expiry (default 24h) and forces a rotate prompt. Requires fresh X-2FA-Token when TOTP is on. Body: { rotate_overlap_hours?: number }.',
+        tags: ['API Keys'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'keyId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '201': { description: 'Replacement issued (key returned once)' },
+          '404': { description: 'Key not found' },
+          '403': { description: 'Missing X-2FA-Token or RBAC denial' },
+        },
+      },
+    },
     '/notification-channels/{id}/test': {
       post: {
         summary: 'Send test notification',

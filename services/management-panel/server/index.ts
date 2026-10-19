@@ -66,6 +66,18 @@ import {
   parseCookies,
   resolveSessionToken,
 } from './sso/store.ts';
+import {
+  clearReauthGrant,
+  configureScopeGuards,
+  createTwoFactorStatusChecker,
+  createTwoFactorVerifier,
+  keyAllowsApp,
+  normalizeScopes,
+  require2FAReauth,
+  requireScope,
+  requireWildcardScope,
+  scopeDenialFor,
+} from './apikeys/index.ts';
 import type { ResourceAction, ResourceType } from './rbac/index.ts';
 import { SERVER_PRESETS } from './presets.ts';
 import openapiSpec from './openapi.ts';
@@ -295,7 +307,16 @@ const workspacesByUser = new Map<string, any[]>();
 const pluginInstallations = new Map<string, any[]>();
 
 rbacStore = new RbacStore(supabase, { cacheTtlMs: Number(process.env.RBAC_CACHE_TTL_MS) || 30_000 });
-rbacGuards = createRbacGuards({ store: rbacStore, audit: logAudit });
+// Scoped API keys (v2): scope/app checks ride on the RBAC guard layer so
+// every coordinated route gets both authorizations; sensitive routes also
+// demand a fresh 2FA code (X-2FA-Token), see the API routes below.
+rbacGuards = createRbacGuards({
+  store: rbacStore,
+  audit: logAudit,
+  scopeCheck: (req, resourceType, action) => scopeDenialFor(req, resourceType, action),
+  keyAllowsApp,
+});
+configureScopeGuards(logAudit);
 
 async function getOwnedAppOrNull(appId: string, userId: string) {
   const { data, error } = await supabase
@@ -433,12 +454,23 @@ const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   const keyPrefix = token.substring(0, 10);
   const { data: apiKeyRow } = await supabase
     .from('api_keys')
-    .select('user_id, key_hash')
+    .select('id, user_id, key_hash, scopes, key_class, app_id, expires_at, force_rotate')
     .eq('key_prefix', keyPrefix)
     .eq('revoked', false)
     .maybeSingle();
 
   if (apiKeyRow && apiKeyMatches(token, apiKeyRow.key_hash)) {
+    if (apiKeyRow.expires_at && new Date(apiKeyRow.expires_at).getTime() < Date.now()) {
+      return res.status(401).json({ error: 'API key expired', code: 'key_expired' });
+    }
+    (req as any).apiKey = {
+      id: apiKeyRow.id,
+      userId: apiKeyRow.user_id,
+      scopes: Array.isArray(apiKeyRow.scopes) ? (apiKeyRow.scopes as string[]) : null,
+      keyClass: apiKeyRow.key_class || null,
+      appId: apiKeyRow.app_id || null,
+      forceRotate: apiKeyRow.force_rotate === true || !Array.isArray(apiKeyRow.scopes),
+    };
     (req as any).user = { id: apiKeyRow.user_id };
     return next();
   }
@@ -644,7 +676,7 @@ app.get('/api/presets', verifyAuth, async (_req: Request, res: Response) => {
 });
 
 // GET /api/apps - List all apps for current user
-app.get('/api/apps', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/apps', verifyAuth, requireScope('apps', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
   try {
@@ -662,7 +694,7 @@ app.get('/api/apps', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/apps - Create a new Docker app
-app.post('/api/apps', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps', verifyAuth, requireScope('apps', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, image, ports, environmentVars, volumes, memoryLimit, cpuShares, description, javaVersion } = req.body;
 
@@ -1106,7 +1138,7 @@ app.get('/api/apps/:appId/autopilot', verifyAuth, requireAppId('read'), async (r
   ]);
 });
 
-app.get('/api/workspaces', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   if (!workspacesByUser.has(userId)) {
     workspacesByUser.set(userId, [{ id: crypto.randomUUID(), name: 'Default Workspace', appIds: [], memberCount: 1, sharedBackups: true, sharedLogs: true, createdAt: new Date().toISOString() }]);
@@ -1114,7 +1146,7 @@ app.get('/api/workspaces', verifyAuth, async (req: Request, res: Response) => {
   res.json(workspacesByUser.get(userId));
 });
 
-app.post('/api/workspaces', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const workspace = {
     id: crypto.randomUUID(),
@@ -1383,6 +1415,36 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 const INTEGRATION_SERVICE_URL = process.env.INTEGRATION_SERVICE_URL || 'http://localhost:9000';
 
+/**
+ * JSON request to the integration service without streaming the response
+ * (used by the 2FA re-auth middleware, which needs a boolean verdict).
+ */
+async function integrationRequest(path: string, init: { method: string; body?: string } = { method: 'GET' }): Promise<{ ok: boolean; data?: any }> {
+  try {
+    const response = await fetch(`${INTEGRATION_SERVICE_URL}${path}`, {
+      method: init.method,
+      headers: { 'Content-Type': 'application/json' },
+      body: init.body,
+      signal: AbortSignal.timeout(10_000),
+    });
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    return { ok: response.ok, data };
+  } catch {
+    return { ok: false, data: null };
+  }
+}
+
+// Fail-closed middleware stack for sensitive operations (API-key
+// management, report/audit export, 2FA disable, backup-code retrieval).
+const twoFactorProbe = createTwoFactorVerifier(integrationRequest);
+const twoFactorStatus = createTwoFactorStatusChecker(integrationRequest);
+const sensitive2FA = require2FAReauth(twoFactorProbe, twoFactorStatus);
+
 async function forwardToIntegration(req: Request, res: Response, path: string) {
   try {
     const response = await fetch(`${INTEGRATION_SERVICE_URL}${path}`, {
@@ -1433,7 +1495,7 @@ app.post('/api/auth/2fa/verify', loginLimiter, async (req: Request, res: Respons
   await forwardToIntegration(req, res, '/api/auth/2fa/verify');
 });
 
-app.post('/api/auth/2fa/disable', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/auth/2fa/disable', verifyAuth, sensitive2FA, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   if (!selfOrRequestBodyUser(req)) {
     return res.status(403).json({ error: 'Forbidden', code: 'rbac_denied' });
@@ -1442,7 +1504,7 @@ app.post('/api/auth/2fa/disable', verifyAuth, async (req: Request, res: Response
   await logAudit(userId, 'auth:2fa-disable', 'settings', userId);
 });
 
-app.get('/api/auth/2fa/backup-codes', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/auth/2fa/backup-codes', verifyAuth, sensitive2FA, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const response = await fetch(`${INTEGRATION_SERVICE_URL}/api/auth/2fa/backup-codes?user_id=${userId}`, {
@@ -1469,13 +1531,19 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   const keyPrefix = api_key.substring(0, 10);
   const { data, error } = await supabase
     .from('api_keys')
-    .select('id, user_id, key_hash')
+    .select('id, user_id, key_hash, scopes, key_class, app_id, expires_at, force_rotate')
     .eq('key_prefix', keyPrefix)
     .eq('revoked', false)
     .maybeSingle();
 
-  if (error || !data || !apiKeyMatches(api_key, data.key_hash)) {
+  if (!data) {
     return res.status(401).json({ error: 'Invalid API key' });
+  }
+  if (!apiKeyMatches(api_key, data.key_hash)) {
+    return res.status(401).json({ error: 'Invalid API key' });
+  }
+  if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) {
+    return res.status(401).json({ error: 'API key expired', code: 'key_expired' });
   }
 
   await supabase
@@ -1483,7 +1551,15 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     .update({ last_used_at: new Date().toISOString() })
     .eq('id', data.id);
 
-  res.json({ token: api_key, user_id: data.user_id });
+  res.json({
+    token: api_key,
+    user_id: data.user_id,
+    scopes: Array.isArray(data.scopes) ? data.scopes : [WILDCARD_SCOPE],
+    key_class: data.key_class || 'legacy',
+    app_id: data.app_id || null,
+    expires_at: data.expires_at || null,
+    needs_rotation: !Array.isArray(data.scopes),
+  });
 });
 
 // POST /api/auth/logout - Invalidate the current session
@@ -1706,7 +1782,7 @@ function parseRange(range: string): number {
 }
 
 // GET /api/metrics/aggregated - Aggregated metrics across all apps
-app.get('/api/metrics/aggregated', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/metrics/aggregated', verifyAuth, requireScope('metrics', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data: apps } = await supabase.from('docker_apps').select('id').eq('user_id', userId);
@@ -1861,7 +1937,7 @@ app.get('/api/metrics/history', verifyAuth, requireAppId('read', 'metrics', { op
 });
 
 // POST /api/metrics/stream/config - Configure Netdata/Grafana data source
-app.post('/api/metrics/stream/config', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/metrics/stream/config', verifyAuth, requireScope('settings', 'write'), async (req: Request, res: Response) => {
   const { type, url, apiKey } = req.body;
   if (!type || !url || !['netdata', 'grafana'].includes(type)) {
     return res.status(400).json({ error: 'type (netdata|grafana) and url are required' });
@@ -1878,7 +1954,7 @@ app.post('/api/metrics/stream/config', verifyAuth, async (req: Request, res: Res
 });
 
 // GET /api/metrics/grafana-url - Return Grafana embed URL if configured
-app.get('/api/metrics/grafana-url', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/metrics/grafana-url', verifyAuth, requireScope('metrics', 'read'), async (req: Request, res: Response) => {
   try {
     const { data } = await supabase
       .from('shared_config')
@@ -1896,7 +1972,7 @@ app.get('/api/metrics/grafana-url', verifyAuth, async (req: Request, res: Respon
 });
 
 // GET /api/logs/access - Access logs
-app.get('/api/logs/access', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/logs/access', verifyAuth, requireScope('audit', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000);
   const offset = parseInt(req.query.offset as string) || 0;
@@ -2431,7 +2507,7 @@ app.get('/api/reports', verifyAuth, requireSelfPermission('reports', 'read'), as
   }
 });
 
-app.get('/api/reports/export', verifyAuth, requireSelfPermission('reports', 'export'), async (req: Request, res: Response) => {
+app.get('/api/reports/export', verifyAuth, requireSelfPermission('reports', 'export'), sensitive2FA, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const startDate = req.query.start_date as string;
   const endDate = req.query.end_date as string;
@@ -2630,7 +2706,7 @@ async function setModpackInstallations(installations: ModpackInstallation[]): Pr
 }
 
 // GET /api/modpacks/search - Proxy to Integration Service
-app.get('/api/modpacks/search', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/modpacks/search', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const query = req.query.query as string;
   const platform = (req.query.platform as string) || 'all';
   try {
@@ -3098,7 +3174,7 @@ async function writeDashboards(dashboards: any[]): Promise<void> {
   await fs.writeFile(DASHBOARDS_FILE, JSON.stringify(dashboards, null, 2), 'utf-8');
 }
 
-app.get('/api/dashboards', verifyAuth, async (_req: Request, res: Response) => {
+app.get('/api/dashboards', verifyAuth, requireWildcardScope(), async (_req: Request, res: Response) => {
   try {
     res.json({ dashboards: await readDashboards() });
   } catch (err) {
@@ -3106,7 +3182,7 @@ app.get('/api/dashboards', verifyAuth, async (_req: Request, res: Response) => {
   }
 });
 
-app.get('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const dashboards = await readDashboards();
     const dashboard = dashboards.find((d: any) => d.id === req.params.id);
@@ -3117,7 +3193,7 @@ app.get('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) =
   }
 });
 
-app.post('/api/dashboards', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/dashboards', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const dashboards = await readDashboards();
     const id = req.body.id || crypto.randomUUID();
@@ -3131,7 +3207,7 @@ app.post('/api/dashboards', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
-app.put('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+app.put('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const dashboards = await readDashboards();
     const index = dashboards.findIndex((d: any) => d.id === req.params.id);
@@ -3146,7 +3222,7 @@ app.put('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) =
   }
 });
 
-app.delete('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const dashboards = await readDashboards();
     const index = dashboards.findIndex((d: any) => d.id === req.params.id);
@@ -3160,7 +3236,7 @@ app.delete('/api/dashboards/:id', verifyAuth, async (req: Request, res: Response
   }
 });
 
-app.get('/api/dashboards/:id/data', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/dashboards/:id/data', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const period = req.query.period as string;
     const dashboards = await readDashboards();
@@ -3177,7 +3253,7 @@ app.get('/api/dashboards/:id/data', verifyAuth, async (req: Request, res: Respon
 // ============================================================================
 
 // GET /api/i18n/translations - List all translations
-app.get('/api/i18n/translations', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/i18n/translations', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const { data } = await supabase
       .from('shared_config')
@@ -3191,7 +3267,7 @@ app.get('/api/i18n/translations', verifyAuth, async (req: Request, res: Response
 });
 
 // POST /api/i18n/translations - Submit a translation
-app.post('/api/i18n/translations', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/i18n/translations', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { locale, key, value } = req.body;
   if (!locale || !key || !value) {
     return res.status(400).json({ error: 'locale, key, and value are required' });
@@ -3252,7 +3328,7 @@ const setThemes = async (themes: any[]): Promise<void> => {
 };
 
 // GET /api/themes - List themes for current user
-app.get('/api/themes', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/themes', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const themes = await getThemes(userId);
@@ -3263,7 +3339,7 @@ app.get('/api/themes', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/themes - Save a new theme
-app.post('/api/themes', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/themes', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, config } = req.body;
   if (!name || !config) {
@@ -3295,7 +3371,7 @@ app.post('/api/themes', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // GET /api/themes/:id - Get a specific theme
-app.get('/api/themes/:id', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/themes/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -3309,7 +3385,7 @@ app.get('/api/themes/:id', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // DELETE /api/themes/:id - Delete a theme
-app.delete('/api/themes/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/themes/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -3324,7 +3400,7 @@ app.delete('/api/themes/:id', verifyAuth, async (req: Request, res: Response) =>
 });
 
 // POST /api/themes/:id/publish - Publish theme to gallery
-app.post('/api/themes/:id/publish', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/themes/:id/publish', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -3899,35 +3975,163 @@ app.get('/api/webhooks/:id/logs', verifyAuth, requireSelfPermission('webhooks', 
 });
 
 // ============================================================================
-// API Key Management Routes
+// API Key Management Routes (scoped keys, see server/apikeys/)
 // ============================================================================
 
+const WILDCARD_SCOPE = '*';
+
+/**
+ * Whether the row still works but should prompt its owner to rotate.
+ * Kept as a function so list/read single-source the rule.
+ */
+function forceRotationNeeded(row: any): boolean {
+  return row.force_rotate === true || !Array.isArray(row.scopes);
+}
+
+/**
+ * GET /api/api-keys - the caller's keys with scopes, class, last-used and
+ * a `needs_rotation` flag for legacy full-access keys.
+ */
 app.get('/api/api-keys', verifyAuth, requireSelfPermission('apikeys', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { data, error } = await supabase.from('api_keys').select('id, name, key_prefix, role, expires_at, last_used_at, created_at').eq('user_id', userId).eq('revoked', false);
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, key_prefix, role, scopes, key_class, app_id, expires_at, last_used_at, created_at, force_rotate')
+    .eq('user_id', userId)
+    .eq('revoked', false)
+    .order('created_at', { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ api_keys: data || [] });
+  res.json({
+    api_keys: (data || []).map((row: any) => ({
+      ...row,
+      // Legacy rows carry no scope array: they remain full-access until
+      // rotated; the flag lets any client render the rotation prompt.
+      needs_rotation: forceRotationNeeded(row),
+    })),
+  });
 });
 
-app.post('/api/api-keys', verifyAuth, requireSelfPermission('apikeys', 'write'), async (req: Request, res: Response) => {
+/**
+ * POST /api/api-keys - create a key. v2 body:
+ *   { name, key_class: 'live'|'test', scopes: ['apps:read', ...]?,
+ *     expire_days?, app_id? }
+ * The prefix encodes the class (`ip_live_` / `ip_test_`); omitted or
+ * invalid scopes default to the wildcard `*` (documented behavior).
+ */
+app.post('/api/api-keys', verifyAuth, requireSelfPermission('apikeys', 'write'), sensitive2FA, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { name, role, expire_days } = req.body;
-  const rawKey = `ip_${crypto.randomBytes(24).toString('hex')}`;
+  const { name, key_class, scopes, expire_days, app_id } = req.body || {};
+  if (!name || typeof name !== 'string' || name.length > 255) {
+    return res.status(400).json({ error: 'name is required (<= 255 chars)' });
+  }
+  const keyClass = key_class === 'test' ? 'test' : 'live';
+  const rawKey = `${keyClass === 'test' ? 'ip_test_' : 'ip_live_'}${crypto.randomBytes(12).toString('hex')}`;
   const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.substring(0, 10);
-  const expiresAt = expire_days ? new Date(Date.now() + expire_days * 86400000).toISOString() : null;
-  const { data, error } = await supabase.from('api_keys').insert({ user_id: userId, name, key_hash: keyHash, key_prefix: keyPrefix, role: role || 'user', expires_at: expiresAt }).select('id, name, key_prefix, role, expires_at').single();
+  const normalizedScopes = scopes === undefined
+    ? [WILDCARD_SCOPE]
+    : normalizeScopes(scopes);
+  if (normalizedScopes === null) {
+    return res.status(400).json({ error: "scopes must be '<family>:<action>' tokens (e.g. apps:read), '<family>:*', or '*'" });
+  }
+  const expiresAt = expire_days ? new Date(Date.now() + Number(expire_days) * 86400000).toISOString() : null;
+  if (expire_days && !(Number(expire_days) > 0 && Number(expire_days) <= 730)) {
+    return res.status(400).json({ error: 'expire_days must be a positive number up to 730' });
+  }
+  const { data, error } = await supabase
+    .from('api_keys')
+    .insert({
+      user_id: userId,
+      name,
+      key_hash: keyHash,
+      key_prefix: keyPrefix,
+      role: 'user',
+      scopes: normalizedScopes,
+      key_class: keyClass,
+      expires_at: expiresAt,
+      app_id: typeof app_id === 'string' && app_id ? app_id : null,
+    })
+    .select('id, name, key_prefix, role, scopes, key_class, app_id, expires_at')
+    .single();
   if (error) return res.status(500).json({ error: error.message });
-  await logAudit(userId, 'api_key:create', 'api_key', data.id, null, { name, role: role || 'user' });
-  res.json({ ...data, key: rawKey });
+  await logAudit(userId, 'api_key:create', 'api_key', data.id, null, {
+    name,
+    scopes: (data.scopes as string[]) || [WILDCARD_SCOPE],
+    key_class: keyClass,
+    app_id: data.app_id || null,
+  });
+  res.json({ ...data, needs_rotation: false, key: rawKey });
 });
 
-app.delete('/api/api-keys/:id', verifyAuth, requireSelfPermission('apikeys', 'write'), async (req: Request, res: Response) => {
+/**
+ * DELETE /api/api-keys/:id - revoke. Audited; also drops the caller's
+ * cached 2FA re-auth window.
+ */
+app.delete('/api/api-keys/:id', verifyAuth, requireSelfPermission('apikeys', 'write'), sensitive2FA, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { error } = await supabase.from('api_keys').update({ revoked: true }).eq('id', req.params.id).eq('user_id', userId);
+  const { error } = await supabase
+    .from('api_keys')
+    .update({ revoked: true })
+    .eq('id', req.params.id)
+    .eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
+  clearReauthGrant(userId);
   await logAudit(userId, 'api_key:revoke', 'api_key', req.params.id);
   res.json({ status: 'revoked' });
+});
+
+/**
+ * POST /api/api-keys/:id/rotate - overlap rotation: a replacement key is
+ * issued immediately; the old key keeps working until its overlap expiry
+ * (`rotate_overlap_hours`, default 24, max 168) and carries `force_rotate`
+ * so a client prompts again. Requires a fresh 2FA code.
+ */
+app.post('/api/api-keys/:id/rotate', verifyAuth, requireSelfPermission('apikeys', 'write'), sensitive2FA, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  const overlapHours = Math.min(Math.max(Number(req.body?.rotate_overlap_hours || 24), 1), 168);
+  const { data: current, error: fetchError } = await supabase
+    .from('api_keys')
+    .select('id, name, scopes, key_class, app_id, expires_at')
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .eq('revoked', false)
+    .single();
+  if (fetchError || !current) return res.status(404).json({ error: 'API key not found' });
+
+  const keyClass = current.key_class === 'test' ? 'test' : 'live';
+  const rawKey = `${keyClass === 'test' ? 'ip_test_' : 'ip_live_'}${crypto.randomBytes(12).toString('hex')}`;
+  const keyHash = hashApiKey(rawKey);
+  const keyPrefix = rawKey.substring(0, 10);
+  const overlapEnd = new Date(Date.now() + overlapHours * 3600000).toISOString();
+  const hardEnd = current.expires_at && new Date(current.expires_at).getTime() < Date.now() + overlapHours * 3600000
+    ? current.expires_at
+    : overlapEnd;
+
+  const { data: created, error: createError } = await supabase
+    .from('api_keys')
+    .insert({
+      user_id: userId,
+      name: current.name,
+      key_hash: keyHash,
+      key_prefix: keyPrefix,
+      role: 'user',
+      scopes: Array.isArray(current.scopes) ? current.scopes : [WILDCARD_SCOPE],
+      key_class: keyClass,
+      app_id: current.app_id || null,
+      expires_at: current.expires_at || null,
+      rotated_from: current.id,
+    })
+    .select('id, name, scopes, key_class, app_id, expires_at')
+    .single();
+  if (createError) return res.status(500).json({ error: createError.message });
+
+  await supabase
+    .from('api_keys')
+    .update({ force_rotate: true, expires_at: hardEnd })
+    .eq('id', current.id);
+  clearReauthGrant(userId);
+  await logAudit(userId, 'api_key:rotate', 'api_key', current.id, null, { overlap_end: hardEnd });
+  res.status(201).json({ ...created, old_overlap_expires_at: hardEnd, key: rawKey });
 });
 
 // ============================================================================
@@ -4076,7 +4280,7 @@ app.post('/api/templates/init', verifyAuth, requireInstancePermission('settings'
 // Doctor / Benchmark / Diagnose API Routes
 // ============================================================================
 
-app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/doctor/benchmark', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
   const result = await runBenchmark(duration);
   const { error } = await supabase.from('benchmark_results').insert({
@@ -4096,7 +4300,7 @@ app.post('/api/doctor/benchmark', verifyAuth, async (req: Request, res: Response
   res.json({ status: 'completed', ...result });
 });
 
-app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/doctor/benchmark/:server', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { server } = req.params;
   const duration = Math.min(Math.max(Number(req.body?.duration) || 10, 1), 120);
   const { data: app, error } = await supabase
@@ -4151,13 +4355,13 @@ app.post('/api/doctor/benchmark/:server', verifyAuth, async (req: Request, res: 
 
 const DIAGNOSE_ISSUES = ['connectivity', 'performance', 'disk'];
 
-app.post('/api/doctor/diagnose', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/doctor/diagnose', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { issue } = req.body;
   const checks = await runDiagnostics(issue as string | undefined);
   res.json(checks);
 });
 
-app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/doctor/diagnose/:server', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { issue } = req.body;
   const checks = await runDiagnostics(issue as string | undefined);
   res.json({ server: req.params.server, ...checks });
@@ -4209,7 +4413,7 @@ app.post('/api/rollback', verifyAuth, requireSelfPermission('audit', 'write'), a
 // Activity Timeline API Route
 // ============================================================================
 
-app.get('/api/activity', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/activity', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('activity_timeline').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
   if (error) return res.status(500).json({ error: error.message });
@@ -4372,7 +4576,7 @@ app.post('/api/runbooks/:id/execute', verifyAuth, requireSelfPermission('runbook
 // AI Assistant API Routes
 // ============================================================================
 
-app.post('/api/assistant/analyze', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/assistant/analyze', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { query } = req.body;
   if (!query || typeof query !== 'string') {
@@ -4386,7 +4590,7 @@ app.post('/api/assistant/analyze', verifyAuth, async (req: Request, res: Respons
   res.json({ analysis: plan, plan_id: `plan-${crypto.randomUUID()}`, requires_approval: plan.requires_approval, message: plan.message });
 });
 
-app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/assistant/execute', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { plan: planBody, approved } = req.body;
   if (!approved) return res.json({ status: 'cancelled', message: 'Execution cancelled by user' });
@@ -4457,7 +4661,7 @@ app.post('/api/assistant/execute', verifyAuth, async (req: Request, res: Respons
   res.json({ status: failed ? 'failed' : 'executed', steps });
 });
 
-app.post('/api/assistant/chat', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/assistant/chat', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { message, conversation_id } = req.body;
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'message is required' });
@@ -4477,7 +4681,7 @@ app.post('/api/assistant/chat', verifyAuth, async (req: Request, res: Response) 
 // Global Search API Enhancement
 // ============================================================================
 
-app.get('/api/global-search', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/global-search', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { q } = req.query;
   if (!q) return res.json({ results: [] });
@@ -4520,7 +4724,7 @@ registerSsoRoutes({
 // GraphQL API (simplified REST-based)
 // ============================================================================
 
-app.post('/api/graphql', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/graphql', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const { query: gqlQuery } = req.body;
   if (!gqlQuery || typeof gqlQuery !== 'string') {
     return res.status(400).json({ error: 'Query is required' });

@@ -1513,6 +1513,37 @@ class APIClient {
     await this.api.delete(`/api/rbac/instance-roles/${userId}`);
   }
 
+  /** List scoped API keys (key model v2) for the caller. */
+  async listApiKeys(): Promise<any> {
+    const res = await this.api.get('/api/api-keys');
+    return res.data;
+  }
+
+  /** Create a scoped API key; the raw key is returned exactly once. */
+  async createApiKey(payload: {
+    name: string;
+    key_class?: 'live' | 'test';
+    scopes?: string[];
+    expire_days?: number;
+    app_id?: string;
+  }): Promise<any> {
+    const res = await this.api.post('/api/api-keys', payload);
+    return res.data;
+  }
+
+  /** Rotate a scoped API key; the new raw key is returned exactly once. */
+  async rotateApiKey(keyId: string, overlapHours?: number): Promise<any> {
+    const res = await this.api.post(`/api/api-keys/${keyId}/rotate`, {
+      rotate_overlap_hours: overlapHours ?? 24,
+    });
+    return res.data;
+  }
+
+  /** Revoke (permanently delete) a scoped API key. */
+  async revokeApiKey(keyId: string): Promise<any> {
+    await this.api.delete(`/api/api-keys/${keyId}`);
+  }
+
   async getSsoProviders(): Promise<{
     providers: Array<{ id: string; name: string; enabled: boolean }>;
     saml: { enabled: boolean; note: string };

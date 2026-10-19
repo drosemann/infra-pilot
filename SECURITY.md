@@ -66,6 +66,15 @@ get a fix before any other work.
 | Panel SSO (`/api/sso/*`) | OIDC-verified identities | Log in to the panel (Google / Entra / generic OIDC) | Authorization-code + PKCE, single-use state, RS256 id_token (JWKS) + nonce; JIT provisioning behind `SSO_EMAIL_ALLOWLIST` / `SSO_EMAIL_DOMAIN_ALLOWLIST` with verified email only; group→role mappings only apply when the user lacks an admin-set instance role. Session tokens are HMAC-signed, DB-backed, revocable (`POST /api/sso/logout`, `panel_sessions` revocation) |
 | `/api/rbac/instance-roles*` | Instance `admin` only | Grant, change, revoke instance roles | RBAC instance guard; last-admin demotion/revocation refused (`409`); every change audited |
 
+API keys are caller credentials for the panel REST API and CLI: stored
+scrypt-hashed (per-key random salt, raw key shown once) and treated as
+personal resources under RBAC — the `apikeys` family only reaches the
+caller's own rows. The v2 model adds scopes (`<family>:<action>`, `<family>:*`,
+`*`), optional app binding and expiry, rotation with an overlap window, and a
+two-factor re-auth gate (`X-2FA-Token`) on key create/revoke/rotate, report
+export, 2FA disable, and backup-code retrieval; scope and app-binding denials
+are audited and fail closed.
+
 ### Secrets and credentials
 
 - Secrets live in environment variables / `.env` files, **never** in code or

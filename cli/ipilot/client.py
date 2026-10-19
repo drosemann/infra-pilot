@@ -76,7 +76,8 @@ class ApiClient:
         except requests.HTTPError as exc:
             status = exc.response.status_code
             try:
-                msg = exc.response.json().get("message", str(exc))
+                body = exc.response.json()
+                msg = body.get("message", body.get("error", str(exc)))
             except (json.JSONDecodeError, AttributeError):
                 msg = str(exc)
             if status == 404:
@@ -93,9 +94,20 @@ class ApiClient:
                     path,
                 )
                 msg = f"Not implemented: {path} – the backend does not support this operation"
+            elif status == 403 and body.get("code") == "scope_denied":
+                # Scoped API keys (panel key model v2) surface required
+                # scopes explicitly; CLI messages stay actionable.
+                required = body.get("required", "?")
+                hint = body.get(
+                    "hint",
+                    "Create a new key with the needed scope (ipilot apikeys create ... --scopes) "
+                    "or use a wildcard key.",
+                )
+                msg = f"This API key lacks permission for {path}: missing scope '{required}'. {hint}"
+
             else:
                 logger.warning("HTTP error %s on %s: %s", status, path, msg)
-            return {"error": msg}
+            return {"error": msg, "scope_denied": body.get("code") == "scope_denied"}
         except requests.ConnectionError as exc:
             logger.warning("Connection failed: %s", exc)
             return {"error": f"Connection failed: {exc}"}
@@ -189,9 +201,17 @@ class ApiClient:
             api_key: The API key to authenticate with.
 
         Returns:
-            Response data containing a ``token`` on success.
+            Response data containing ``token``, the key's ``scopes``,
+            ``key_class``, expiry and a ``needs_rotation`` hint on success
+            (panel key model v2).
         """
         return self._request("POST", "/auth/login", {"api_key": api_key})
+
+    def rotate_api_key(self, key_id: str, overlap_hours: int = 24) -> Any:
+        """Rotate an API key; the old key keeps working until the overlap ends."""
+        return self._request(
+            "POST", f"/api-keys/{key_id}/rotate", {"rotate_overlap_hours": overlap_hours}
+        )
 
     def logout(self) -> Any:
         """Invalidate the current session.
@@ -578,12 +598,24 @@ class ApiClient:
         return self._request("GET", "/api-keys")
 
     def create_api_key(
-        self, name: str, role: str = "user", expire_days: Optional[int] = None
+        self,
+        name: str,
+        role: str = "user",
+        expire_days: Optional[int] = None,
+        scopes: Optional[list] = None,
+        key_class: Optional[str] = None,
+        app_id: Optional[str] = None,
     ) -> Any:
-        """Create an API key."""
-        data = {"name": name, "role": role}
+        """Create an API key (scoped keys: see panel key model v2)."""
+        data: Dict[str, Any] = {"name": name, "role": role}
         if expire_days:
             data["expire_days"] = expire_days
+        if scopes is not None:
+            data["scopes"] = scopes
+        if key_class:
+            data["key_class"] = key_class
+        if app_id:
+            data["app_id"] = app_id
         return self._request("POST", "/api-keys", data)
 
     def revoke_api_key(self, key_id: str) -> Any:

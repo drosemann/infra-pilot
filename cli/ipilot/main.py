@@ -24,6 +24,12 @@ attach_to_app(app)
 def login(
     ctx: typer.Context,
     api_key: str = typer.Argument(..., help="Your API key"),
+    scopes: Optional[str] = typer.Option(
+        None,
+        "--scopes",
+        help="Comma-separated scopes to record in the profile (server hints, e.g. 'apps:read,metrics:*' or '*'). "
+             "Use the stored scopes for automation-aware tooling; the server remains authoritative.",
+    ),
 ):
     """Log in to the API with your API key."""
     from .client import ApiClient
@@ -40,6 +46,21 @@ def login(
         from .config import set_key
 
         set_key("token", result["token"], profile=ctx.obj.get("profile"))
+        # Record the key's own scopes (server-provided) in the profile so
+        # tooling can warn before hitting endpoints the key cannot use.
+        server_scopes = result.get("scopes")
+        effective: Optional[List[str]] = None
+        if isinstance(server_scopes, list):
+            effective = [str(s) for s in server_scopes]
+        elif scopes:
+            effective = [s.strip() for s in scopes.split(",") if s.strip()]
+        else:
+            typer.echo(
+                "Warning: this is a legacy full-access key. The server now issues scoped keys "
+                "(ip_live_ip_test prefixes); rotate it: ipilot apikeys list, then rotate the key.",
+            )
+        if effective:
+            set_key("scopes", effective, profile=ctx.obj.get("profile"))
     print_output(result, ctx.obj.get("output", "table"))
 
 

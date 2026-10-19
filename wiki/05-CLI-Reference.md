@@ -132,11 +132,52 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 
 ## API Keys
 
+Scoped keys (panel key model v2). New keys are prefixed `ip_live_`
+(production) or `ip_test_` (clearly-marked test keys); legacy `ip_<hex>`
+keys still work but carry full wildcard access and are flagged
+`needs_rotation: true`.
+
 | Command | Description |
 | --------- | ------------- |
-| `apikeys list` | List API keys |
-| `apikeys create <name> [--role] [--expire]` | Create API key |
+| `apikeys list` | List API keys (scopes, class, rotation state) |
+| `apikeys create <name> [--scopes s] [--type live\|test] [--app app-id] [--expire days] [--role r]` | Create a scoped key |
+| `apikeys rotate <key-id> [--overlap hours]` | Rotate a key with an overlap window |
 | `apikeys revoke <id>` | Revoke API key |
+
+Create options:
+
+- `--scopes`/`-s` — comma-separated scopes, e.g.
+  `--scopes apps:read,metrics:*`. Scope syntax is `<family>:<action>`
+  (`apps:read`), `<family>:*` (`metrics:*`), or the wildcard `*`.
+  Omitting it creates a wildcard key; the CLI notes when it does.
+- `--type`/`-t` — key class, `live` (production prefix) or `test`.
+- `--app`/`-a` — bind the key to one app; a bound key only works on that
+  app's routes (`403 app_binding` otherwise).
+- `--expire`/`-e` — expiration in days (max 730).
+
+Rotation (`apikeys rotate <key-id> --overlap hours`): a replacement is issued
+immediately and the old key keeps working until the overlap deadline
+(default 24 h, max 168). The replacement key is printed once — save it.
+Note: with TOTP enabled, the panel requires a fresh two-factor code
+(`X-2FA-Token`) for key create/rotate/revoke; the CLI shows the panel's
+challenge message if one is needed for the caller's account.
+
+`login <api_key>` records the key's scopes in the profile — server-provided
+scopes win so the profile matches the key; `--scopes apps:read,metrics:*`
+records a hint only. Logging in with a legacy `ip_<hex>` full-access key
+prints a rotation warning pointing at `apikeys list` / `apikeys rotate`.
+
+Scope denials: the panel answers `403` with
+`{ code: 'scope_denied', required: '<scope>' }`; the CLI surfaces it as
+"This API key lacks permission for \<path\>: missing scope '\<required\>'"
+plus advice (create a key with the needed scope via
+`ipilot apikeys create ... --scopes` or use a wildcard key).
+
+```bash
+ipilot apikeys create ci-deployer --scopes apps:read,apps:write,metrics:* --type live --app app-1
+ipilot apikeys rotate <key-id> --overlap 48
+ipilot login ip_live_... --scopes apps:read,metrics:*
+```
 
 ## Undo / Rollback
 

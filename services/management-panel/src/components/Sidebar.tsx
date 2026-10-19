@@ -225,6 +225,12 @@ export const Sidebar = ({
           icon: "🔐",
           route: "/settings/roles",
         },
+        {
+          id: "api-keys",
+          label: "API Keys",
+          icon: "🔑",
+          route: "/settings/api-keys",
+        },
       ],
     },
   ];

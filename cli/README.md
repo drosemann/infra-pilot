@@ -78,6 +78,26 @@ ipilot two-factor verify 123456
 ipilot search web --types app,server
 ```
 
+### API keys
+
+Scoped API keys (panel key model v2) for automation. New keys are prefixed
+`ip_live_` or `ip_test_`; legacy `ip_<hex>` keys keep full wildcard access
+and are flagged for rotation.
+
+```bash
+ipilot login <api-key> --scopes apps:read,metrics:*
+ipilot apikeys create ci-deployer --scopes apps:read,apps:write \
+  --type live --app app-1
+ipilot apikeys rotate <key-id> --overlap 48
+ipilot apikeys list
+```
+
+`login` stores the key's scopes in the profile (server-provided scopes take
+precedence; a legacy key prints a rotation warning). Scope denials map to a
+clear error naming the missing scope. See
+[wiki/05-CLI-Reference.md](../wiki/05-CLI-Reference.md#api-keys) for the
+full option list.
+
 `ipilot docs` produces a help-based reference for the current executable.
 The curated examples are in [wiki/04-Usage-Examples.md](../wiki/04-Usage-Examples.md);
 configuration precedence is in [wiki/03-Configuration.md](../wiki/03-Configuration.md).

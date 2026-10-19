@@ -33,6 +33,15 @@ export type RbacAuditFn = (
 export interface RbacGuardOptions {
   store: RbacStore;
   audit: RbacAuditFn;
+  /**
+   * Optional API-key scope checks (SERVER API-KEYS v2, server/apikeys/):
+   * when the caller authenticated with a scoped key, the first function
+   * returns the required-scope hint on denial (null = allowed); the
+   * second enforces an optional app binding. Injected by index.ts so the
+   * RBAC layer keeps its single-responsibility authorization role.
+   */
+  scopeCheck?: (req: Request, resourceType: string, action: string) => string | null;
+  keyAllowsApp?: (req: Request, appId: string | null) => boolean;
 }
 
 export type RbacGuard = ReturnType<typeof createRbacGuards>;
@@ -55,7 +64,26 @@ function requestIp(req: Request): string | undefined {
 }
 
 export function createRbacGuards(options: RbacGuardOptions) {
-  const { store, audit } = options;
+  const { store, audit, scopeCheck, keyAllowsApp } = options;
+
+  /** API-key scope gate; denial responds 403 instead of continuing. */
+  function checkScopes(
+    req: Request,
+    res: Response,
+    resourceType: ResourceType,
+    action: ResourceAction,
+  ): boolean {
+    if (!scopeCheck) return true;
+    const required = scopeCheck(req, resourceType, action);
+    if (!required) return true;
+    res.status(403).json({
+      error: `This API key is missing the '${required}' scope`,
+      code: 'scope_denied',
+      required,
+      hint: 'Create a new key with the needed scope, or use a wildcard key for unclassified endpoints.',
+    });
+    return false;
+  }
 
   /**
    * Shared denial writer: 403 body + `rbac:denied` audit event.
@@ -116,6 +144,7 @@ export function createRbacGuards(options: RbacGuardOptions) {
         return;
       }
       try {
+        if (!checkScopes(req, res, resourceType, action)) return;
         const decision = opts.self
           ? await store.canSelf(userId, resourceType, action)
           : await store.can(userId, resourceType, action);
@@ -157,7 +186,25 @@ export function createRbacGuards(options: RbacGuardOptions) {
       if (!UUID_RE.test(appId)) {
         return res.status(400).json({ error: 'A valid appId is required' });
       }
+      if (keyAllowsApp && !keyAllowsApp(req, appId)) {
+        audit(
+          userId,
+          'scope:denied',
+          'apikeys',
+          undefined,
+          null,
+          { code: 'app_binding', required: 'apps:*', route: req.path, method: req.method },
+          requestIp(req),
+        );
+        return res.status(403).json({
+          error: 'This API key is bound to a different app',
+          code: 'scope_denied',
+          required: 'apps:*',
+          hint: 'App-bound keys only work on their bound app; create an unbound key for cross-app tooling.',
+        });
+      }
       try {
+        if (!checkScopes(req, res, resourceType, action)) return;
         const decision = await store.can(userId, resourceType, action, { appId });
         if (decision.reason === 'app_not_found') {
           return res.status(404).json({ error: 'App not found' });

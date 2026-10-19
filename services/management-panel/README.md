@@ -69,6 +69,45 @@ lockout enforced). The first admin is promoted automatically during
 setup. App owners and per-app members are managed per app. The WebSocket
 gateway resolves app access through the same RBAC store as the REST API.
 
+## API keys
+
+API keys authenticate CLI and scripted callers without a browser session
+(model v2 in `server/apikeys/`):
+
+- **Prefixes.** New keys are `ip_live_...` (production) or `ip_test_...`
+  (clearly-marked test keys). Legacy `ip_<hex>` keys keep working with
+  implicit wildcard access and are surfaced with `needs_rotation: true`.
+- **Scopes.** Each key carries a scope array: `<family>:<action>` (e.g.
+  `apps:read`), `<family>:*` (e.g. `metrics:*`), or `*`. The family list
+  (apps, backups, deployments, configs, metrics, inventory, databases,
+  webhooks, plugins, templates, ssh, maintenance, secrets, members, billing,
+  runbooks, audit, settings, notifications, apikeys, organization,
+  customers, reports) and the action set (read, write, exec, delete,
+  export, validate) live in `server/apikeys/index.ts`. Enforcement rides on
+  the RBAC guard layer — a request needs **both** RBAC authorization and a
+  key scope. Denials answer `403 { code: 'scope_denied', required: ... }`
+  and are audited (`scope:denied`).
+- **App binding and expiry.** A key bound to an app only works on that
+  app's routes (`403 code: 'app_binding'` otherwise); optional expiry is
+  capped at 730 days.
+- **Classified routes.** `/api/apps` list+create need
+  `apps:read`/`apps:write`; metrics aggregated and `grafana-url` need
+  `metrics:read`; the metrics stream config needs `settings:write`; access
+  logs need `audit:read`. Endpoints without RBAC coordinates (dashboards,
+  themes, workspaces, doctor, assistant, graphql, search, global-search,
+  i18n, modpacks search, activity) are wildcard-only (`*`) for scoped keys.
+- **Rotation with overlap.** `POST /api/api-keys/:id/rotate` with body
+  `{ rotate_overlap_hours }` (default 24, max 168) issues a replacement
+  immediately; the old key keeps working until the overlap deadline with a
+  `force_rotate` prompt. Raw keys are returned once, never listed.
+- **2FA re-auth gate.** Sensitive operations require a fresh two-factor
+  code in the `X-2FA-Token` header while the account has TOTP enabled
+  (5-minute re-auth window; fails closed with 503 when the integration
+  service is unreachable): `POST /api/api-keys`,
+  `DELETE /api/api-keys/:id`, `POST /api/api-keys/:id/rotate`,
+  `GET /api/reports/export`, `POST /api/auth/2fa/disable`, and
+  `GET /api/auth/2fa/backup-codes`. See `wiki/14-Two-Factor-Auth.md`.
+
 ## SSO / OIDC
 
 The panel implements the OIDC **authorization-code flow with PKCE** by

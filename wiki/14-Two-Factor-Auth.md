@@ -73,7 +73,53 @@ authenticated session (`verifyAuth`).
 
 Settings → active 2FA → confirm password → Disable.
 `POST /api/auth/2fa/disable` (authenticated).
-Disabling requires the account password, not just a session.
+Disabling requires the account password, not just a session — and, with
+TOTP enabled, a fresh `X-2FA-Token` (see below).
+
+## Sensitive-operation re-auth (X-2FA-Token)
+
+Some credential-touching panel routes demand a **fresh** two-factor code even
+with a valid session. When TOTP is enabled for the account, send the current
+6-digit app code (or a backup code — both work the same) in the
+`X-2FA-Token` HTTP header:
+
+```text
+X-2FA-Token: 123456
+```
+
+Sensitive routes:
+
+| Method | Path | Operation |
+| ------ | ---- | --------- |
+| `POST` | `/api/api-keys` | Create an API key |
+| `POST` | `/api/api-keys/:id/rotate` | Rotate an API key |
+| `DELETE` | `/api/api-keys/:id` | Revoke an API key |
+| `GET` | `/api/reports/export` | Export a usage report |
+| `POST` | `/api/auth/2fa/disable` | Disable 2FA |
+| `GET` | `/api/auth/2fa/backup-codes` | Fetch backup codes |
+
+Behavior:
+
+- TOTP enablement is checked **live** against the integration service on each
+  request; accounts without 2FA are never asked for the header.
+- One valid code opens a **5-minute re-auth window per user**; further
+  sensitive calls within that window need no new code. Logout and API-key
+  revocation clear the cached grant.
+- **Fail closed:** nothing is cached on uncertainty. If the integration
+  service is unreachable, the enablement status probe answers `503`
+  ("Two-factor status unavailable; refusing sensitive operation"), and a
+  verify that cannot complete is treated as invalid — the request gets
+  `403 { code: 'reauth_required' }` until a fresh code is accepted.
+
+Integration-service contract (external service, panel forwards to it):
+
+```text
+POST {INTEGRATION_SERVICE_URL}/api/auth/2fa/verify-reauth
+     { user_id, code }  ->  200 { valid: boolean }
+
+GET  {INTEGRATION_SERVICE_URL}/api/auth/2fa/status/{userId}
+     ->  200 { enabled: boolean }
+```
 
 ## Troubleshooting
 
@@ -84,6 +130,8 @@ Disabling requires the account password, not just a session.
 | Lost device, have codes | Login → use backup code via verify-backup |
 | Lost device + codes | Contact admin; do not open a public issue with secrets |
 | `502 Integration service unavailable` | Integration service (`:9000`) not running — start it / check `INTEGRATION_SERVICE_URL` |
+| `503 Two-factor status unavailable` on a sensitive route | Re-auth could not confirm 2FA state — same fix as the 502 row; nothing is skipped while offline |
+| `403 reauth_required` on a sensitive route | Send a fresh code in `X-2FA-Token` (TOTP or backup code) with the next request |
 | Repeated `429` | Rate limiter tripped — wait, then retry once per code window |
 
 ## Test coverage

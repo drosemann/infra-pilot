@@ -18,6 +18,7 @@ import { Deployments } from './pages/Deployments';
 import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
 import { RolesManagement } from './pages/RolesManagement';
+import { ApiKeys } from './pages/ApiKeys';
 import { AuditLog } from './pages/AuditLog';
 import { KnowledgeBase } from './pages/KnowledgeBase';
 import { ActivityFeed } from './components/ActivityFeed';
@@ -217,6 +218,7 @@ export default function App() {
                       <Route path="/settings/alerts" element={<SettingsPage />} />
                       <Route path="/settings/maintenance" element={<SettingsPage />} />
                       <Route path="/settings/roles" element={<RolesManagement />} />
+                      <Route path="/settings/api-keys" element={<ApiKeys />} />
                       {featureGates.canManageCustomers(mode) && (
                         <Route path="/customers" element={<Customers />} />
                       )}

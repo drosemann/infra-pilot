@@ -569,6 +569,22 @@ export interface ServerRoleAssignment {
   createdAt: string;
 }
 
+/** Instance-level RBAC role assignment (rbac_instance_roles). */
+export interface InstanceRoleAssignment {
+  userId: string;
+  role: 'admin' | 'operator' | 'viewer';
+  grantedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Authorization state returned by GET /api/rbac/me. */
+export interface RbacMe {
+  userId: string;
+  instanceRole: 'admin' | 'operator' | 'viewer' | null;
+  organizations: Array<{ id: string | null; role: string }>;
+}
+
 export interface ServerSnapshot {
   id: string;
   appId: string;

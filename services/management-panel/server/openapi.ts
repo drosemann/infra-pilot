@@ -119,6 +119,46 @@ const spec: Record<string, any> = {
           type: { type: 'string', enum: ['app', 'audit', 'backup'] },
         },
       },
+      RbacInstanceRole: {
+        type: 'object',
+        description: 'Instance-level role assignment',
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+          role: { type: 'string', enum: ['admin', 'operator', 'viewer'] },
+          grantedBy: { type: 'string', format: 'uuid', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      RbacMe: {
+        type: 'object',
+        description: 'Caller authorization state used by frontend route guards',
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+          instanceRole: { type: 'string', enum: ['admin', 'operator', 'viewer'], nullable: true },
+          organizations: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', format: 'uuid', nullable: true },
+                role: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+      RbacDenial: {
+        type: 'object',
+        description: '403 response body emitted by the RBAC middleware',
+        properties: {
+          error: { type: 'string', enum: ['Forbidden'] },
+          code: { type: 'string', enum: ['rbac_denied'] },
+          resourceType: { type: 'string' },
+          action: { type: 'string' },
+          reason: { type: 'string', enum: ['app', 'assignment', 'instance'] },
+        },
+      },
     },
   },
   paths: {
@@ -587,6 +627,75 @@ const spec: Record<string, any> = {
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': { description: 'Test notification sent' } },
+      },
+    },
+    '/rbac/me': {
+      get: {
+        summary: 'Get the caller\'s authorization state',
+        description: 'Returns the caller\'s instance role, app assignments, and organization memberships. Powers frontend route guards.',
+        tags: ['RBAC'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': { description: 'Authorization state', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacMe' } } } },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/rbac/instance-roles': {
+      get: {
+        summary: 'List instance-level role assignments',
+        tags: ['RBAC'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Assignments',
+            content: { 'application/json': { schema: { type: 'object', properties: { roles: { type: 'array', items: { $ref: '#/components/schemas/RbacInstanceRole' } } } } } },
+          },
+          '401': { description: 'Unauthorized' },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+        },
+      },
+      post: {
+        summary: 'Grant or change an instance role',
+        description: 'Requires instance admin. Audited. Refuses to demote the last instance admin.',
+        tags: ['RBAC'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userId', 'role'],
+                properties: {
+                  userId: { type: 'string', format: 'uuid' },
+                  role: { type: 'string', enum: ['admin', 'operator', 'viewer'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Assignment written', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacInstanceRole' } } } },
+          '400': { description: 'Invalid body' },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+          '409': { description: 'Demotion would remove the last instance admin' },
+        },
+      },
+    },
+    '/rbac/instance-roles/{userId}': {
+      delete: {
+        summary: 'Revoke an instance role',
+        description: 'Requires instance admin. Audited. Refuses to revoke the last instance admin.',
+        tags: ['RBAC'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Revoked' },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+          '404': { description: 'Assignment not found' },
+          '409': { description: 'Revocation would remove the last instance admin' },
+        },
       },
     },
   },

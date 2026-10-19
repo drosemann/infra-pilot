@@ -2,8 +2,8 @@
  * Per-app authorization for WebSocket actions.
  *
  * Deny by default: every decision flows through the host-supplied
- * `resolveAppAccess` resolver (wired to the panel's `serverRoles` map plus
- * app ownership in `server/index.ts`). Ticket app scope, when present, only
+ * `resolveAppAccess` resolver (delegated to the panel's RBAC store
+ * `server/rbac/store.ts`). Ticket app scope, when present, only
  * narrows access further — the resolver can allow an action that the ticket
  * scope still refuses.
  */

@@ -61,6 +61,8 @@ get a fix before any other work.
 | Discord app commands | Discord users | Manage VPS, backups, deploy, secrets | Bot-level role/permission checks; container names validated against `SAFE_CONTAINER_PATTERN`; health-check targets validated against allow-lists |
 | `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists; resource limits enforced against `RESOURCE_LIMITS` |
 | Panel WebSocket gateway (`ws://…:3001`) | Authenticated panel users | Tail app logs, stream metrics, run terminal commands in containers | Single-use HMAC ticket from `POST /api/ws-token`; per-app ACL (ownership/roles) on every action, deny by default; rate limits and violation escalation; audit events carry no ticket material (see `wiki/15-WS-Auth.md`) |
+| Panel REST API | Authenticated panel users | Operate on apps and their personal resource rows | Two layers: `verifyAuth` then RBAC (`server/rbac/`) — app-scoped actions need ownership, an app assignment, or instance `admin`; personal resources are limited to the caller's own rows; instance resources are role-gated. Denials are audited (`rbac:denied`) and fail closed on store errors |
+| `/api/rbac/instance-roles*` | Instance `admin` only | Grant, change, revoke instance roles | RBAC instance guard; last-admin demotion/revocation refused (`409`); every change audited |
 
 ### Secrets and credentials
 

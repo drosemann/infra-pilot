@@ -59,6 +59,8 @@ import {
   WsAuditLogger,
 } from './ws/index.ts';
 import type { WsAction } from './ws/index.ts';
+import { createRbacGuards, RbacStore } from './rbac/index.ts';
+import type { ResourceAction, ResourceType } from './rbac/index.ts';
 import { SERVER_PRESETS } from './presets.ts';
 import openapiSpec from './openapi.ts';
 import { analyzeConfiguration } from './config-advice-engine.ts';
@@ -211,11 +213,47 @@ let supabase = createClient(supabaseUrl, supabaseKey);
 
 export function setSupabaseClientForTests(client: ReturnType<typeof createClient>) {
   supabase = client;
+  rbacStore?.setClient(client);
 }
 
 export { app };
 
+/**
+ * Panel RBAC store + HTTP guards. Static moment: authorization is deny by
+ * default — a check that cannot reach the store returns 503 and never
+ * silently allows. Assignments persist in `rbac_instance_roles` and
+ * `rbac_app_roles` (db/schema.sql); `wiki/11-Auth-Matrix.md` keeps the
+ * decision table.
+ */
+let rbacStore: RbacStore | null = null;
+let rbacGuards: ReturnType<typeof createRbacGuards> | null = null;
 
+/**
+ * Guard factory baked into the request chain before route definitions.
+ * Called with a resource type and action; failures are audited as
+ * `rbac:denied` and answered with 403 `code: 'rbac_denied'`.
+ */
+function requireSelfPermission(
+  resourceType: ResourceType,
+  action: ResourceAction,
+) {
+  return rbacGuards!.requirePermission(resourceType, action, { self: true });
+}
+
+function requireInstancePermission(resourceType: ResourceType, action: ResourceAction) {
+  return rbacGuards!.requirePermission(resourceType, action);
+}
+
+function requireAppId(
+  action: ResourceAction,
+  resourceType: ResourceType = 'app',
+  opts: { optional?: boolean } = {},
+) {
+  return rbacGuards!.requireAppRole(action, resourceType, opts);
+}
+
+// Legacy per-app permission shape kept for API compatibility (see
+// server/rbac/catalog.ts for the mapping onto the modern vocabulary).
 type ServerPermissionSet = {
   start: boolean;
   stop: boolean;
@@ -234,10 +272,12 @@ const fullServerPermissions: ServerPermissionSet = {
   deployments: true,
 };
 
-const serverRoles = new Map<string, any[]>();
 const serverSnapshots = new Map<string, any[]>();
 const workspacesByUser = new Map<string, any[]>();
 const pluginInstallations = new Map<string, any[]>();
+
+rbacStore = new RbacStore(supabase, { cacheTtlMs: Number(process.env.RBAC_CACHE_TTL_MS) || 30_000 });
+rbacGuards = createRbacGuards({ store: rbacStore, audit: logAudit });
 
 async function getOwnedAppOrNull(appId: string, userId: string) {
   const { data, error } = await supabase
@@ -478,6 +518,10 @@ app.post('/api/setup/init', loginLimiter, async (req: Request, res: Response) =>
       return res.status(500).json({ error: 'Failed to initialize setup' });
     }
 
+    // RBAC bootstrap: promote the setup-created admin user immediately so
+    // instance administration works without waiting for a restart.
+    await rbacStore!.bootstrapInstanceRoles();
+
     // Return session token
     const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
       email,
@@ -616,33 +660,22 @@ app.post('/api/apps', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/apps/:appId - Get app details
-app.get('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
+// GET /api/apps/:appId - Get app details (owner or authorized assignment)
+app.get('/api/apps/:appId', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
+  const appRecord = (req as any).appRecord;
 
   try {
-    const { data, error } = await supabase
-      .from('docker_apps')
-      .select('*')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'App not found' });
-    }
-
-    res.json(data);
+    res.json(appRecord);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch app' });
   }
 });
 
-// PATCH /api/apps/:appId - Update app settings
-app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) => {
+// PATCH /api/apps/:appId - Update app settings (owner or app assignment with write)
+app.patch('/api/apps/:appId', verifyAuth, requireAppId('write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const appId = (req as any).appAccess.appId;
+  const appRecord = (req as any).appRecord;
   const { javaVersion, ...otherFields } = req.body;
 
   const ALLOWED_UPDATE_FIELDS = [
@@ -667,14 +700,7 @@ app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =>
     }
 
     if (javaVersion) {
-      const { data: current } = await supabase
-        .from('docker_apps')
-        .select('environment_vars')
-        .eq('id', appId)
-        .eq('user_id', userId)
-        .single();
-
-      const envVars = { ...((current?.environment_vars as Record<string, string>) || {}), JAVA_VERSION: javaVersion };
+      const envVars = { ...((appRecord.environment_vars as Record<string, string>) || {}), JAVA_VERSION: javaVersion };
       updateData.environment_vars = envVars;
     }
 
@@ -682,7 +708,7 @@ app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =>
       .from('docker_apps')
       .update(updateData)
       .eq('id', appId)
-      .eq('user_id', userId)
+      .eq('user_id', appRecord.user_id)
       .select()
       .single();
 
@@ -697,19 +723,21 @@ app.patch('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =>
   }
 });
 
-// DELETE /api/apps/:appId - Delete an app
-app.delete('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) => {
+// DELETE /api/apps/:appId - Delete an app (owner or assignment with delete)
+app.delete('/api/apps/:appId', verifyAuth, requireAppId('delete'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const appId = (req as any).appAccess.appId;
+  const appRecord = (req as any).appRecord;
 
   try {
     const { error } = await supabase
       .from('docker_apps')
       .delete()
       .eq('id', appId)
-      .eq('user_id', userId);
+      .eq('user_id', appRecord.user_id);
 
     if (error) throw error;
+    rbacStore!.invalidateApp(appId);
     await logAudit(userId, 'app:delete', 'app', appId);
     res.json({ success: true });
   } catch (err) {
@@ -721,10 +749,11 @@ app.delete('/api/apps/:appId', verifyAuth, async (req: Request, res: Response) =
 // DOCKER CONTROL ROUTES (require auth)
 // ============================================================================
 
-// POST /api/apps/:appId/start - Start a container
-app.post('/api/apps/:appId/start', verifyAuth, async (req: Request, res: Response) => {
+// POST /api/apps/:appId/start - Start a container (owner or assignment with exec)
+app.post('/api/apps/:appId/start', verifyAuth, requireAppId('exec'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const appId = (req as any).appAccess.appId;
+  const appRecord = (req as any).appRecord;
 
   try {
     const dockerResult = await dockerAction(appId, 'start');
@@ -735,7 +764,7 @@ app.post('/api/apps/:appId/start', verifyAuth, async (req: Request, res: Respons
         started_at: new Date().toISOString(),
       })
       .eq('id', appId)
-      .eq('user_id', userId)
+      .eq('user_id', appRecord.user_id)
       .select()
       .single();
 
@@ -753,10 +782,11 @@ app.post('/api/apps/:appId/start', verifyAuth, async (req: Request, res: Respons
   }
 });
 
-// POST /api/apps/:appId/stop - Stop a container
-app.post('/api/apps/:appId/stop', verifyAuth, async (req: Request, res: Response) => {
+// POST /api/apps/:appId/stop - Stop a container (owner or assignment with exec)
+app.post('/api/apps/:appId/stop', verifyAuth, requireAppId('exec'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const appId = (req as any).appAccess.appId;
+  const appRecord = (req as any).appRecord;
 
   try {
     const dockerResult = await dockerAction(appId, 'stop');
@@ -764,7 +794,7 @@ app.post('/api/apps/:appId/stop', verifyAuth, async (req: Request, res: Response
       .from('docker_apps')
       .update({ status: 'stopped' })
       .eq('id', appId)
-      .eq('user_id', userId)
+      .eq('user_id', appRecord.user_id)
       .select()
       .single();
 
@@ -782,10 +812,11 @@ app.post('/api/apps/:appId/stop', verifyAuth, async (req: Request, res: Response
   }
 });
 
-// POST /api/apps/:appId/restart - Restart a container
-app.post('/api/apps/:appId/restart', verifyAuth, async (req: Request, res: Response) => {
+// POST /api/apps/:appId/restart - Restart a container (owner or assignment with exec)
+app.post('/api/apps/:appId/restart', verifyAuth, requireAppId('exec'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const appId = (req as any).appAccess.appId;
+  const appRecord = (req as any).appRecord;
 
   try {
     const dockerResult = await dockerAction(appId, 'restart');
@@ -796,7 +827,7 @@ app.post('/api/apps/:appId/restart', verifyAuth, async (req: Request, res: Respo
         started_at: new Date().toISOString(),
       })
       .eq('id', appId)
-      .eq('user_id', userId)
+      .eq('user_id', appRecord.user_id)
       .select()
       .single();
 
@@ -814,9 +845,8 @@ app.post('/api/apps/:appId/restart', verifyAuth, async (req: Request, res: Respo
   }
 });
 
-// GET /api/apps/:appId/logs - Stream logs with search, filtering, pagination
-app.get('/api/apps/:appId/logs', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+// GET /api/apps/:appId/logs - Stream logs with search, filtering, pagination (owner or assignment)
+app.get('/api/apps/:appId/logs', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000);
   const page = Math.max(parseInt(req.query.page as string) || 1, 1);
@@ -827,17 +857,7 @@ app.get('/api/apps/:appId/logs', verifyAuth, async (req: Request, res: Response)
   const to = req.query.to as string;
 
   try {
-    // Verify app ownership
-    const { data: app, error: appError } = await supabase
-      .from('docker_apps')
-      .select('id')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (appError || !app) {
-      return res.status(404).json({ error: 'App not found' });
-    }
+    // The RBAC guard verified access and confirmed the app exists.
 
     // Build query
     let query = supabase
@@ -875,15 +895,14 @@ app.get('/api/apps/:appId/logs', verifyAuth, async (req: Request, res: Response)
 // ============================================================================
 
 // POST /api/apps/:appId/clone - One-click clone with config, ports, files and backups metadata
-app.post('/api/apps/:appId/clone', verifyAuth, async (req: Request, res: Response) => {
+// Clone requires exec on the source app; the clone is owned by the caller.
+app.post('/api/apps/:appId/clone', verifyAuth, requireAppId('exec'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
+  const source = (req as any).appRecord;
   const { name, includeFiles = true, includeBackups = true } = req.body;
+  const appId = source.id;
 
   try {
-    const source = await getOwnedAppOrNull(appId, userId);
-    if (!source) return res.status(404).json({ error: 'App not found' });
-
     const cloneName = name || `${source.name}-clone`;
     const { data, error } = await supabase
       .from('docker_apps')
@@ -919,7 +938,8 @@ app.post('/api/apps/:appId/clone', verifyAuth, async (req: Request, res: Respons
       }));
       serverSnapshots.set(data.id, clonedSnapshots);
     }
-    serverRoles.set(data.id, [{ id: crypto.randomUUID(), appId: data.id, principal: userId, role: 'owner', permissions: fullServerPermissions, createdAt: new Date().toISOString() }]);
+    // Ownership is authoritative: the app owner implicitly holds every
+    // permission, so no assignment row is created for the cloner.
     await logAudit(userId, 'app:clone', 'app', data.id, { sourceAppId: appId }, { name: cloneName, includeFiles, includeBackups });
     res.status(201).json(data);
   } catch (err) {
@@ -927,51 +947,58 @@ app.post('/api/apps/:appId/clone', verifyAuth, async (req: Request, res: Respons
   }
 });
 
-app.get('/api/apps/:appId/roles', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
-  if (!serverRoles.has(appId)) {
-    serverRoles.set(appId, [{ id: crypto.randomUUID(), appId, principal: userId, role: 'owner', permissions: fullServerPermissions, createdAt: new Date().toISOString() }]);
+/**
+ * Per-app role assignments backed by `rbac_app_roles` (server/rbac).
+ * Reading/managing assignments maps to the `members` resource: app owners
+ * and `admin` assignments decide who else can join the app, and instance
+ * admins override. Wire shape keeps the legacy `principal` field.
+ */
+app.get('/api/apps/:appId/roles', verifyAuth, requireAppId('read', 'members'), async (req: Request, res: Response) => {
+  const appId = (req as any).appAccess.appId;
+  try {
+    const rows = await rbacStore!.listAppRoles(appId);
+    res.json(rows.map((row) => RbacStore.toWire(row, fullServerPermissions)));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list app roles' });
   }
-  res.json(serverRoles.get(appId));
 });
 
-app.post('/api/apps/:appId/roles', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/roles', verifyAuth, requireAppId('manage', 'members'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
+  const appId = (req as any).appAccess.appId;
+  const { principal, role, permissions } = req.body || {};
+  if (!principal || typeof principal !== 'string') {
+    return res.status(400).json({ error: 'principal (user id) is required' });
+  }
+  if (!role || typeof role !== 'string') {
+    return res.status(400).json({ error: 'role is required' });
+  }
 
-  const assignment = {
-    id: req.body.id || crypto.randomUUID(),
-    appId,
-    principal: req.body.principal,
-    role: req.body.role || 'custom',
-    permissions: { ...fullServerPermissions, ...(req.body.permissions || {}) },
-    createdAt: new Date().toISOString(),
-  };
-  const existing = serverRoles.get(appId) || [];
-  serverRoles.set(appId, [assignment, ...existing.filter((role) => role.id !== assignment.id && role.principal !== assignment.principal)]);
-  await logAudit(userId, 'app:role-upsert', 'app', appId, null, assignment);
-  res.status(201).json(assignment);
+  try {
+    const assignment = await rbacStore!.setAppRole(appId, principal, role as any, permissions ?? null, userId);
+    await logAudit(userId, 'app:role-upsert', 'app', appId, null, {
+      principal,
+      role: assignment.role,
+      permissions: permissions ?? null,
+    });
+    res.status(201).json(RbacStore.toWire(assignment, fullServerPermissions));
+  } catch (err: any) {
+    const message = String(err?.message || 'Failed to upsert app role');
+    if (message.includes('must be')) return res.status(400).json({ error: message });
+    res.status(500).json({ error: 'Failed to upsert app role' });
+  }
 });
 
-app.get('/api/apps/:appId/snapshots', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
+app.get('/api/apps/:appId/snapshots', verifyAuth, requireAppId('read', 'backup'), async (req: Request, res: Response) => {
+  const appId = (req as any).appAccess.appId;
   if (!serverSnapshots.has(appId)) serverSnapshots.set(appId, createDefaultSnapshots(appId));
   res.json(serverSnapshots.get(appId));
 });
 
-app.post('/api/apps/:appId/snapshots', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/snapshots', verifyAuth, requireAppId('write', 'backup'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
+  const appId = (req as any).appAccess.appId;
+  const source = (req as any).appRecord;
   const snapshot = {
     id: crypto.randomUUID(),
     appId,
@@ -986,11 +1013,9 @@ app.post('/api/apps/:appId/snapshots', verifyAuth, async (req: Request, res: Res
   res.status(201).json(snapshot);
 });
 
-app.post('/api/apps/:appId/snapshots/:snapshotId/restore', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/snapshots/:snapshotId/restore', verifyAuth, requireAppId('write', 'backup'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId, snapshotId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
   const snapshots = serverSnapshots.get(appId) || createDefaultSnapshots(appId);
   const snapshot = snapshots.find((item) => item.id === snapshotId);
   if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
@@ -1000,34 +1025,20 @@ app.post('/api/apps/:appId/snapshots/:snapshotId/restore', verifyAuth, async (re
   res.json(snapshot);
 });
 
-// GET /api/apps/:appId/status - Get app status
-app.get('/api/apps/:appId/status', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
+// GET /api/apps/:appId/status - Get app status (owner or authorized assignment)
+app.get('/api/apps/:appId/status', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
+  const appRecord = (req as any).appRecord;
 
   try {
-    const { data, error } = await supabase
-      .from('docker_apps')
-      .select('id, status, started_at, memory_limit, cpu_shares')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'App not found' });
-    }
-
-    res.json({ status: data.status, started_at: data.started_at, memory_limit: data.memory_limit, cpu_shares: data.cpu_shares });
+    res.json({ status: appRecord.status, started_at: appRecord.started_at, memory_limit: appRecord.memory_limit, cpu_shares: appRecord.cpu_shares });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch app status' });
   }
 });
 
-app.get('/api/apps/:appId/autopilot', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
+app.get('/api/apps/:appId/autopilot', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
+  const appId = (req as any).appAccess.appId;
+  const source = (req as any).appRecord;
   const memoryLimit = source.memory_limit || '1024m';
   const cpuShares = source.cpu_shares || 512;
   res.json([
@@ -1078,11 +1089,9 @@ app.post('/api/workspaces', verifyAuth, async (req: Request, res: Response) => {
   res.status(201).json(workspace);
 });
 
-app.get('/api/apps/:appId/billing', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
+app.get('/api/apps/:appId/billing', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
+  const appId = (req as any).appAccess.appId;
+  const source = (req as any).appRecord;
   const ramGb = source.memory_limit?.includes('g') ? parseFloat(source.memory_limit) : 1;
   const cpuCores = Math.max(0.5, (source.cpu_shares || 512) / 1024);
   const lineItems = [
@@ -1096,11 +1105,9 @@ app.get('/api/apps/:appId/billing', verifyAuth, async (req: Request, res: Respon
   res.json({ appId, currency: 'EUR', currentMonth: monthlyEstimate * 0.42, monthlyEstimate, lineItems });
 });
 
-app.post('/api/apps/:appId/plugins/:pluginId/install', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/plugins/:pluginId/install', verifyAuth, requireAppId('write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId, pluginId } = req.params;
-  const source = await getOwnedAppOrNull(appId, userId);
-  if (!source) return res.status(404).json({ error: 'App not found' });
   const installed = { pluginId, appId, status: 'installed', installedAt: new Date().toISOString() };
   pluginInstallations.set(appId, [installed, ...(pluginInstallations.get(appId) || []).filter((item) => item.pluginId !== pluginId)]);
   await logAudit(userId, 'app:plugin-install', 'plugin', pluginId, null, installed);
@@ -1161,20 +1168,12 @@ app.get('/api/config/mode', verifyAuth, async (req: Request, res: Response) => {
 // ============================================================================
 
 // GET /api/apps/:appId/config - List config files in container
-app.get('/api/apps/:appId/config', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
-  const { appId } = req.params;
+app.get('/api/apps/:appId/config', verifyAuth, requireAppId('read', 'config'), async (req: Request, res: Response) => {
+  const appId = (req as any).appAccess.appId;
+  const app = (req as any).appRecord;
   const path = (req.query.path as string) || '/';
 
   try {
-    const { data: app, error } = await supabase
-      .from('docker_apps')
-      .select('container_id')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !app) return res.status(404).json({ error: 'App not found' });
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
     const safePath = path.replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
@@ -1204,22 +1203,14 @@ app.get('/api/apps/:appId/config', verifyAuth, async (req: Request, res: Respons
 });
 
 // GET /api/apps/:appId/config/read - Read a config file
-app.get('/api/apps/:appId/config/read', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+app.get('/api/apps/:appId/config/read', verifyAuth, requireAppId('read', 'config'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   const file = req.query.file as string;
 
   if (!file) return res.status(400).json({ error: 'file query parameter is required' });
 
   try {
-    const { data: app, error } = await supabase
-      .from('docker_apps')
-      .select('container_id')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    const app = (req as any).appRecord;
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
     const { stdout, stderr } = await runCommand('docker', ['exec', app.container_id, 'cat', file]).catch((err: any) => {
@@ -1240,7 +1231,7 @@ app.get('/api/apps/:appId/config/read', verifyAuth, async (req: Request, res: Re
 });
 
 // POST /api/apps/:appId/config/write - Write/save a config file
-app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/config/write', verifyAuth, requireAppId('write', 'config'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
   const { path: filePath, content } = req.body;
@@ -1248,14 +1239,7 @@ app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: 
   if (!filePath || content === undefined) return res.status(400).json({ error: 'path and content are required' });
 
   try {
-    const { data: app, error } = await supabase
-      .from('docker_apps')
-      .select('container_id')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    const app = (req as any).appRecord;
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
     const timestamp = Date.now();
@@ -1279,8 +1263,7 @@ app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: 
 });
 
 // GET /api/apps/:appId/config/validate - Validate YAML/JSON syntax
-app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res: Response) => {
-  const userId = (req as any).user.id;
+app.get('/api/apps/:appId/config/validate', verifyAuth, requireAppId('read', 'config'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   const rawFile = req.query.file;
 
@@ -1294,14 +1277,7 @@ app.get('/api/apps/:appId/config/validate', verifyAuth, async (req: Request, res
   }
 
   try {
-    const { data: app, error } = await supabase
-      .from('docker_apps')
-      .select('container_id')
-      .eq('id', appId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !app) return res.status(404).json({ error: 'App not found' });
+    const app = (req as any).appRecord;
     if (!app.container_id) return res.status(400).json({ error: 'No container associated with this app' });
 
     const { stdout } = await runCommand('docker', ['exec', app.container_id, 'cat', file]).catch((err: any) => {
@@ -1380,11 +1356,35 @@ async function forwardToIntegration(req: Request, res: Response, path: string) {
   }
 }
 
+/**
+ * 2FA settings are personal: a caller may only manage their own enrolment.
+ * `forwardToIntegration` relays the client body verbatim, so gate any
+ * `user_id` in it against the authenticated identity (RBAC deny-by-default
+ * applies even to personal flows) and default it to the caller's id.
+ */
+function selfOrRequestBodyUser(req: Request): boolean {
+  const userId = (req as any).user?.id;
+  const bodyUserId = (req.body || {}).user_id;
+  if (typeof bodyUserId === 'string' && bodyUserId && bodyUserId !== userId) return false;
+  if (!bodyUserId && userId) {
+    (req as any).body = { ...(req.body || {}), user_id: userId };
+  }
+  return true;
+}
+
 app.post('/api/auth/2fa/setup', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  if (!selfOrRequestBodyUser(req)) {
+    return res.status(403).json({ error: 'Forbidden', code: 'rbac_denied' });
+  }
   await forwardToIntegration(req, res, '/api/auth/2fa/setup');
+  await logAudit(userId, 'auth:2fa-setup', 'settings', userId);
 });
 
 app.post('/api/auth/2fa/verify-setup', verifyAuth, async (req: Request, res: Response) => {
+  if (!selfOrRequestBodyUser(req)) {
+    return res.status(403).json({ error: 'Forbidden', code: 'rbac_denied' });
+  }
   await forwardToIntegration(req, res, '/api/auth/2fa/verify-setup');
 });
 
@@ -1393,7 +1393,12 @@ app.post('/api/auth/2fa/verify', loginLimiter, async (req: Request, res: Respons
 });
 
 app.post('/api/auth/2fa/disable', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  if (!selfOrRequestBodyUser(req)) {
+    return res.status(403).json({ error: 'Forbidden', code: 'rbac_denied' });
+  }
   await forwardToIntegration(req, res, '/api/auth/2fa/disable');
+  await logAudit(userId, 'auth:2fa-disable', 'settings', userId);
 });
 
 app.get('/api/auth/2fa/backup-codes', verifyAuth, async (req: Request, res: Response) => {
@@ -1453,7 +1458,7 @@ app.get('/api/demo/flag', (_req: Request, res: Response) => {
 
 // Minimal Business Mode MVP: expose a placeholder endpoint for customers
 // Access controlled via existing verifyAuth middleware
-app.get('/api/customers', verifyAuth, customersLimiter, async (req: Request, res: Response) => {
+app.get('/api/customers', verifyAuth, customersLimiter, requireSelfPermission('customers', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
     const { data: cfg } = await supabase.from('setup_config').select('mode').single();
@@ -1509,7 +1514,7 @@ app.get('/api/customers', verifyAuth, customersLimiter, async (req: Request, res
 });
 
 // POST /api/customers - Create a new customer (Business Mode only)
-app.post('/api/customers', verifyAuth, customersLimiter, async (req: Request, res: Response) => {
+app.post('/api/customers', verifyAuth, customersLimiter, requireSelfPermission('customers', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   const { name, email } = req.body;
   try {
@@ -1530,7 +1535,7 @@ app.post('/api/customers', verifyAuth, customersLimiter, async (req: Request, re
 });
 
 // POST /api/seed-demo - Seed demo data (customers + apps) for quick local demos
-app.post('/api/seed-demo', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/seed-demo', verifyAuth, requireSelfPermission('customers', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   try {
     const { data: cfg } = await supabase.from('setup_config').select('mode').single();
@@ -1586,7 +1591,7 @@ app.post('/api/seed-demo', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // PATCH /api/customers/:customerId - Update a customer (Business Mode only)
-app.patch('/api/customers/:customerId', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/customers/:customerId', verifyAuth, requireSelfPermission('customers', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   const { customerId } = req.params;
   const updates = req.body;
@@ -1609,7 +1614,7 @@ app.patch('/api/customers/:customerId', verifyAuth, async (req: Request, res: Re
 });
 
 // DELETE /api/customers/:customerId - Delete a customer (Business Mode only)
-app.delete('/api/customers/:customerId', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/customers/:customerId', verifyAuth, requireSelfPermission('customers', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   const { customerId } = req.params;
   try {
@@ -1630,7 +1635,7 @@ app.delete('/api/customers/:customerId', verifyAuth, async (req: Request, res: R
 // ============================================================================
 
 // GET /api/apps/:appId/metrics - Server metrics for an app
-app.get('/api/apps/:appId/metrics', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/apps/:appId/metrics', verifyAuth, requireAppId('read', 'metrics'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   const range = (req.query.range as string) || '30m';
   try {
@@ -1694,7 +1699,7 @@ app.get('/api/metrics/aggregated', verifyAuth, async (req: Request, res: Respons
 });
 
 // GET /api/metrics/realtime - Real-time resource data
-app.get('/api/metrics/realtime', verifyAuth, generalLimiter, async (req: Request, res: Response) => {
+app.get('/api/metrics/realtime', verifyAuth, generalLimiter, requireAppId('read', 'metrics'), async (req: Request, res: Response) => {
   const appId = req.query.appId as string | undefined;
   try {
     if (appId) {
@@ -1764,7 +1769,7 @@ app.get('/api/metrics/realtime', verifyAuth, generalLimiter, async (req: Request
 });
 
 // GET /api/metrics/history - Historical time-series metrics
-app.get('/api/metrics/history', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/metrics/history', verifyAuth, requireAppId('read', 'metrics', { optional: true }), async (req: Request, res: Response) => {
   const appId = req.query.appId as string | undefined;
   const period = (req.query.period as string) || '1h';
   const resolution = (req.query.resolution as string) || '5m';
@@ -1869,7 +1874,7 @@ app.get('/api/logs/access', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // GET /api/apps/:appId/config-versions - Config version history
-app.get('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/apps/:appId/config-versions', verifyAuth, requireAppId('read', 'config'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   try {
     const { data, error } = await supabase
@@ -1885,7 +1890,7 @@ app.get('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, res
 });
 
 // POST /api/apps/:appId/config-versions - Create config version snapshot
-app.post('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/config-versions', verifyAuth, requireAppId('write', 'config'), async (req: Request, res: Response) => {
   const { appId } = req.params;
   const userId = (req as any).user.id;
   const { config_snapshot, change_summary } = req.body;
@@ -1911,7 +1916,7 @@ app.post('/api/apps/:appId/config-versions', verifyAuth, async (req: Request, re
 });
 
 // POST /api/apps/:appId/config-versions/:version/rollback - Rollback to version
-app.post('/api/apps/:appId/config-versions/:version/rollback', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/config-versions/:version/rollback', verifyAuth, requireAppId('write', 'config'), async (req: Request, res: Response) => {
   const { appId, version } = req.params;
   const userId = (req as any).user.id;
   try {
@@ -1953,7 +1958,7 @@ app.post('/api/apps/:appId/config-versions/:version/rollback', verifyAuth, async
 });
 
 // Maintenance Windows CRUD
-app.get('/api/maintenance-windows', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/maintenance-windows', verifyAuth, requireSelfPermission('maintenance', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data, error } = await supabase
@@ -1968,7 +1973,7 @@ app.get('/api/maintenance-windows', verifyAuth, async (req: Request, res: Respon
   }
 });
 
-app.post('/api/maintenance-windows', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/maintenance-windows', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { title, description, app_id, starts_at, ends_at } = req.body;
   try {
@@ -1984,7 +1989,7 @@ app.post('/api/maintenance-windows', verifyAuth, async (req: Request, res: Respo
   }
 });
 
-app.patch('/api/maintenance-windows/:id', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/maintenance-windows/:id', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2018,7 +2023,7 @@ const setScheduledTasks = async (tasks: any[]): Promise<void> => {
     .upsert({ key: 'scheduled_tasks', value: tasks }, { onConflict: 'key' });
 };
 
-app.get('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/scheduled-tasks', verifyAuth, requireSelfPermission('maintenance', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const tasks = await getScheduledTasks();
@@ -2029,7 +2034,7 @@ app.get('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response) 
   }
 });
 
-app.post('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/scheduled-tasks', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, description, taskType, targetAppId, cronExpression, command } = req.body;
 
@@ -2067,7 +2072,7 @@ app.post('/api/scheduled-tasks', verifyAuth, async (req: Request, res: Response)
   }
 });
 
-app.patch('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/scheduled-tasks/:id', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2083,7 +2088,7 @@ app.patch('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Resp
   }
 });
 
-app.delete('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/scheduled-tasks/:id', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2099,7 +2104,7 @@ app.delete('/api/scheduled-tasks/:id', verifyAuth, async (req: Request, res: Res
   }
 });
 
-app.post('/api/scheduled-tasks/:id/toggle', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/scheduled-tasks/:id/toggle', verifyAuth, requireSelfPermission('maintenance', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2116,7 +2121,7 @@ app.post('/api/scheduled-tasks/:id/toggle', verifyAuth, async (req: Request, res
 });
 
 // Backup Jobs CRUD
-app.get('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/backup-jobs', verifyAuth, requireSelfPermission('backup', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const appId = req.query.app_id as string | undefined;
   try {
@@ -2133,7 +2138,7 @@ app.get('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/backup-jobs', verifyAuth, requireSelfPermission('backup', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, app_id, schedule_type, retention_count } = req.body;
   try {
@@ -2150,7 +2155,7 @@ app.post('/api/backup-jobs', verifyAuth, async (req: Request, res: Response) => 
   }
 });
 
-app.patch('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/backup-jobs/:id', verifyAuth, requireSelfPermission('backup', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2169,7 +2174,7 @@ app.patch('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Response
   }
 });
 
-app.delete('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/backup-jobs/:id', verifyAuth, requireSelfPermission('backup', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2183,7 +2188,7 @@ app.delete('/api/backup-jobs/:id', verifyAuth, async (req: Request, res: Respons
 });
 
 // GET /api/backup-jobs/:jobId/status - Backup status history
-app.get('/api/backup-jobs/:jobId/status', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/backup-jobs/:jobId/status', verifyAuth, requireSelfPermission('backup', 'read'), async (req: Request, res: Response) => {
   const { jobId } = req.params;
   try {
     const { data, error } = await supabase
@@ -2208,7 +2213,7 @@ const backupArtifactsLimiter = rateLimit({
 });
 
 // GET /api/backup-artifacts - Read-only list of db-backup.sh artifacts
-app.get('/api/backup-artifacts', verifyAuth, backupArtifactsLimiter, async (_req: Request, res: Response) => {
+app.get('/api/backup-artifacts', verifyAuth, backupArtifactsLimiter, requireSelfPermission('backup', 'read'), async (_req: Request, res: Response) => {
   try {
     const dir = process.env.BACKUP_DIR || path.resolve(__dirname, '..', '..', '..', 'backups');
     let names: string[] = [];
@@ -2242,7 +2247,7 @@ app.get('/api/backup-artifacts', verifyAuth, backupArtifactsLimiter, async (_req
 });
 
 // POST /api/backup/config - S3/Backblaze backup storage configuration
-app.post('/api/backup/config', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/backup/config', verifyAuth, requireSelfPermission('backup', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { s3_bucket, s3_key, s3_secret, s3_endpoint } = req.body;
   await supabase.from('shared_config').upsert({ key: `backup_s3_config_${userId}`, value: { s3_bucket, s3_key, s3_secret: s3_secret ? '***' : undefined, s3_endpoint } }, { onConflict: 'key' });
@@ -2250,14 +2255,14 @@ app.post('/api/backup/config', verifyAuth, async (req: Request, res: Response) =
 });
 
 // POST /api/backups/:backupId/restore - Restore from backup
-app.post('/api/backups/:backupId/restore', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/backups/:backupId/restore', verifyAuth, requireSelfPermission('backup', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { target } = req.body;
   res.json({ status: 'restore_initiated', backup_id: req.params.backupId, target: target || 'original', message: 'Restore process started' });
 });
 
 // Alert Configs CRUD
-app.get('/api/alert-configs', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/alert-configs', verifyAuth, requireSelfPermission('notifications', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data, error } = await supabase
@@ -2272,7 +2277,7 @@ app.get('/api/alert-configs', verifyAuth, async (req: Request, res: Response) =>
   }
 });
 
-app.post('/api/alert-configs', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/alert-configs', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { metric_type, operator, threshold, enabled, notify_email } = req.body;
   try {
@@ -2289,7 +2294,7 @@ app.post('/api/alert-configs', verifyAuth, async (req: Request, res: Response) =
   }
 });
 
-app.patch('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/alert-configs/:id', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2308,7 +2313,7 @@ app.patch('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Respon
   }
 });
 
-app.delete('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/alert-configs/:id', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2322,7 +2327,7 @@ app.delete('/api/alert-configs/:id', verifyAuth, async (req: Request, res: Respo
 });
 
 // Alert History
-app.get('/api/alert-history', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/alert-history', verifyAuth, requireSelfPermission('notifications', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data: configs } = await supabase.from('alert_configs').select('id').eq('user_id', userId);
@@ -2341,7 +2346,7 @@ app.get('/api/alert-history', verifyAuth, async (req: Request, res: Response) =>
   }
 });
 
-app.post('/api/alert-history/:id/acknowledge', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/alert-history/:id/acknowledge', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const { data, error } = await supabase
@@ -2358,7 +2363,7 @@ app.post('/api/alert-history/:id/acknowledge', verifyAuth, async (req: Request, 
 });
 
 // Health Checks
-app.get('/api/health-checks', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/health-checks', verifyAuth, requireSelfPermission('metrics', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const appId = req.query.app_id as string;
   try {
@@ -2373,7 +2378,7 @@ app.get('/api/health-checks', verifyAuth, async (req: Request, res: Response) =>
 });
 
 // Reports & Export
-app.get('/api/reports', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/reports', verifyAuth, requireSelfPermission('reports', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const startDate = req.query.start_date as string;
   const endDate = req.query.end_date as string;
@@ -2385,7 +2390,7 @@ app.get('/api/reports', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/reports/export', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/reports/export', verifyAuth, requireSelfPermission('reports', 'export'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const startDate = req.query.start_date as string;
   const endDate = req.query.end_date as string;
@@ -2439,7 +2444,7 @@ function maskPassword(pwd: string): string {
 }
 
 // GET /api/databases - List databases for current user
-app.get('/api/databases', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/databases', verifyAuth, requireSelfPermission('databases', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data } = await supabase
@@ -2460,7 +2465,7 @@ app.get('/api/databases', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // POST /api/databases - Create a new database
-app.post('/api/databases', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/databases', verifyAuth, requireSelfPermission('databases', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, appId } = req.body;
 
@@ -2509,7 +2514,7 @@ app.post('/api/databases', verifyAuth, async (req: Request, res: Response) => {
 });
 
 // GET /api/databases/:id - Get database details
-app.get('/api/databases/:id', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/databases/:id', verifyAuth, requireSelfPermission('databases', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2531,7 +2536,7 @@ app.get('/api/databases/:id', verifyAuth, async (req: Request, res: Response) =>
 });
 
 // DELETE /api/databases/:id - Delete a database
-app.delete('/api/databases/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/databases/:id', verifyAuth, requireSelfPermission('databases', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2599,7 +2604,7 @@ app.get('/api/modpacks/search', verifyAuth, async (req: Request, res: Response) 
 });
 
 // POST /api/apps/:appId/modpacks/install - Trigger modpack installation
-app.post('/api/apps/:appId/modpacks/install', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/apps/:appId/modpacks/install', verifyAuth, requireAppId('write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
   const { modpackId, platform } = req.body;
@@ -2677,7 +2682,7 @@ app.post('/api/apps/:appId/modpacks/install', verifyAuth, async (req: Request, r
 });
 
 // GET /api/apps/:appId/modpacks/status - Check installation status
-app.get('/api/apps/:appId/modpacks/status', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/apps/:appId/modpacks/status', verifyAuth, requireAppId('read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId } = req.params;
 
@@ -2694,7 +2699,7 @@ app.get('/api/apps/:appId/modpacks/status', verifyAuth, async (req: Request, res
 // AUDIT LOG ROUTE
 // ============================================================================
 
-app.get('/api/audit-log', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/audit-log', verifyAuth, requireSelfPermission('audit', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
   const offset = parseInt(req.query.offset as string) || 0;
@@ -2772,7 +2777,7 @@ app.get('/api/search', verifyAuth, async (req: Request, res: Response) => {
 // NOTIFICATION CHANNELS ROUTES
 // ============================================================================
 
-app.get('/api/notification-channels', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/notification-channels', verifyAuth, requireSelfPermission('notifications', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const { data, error } = await supabase
@@ -2787,7 +2792,7 @@ app.get('/api/notification-channels', verifyAuth, async (req: Request, res: Resp
   }
 });
 
-app.post('/api/notification-channels', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/notification-channels', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, type, config } = req.body;
   if (!name || !type || !config) {
@@ -2810,7 +2815,7 @@ app.post('/api/notification-channels', verifyAuth, async (req: Request, res: Res
   }
 });
 
-app.patch('/api/notification-channels/:id', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/notification-channels/:id', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2829,7 +2834,7 @@ app.patch('/api/notification-channels/:id', verifyAuth, async (req: Request, res
   }
 });
 
-app.delete('/api/notification-channels/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/notification-channels/:id', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2915,7 +2920,7 @@ const forwardDeploymentToOrchestrator = async (deployment: any): Promise<any | n
   }
 };
 
-app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/deployments', verifyAuth, requireSelfPermission('deployment', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     const deployments = await getDeployments();
@@ -2926,7 +2931,7 @@ app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/deployments', verifyAuth, requireSelfPermission('deployment', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, repoUrl, branch, containerId, targetDir, installCommand, restartCommand, dryRun } = req.body;
 
@@ -2966,7 +2971,7 @@ app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => 
   }
 });
 
-app.delete('/api/deployments/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/deployments/:id', verifyAuth, requireSelfPermission('deployment', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2982,7 +2987,7 @@ app.delete('/api/deployments/:id', verifyAuth, async (req: Request, res: Respons
   }
 });
 
-app.patch('/api/deployments/:id/toggle', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/deployments/:id/toggle', verifyAuth, requireSelfPermission('deployment', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -2998,7 +3003,7 @@ app.patch('/api/deployments/:id/toggle', verifyAuth, async (req: Request, res: R
   }
 });
 
-app.get('/api/deployments/:id/history', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/deployments/:id/history', verifyAuth, requireSelfPermission('deployment', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -3011,7 +3016,7 @@ app.get('/api/deployments/:id/history', verifyAuth, async (req: Request, res: Re
   }
 });
 
-app.post('/api/notification-channels/:id/test', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/notification-channels/:id/test', verifyAuth, requireSelfPermission('notifications', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { id } = req.params;
   try {
@@ -3421,46 +3426,23 @@ app.post('/api/config/:appId/advice/:suggestionId/apply', verifyAuth, generalLim
 
 const httpServer = http.createServer(app);
 
-/**
- * True when the user owns the app (docker_apps.user_id).
- * @param userId - Authenticated user id
- * @param appId - App id from the message or ticket scope
- */
-async function wsUserOwnsApp(userId: string, appId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('docker_apps')
-    .select('user_id')
-    .eq('id', appId)
-    .maybeSingle();
-  if (error || !data) return false;
-  return data.user_id === userId;
-}
-
-/**
- * Look up a user's role assignment for an app (in-memory model).
- * @returns The assignment, or null when the user has no role on the app
- */
-function wsRoleAssignment(userId: string, appId: string): any | null {
-  const roles = serverRoles.get(appId);
-  if (!roles) return null;
-  return roles.find((role) => role && role.principal === userId) ?? null;
-}
+/* App access decisions live entirely in the RBAC store
+ * (`server/rbac/store.ts`); WebSocket and HTTP share the same resolver. */
 
 /**
  * Resolve whether a user may perform a WebSocket action on an app.
- * Owners may do everything; role assignments gate on `permissions`:
- * `logs:read` needs `console` or `files`, `metrics:read` needs any assignment,
- * and terminal actions need `console`.
+ * Whole decision delegated to the RBAC store, which applies ownership,
+ * app assignments, and instance roles with the same permission mapping
+ * the HTTP middleware uses.
  */
 async function resolveWsAppAccess(userId: string, appId: string, action: WsAction): Promise<boolean> {
-  const isOwner = await wsUserOwnsApp(userId, appId);
-  if (isOwner) return true;
-  const assignment = wsRoleAssignment(userId, appId);
-  if (!assignment) return false;
-  const permissions = assignment.permissions || {};
-  if (action === 'metrics:read') return true;
-  if (action === 'logs:read') return permissions.console === true || permissions.files === true;
-  return permissions.console === true;
+  try {
+    return await rbacStore!.resolveAppAccess(userId, appId, action);
+  } catch (err) {
+    // Fail closed: the gateway denies on resolver errors.
+    console.error('[ws] app access resolution failed:', err instanceof Error ? err.message : err);
+    return false;
+  }
 }
 
 /**
@@ -3482,12 +3464,15 @@ async function resolveWsContainerId(appId: string): Promise<string | null> {
 
 /**
  * Whether a user may request a ticket scoped to a specific app.
- * Scoping is allowed for owners and for users with a role assignment; the
- * ticket scope only narrows access, the gateway still re-checks every action.
+ * Ownership, any app assignment, or instance access qualifies; the ticket
+ * scope only narrows access, the gateway still re-checks every action.
  */
 async function canScopeWsTicket(userId: string, appId: string): Promise<boolean> {
-  if (await wsUserOwnsApp(userId, appId)) return true;
-  return wsRoleAssignment(userId, appId) !== null;
+  try {
+    return (await rbacStore!.can(userId, 'app', 'read', { appId })).allowed;
+  } catch {
+    return false;
+  }
 }
 
 const wsConfig = loadWsConfig(process.env);
@@ -3524,7 +3509,7 @@ export { httpServer, wsGateway };
 // SSH Session Management API Routes
 // ============================================================================
 
-app.get('/api/ssh/sessions', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/ssh/sessions', verifyAuth, requireSelfPermission('ssh', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { status } = req.query;
   let query = supabase.from('ssh_sessions').select('*').eq('user_id', userId).order('started_at', { ascending: false });
@@ -3534,7 +3519,7 @@ app.get('/api/ssh/sessions', verifyAuth, async (req: Request, res: Response) => 
   res.json({ sessions: data || [] });
 });
 
-app.post('/api/ssh/connect', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/ssh/connect', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { server, user, jump_host, port } = req.body;
   const { data, error } = await supabase.from('ssh_sessions').insert({
@@ -3544,14 +3529,14 @@ app.post('/api/ssh/connect', verifyAuth, async (req: Request, res: Response) => 
   res.json({ session: data, message: `SSH session connecting to ${user || 'root'}@${server}` });
 });
 
-app.get('/api/ssh/jump-hosts', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/ssh/jump-hosts', verifyAuth, requireSelfPermission('ssh', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('ssh_jump_hosts').select('*').eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ jump_hosts: data || [] });
 });
 
-app.post('/api/ssh/jump-hosts', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/ssh/jump-hosts', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, host, user } = req.body;
   const { data, error } = await supabase.from('ssh_jump_hosts').insert({ user_id: userId, name, host, username: user || 'root' }).select().single();
@@ -3559,14 +3544,14 @@ app.post('/api/ssh/jump-hosts', verifyAuth, async (req: Request, res: Response) 
   res.json(data);
 });
 
-app.get('/api/ssh/keys', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/ssh/keys', verifyAuth, requireSelfPermission('ssh', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('ssh_keys').select('*').eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ keys: data || [] });
 });
 
-app.post('/api/ssh/keys', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/ssh/keys', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, key } = req.body;
   const fingerprint = crypto.createHash('sha256').update(key).digest('hex');
@@ -3575,28 +3560,28 @@ app.post('/api/ssh/keys', verifyAuth, async (req: Request, res: Response) => {
   res.json(data);
 });
 
-app.delete('/api/ssh/keys/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/ssh/keys/:id', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('ssh_keys').delete().eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ status: 'deleted' });
 });
 
-app.get('/api/ssh/sessions/:id/recording', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/ssh/sessions/:id/recording', verifyAuth, requireSelfPermission('ssh', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('ssh_sessions').select('recording').eq('id', req.params.id).eq('user_id', userId).single();
   if (error) return res.status(500).json({ error: error.message });
   res.json({ recording: data?.recording || 'No recording available' });
 });
 
-app.get('/api/ssh/saved-hosts', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/ssh/saved-hosts', verifyAuth, requireSelfPermission('ssh', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('ssh_saved_hosts').select('*').eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ hosts: data || [] });
 });
 
-app.post('/api/ssh/saved-hosts', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/ssh/saved-hosts', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, host, port } = req.body;
   const { data, error } = await supabase.from('ssh_saved_hosts').insert({ user_id: userId, name, host, port: port || 22 }).select().single();
@@ -3604,7 +3589,7 @@ app.post('/api/ssh/saved-hosts', verifyAuth, async (req: Request, res: Response)
   res.json(data);
 });
 
-app.delete('/api/ssh/saved-hosts/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/ssh/saved-hosts/:id', verifyAuth, requireSelfPermission('ssh', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('ssh_saved_hosts').delete().eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
@@ -3615,7 +3600,7 @@ app.delete('/api/ssh/saved-hosts/:id', verifyAuth, async (req: Request, res: Res
 // Server Inventory API Routes
 // ============================================================================
 
-app.get('/api/inventory', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/inventory', verifyAuth, requireSelfPermission('inventory', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   let query = supabase.from('server_inventory').select('*').eq('user_id', userId);
   const { tag, environment, region, owner, provider } = req.query;
@@ -3629,7 +3614,7 @@ app.get('/api/inventory', verifyAuth, async (req: Request, res: Response) => {
   res.json({ inventory: data || [] });
 });
 
-app.get('/api/inventory/tags', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/inventory/tags', verifyAuth, requireSelfPermission('inventory', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('server_inventory').select('tags').eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
@@ -3638,14 +3623,14 @@ app.get('/api/inventory/tags', verifyAuth, async (req: Request, res: Response) =
   res.json({ tags: Array.from(allTags) });
 });
 
-app.get('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/inventory/:serverId', verifyAuth, requireSelfPermission('inventory', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('server_inventory').select('*').eq('server_id', req.params.serverId).eq('user_id', userId).single();
   if (error) return res.status(404).json({ error: 'Not found' });
   res.json(data);
 });
 
-app.patch('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Response) => {
+app.patch('/api/inventory/:serverId', verifyAuth, requireSelfPermission('inventory', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('server_inventory').update(req.body).eq('server_id', req.params.serverId).eq('user_id', userId).select().single();
   if (error) return res.status(500).json({ error: error.message });
@@ -3653,14 +3638,14 @@ app.patch('/api/inventory/:serverId', verifyAuth, async (req: Request, res: Resp
   res.json(data);
 });
 
-app.get('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/inventory/:serverId/tags', verifyAuth, requireSelfPermission('inventory', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
   if (error) return res.status(404).json({ error: 'Not found' });
   res.json({ tags: data?.tags || [] });
 });
 
-app.post('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/inventory/:serverId/tags', verifyAuth, requireSelfPermission('inventory', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { tag } = req.body;
   const { data: existing } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
@@ -3671,7 +3656,7 @@ app.post('/api/inventory/:serverId/tags', verifyAuth, async (req: Request, res: 
   res.json(data);
 });
 
-app.delete('/api/inventory/:serverId/tags/:tag', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/inventory/:serverId/tags/:tag', verifyAuth, requireSelfPermission('inventory', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: existing } = await supabase.from('server_inventory').select('tags').eq('server_id', req.params.serverId).eq('user_id', userId).single();
   const tags = (existing?.tags || []).filter((t: string) => t !== req.params.tag);
@@ -3684,7 +3669,7 @@ app.delete('/api/inventory/:serverId/tags/:tag', verifyAuth, async (req: Request
 // Secret Management API Routes
 // ============================================================================
 
-app.get('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/secrets', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { path } = req.query;
   let query = supabase.from('secrets').select('id, key, version, rotate, rotation_days, last_rotated, next_rotation, created_at, updated_at').eq('user_id', userId);
@@ -3694,14 +3679,14 @@ app.get('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
   res.json({ secrets: data || [] });
 });
 
-app.get('/api/secrets/due-for-rotation', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/secrets/due-for-rotation', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('secrets').select('*').eq('user_id', userId).eq('rotate', true).lte('next_rotation', new Date().toISOString());
   if (error) return res.status(500).json({ error: error.message });
   res.json({ secrets: data || [] });
 });
 
-app.get('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/secrets/:key', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { version } = req.query;
   if (version) {
@@ -3716,7 +3701,7 @@ app.get('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => 
   res.json({ value: data.value, version: data.version, key: data.key });
 });
 
-app.post('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/secrets', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { key, value, rotate, rotation_days } = req.body;
   const { data: existing } = await supabase.from('secrets').select('id, version').eq('key', key).eq('user_id', userId).single();
@@ -3734,14 +3719,14 @@ app.post('/api/secrets', verifyAuth, async (req: Request, res: Response) => {
   res.json(data);
 });
 
-app.delete('/api/secrets/:key', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/secrets/:key', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('secrets').delete().eq('key', req.params.key).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ status: 'deleted' });
 });
 
-app.get('/api/secrets/:key/versions', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/secrets/:key/versions', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3750,7 +3735,7 @@ app.get('/api/secrets/:key/versions', verifyAuth, async (req: Request, res: Resp
   res.json({ versions: data || [] });
 });
 
-app.post('/api/secrets/:key/rotate', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/secrets/:key/rotate', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: secret } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3763,7 +3748,7 @@ app.post('/api/secrets/:key/rotate', verifyAuth, async (req: Request, res: Respo
   res.json(data);
 });
 
-app.post('/api/secrets/rotate-all', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/secrets/rotate-all', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: secrets } = await supabase.from('secrets').select('*').eq('user_id', userId).eq('rotate', true).lte('next_rotation', new Date().toISOString());
   const results = [];
@@ -3777,7 +3762,7 @@ app.post('/api/secrets/rotate-all', verifyAuth, async (req: Request, res: Respon
   res.json({ rotated: results.length, secrets: results });
 });
 
-app.get('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/secrets/:key/access', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3786,7 +3771,7 @@ app.get('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Respon
   res.json({ access: data || [] });
 });
 
-app.post('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/secrets/:key/access', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3796,7 +3781,7 @@ app.post('/api/secrets/:key/access', verifyAuth, async (req: Request, res: Respo
   res.json(data);
 });
 
-app.delete('/api/secrets/:key/access/:role', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/secrets/:key/access/:role', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3809,14 +3794,14 @@ app.delete('/api/secrets/:key/access/:role', verifyAuth, async (req: Request, re
 // Webhook Management API Routes
 // ============================================================================
 
-app.get('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/webhooks', verifyAuth, requireSelfPermission('webhooks', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ webhooks: data || [] });
 });
 
-app.post('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/webhooks', verifyAuth, requireSelfPermission('webhooks', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, url, events, secret } = req.body;
   const { data, error } = await supabase.from('webhooks').insert({ user_id: userId, name, url, events: events || [], secret }).select().single();
@@ -3825,7 +3810,7 @@ app.post('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
   res.json(data);
 });
 
-app.delete('/api/webhooks/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/webhooks/:id', verifyAuth, requireSelfPermission('webhooks', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('webhooks').delete().eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
@@ -3833,12 +3818,12 @@ app.delete('/api/webhooks/:id', verifyAuth, async (req: Request, res: Response) 
   res.json({ status: 'deleted' });
 });
 
-app.post('/api/webhooks/test', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/webhooks/test', verifyAuth, requireSelfPermission('webhooks', 'write'), async (req: Request, res: Response) => {
   const { event } = req.body;
   res.json({ status: 'test_sent', event: event || 'test', note: 'Webhook test endpoint ready. Configure a real webhook to receive events.' });
 });
 
-app.post('/api/webhooks/:id/test', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/webhooks/:id/test', verifyAuth, requireSelfPermission('webhooks', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: webhook } = await supabase.from('webhooks').select('*').eq('id', req.params.id).eq('user_id', userId).single();
   if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
@@ -3853,7 +3838,7 @@ app.post('/api/webhooks/:id/test', verifyAuth, async (req: Request, res: Respons
   }
 });
 
-app.get('/api/webhooks/logs', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/webhooks/logs', verifyAuth, requireSelfPermission('webhooks', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: webhooks } = await supabase.from('webhooks').select('id').eq('user_id', userId);
   const ids = (webhooks || []).map((w: any) => w.id);
@@ -3863,7 +3848,7 @@ app.get('/api/webhooks/logs', verifyAuth, async (req: Request, res: Response) =>
   res.json({ logs: data || [] });
 });
 
-app.get('/api/webhooks/:id/logs', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/webhooks/:id/logs', verifyAuth, requireSelfPermission('webhooks', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: webhook } = await supabase.from('webhooks').select('id').eq('id', req.params.id).eq('user_id', userId).single();
   if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
@@ -3876,14 +3861,14 @@ app.get('/api/webhooks/:id/logs', verifyAuth, async (req: Request, res: Response
 // API Key Management Routes
 // ============================================================================
 
-app.get('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/api-keys', verifyAuth, requireSelfPermission('apikeys', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('api_keys').select('id, name, key_prefix, role, expires_at, last_used_at, created_at').eq('user_id', userId).eq('revoked', false);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ api_keys: data || [] });
 });
 
-app.post('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/api-keys', verifyAuth, requireSelfPermission('apikeys', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, role, expire_days } = req.body;
   const rawKey = `ip_${crypto.randomBytes(24).toString('hex')}`;
@@ -3896,7 +3881,7 @@ app.post('/api/api-keys', verifyAuth, async (req: Request, res: Response) => {
   res.json({ ...data, key: rawKey });
 });
 
-app.delete('/api/api-keys/:id', verifyAuth, async (req: Request, res: Response) => {
+app.delete('/api/api-keys/:id', verifyAuth, requireSelfPermission('apikeys', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('api_keys').update({ revoked: true }).eq('id', req.params.id).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
@@ -3908,7 +3893,7 @@ app.delete('/api/api-keys/:id', verifyAuth, async (req: Request, res: Response) 
 // Plugin Management API Routes
 // ============================================================================
 
-app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/plugins', verifyAuth, requireSelfPermission('plugins', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { installed } = req.query;
   let query = supabase.from('plugins').select('*').eq('user_id', userId);
@@ -3934,7 +3919,7 @@ app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
   res.json({ plugins: allPlugins });
 });
 
-app.post('/api/plugins/install', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/plugins/install', verifyAuth, requireSelfPermission('plugins', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, source, version } = req.body;
   const { data, error } = await supabase.from('plugins').insert({ user_id: userId, name, source, version, installed: true, enabled: true }).select().single();
@@ -3943,32 +3928,32 @@ app.post('/api/plugins/install', verifyAuth, async (req: Request, res: Response)
   res.json(data);
 });
 
-app.post('/api/plugins/:name/uninstall', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/plugins/:name/uninstall', verifyAuth, requireSelfPermission('plugins', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { error } = await supabase.from('plugins').delete().eq('name', req.params.name).eq('user_id', userId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ status: 'uninstalled' });
 });
 
-app.post('/api/plugins/:name/update', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/plugins/:name/update', verifyAuth, requireSelfPermission('plugins', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('plugins').update({ version: '1.0.1', updated_at: new Date().toISOString() }).eq('name', req.params.name).eq('user_id', userId).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data || { status: 'updated' });
 });
 
-app.post('/api/plugins/update-all', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/plugins/update-all', verifyAuth, requireSelfPermission('plugins', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('plugins').update({ version: '1.0.1', updated_at: new Date().toISOString() }).eq('user_id', userId).eq('installed', true);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ status: 'all_updated', count: data?.length || 0 });
 });
 
-app.get('/api/plugins/updates', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/plugins/updates', verifyAuth, requireSelfPermission('plugins', 'read'), async (req: Request, res: Response) => {
   res.json({ updates: [] });
 });
 
-app.get('/api/plugins/:name', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/plugins/:name', verifyAuth, requireSelfPermission('plugins', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data, error } = await supabase.from('plugins').select('*').eq('name', req.params.name).eq('user_id', userId).single();
   if (error) return res.status(404).json({ error: 'Plugin not found or not installed' });
@@ -4006,7 +3991,7 @@ app.get('/api/templates/:name', verifyAuth, async (req: Request, res: Response) 
   res.json(data);
 });
 
-app.post('/api/templates/deploy', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/templates/deploy', verifyAuth, requireSelfPermission('app', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { template: templateName, name, server, variables, dry_run } = req.body;
   const template = BUILTIN_TEMPLATES.find((t) => t.name === templateName);
@@ -4024,7 +4009,7 @@ app.post('/api/templates/deploy', verifyAuth, async (req: Request, res: Response
   res.json({ status: 'deployed', app: data, message: `Template '${templateName}' deployed as '${name}'` });
 });
 
-app.post('/api/templates/init', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/templates/init', verifyAuth, requireInstancePermission('settings', 'write'), async (req: Request, res: Response) => {
   const { template, name, output_dir } = req.body;
   const tpl = BUILTIN_TEMPLATES.find((t) => t.name === template);
   if (!tpl) return res.status(404).json({ error: `Template '${template}' not found` });
@@ -4141,7 +4126,7 @@ app.post('/api/doctor/diagnose/:server', verifyAuth, async (req: Request, res: R
 // Change History / Rollback API Routes
 // ============================================================================
 
-app.get('/api/changes', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/changes', verifyAuth, requireSelfPermission('audit', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { resource, limit } = req.query;
   let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(parseInt(limit as string || '20'));
@@ -4151,7 +4136,7 @@ app.get('/api/changes', verifyAuth, async (req: Request, res: Response) => {
   res.json({ changes: data || [] });
 });
 
-app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/changes/history', verifyAuth, requireSelfPermission('audit', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { resource_type, resource_id } = req.query;
   let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false });
@@ -4162,7 +4147,7 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   res.json({ history: data || [] });
 });
 
-app.post('/api/changes/:id/undo', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/changes/:id/undo', verifyAuth, requireSelfPermission('audit', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { dry_run } = req.body;
   const { data: change } = await supabase.from('change_history').select('*').eq('id', req.params.id).eq('user_id', userId).single();
@@ -4172,7 +4157,7 @@ app.post('/api/changes/:id/undo', verifyAuth, async (req: Request, res: Response
   res.json({ status: 'undone', change });
 });
 
-app.post('/api/rollback', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/rollback', verifyAuth, requireSelfPermission('audit', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { resource_type, resource_id, version } = req.body;
   await supabase.from('change_history').insert({ user_id: userId, resource_type, resource_id, action: 'rollback', summary: `Rollback to ${version || 'previous'}`, new_value: { version } });
@@ -4193,6 +4178,98 @@ app.get('/api/activity', verifyAuth, async (req: Request, res: Response) => {
 // ============================================================================
 // Multi-Tenant / Organization API Routes
 // ============================================================================
+
+// ============================================================================
+// RBAC MANAGEMENT API ROUTES (server/rbac/)
+// ============================================================================
+
+/**
+ * GET /api/rbac/me - The caller's own authorization state: instance role,
+ * app assignments, and org memberships. Powers frontend route guards.
+ */
+app.get('/api/rbac/me', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const instance = await rbacStore!.getInstanceRole(userId);
+    const { data: orgs } = await supabase.from('organization_members').select('organizations(id), role').eq('user_id', userId);
+    res.json({
+      userId,
+      instanceRole: instance?.role ?? null,
+      organizations: (orgs || []).map((row: any) => ({
+        id: row.organizations?.id ?? null,
+        role: row.role,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load authorization state' });
+  }
+});
+
+/**
+ * GET /api/rbac/instance-roles - List instance-level assignments (admin).
+ */
+app.get('/api/rbac/instance-roles', verifyAuth, requireInstancePermission('settings', 'read'), async (_req: Request, res: Response) => {
+  try {
+    res.json({ roles: await rbacStore!.listInstanceRoles() });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to list instance roles' });
+  }
+});
+
+/**
+ * POST /api/rbac/instance-roles - Grant or change an instance role (admin).
+ * Body: { userId, role: 'admin'|'operator'|'viewer' }. Audited.
+ */
+app.post('/api/rbac/instance-roles', verifyAuth, requireInstancePermission('settings', 'write'), async (req: Request, res: Response) => {
+  const actorId = (req as any).user.id;
+  const { userId, role } = req.body || {};
+  if (!userId || typeof userId !== 'string') {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+  if (!['admin', 'operator', 'viewer'].includes(role)) {
+    return res.status(400).json({ error: "role must be 'admin', 'operator' or 'viewer'" });
+  }
+  try {
+    // Lockout guard: refuse to demote the last instance admin.
+    const existing = await rbacStore!.getInstanceRole(userId);
+    if (existing && existing.role === 'admin' && role !== 'admin') {
+      const roles = await rbacStore!.listInstanceRoles();
+      const admins = roles.filter((r) => r.role === 'admin');
+      if (admins.length <= 1 && admins.some((r) => r.userId === userId)) {
+        return res.status(409).json({ error: 'Cannot demote the last instance admin' });
+      }
+    }
+    const assignment = await rbacStore!.setInstanceRole(userId, role, actorId);
+    await logAudit(actorId, 'rbac:instance-role-grant', 'settings', userId, null, { role });
+    res.status(201).json(assignment);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to grant instance role' });
+  }
+});
+
+/**
+ * DELETE /api/rbac/instance-roles/:userId - Revoke an instance role (admin).
+ * Revoke keeps at least one admin (lockout guard): the last bootstrap admin
+ * cannot be demoted through this endpoint.
+ */
+app.delete('/api/rbac/instance-roles/:userId', verifyAuth, requireInstancePermission('settings', 'write'), async (req: Request, res: Response) => {
+  const actorId = (req as any).user.id;
+  const targetId = req.params.userId;
+  try {
+    const roles = await rbacStore!.listInstanceRoles();
+    const admins = roles.filter((r) => r.role === 'admin');
+    const target = roles.find((r) => r.userId === targetId);
+    if (!target) return res.status(404).json({ error: 'Assignment not found' });
+    if (target.role === 'admin' && admins.length <= 1) {
+      return res.status(409).json({ error: 'Cannot revoke the last instance admin' });
+    }
+    await rbacStore!.deleteInstanceRole(targetId);
+    await logAudit(actorId, 'rbac:instance-role-revoke', 'settings', targetId, { role: target.role }, null);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to revoke instance role' });
+  }
+});
 
 app.get('/api/organizations', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
@@ -4216,7 +4293,7 @@ app.post('/api/organizations', verifyAuth, async (req: Request, res: Response) =
 // Runbook API Routes
 // ============================================================================
 
-app.get('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
+app.get('/api/runbooks', verifyAuth, requireSelfPermission('runbooks', 'read'), async (req: Request, res: Response) => {
   const { data, error } = await supabase.from('runbooks').select('*').order('name');
   if (error) return res.status(500).json({ error: error.message });
   const builtinRunbooks = [
@@ -4228,7 +4305,7 @@ app.get('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
   res.json({ runbooks: [...builtinRunbooks, ...(data || [])] });
 });
 
-app.post('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/runbooks', verifyAuth, requireSelfPermission('runbooks', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, description, steps } = req.body;
   const { data, error } = await supabase.from('runbooks').insert({ name, description, steps, created_by: userId }).select().single();
@@ -4236,7 +4313,7 @@ app.post('/api/runbooks', verifyAuth, async (req: Request, res: Response) => {
   res.json(data);
 });
 
-app.post('/api/runbooks/:id/execute', verifyAuth, async (req: Request, res: Response) => {
+app.post('/api/runbooks/:id/execute', verifyAuth, requireSelfPermission('runbooks', 'exec'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { data: runbook } = await supabase.from('runbooks').select('*').eq('id', req.params.id).single();
   if (!runbook) return res.status(404).json({ error: 'Runbook not found' });
@@ -4432,5 +4509,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`✨ Docker Panel API running on http://localhost:${port}`);
     console.log(`📡 Frontend should be at http://localhost:5173`);
     console.log(`🐳 Make sure Supabase and Docker are configured in .env.local`);
+    // RBAC bootstrap: promote the setup-created admin user before serving.
+    rbacStore!.bootstrapInstanceRoles();
   });
 }

@@ -219,6 +219,12 @@ export const Sidebar = ({
           icon: "🛠️",
           route: "/settings/maintenance",
         },
+        {
+          id: "roles",
+          label: "Access Roles",
+          icon: "🔐",
+          route: "/settings/roles",
+        },
       ],
     },
   ];

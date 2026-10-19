@@ -12,9 +12,38 @@ finding and must be fixed or explicitly accepted.
 | Term | Meaning |
 | ------ | --------- |
 | `verifyAuth` | Express middleware: Supabase JWT, falls back to scrypt-hashed API key |
+| `requireSelfPermission` | `verifyAuth` + RBAC check against the caller's own personal resources (`server/rbac/`) |
+| `requireAppId` | `verifyAuth` + RBAC app-scope decision (ownership → app assignment → instance role) |
+| `requireInstancePermission` | `verifyAuth` + RBAC check granted by instance role only |
 | federation token | Bearer token, constant-time compare, **fails closed in production** |
 | HMAC-SHA256 | GitHub webhook signature, fails closed (503) when secret unset |
 | public | No auth by design; must be documented here |
+
+## RBAC model (`server/rbac/`, PROMPT 2)
+
+All protected management-panel routes now sit behind the shared RBAC
+enforcement layer. One decision engine (`server/rbac/store.ts`) issues
+grants for HTTP and the WebSocket gateway alike:
+
+| Scope | Resources | Decision order |
+| ------ | --------- | -------------- |
+| app | `app`, `backup`, `deployment`, `config`, `metrics`, `maintenance`, `members` | owner (`docker_apps.user_id`) → app assignment (`rbac_app_roles`: admin/operator/viewer/custom) → instance role (`rbac_instance_roles`, only `admin` covers app actions) |
+| personal | `inventory`, `databases`, `webhooks`, `plugins`, `ssh`, `secrets`, `billing`, `runbooks`, `audit`, `notifications`, `apikeys`, `customers`, `reports` | caller's own rows (`user_id`); `PERSONAL_SELF_ACTIONS` lists which actions the self path confers; app `owner` is implicit via `user_id` and never persisted |
+| instance | `templates`, `settings` | role-gated only (admins get `*`; operators/viewers get the `read`/`templates:read`/`settings:read` entries in `INSTANCE_ROLE_GRANTS`) |
+
+Additional rules:
+
+- Denials return `403 { error, code: 'rbac_denied', resourceType, action, reason }`
+  and emit an `rbac:denied` audit event without payload contents.
+- Unknown apps return `404` (not 403) for app-scoped routes.
+- Store/cache failures fail closed (`503 rbac_unavailable`).
+- Legacy per-app boolean permissions (`ServerPermissionSet`) are mapped to
+  equivalent grants by `SERVER_PERMISSION_MAP` so old clients keep working.
+- WebSocket access (`resolveWsAppAccess`) delegates to the same store:
+  terminal/exec needs console access, `logs:read` needs console or files,
+  `metrics:read` needs any assignment or ownership.
+- Last-admin safety: demoting or revoking the final instance admin is
+  refused with `409`.
 
 ## Orchestrator Agent (`services/orchestrator-agent`, port 8500)
 
@@ -38,7 +67,9 @@ requests (matches `validate_secrets` convention in `config.py`).
 
 ## Management Panel (`services/management-panel`, port 3001)
 
-188 routes total: 170 protected with `verifyAuth`, 18 public.
+Two layers: `verifyAuth` (authentication) then RBAC guards
+(authorization). RBAC-denied writes are audited; every guard order is
+`verifyAuth` → limiter → RBAC guard.
 
 ### Public (by design)
 
@@ -47,7 +78,7 @@ requests (matches `validate_secrets` convention in `config.py`).
 | `/health` | GET | ok | Docker healthcheck |
 | `/api/health` | GET | ok | CLI compatibility |
 | `/api/setup/status` | GET | ok | First-run check |
-| `/api/setup/init` | POST | ok | Creates first admin; `loginLimiter` applied; refuses re-init |
+| `/api/setup/init` | POST | ok | Creates first admin; `loginLimiter` applied; refuses re-init; bootstraps RBAC admin role |
 | `/api/auth/login` | POST | ok | API key login; `loginLimiter` applied |
 | `/api/auth/logout` | POST | ok | No server state to revoke |
 | `/api/validate/discord-token` | POST | ok | Validates a Discord token; no data returned |
@@ -57,25 +88,35 @@ requests (matches `validate_secrets` convention in `config.py`).
 | `/api/auth/2fa/verify` | POST | ok | Pre-auth step of login flow |
 | `/api/auth/2fa/verify-backup` | POST | ok | Pre-auth step of login flow |
 
+### Protected (`verifyAuth` + RBAC guard)
+
+A route-level table is generated from the source; the contract below is
+what each guard guarantees:
+
+| Guard family | Routes | Who passes |
+| ------- | ------ | ----------- |
+| `requireAppId` | `/api/apps/:id` (read/write/delete), lifecycle, clone, snapshots, logs, status, autopilot, billing, plugins install, config + versions + rollback, metrics (also unscoped aggregates via `{ optional: true }`), maintenance-windows, scheduled-tasks, backup-jobs/artifacts/restore, modpacks, deployments, alert-configs/history, health-checks, reports + export, databases, roles endpoints | app owner; assigned app role (`admin`/**`operator`**/**`viewer`**/`custom` via legacy booleans); instance `admin` |
+| `requireSelfPermission` | inventory, secrets (+rotation/access), webhooks (+test/logs), api-keys, plugins catalog/update, templates deploy, changes/undo/rollback, runbooks, customers (+seed-demo), notification-channels, 2FA setup/verify-setup/disable (also verifies body `user_id` = caller) | any authenticated user acting on **their own** rows; personal actions map in `server/rbac/catalog.ts` |
+| `requireInstancePermission('settings', …)` | `/api/templates/init` (write), `/api/rbac/instance-roles` GET (read) / POST+DELETE (write) | instance `admin` (operators/viewers only have settings `read`) |
+
+Related authority rules:
+
+- `/api/apps/:id/roles` management requires the caller to own the app or
+  hold instance admin; assignments use `rbac_app_roles` and principals
+  may be `user:<uuid>` or `discord:<id>`.
+- Only the app owner (or instance admin) may assign roles for an app;
+  the `owner` role itself is never persisted.
+- The WebSocket gateway re-checks every message against the same store;
+  tickets from `/api/ws-token` are bound to the caller and optionally to
+  one app. See [15-WS-Auth](./15-WS-Auth.md).
+- `/api/rbac/me` returns the caller's instance role and memberships for
+  frontend navigation; it never elevates anything.
+
 ### Findings (open)
 
-| Route | Method | Issue | Severity |
-| ------- | -------- | ------- | ---------- |
-| `/api/runbooks` | GET | Reads all runbooks incl. user-created ones without `verifyAuth`; its POST siblings require auth | high |
-
-### Protected (`verifyAuth`)
-
-All `/api/apps*`, `/api/customers*`, `/api/metrics*`, `/api/backup*`,
-`/api/alert-*`, `/api/scheduled-tasks*`, `/api/maintenance-windows*`,
-`/api/workspaces`, `/api/secrets*`, `/api/webhooks*`, `/api/apikeys*`,
-`/api/inventory*`, `/api/templates*`, `/api/runbooks` (POST/execute),
-`/api/assistant/*`, `/api/graphql`, `/api/auth/2fa/setup`,
-`/api/auth/2fa/verify-setup`, `/api/auth/2fa/disable`,
-`/api/auth/2fa/backup-codes`, `/api/ws-token` (POST),
-`/api/ws-token/revoke` (POST) — all
-checked at last audit (170 routes). The WebSocket upgrade itself carries a
-short-lived single-use ticket minted by `/api/ws-token`; see
-[15-WS-Auth](./15-WS-Auth.md).
+None at this pass. The former finding (runbooks GET lacked `verifyAuth`)
+was closed by the RBAC pass; `GET /api/runbooks` now sits behind
+`verifyAuth` + `requireSelfPermission('runbooks','read')`.
 
 ### Pre-auth by design (rate-limited, no bearer)
 
@@ -88,6 +129,10 @@ Full user flow: [14-Two-Factor-Auth](./14-Two-Factor-Auth.md).
 
 ## Update History
 
+- 2026-10-19: RBAC enforcement layer (`server/rbac/`) wired across all
+  protected routes; WS gateway delegated to the same decision store;
+  `GET /api/runbooks` finding closed by the same work; `/api/rbac/*`
+  admin routes added (last-admin lockout enforced).
 - 2026-09-29: 2FA setup/verify-setup/disable confirmed behind
   `verifyAuth`, verify/verify-backup confirmed pre-auth with
   `loginLimiter`; added unit (`two-factor-auth-flow`) and

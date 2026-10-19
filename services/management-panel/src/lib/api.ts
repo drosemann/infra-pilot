@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, BackupArtifactsResponse, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
+import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, BackupArtifactsResponse, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger, InstanceRoleAssignment, RbacMe } from './types.ts';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -1487,6 +1487,30 @@ class APIClient {
   async revokeWsToken(options: { ticket?: string; all?: boolean }): Promise<{ revoked: boolean; scope: string; sessionsClosed: number }> {
     const res = await this.api.post('/api/ws-token/revoke', options);
     return res.data;
+  }
+
+  // RBAC management endpoints
+  /**
+   * Fetch the caller's authorization state (instance role + org memberships).
+   * Used by route guards to decide which pages a user may open.
+   */
+  async getRbacMe(): Promise<RbacMe> {
+    const res = await this.api.get('/api/rbac/me');
+    return res.data;
+  }
+
+  async getInstanceRoles(): Promise<InstanceRoleAssignment[]> {
+    const res = await this.api.get('/api/rbac/instance-roles');
+    return res.data.roles;
+  }
+
+  async setInstanceRole(userId: string, role: 'admin' | 'operator' | 'viewer'): Promise<InstanceRoleAssignment> {
+    const res = await this.api.post('/api/rbac/instance-roles', { userId, role });
+    return res.data;
+  }
+
+  async deleteInstanceRole(userId: string): Promise<void> {
+    await this.api.delete(`/api/rbac/instance-roles/${userId}`);
   }
 }
 

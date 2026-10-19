@@ -42,8 +42,32 @@ up -d` instead.
 Setup, health, and documentation endpoints are intentionally reachable without
 an application session. Operational `/api/*` routes are protected by the
 backend's `verifyAuth` middleware unless explicitly documented otherwise.
-Treat the OpenAPI document and `server/index.ts` as the authoritative
+ Treat the OpenAPI document and `server/index.ts` as the authoritative
 route list.
+
+## Access control (RBAC)
+
+Authorization is layered on top of `verifyAuth` by the RBAC module in
+`server/rbac/`:
+
+- **App-scoped routes** (`/api/apps/:id` and everything hanging off it) check
+  ownership first (`docker_apps.user_id`), then per-app assignments
+  (`rbac_app_roles`: `admin`/`operator`/`viewer`/`custom`), then the
+  instance role. Denials return `403 { code: 'rbac_denied', ... }` and are
+  audited; unknown apps return `404`.
+- **Personal routes** (inventory, secrets, webhooks, API keys, plugins,
+  runbooks, customers, notifications, …) apply to the caller's own rows;
+  the reachable action set per resource lives in
+  `server/rbac/catalog.ts` (`PERSONAL_SELF_ACTIONS`).
+- **Instance routes** (template init, RBAC admin routes) require the
+  instance `admin` role stored in `rbac_instance_roles`.
+
+Instance roles are managed on **Settings → Access Roles**
+(`/settings/roles`) or via `GET/POST /api/rbac/instance-roles` and
+`DELETE /api/rbac/instance-roles/:userId` (admin only, audited, last-admin
+lockout enforced). The first admin is promoted automatically during
+setup. App owners and per-app members are managed per app. The WebSocket
+gateway resolves app access through the same RBAC store as the REST API.
 
 ## WebSocket authentication
 

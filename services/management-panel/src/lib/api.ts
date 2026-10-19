@@ -1512,6 +1512,14 @@ class APIClient {
   async deleteInstanceRole(userId: string): Promise<void> {
     await this.api.delete(`/api/rbac/instance-roles/${userId}`);
   }
+
+  async getSsoProviders(): Promise<{
+    providers: Array<{ id: string; name: string; enabled: boolean }>;
+    saml: { enabled: boolean; note: string };
+  }> {
+    const res = await this.api.get('/api/sso/providers');
+    return res.data;
+  }
 }
 
 export const apiClient = new APIClient();

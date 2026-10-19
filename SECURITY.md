@@ -46,6 +46,7 @@ get a fix before any other work.
 | B5 | Management panel ↔ Supabase | Panel data, auth | Supabase key must never leave the server side |
 | B6 | CLI ↔ orchestrator API | API keys, config profiles | TLS in production; token stored in `~/.ipilot/config.json` |
 | B7 | Browser → panel WebSocket gateway | Live logs, metrics, container terminals | Unauthenticated upgrade; requires a short-lived single-use HMAC ticket (`POST /api/ws-token`, <=5 min) plus per-app ACL on every action; `WS_TICKET_SECRET` is server-side only |
+| B8 | IdP → panel SSO callback (`/api/sso/callback/:provider`) | Identity assertion (id_token) | Authorization code + PKCE (S256), single-use 10-minute `state` bound to the provider, RS256 id_token verified against IdP JWKS with iss/aud/exp/nonce checks; JIT provisioning gated by email/domain allowlists and requires the server-side `SUPABASE_SERVICE_ROLE_KEY`; `SESSION_SECRET` signs panel session tokens (cookie httpOnly/SameSite=Lax/secure-in-prod + DB-backed, revocable). SAML is not implemented (explicit 501); state/nonce store is per-process until a shared store ships |
 
 ### Who can do what via which API
 
@@ -62,6 +63,7 @@ get a fix before any other work.
 | `docker exec`/`docker run` (via bot) | RBAC-authorized users | Run commands in containers | **No `--privileged`, no `--cap-add=ALL`**; never `shell=True`; subprocess args passed as lists; resource limits enforced against `RESOURCE_LIMITS` |
 | Panel WebSocket gateway (`ws://…:3001`) | Authenticated panel users | Tail app logs, stream metrics, run terminal commands in containers | Single-use HMAC ticket from `POST /api/ws-token`; per-app ACL (ownership/roles) on every action, deny by default; rate limits and violation escalation; audit events carry no ticket material (see `wiki/15-WS-Auth.md`) |
 | Panel REST API | Authenticated panel users | Operate on apps and their personal resource rows | Two layers: `verifyAuth` then RBAC (`server/rbac/`) — app-scoped actions need ownership, an app assignment, or instance `admin`; personal resources are limited to the caller's own rows; instance resources are role-gated. Denials are audited (`rbac:denied`) and fail closed on store errors |
+| Panel SSO (`/api/sso/*`) | OIDC-verified identities | Log in to the panel (Google / Entra / generic OIDC) | Authorization-code + PKCE, single-use state, RS256 id_token (JWKS) + nonce; JIT provisioning behind `SSO_EMAIL_ALLOWLIST` / `SSO_EMAIL_DOMAIN_ALLOWLIST` with verified email only; group→role mappings only apply when the user lacks an admin-set instance role. Session tokens are HMAC-signed, DB-backed, revocable (`POST /api/sso/logout`, `panel_sessions` revocation) |
 | `/api/rbac/instance-roles*` | Instance `admin` only | Grant, change, revoke instance roles | RBAC instance guard; last-admin demotion/revocation refused (`409`); every change audited |
 
 ### Secrets and credentials

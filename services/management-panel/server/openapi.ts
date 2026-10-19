@@ -698,6 +698,191 @@ const spec: Record<string, any> = {
         },
       },
     },
+    '/sso/providers': {
+      get: {
+        summary: 'List configured SSO providers',
+        description: 'Returns enabled booleans only. Providers are enabled when their OIDC env configuration (client id + secret) is present. GitHub is listed but never enabled: its OAuth2 flow has no id_token and cannot run the OIDC path.',
+        tags: ['SSO'],
+        responses: {
+          '200': {
+            description: 'Provider flags',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    providers: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', enum: ['google', 'microsoft', 'oidc', 'github'] },
+                          name: { type: 'string' },
+                          enabled: { type: 'boolean' },
+                        },
+                      },
+                    },
+                    saml: {
+                      type: 'object',
+                      properties: {
+                        enabled: { type: 'boolean' },
+                        note: { type: 'string' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/sso/login/{providerId}': {
+      get: {
+        summary: 'Start the OIDC authorization-code flow (browser redirect)',
+        description: '302 redirect to the identity provider with PKCE (S256), state, and nonce. The state is single-use and expires after ten minutes.',
+        tags: ['SSO'],
+        parameters: [{ name: 'providerId', in: 'path', required: true, schema: { type: 'string', enum: ['google', 'microsoft', 'oidc'] } }],
+        responses: {
+          '302': { description: 'Redirect to the IdP' },
+          '404': { description: 'Unknown provider' },
+          '502': { description: 'OIDC discovery failed' },
+          '503': { description: 'Provider not configured' },
+        },
+      },
+    },
+    '/sso/callback/{providerId}': {
+      get: {
+        summary: 'OIDC callback (browser redirect from the IdP)',
+        description: 'Validates state, exchanges the code (PKCE), verifies the id_token (RS256/JWKS, iss/aud/exp/nonce), provisions or links the identity, and redirects to the SPA with a panel-session token in the URL fragment plus the ip_session cookie.',
+        tags: ['SSO'],
+        parameters: [{ name: 'providerId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '302': { description: 'Redirect to the SPA on success or failure reason' },
+        },
+      },
+    },
+    '/sso/session': {
+      get: {
+        summary: 'Describe the current authentication context',
+        tags: ['SSO'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Authentication method in use',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    user: { type: 'string', format: 'uuid', nullable: true },
+                    method: { type: 'string', enum: ['sso-session', 'none', 'jwt', 'api-key'] },
+                    provider: { type: 'string', nullable: true },
+                    expiresAt: { type: 'string', format: 'date-time', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    '/sso/logout': {
+      post: {
+        summary: 'Revoke the current SSO panel session and clear the cookie',
+        tags: ['SSO'],
+        security: [{ bearerAuth: [] }],
+        responses: { '200': { description: 'Logged out' } },
+      },
+    },
+    '/sso/group-roles': {
+      get: {
+        summary: 'List group to instance-role mappings (admin)',
+        tags: ['SSO'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Mappings',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    mappings: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string', format: 'uuid' },
+                          provider: { type: 'string', enum: ['google', 'microsoft', 'oidc'] },
+                          group_name: { type: 'string' },
+                          role: { type: 'string', enum: ['admin', 'operator', 'viewer'] },
+                          created_at: { type: 'string', format: 'date-time' },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+        },
+      },
+      put: {
+        summary: 'Upsert a group to instance-role mapping (admin)',
+        description: 'Body: { provider, group, role }. Applied at next SSO login; only takes effect for users without an admin-set instance role. Audited.',
+        tags: ['SSO'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['provider', 'group', 'role'],
+                properties: {
+                  provider: { type: 'string', enum: ['google', 'microsoft', 'oidc'] },
+                  group: { type: 'string' },
+                  role: { type: 'string', enum: ['admin', 'operator', 'viewer'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Mapping saved' },
+          '400': { description: 'Invalid body' },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+        },
+      },
+      delete: {
+        summary: 'Remove a group to instance-role mapping (admin)',
+        description: 'Body: { provider, group }. Audited.',
+        tags: ['SSO'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['provider', 'group'],
+                properties: {
+                  provider: { type: 'string', enum: ['google', 'microsoft', 'oidc'] },
+                  group: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Mapping removed' },
+          '404': { description: 'Mapping not found' },
+          '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/RbacDenial' } } } },
+        },
+      },
+    },
   },
 };
 

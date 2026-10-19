@@ -83,12 +83,20 @@ Two layers: `verifyAuth` (authentication) then RBAC guards
 | `/api/auth/logout` | POST | ok | No server state to revoke |
 | `/api/validate/discord-token` | POST | ok | Validates a Discord token; no data returned |
 | `/api/demo/flag` | GET | ok | Feature-gating flag, no data leak |
-| `/api/sso/providers` | GET | ok | Only returns enabled/disabled booleans |
+| `/api/sso/providers` | GET | ok | Only enabled booleans + ids, no secrets |
+| `/api/sso/login/:provider` | GET | ok | OIDC redirect (PKCE + single-use state); `loginLimiter` applied |
+| `/api/sso/callback/:provider` | GET | ok | State consumed before any lookup; id_token verified (RS256/JWKS); redirects only, never returns tokens in the body |
+| `/api/sso/saml` | GET | ok | Explicit `501`: SAML is not implemented (documented, not faked) |
 | `/api/openapi.json`, `/api/docs` | GET | ok | API surface is public by design |
 | `/api/auth/2fa/verify` | POST | ok | Pre-auth step of login flow |
 | `/api/auth/2fa/verify-backup` | POST | ok | Pre-auth step of login flow |
 
 ### Protected (`verifyAuth` + RBAC guard)
+
+`verifyAuth` accepts, in order: a Supabase JWT, an SSO panel session
+(Bearer `sso_...` or the `ip_session` cookie — DB-backed, revocable), or
+a scrypt-hashed API key. An invalid `sso_` Bearer token never falls
+through to JWT/API-key matching.
 
 A route-level table is generated from the source; the contract below is
 what each guard guarantees:
@@ -97,7 +105,7 @@ what each guard guarantees:
 | ------- | ------ | ----------- |
 | `requireAppId` | `/api/apps/:id` (read/write/delete), lifecycle, clone, snapshots, logs, status, autopilot, billing, plugins install, config + versions + rollback, metrics (also unscoped aggregates via `{ optional: true }`), maintenance-windows, scheduled-tasks, backup-jobs/artifacts/restore, modpacks, deployments, alert-configs/history, health-checks, reports + export, databases, roles endpoints | app owner; assigned app role (`admin`/**`operator`**/**`viewer`**/`custom` via legacy booleans); instance `admin` |
 | `requireSelfPermission` | inventory, secrets (+rotation/access), webhooks (+test/logs), api-keys, plugins catalog/update, templates deploy, changes/undo/rollback, runbooks, customers (+seed-demo), notification-channels, 2FA setup/verify-setup/disable (also verifies body `user_id` = caller) | any authenticated user acting on **their own** rows; personal actions map in `server/rbac/catalog.ts` |
-| `requireInstancePermission('settings', …)` | `/api/templates/init` (write), `/api/rbac/instance-roles` GET (read) / POST+DELETE (write) | instance `admin` (operators/viewers only have settings `read`) |
+| `requireInstancePermission('settings', …)` | `/api/templates/init` (write), `/api/rbac/instance-roles` GET (read) / POST+DELETE (write), `/api/sso/group-roles` GET (read) / PUT+DELETE (write) | instance `admin` (operators/viewers only have settings `read`) |
 
 Related authority rules:
 
@@ -126,9 +134,20 @@ was closed by the RBAC pass; `GET /api/runbooks` now sits behind
 | `/api/auth/2fa/verify-backup` | POST | `loginLimiter` | Backup-code login step `{ temp_token, backup_code }` |
 
 Full user flow: [14-Two-Factor-Auth](./14-Two-Factor-Auth.md).
+SSO session endpoints (`/api/sso/session`, `/api/sso/logout`,
+`/api/sso/group-roles`) sit behind `verifyAuth` and the RBAC instance
+guard; see the SSO row in the guard-family table. SAML is explicitly
+not implemented (`/api/sso/saml` answers 501, documented as roadmap
+work).
 
 ## Update History
 
+- 2026-10-19: SSO/OIDC authorization-code + PKCE flow (`server/sso/`)
+  with JWKS-verified id_tokens, JIT provisioning behind email/domain
+  allowlists, DB-backed revocable panel sessions accepted by
+  `verifyAuth` (Bearer `sso_` / `ip_session` cookie), group→role
+  mapping admin API. SAML documented as future work (explicit 501,
+  never faked).
 - 2026-10-19: RBAC enforcement layer (`server/rbac/`) wired across all
   protected routes; WS gateway delegated to the same decision store;
   `GET /api/runbooks` finding closed by the same work; `/api/rbac/*`

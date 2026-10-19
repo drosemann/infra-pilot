@@ -60,6 +60,12 @@ import {
 } from './ws/index.ts';
 import type { WsAction } from './ws/index.ts';
 import { createRbacGuards, RbacStore } from './rbac/index.ts';
+import { registerSsoRoutes } from './sso/routes.ts';
+import {
+  SESSION_COOKIE_NAME,
+  parseCookies,
+  resolveSessionToken,
+} from './sso/store.ts';
 import type { ResourceAction, ResourceType } from './rbac/index.ts';
 import { SERVER_PRESETS } from './presets.ts';
 import openapiSpec from './openapi.ts';
@@ -210,6 +216,18 @@ if (process.env.NODE_ENV === 'production' && !process.env.VITE_SUPABASE_ANON_KEY
   throw new Error('VITE_SUPABASE_ANON_KEY is required in production; refusing to start with a dummy key');
 }
 let supabase = createClient(supabaseUrl, supabaseKey);
+
+/**
+ * Service-role client: only exists when the operator provides the key.
+ * Required for SSO identity linking and JIT provisioning (auth admin API);
+ * nullable everywhere else so SSO degrades to a clear 502 instead of
+ * crashing the panel at boot.
+ */
+const supabaseAdmin = process.env.SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  : null;
 
 export function setSupabaseClientForTests(client: ReturnType<typeof createClient>) {
   supabase = client;
@@ -379,6 +397,29 @@ function apiKeyMatches(rawKey: string, storedHash: string | null | undefined): b
  */
 const verifyAuth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
+
+  // SSO panel sessions may arrive as a Bearer token (`sso_...`, minted at
+  // the OIDC callback) or as the `ip_session` cookie. They carry the same
+  // authority as the user they were minted for; DB state stays the source
+  // of truth (revocable, expiring).
+  const sessionTokenSource = token?.startsWith('sso_')
+    ? token
+    : (token ? null : parseCookies(req.headers.cookie)[SESSION_COOKIE_NAME] || null);
+  if (sessionTokenSource) {
+    const session = await resolveSessionToken(supabase, sessionTokenSource);
+    if (session) {
+      (req as any).user = { id: session.user_id };
+      (req as any).authMethod = 'sso-session';
+      (req as any).session = session;
+      return next();
+    }
+    if (token && token.startsWith('sso_')) {
+      // An explicit sso_ Bearer token that failed validation must not fall
+      // through into JWT/API-key matching.
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+  }
+
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -4462,17 +4503,17 @@ app.get('/api/global-search', verifyAuth, async (req: Request, res: Response) =>
 });
 
 // ============================================================================
-// SSO / OIDC Configuration API Routes
+// SSO / OIDC Configuration API Routes (server/sso/)
 // ============================================================================
 
-app.get('/api/sso/providers', async (req: Request, res: Response) => {
-  const providers = [
-    { id: 'google', name: 'Google', enabled: !!process.env.GOOGLE_CLIENT_ID },
-    { id: 'github', name: 'GitHub', enabled: !!process.env.GITHUB_CLIENT_ID },
-    { id: 'microsoft', name: 'Microsoft Entra ID', enabled: !!process.env.MICROSOFT_CLIENT_ID },
-    { id: 'oidc', name: 'Generic OIDC', enabled: !!process.env.OIDC_ISSUER_URL },
-  ];
-  res.json({ providers });
+registerSsoRoutes({
+  app,
+  supabase,
+  supabaseAdmin,
+  authCheck: verifyAuth,
+  logAudit,
+  requireInstancePermission,
+  loginLimiter,
 });
 
 // ============================================================================

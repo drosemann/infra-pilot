@@ -9,6 +9,7 @@ example is the authoritative list of values used by the default Compose stack.
 | --- | --- | --- |
 | PostgreSQL | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT` | Database service and service connection strings. |
 | Panel | `MANAGEMENT_FRONTEND_PORT`, `MANAGEMENT_BACKEND_PORT`, `VITE_API_URL`, `CORS_ORIGINS` | Browser/UI and Express API exposure. |
+| SSO / OIDC (panel) | `SESSION_SECRET`, `PANEL_PUBLIC_URL`, `PANEL_FRONTEND_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SSO_EMAIL_ALLOWLIST`, `SSO_EMAIL_DOMAIN_ALLOWLIST`, `<GOOGLE\|MICROSOFT\|OIDC>_CLIENT_ID`/`_CLIENT_SECRET` | OIDC login (`server/sso/`); see the panel README. Providers are enabled only when both client env vars are set. |
 | Orchestrator | `ORCHESTRATOR_WEBHOOK_PORT`, `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN`, `FEDERATION_API_TOKEN` | Webhook/API listener and request authentication. |
 | Monitoring/load test | `PROMETHEUS_PORT`, `GRAFANA_PORT`, `K6_*` | Optional monitoring and k6 profiles. |
 | Discord | `DISCORD_TOKEN`, `PTERODACTYL_API_URL`, `PTERODACTYL_API_KEY` | Optional `discord` profile. |
@@ -41,6 +42,11 @@ select a profile and output format in the current CLI build.
 
 - The panel's setup and selected health/documentation routes are public;
   operational `/api/*` routes use the panel's authentication middleware.
+- SSO: only `/api/sso/login/:provider` and `/api/sso/callback/:provider`
+  are reachable without a session, and the callback is safe only by
+  virtue of single-use state validation. SSO sessions require
+  `SESSION_SECRET`; JIT identity provisioning requires
+  `SUPABASE_SERVICE_ROLE_KEY`, which must never reach a browser.
 - The orchestrator exposes `/health` and `/metrics` for probes and Prometheus.
   Webhook/API authentication is documented in [Auth Matrix](11-Auth-Matrix.md).
 - `FEDERATION_API_TOKEN` protects the orchestrator `/api/` route group when configured. Do not expose it to browsers.

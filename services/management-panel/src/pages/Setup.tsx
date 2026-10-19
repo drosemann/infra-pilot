@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { apiClient } from "../lib/api";
@@ -286,6 +286,32 @@ export const Setup = () => {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState<
+    Array<{ id: string; name: string; enabled: boolean }>
+  >([]);
+
+  // Fetch which SSO providers the server has configured. Empty or failed
+  // loads simply render no buttons: password/API-key access keeps working.
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .getSsoProviders()
+      .then((data) => {
+        if (cancelled) return;
+        const usable = data.providers.filter((provider) => provider.enabled);
+        if (usable.length > 0) setSsoProviders(usable);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // SSO starts a full browser navigation so the IdP round trip (and the
+  // server callback redirect) is never cut short by the SPA router.
+  const startSso = (providerId: string) => {
+    window.location.href = `/api/sso/login/${providerId}`;
+  };
 
   const handleModeSelect = (selectedMode: SetupMode) => {
     setMode(selectedMode);
@@ -448,6 +474,30 @@ export const Setup = () => {
               Let's set up your self-hosted Docker management platform
             </p>
           </div>
+
+          {/* SSO: offered when at least one provider is configured */}
+          {ssoProviders.length > 0 && (
+            <div className="mb-8 text-center" aria-labelledby="sso-sign-in">
+              <h2 id="sso-sign-in" className="text-lg font-semibold text-slate-900 dark:text-white mb-3">
+                Sign in with an identity provider
+              </h2>
+              <div className="flex flex-wrap justify-center gap-3">
+                {ssoProviders.map((provider) => (
+                  <button
+                    key={provider.id}
+                    type="button"
+                    onClick={() => startSso(provider.id)}
+                    className="px-4 py-2 border-2 border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-white hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+                  >
+                    Continue with {provider.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-3">
+                SAML is not offered: see the SSO section of the README for the support model.
+              </p>
+            </div>
+          )}
 
           {/* Mode Selection */}
           <div className="space-y-4">

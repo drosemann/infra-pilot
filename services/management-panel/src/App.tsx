@@ -4,7 +4,7 @@ import { IntlProvider } from 'react-intl';
 import { Toaster } from 'sonner';
 import { apiClient } from './lib/api';
 import { apiClientEffect, useEffectful } from './lib/effect';
-import { getAccessToken } from './lib/auth';
+import { getAccessToken, setAccessToken } from './lib/auth';
 import { ConfigContext, SetupMode } from './lib/types';
 import { Setup } from './pages/Setup';
 import { Dashboard } from './pages/Dashboard';
@@ -108,6 +108,29 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(() => getAccessToken() !== null);
   const [locale, setLocaleState] = useState<SupportedLocale>(detectBrowserLocale());
 
+  // SSO callbacks hand the panel-session token to the SPA in the URL
+  // fragment (`/#sso_token=...`); consume it into the same storage the
+  // auth helpers use, then strip the fragment so it never lingers in,
+  // e.g., copied links or referer headers. Failures fall back to the
+  // normal password/API-key paths.
+  const ssoToken = useMemo(() => {
+    try {
+      const hash = window.location.hash || '';
+      const params = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+      const token = params.get('sso_token');
+      const error = params.get('sso_error');
+      if (token) setAccessToken(token);
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (error) {
+        console.warn(`[infra-pilot] SSO login failed: ${error}`);
+        return null;
+      }
+      return token;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const { data: status, loading } = useEffectful(
     () => apiClientEffect.getSetupStatus(),
     []
@@ -142,6 +165,13 @@ export default function App() {
       }
     }
   }, [status]);
+
+  useEffect(() => {
+    if (ssoToken) {
+      apiClient.setToken(ssoToken);
+      setAuthenticated(true);
+    }
+  }, [ssoToken]);
 
   if (loading) {
     return (

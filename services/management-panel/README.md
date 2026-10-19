@@ -69,6 +69,40 @@ lockout enforced). The first admin is promoted automatically during
 setup. App owners and per-app members are managed per app. The WebSocket
 gateway resolves app access through the same RBAC store as the REST API.
 
+## SSO / OIDC
+
+The panel implements the OIDC **authorization-code flow with PKCE** by
+hand (`server/sso/` — no OAuth framework dependency). Supported
+providers: Google, Microsoft Entra ID, and any generic OIDC issuer
+(Keycloak, Authentik, ...). A provider is usable only when its client id
+**and** secret env vars are set; see `.env.example`.
+
+What you get:
+
+- `GET /api/sso/login/:provider` → 302 to the IdP (PKCE S256, state,
+  nonce; state is single-use and expires after ten minutes).
+- `GET /api/sso/callback/:provider` → code exchange, id_token signature
+  verification (RS256 via JWKS, iss/aud/exp/nonce checks), JIT
+  provisioning with email/domain allowlists, then a redirect to the SPA
+  with a panel-session token (URL fragment) plus an `ip_session` cookie.
+- Panel sessions are DB rows (`panel_sessions`) — revocable and
+  expiring; `verifyAuth` accepts both the Bearer token (`sso_...`) and
+  the cookie. `GET /api/sso/session` reports how a caller got in.
+- Identity claims map to instance roles via the group table
+  (`sso_group_roles`); admin-API at `/api/sso/group-roles`. These mappings
+  apply only to users without an already-set (admin-chosen) role.
+  Required: `SUPABASE_SERVICE_ROLE_KEY` (identity linking/JIT uses the
+  Supabase auth admin API), `SESSION_SECRET`, and `PANEL_PUBLIC_URL` so
+  IdP redirect URIs can be registered as
+  `<PANEL_PUBLIC_URL>/api/sso/callback/<provider>`.
+
+**SAML is not implemented.** `GET /api/sso/saml` answers `501` with a
+roadmap note rather than pretending; a signed-Response SAML verifier is
+future work. GitHub's OAuth2 app flow has no id_token and is also not
+offered through the OIDC path. Single-instance caveat: authorization
+state (`state`/`nonce`) is in-memory per process; horizontal panel
+deployments need sticky routing until a shared store lands.
+
 ## WebSocket authentication
 
 The realtime gateway (`server/ws/`) requires every WebSocket connection to

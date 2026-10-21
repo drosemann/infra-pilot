@@ -65,7 +65,8 @@ List findings in descending severity, then confidence. Each finding must:
 Use these severity levels:
 
 - **Critical** — likely severe compromise, broad data loss, or complete
-  production outage; no reasonable conditions need to be assumed.
+  production outage under realistic conditions, with no reasonable recovery
+  or workaround available.
 - **High** — significant security, data integrity, availability, or core
   feature failure affecting a realistic supported scenario.
 - **Medium** — a concrete, meaningful defect with limited impact or narrower

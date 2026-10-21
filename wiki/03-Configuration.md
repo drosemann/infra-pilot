@@ -13,6 +13,7 @@ example is the authoritative list of values used by the default Compose stack.
 | Orchestrator | `ORCHESTRATOR_WEBHOOK_PORT`, `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN`, `FEDERATION_API_TOKEN` | Webhook/API listener and request authentication. |
 | External secrets | `SECRETS_BACKEND`, `SECRETS_CACHE_TTL`, `VAULT_ADDR`/`VAULT_TOKEN`/`VAULT_ROLE_ID`/`VAULT_SECRET_ID`, `AWS_REGION`/`AWS_PROFILE` | Orchestrator secrets service (`secrets_service.py`); see [docs/SECRETS.md](../docs/SECRETS.md). Optional deps (`hvac`/`boto3`) live in `requirements-optional.txt`. |
 | External secrets (panel side) | `ORCHESTRATOR_URL`, `ORCHESTRATOR_API_TOKEN`, `ORCHESTRATOR_ORG_ID` | Panel forwarding for `vault://`/`aws-sm://`/`azure://` secret refs; both URL+token required to enable. |
+| Panel state DB | `DATABASE_URL`, `PG_POOL_MAX`, `PANEL_AUTO_MIGRATE`, `PANEL_STATE_CACHE_TTL_MS` | Direct PostgreSQL for panel-owned state and versioned migrations (`server/db/migrations/`, applied on boot). Hosted Supabase deployments must set the direct Postgres URI; see the panel README. |
 | Monitoring/load test | `PROMETHEUS_PORT`, `GRAFANA_PORT`, `K6_*` | Optional monitoring and k6 profiles. |
 | Discord | `DISCORD_TOKEN`, `PTERODACTYL_API_URL`, `PTERODACTYL_API_KEY` | Optional `discord` profile. |
 

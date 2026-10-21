@@ -102,6 +102,22 @@ import {
   resolveExternalSecret,
   rotateExternalSecret,
 } from './secrets-external.ts';
+import { runMigrations } from './db/migrations.ts';
+import {
+  countSnapshots,
+  createDashboard,
+  createSnapshot,
+  createWorkspace,
+  deleteDashboard,
+  getDashboard,
+  importDashboardsFromFile,
+  installPlugin,
+  listDashboards,
+  listSnapshots,
+  listWorkspaces,
+  restoreSnapshot,
+  updateDashboard,
+} from './db/stores.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -309,10 +325,6 @@ const fullServerPermissions: ServerPermissionSet = {
   deployments: true,
 };
 
-const serverSnapshots = new Map<string, any[]>();
-const workspacesByUser = new Map<string, any[]>();
-const pluginInstallations = new Map<string, any[]>();
-
 rbacStore = new RbacStore(supabase, { cacheTtlMs: Number(process.env.RBAC_CACHE_TTL_MS) || 30_000 });
 // Scoped API keys (v2): scope/app checks ride on the RBAC guard layer so
 // every coordinated route gets both authorizations; sensitive routes also
@@ -344,30 +356,6 @@ function clampPct(value: number): number {
 
 function computeOverallScore(cpuPct: number, memPct: number): number {
   return Number(((clampPct(cpuPct) + clampPct(memPct)) / 2).toFixed(1));
-}
-
-function createDefaultSnapshots(appId: string) {
-  const now = Date.now();
-  return [
-    {
-      id: crypto.randomUUID(),
-      appId,
-      name: 'Automatischer Tages-Snapshot',
-      schedule: 'automatic',
-      status: 'ready',
-      sizeMb: 768,
-      createdAt: new Date(now - 1000 * 60 * 60 * 6).toISOString(),
-    },
-    {
-      id: crypto.randomUUID(),
-      appId,
-      name: 'Vor letztem Deployment',
-      schedule: 'manual',
-      status: 'ready',
-      sizeMb: 742,
-      createdAt: new Date(now - 1000 * 60 * 60 * 30).toISOString(),
-    },
-  ];
 }
 
 // Middleware
@@ -1014,14 +1002,16 @@ app.post('/api/apps/:appId/clone', verifyAuth, requireAppId('exec'), async (req:
 
     if (error) throw error;
     if (includeBackups) {
-      const clonedSnapshots = (serverSnapshots.get(appId) || createDefaultSnapshots(appId)).map((snapshot) => ({
-        ...snapshot,
-        id: crypto.randomUUID(),
-        appId: data.id,
-        name: `${snapshot.name} (clone)`,
-        createdAt: new Date().toISOString(),
-      }));
-      serverSnapshots.set(data.id, clonedSnapshots);
+      const sourceSnapshots = await listSnapshots(appId);
+      for (const snapshot of sourceSnapshots) {
+        await createSnapshot({
+          ...snapshot,
+          id: crypto.randomUUID(),
+          appId: data.id,
+          name: `${snapshot.name} (clone)`,
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
     // Ownership is authoritative: the app owner implicitly holds every
     // permission, so no assignment row is created for the cloner.
@@ -1076,8 +1066,11 @@ app.post('/api/apps/:appId/roles', verifyAuth, requireAppId('manage', 'members')
 
 app.get('/api/apps/:appId/snapshots', verifyAuth, requireAppId('read', 'backup'), async (req: Request, res: Response) => {
   const appId = (req as any).appAccess.appId;
-  if (!serverSnapshots.has(appId)) serverSnapshots.set(appId, createDefaultSnapshots(appId));
-  res.json(serverSnapshots.get(appId));
+  try {
+    res.json(await listSnapshots(appId));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch snapshots' });
+  }
 });
 
 app.post('/api/apps/:appId/snapshots', verifyAuth, requireAppId('write', 'backup'), async (req: Request, res: Response) => {
@@ -1093,7 +1086,11 @@ app.post('/api/apps/:appId/snapshots', verifyAuth, requireAppId('write', 'backup
     sizeMb: Math.max(256, Math.round(((source.volumes || []).length + 1) * 512)),
     createdAt: new Date().toISOString(),
   };
-  serverSnapshots.set(appId, [snapshot, ...(serverSnapshots.get(appId) || [])]);
+  try {
+    await createSnapshot(snapshot);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to create snapshot' });
+  }
   await logAudit(userId, 'app:snapshot-create', 'snapshot', snapshot.id, null, snapshot);
   res.status(201).json(snapshot);
 });
@@ -1101,13 +1098,14 @@ app.post('/api/apps/:appId/snapshots', verifyAuth, requireAppId('write', 'backup
 app.post('/api/apps/:appId/snapshots/:snapshotId/restore', verifyAuth, requireAppId('write', 'backup'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { appId, snapshotId } = req.params;
-  const snapshots = serverSnapshots.get(appId) || createDefaultSnapshots(appId);
-  const snapshot = snapshots.find((item) => item.id === snapshotId);
-  if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
-  snapshot.status = 'restoring';
-  snapshot.restoredAt = new Date().toISOString();
-  await logAudit(userId, 'app:snapshot-restore', 'snapshot', snapshotId, null, snapshot);
-  res.json(snapshot);
+  try {
+    const snapshot = await restoreSnapshot(appId, snapshotId);
+    if (!snapshot) return res.status(404).json({ error: 'Snapshot not found' });
+    await logAudit(userId, 'app:snapshot-restore', 'snapshot', snapshotId, null, snapshot);
+    res.json(snapshot);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to restore snapshot' });
+  }
 });
 
 // GET /api/apps/:appId/status - Get app status (owner or authorized assignment)
@@ -1152,10 +1150,11 @@ app.get('/api/apps/:appId/autopilot', verifyAuth, requireAppId('read'), async (r
 
 app.get('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  if (!workspacesByUser.has(userId)) {
-    workspacesByUser.set(userId, [{ id: crypto.randomUUID(), name: 'Default Workspace', appIds: [], memberCount: 1, sharedBackups: true, sharedLogs: true, createdAt: new Date().toISOString() }]);
+  try {
+    res.json(await listWorkspaces(userId));
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch workspaces' });
   }
-  res.json(workspacesByUser.get(userId));
 });
 
 app.post('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
@@ -1169,7 +1168,11 @@ app.post('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Requ
     sharedLogs: true,
     createdAt: new Date().toISOString(),
   };
-  workspacesByUser.set(userId, [workspace, ...(workspacesByUser.get(userId) || [])]);
+  try {
+    await createWorkspace(userId, workspace);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to create workspace' });
+  }
   await logAudit(userId, 'workspace:create', 'workspace', workspace.id, null, workspace);
   res.status(201).json(workspace);
 });
@@ -1183,7 +1186,7 @@ app.get('/api/apps/:appId/billing', verifyAuth, requireAppId('read'), async (req
     { label: 'CPU', amount: cpuCores * 11.5, unit: `${cpuCores.toFixed(1)} vCPU/Monat` },
     { label: 'RAM', amount: ramGb * 6.2, unit: `${ramGb.toFixed(1)} GB/Monat` },
     { label: 'Storage & Dateien', amount: 4.9, unit: '20 GB' },
-    { label: 'Backups & Snapshots', amount: (serverSnapshots.get(appId)?.length || 2) * 1.4, unit: 'Snapshot' },
+    { label: 'Backups & Snapshots', amount: (await countSnapshots(appId)) * 1.4, unit: 'Snapshot' },
     { label: 'Netzwerk', amount: 2.5, unit: 'Traffic-Paket' },
   ];
   const monthlyEstimate = lineItems.reduce((sum, item) => sum + item.amount, 0);
@@ -1194,7 +1197,11 @@ app.post('/api/apps/:appId/plugins/:pluginId/install', verifyAuth, requireAppId(
   const userId = (req as any).user.id;
   const { appId, pluginId } = req.params;
   const installed = { pluginId, appId, status: 'installed', installedAt: new Date().toISOString() };
-  pluginInstallations.set(appId, [installed, ...(pluginInstallations.get(appId) || []).filter((item) => item.pluginId !== pluginId)]);
+  try {
+    await installPlugin(appId, installed);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to install plugin' });
+  }
   await logAudit(userId, 'app:plugin-install', 'plugin', pluginId, null, installed);
   res.status(201).json({ success: true, pluginId });
 });
@@ -3170,25 +3177,13 @@ app.post('/api/notification-channels/:id/test', verifyAuth, requireSelfPermissio
 
 // Dashboard builder routes moved to experimental/management-panel-expanded/dashboard-builder.ts
 
-// Dashboard routes backed by data/dashboards.json (file-based store)
+// Dashboard routes backed by the panel_dashboards table (server/db/stores).
+// The legacy data/dashboards.json file is imported once on boot.
 const DASHBOARDS_FILE = path.join(__dirname, '..', 'data', 'dashboards.json');
-
-async function readDashboards(): Promise<any[]> {
-  try {
-    const raw = await fs.readFile(DASHBOARDS_FILE, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-async function writeDashboards(dashboards: any[]): Promise<void> {
-  await fs.writeFile(DASHBOARDS_FILE, JSON.stringify(dashboards, null, 2), 'utf-8');
-}
 
 app.get('/api/dashboards', verifyAuth, requireWildcardScope(), async (_req: Request, res: Response) => {
   try {
-    res.json({ dashboards: await readDashboards() });
+    res.json({ dashboards: await listDashboards() });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch dashboards' });
   }
@@ -3196,8 +3191,7 @@ app.get('/api/dashboards', verifyAuth, requireWildcardScope(), async (_req: Requ
 
 app.get('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
-    const dashboards = await readDashboards();
-    const dashboard = dashboards.find((d: any) => d.id === req.params.id);
+    const dashboard = await getDashboard(req.params.id);
     if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
     res.json(dashboard);
   } catch (err) {
@@ -3207,11 +3201,9 @@ app.get('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: R
 
 app.post('/api/dashboards', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
-    const dashboards = await readDashboards();
     const id = req.body.id || crypto.randomUUID();
     const dashboard = { id, ...req.body, createdAt: new Date().toISOString() };
-    dashboards.push(dashboard);
-    await writeDashboards(dashboards);
+    await createDashboard(dashboard);
     await logAudit((req as any).user.id, 'dashboard:create', 'dashboard', id);
     res.json(dashboard);
   } catch (err) {
@@ -3221,12 +3213,8 @@ app.post('/api/dashboards', verifyAuth, requireWildcardScope(), async (req: Requ
 
 app.put('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
-    const dashboards = await readDashboards();
-    const index = dashboards.findIndex((d: any) => d.id === req.params.id);
-    if (index === -1) return res.status(404).json({ error: 'Dashboard not found' });
-    const updated = { ...dashboards[index], ...req.body, id: req.params.id, updatedAt: new Date().toISOString() };
-    dashboards[index] = updated;
-    await writeDashboards(dashboards);
+    const updated = await updateDashboard(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Dashboard not found' });
     await logAudit((req as any).user.id, 'dashboard:update', 'dashboard', req.params.id);
     res.json(updated);
   } catch (err) {
@@ -3236,11 +3224,8 @@ app.put('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: R
 
 app.delete('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
-    const dashboards = await readDashboards();
-    const index = dashboards.findIndex((d: any) => d.id === req.params.id);
-    if (index === -1) return res.status(404).json({ error: 'Dashboard not found' });
-    dashboards.splice(index, 1);
-    await writeDashboards(dashboards);
+    const deleted = await deleteDashboard(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Dashboard not found' });
     await logAudit((req as any).user.id, 'dashboard:delete', 'dashboard', req.params.id);
     res.json({ status: 'deleted' });
   } catch (err) {
@@ -3251,8 +3236,7 @@ app.delete('/api/dashboards/:id', verifyAuth, requireWildcardScope(), async (req
 app.get('/api/dashboards/:id/data', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
   try {
     const period = req.query.period as string;
-    const dashboards = await readDashboards();
-    const dashboard = dashboards.find((d: any) => d.id === req.params.id);
+    const dashboard = await getDashboard(req.params.id);
     if (!dashboard) return res.status(404).json({ error: 'Dashboard not found' });
     res.json({ dashboard, widgets: dashboard.widgets || [], period: period || '24h' });
   } catch (err) {
@@ -4810,11 +4794,31 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(port, () => {
-    console.log(`✨ Docker Panel API running on http://localhost:${port}`);
-    console.log(`📡 Frontend should be at http://localhost:5173`);
-    console.log(`🐳 Make sure Supabase and Docker are configured in .env.local`);
-    // RBAC bootstrap: promote the setup-created admin user before serving.
-    rbacStore!.bootstrapInstanceRoles();
-  });
+  // Versioned migrations run once, before the listener starts. A failure is
+  // fatal: serving against a stale schema is worse than not serving at all.
+  const startServer = async () => {
+    try {
+      await runMigrations();
+      const importedDashboards = await importDashboardsFromFile(DASHBOARDS_FILE);
+      if (importedDashboards > 0) {
+        console.log(
+          `[db] imported ${importedDashboards} dashboard(s) from data/dashboards.json`
+        );
+      }
+    } catch (err) {
+      console.error(
+        '[db] startup migration failed:',
+        err instanceof Error ? err.message : err
+      );
+      process.exit(1);
+    }
+    httpServer.listen(port, () => {
+      console.log(`✨ Docker Panel API running on http://localhost:${port}`);
+      console.log(`📡 Frontend should be at http://localhost:5173`);
+      console.log(`🐳 Make sure Supabase and Docker are configured in .env.local`);
+      // RBAC bootstrap: promote the setup-created admin user before serving.
+      rbacStore!.bootstrapInstanceRoles();
+    });
+  };
+  startServer();
 }

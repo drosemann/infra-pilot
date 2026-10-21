@@ -229,6 +229,31 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `WS_MAX_MESSAGES_PER_MINUTE`, `WS_MAX_SUBSCRIBES_PER_MINUTE` | Gateway rate limits. |
 | `WS_MAX_RATE_STRIKES`, `WS_MAX_VIOLATIONS`, `WS_MAX_MESSAGE_BYTES` | Escalation and frame-size limits. |
 | `ORCHESTRATOR_URL`, `ORCHESTRATOR_API_TOKEN`, `ORCHESTRATOR_ORG_ID` | External-secret forwarding (see "External secrets"). |
+| `DATABASE_URL`, `PG_POOL_MAX` | Direct PostgreSQL used for panel state, migrations, and dashboards. |
+| `PANEL_AUTO_MIGRATE`, `PANEL_STATE_CACHE_TTL_MS` | Boot migration toggle and state-cache TTL. |
+
+## Storage and migrations
+
+The panel keeps authentication and existing business tables on Supabase, and
+additionally owns a **direct PostgreSQL** connection (`DATABASE_URL`) for
+state that must survive restarts. Both may be the same database: in Compose
+the panel and orchestrator share the bundled `postgres:16`; with hosted
+Supabase, point `DATABASE_URL` at the project's direct Postgres connection
+string (the REST/anon client keeps handling auth). This is the honest
+current split — first-class Postgres-only mode is the next roadmap step.
+
+- Versioned migrations live in `server/db/migrations/` and run on boot via
+  `server/db/migrations.ts` (numbered, up-only, transactional, SHA-256
+  checksums in `panel_schema_migrations`). A changed applied file or a failed
+  migration is fatal at startup. See `docs/OPERATIONS.md` for baseline and
+  rollback notes.
+- `server/db/stores.ts` persists what used to be process memory: app
+  snapshots (`panel_app_snapshots`), workspaces (`panel_workspaces`), plugin
+  installations (`panel_plugin_installations`), and dashboards
+  (`panel_dashboards`, one-time import of the legacy `data/dashboards.json`).
+  Per-app roles were already moved to the RBAC store in the previous wave.
+  Reads are cached briefly and invalidated on writes; without `DATABASE_URL`
+  a process-memory fallback keeps local development usable.
 
 ## Code map
 
@@ -238,6 +263,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `server/index.ts` | Express routes, authentication, WebSocket gateway wiring, and service startup. |
 | `server/ws/` | Authenticated WebSocket gateway: tickets, ACL, sessions, rate limits, audit. |
 | `server/secrets-external.ts` | External secret refs: parsing, orchestrator resolution/rotation, TTL cache. |
+| `server/db/` | pg pool, versioned migration runner, and persistent state stores. |
 | `server/openapi.ts` | Panel OpenAPI specification. |
 | `server/*.ts` | Focused backend helpers such as reports, GraphQL, assistant, doctor, and audit sanitisation. |
 | `docs/` | Longer-lived design and setup notes. |

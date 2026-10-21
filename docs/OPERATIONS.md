@@ -43,6 +43,31 @@ Expected: HTTP `200` from both health endpoints and
 
 ---
 
+## Schema migrations (management panel)
+
+The panel applies versioned, up-only SQL migrations from
+`services/management-panel/server/db/migrations/` on boot, before the HTTP
+listener starts. Applied versions and SHA-256 checksums are recorded in
+`panel_schema_migrations`; changing an applied file makes startup fail
+(drift detection) — add a new numbered migration instead. The runner exits
+the process on failure rather than serving against a stale schema.
+
+- `PANEL_AUTO_MIGRATE=false` disables the boot runner (apply out-of-band,
+  e.g. via the Supabase SQL editor on managed projects with restricted DDL).
+- Existing databases that predate the runner are **baselined**: when a
+  migration's marker already exists (a table such as `docker_apps` /
+  `rbac_instance_roles` / `sso_identities`, or a column such as
+  `api_keys.scopes` / `secrets.external_ref`), that version is recorded
+  without re-executing it. Databases migrated by hand therefore upgrade
+  cleanly, and versions 2–6 still apply anything missing.
+- Migration 001 mirrors the historical `db/schema.sql` baseline and adds an
+  `auth.users`/`auth.uid()`/`auth.role()` shim so the same schema applies to
+  the Compose PostgreSQL as well as to Supabase.
+- Rollback: migrations are up-only. Restore the pre-upgrade database backup
+  (see Backups) and deploy the previous release instead of reversing SQL.
+
+---
+
 ## Backups
 
 ```bash

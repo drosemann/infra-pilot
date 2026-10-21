@@ -151,7 +151,7 @@ export function registerSsoRoutes(deps: SsoDeps): void {
    * identity, and issues a panel session (cookie + Bearer token handed to
    * the SPA via the URL fragment).
    */
-  app.get('/api/sso/callback/:providerId', async (req: Request, res: Response) => {
+  app.get('/api/sso/callback/:providerId', loginLimiter, async (req: Request, res: Response) => {
     const provider = providerFor(req.params.providerId);
     const frontendUrl = frontendUrlFor(req);
     const back = (reason: string) => `/#sso_error=${encodeURIComponent(reason)}`;

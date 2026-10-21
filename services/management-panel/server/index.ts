@@ -95,6 +95,13 @@ import { runBenchmark } from './benchmark.ts';
 import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
 import { buildPlan } from './assistant.ts';
 import { executeGraphQL } from './graphql.ts';
+import {
+  isExternalRef,
+  orchestratorSecretsConfigured,
+  orchestratorStatus,
+  resolveExternalSecret,
+  rotateExternalSecret,
+} from './secrets-external.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -530,6 +537,11 @@ app.get('/api/setup/status', async (req: Request, res: Response) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to check setup status' });
   }
+});
+
+app.get('/api/settings/secrets-backend', verifyAuth, requireSelfPermission('settings', 'read'), async (req: Request, res: Response) => {
+  const status = await orchestratorStatus();
+  res.json({ externalSecrets: status });
 });
 
 // POST /api/setup/init - Initialize setup (create first admin user & mode selection)
@@ -3789,7 +3801,7 @@ app.delete('/api/inventory/:serverId/tags/:tag', verifyAuth, requireSelfPermissi
 app.get('/api/secrets', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { path } = req.query;
-  let query = supabase.from('secrets').select('id, key, version, rotate, rotation_days, last_rotated, next_rotation, created_at, updated_at').eq('user_id', userId);
+  let query = supabase.from('secrets').select('id, key, version, rotate, rotation_days, last_rotated, next_rotation, external_ref, created_at, updated_at').eq('user_id', userId);
   if (path) query = query.ilike('key', `${path}%`);
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
@@ -3805,7 +3817,7 @@ app.get('/api/secrets/due-for-rotation', verifyAuth, requireSelfPermission('secr
 
 app.get('/api/secrets/:key', verifyAuth, requireSelfPermission('secrets', 'read'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { version } = req.query;
+  const { version, resolve } = req.query;
   if (version) {
     const { data: secret } = await supabase.from('secrets').select('id').eq('key', req.params.key).eq('user_id', userId).single();
     if (!secret) return res.status(404).json({ error: 'Secret not found' });
@@ -3815,12 +3827,45 @@ app.get('/api/secrets/:key', verifyAuth, requireSelfPermission('secrets', 'read'
   }
   const { data, error } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
   if (error) return res.status(404).json({ error: 'Not found' });
+  if (isExternalRef(data.external_ref)) {
+    // External mode: the panel stores only the reference. The value is
+    // resolved on demand via the orchestrator and lives in an in-process
+    // cache for 30s — never in Supabase.
+    if (resolve === 'true' || resolve === '1') {
+      if (!orchestratorSecretsConfigured()) {
+        return res.status(503).json({ error: 'Orchestrator not configured (set ORCHESTRATOR_API_TOKEN)' });
+      }
+      const resolved = await resolveExternalSecret(data.external_ref, userId);
+      if (!resolved) return res.status(503).json({ error: 'External secret could not be resolved' });
+      return res.json({ key: data.key, value: resolved.value, external_ref: true, backend: resolved.backend, version: data.version });
+    }
+    return res.json({ key: data.key, external_ref: data.external_ref, version: data.version });
+  }
   res.json({ value: data.value, version: data.version, key: data.key });
 });
 
 app.post('/api/secrets', verifyAuth, requireSelfPermission('secrets', 'write'), async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { key, value, rotate, rotation_days } = req.body;
+  const { key, value, rotate, rotation_days, external_ref } = req.body;
+  if (isExternalRef(external_ref)) {
+    // External mode: store the reference only. No plaintext value, no
+    // version history — the backend holds the truth.
+    if (typeof value === 'string' && value.length > 0) {
+      return res.status(400).json({ error: 'external_ref and value are mutually exclusive' });
+    }
+    const nextRotation = rotate ? new Date(Date.now() + (rotation_days || 90) * 86400000).toISOString() : null;
+    const { data: existing } = await supabase.from('secrets').select('id, version').eq('key', key).eq('user_id', userId).single();
+    if (existing) {
+      const { error: updateError } = await supabase.from('secrets').update({ external_ref, value: '', version: (existing.version || 1) + 1, rotate: rotate || false, rotation_days: rotation_days || 90, next_rotation: nextRotation }).eq('id', existing.id);
+      if (updateError) return res.status(500).json({ error: updateError.message });
+      await supabase.from('secret_versions').delete().eq('secret_id', existing.id);
+      const { data } = await supabase.from('secrets').select('id, key, version, external_ref, rotate, rotation_days').eq('id', existing.id).single();
+      return res.json(data);
+    }
+    const { data, error } = await supabase.from('secrets').insert({ user_id: userId, key, external_ref, value: '', rotate: rotate || false, rotation_days: rotation_days || 90, next_rotation: nextRotation }).select('id, key, version, external_ref').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
   const { data: existing } = await supabase.from('secrets').select('id, version').eq('key', key).eq('user_id', userId).single();
   if (existing) {
     const newVersion = (existing.version || 1) + 1;
@@ -3856,6 +3901,21 @@ app.post('/api/secrets/:key/rotate', verifyAuth, requireSelfPermission('secrets'
   const userId = (req as any).user.id;
   const { data: secret } = await supabase.from('secrets').select('*').eq('key', req.params.key).eq('user_id', userId).single();
   if (!secret) return res.status(404).json({ error: 'Secret not found' });
+  if (isExternalRef(secret.external_ref)) {
+    // External mode: the truth lives on the backend; forward rotation
+    // through the orchestrator and only bookkeep the panel row after a
+    // 2xx. The rotated value is never returned or stored.
+    if (!orchestratorSecretsConfigured()) {
+      return res.status(503).json({ error: 'Orchestrator not configured (set ORCHESTRATOR_API_TOKEN)' });
+    }
+    const rotated = await rotateExternalSecret(secret.external_ref, userId);
+    if (!rotated) return res.status(503).json({ error: 'External secret could not be rotated' });
+    const newVersion = (secret.version || 1) + 1;
+    const nextRotation = new Date(Date.now() + (secret.rotation_days || 90) * 86400000).toISOString();
+    const { data, error } = await supabase.from('secrets').update({ version: newVersion, last_rotated: new Date().toISOString(), next_rotation: nextRotation }).eq('id', secret.id).select('id, key, version, last_rotated, next_rotation, external_ref').single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json(data);
+  }
   const newValue = crypto.randomBytes(32).toString('hex');
   const newVersion = (secret.version || 1) + 1;
   await supabase.from('secret_versions').insert({ secret_id: secret.id, value: newValue, version: newVersion, created_by: userId });

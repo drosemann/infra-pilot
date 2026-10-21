@@ -64,6 +64,28 @@ class ReconcileResult:
     dry_run: bool = False
 
 
+def _resolve_single_ref(service: Any, raw: str) -> Tuple[str, str]:
+    """Resolve one ``ref:secrets://`` value; returns (resolved, error).
+
+    ``error`` is empty on success and carries a sanitized reason otherwise
+    (paths/refs are safe to surface; backend values never are).
+    """
+    from secrets_service import parse_secret_ref
+
+    try:
+        ref_path, ref_key = parse_secret_ref(raw)
+        stored = service.get(ref_path, ref_key)
+    except ValueError as exc:
+        return "", str(exc)
+    except Exception as exc:
+        return "", f"secrets backend error: {type(exc).__name__}"
+    if isinstance(stored, str):
+        return stored, ""
+    if isinstance(stored, (int, float, bool)):
+        return str(stored), ""
+    return "", f"no stored entry at {raw[len('ref:secrets://'):]}"
+
+
 class ManifestEngine:
     """Reads an InfraFile manifest and reconciles infrastructure state."""
 
@@ -251,6 +273,12 @@ class ManifestEngine:
     async def reconcile(self, desired: InfraFile) -> ReconcileResult:
         """Converge actual infrastructure toward the desired manifest."""
         desired.validate()
+        # Resolve ``ref:secrets://<path>#<key>`` env values before any
+        # instance is created. Dry runs never touch the secrets backend;
+        # real reconciles fail closed when a reference cannot be resolved.
+        env_map: Dict[str, Dict[str, str]] = {}
+        if not self.dry_run:
+            env_map = self._resolve_secret_refs(desired)
         result = ReconcileResult(
             manifest_name=desired.metadata.name,
             dry_run=self.dry_run,
@@ -291,7 +319,7 @@ class ManifestEngine:
                 memory_mb=inst.memory_mb,
                 storage_gb=inst.storage_gb,
                 ports=inst.ports,
-                env_vars=inst.env,
+                env_vars=env_map.get(inst.name, inst.env),
                 labels=inst.labels,
                 region=inst.region or desired.metadata.region,
                 metadata=inst.metadata,
@@ -393,6 +421,49 @@ class ManifestEngine:
         if not result.dry_run:
             self._record_assignments(desired, result)
         return result
+
+    def _resolve_secret_refs(self, desired: InfraFile) -> Dict[str, Dict[str, str]]:
+        """Resolve ``ref:secrets://<path>#<key>`` env values (fail closed).
+
+        Only called for real reconciles; dry runs keep the raw references.
+        Raises ``ValueError`` listing every unresolved reference (no backend
+        configured, malformed ref, missing entry, or backend error) instead
+        of creating half-res instances. Resolved values are never logged.
+        """
+        from secrets_service import resolve_secrets_service
+
+        refs: List[Tuple[str, str, str]] = []
+        for inst in desired.spec.instances:
+            for env_key, env_value in inst.env.items():
+                if isinstance(env_value, str) and env_value.startswith("ref:secrets://"):
+                    refs.append((inst.name, env_key, env_value))
+        if not refs:
+            return {}
+
+        service = resolve_secrets_service()
+        if service is None:
+            listing = ", ".join(f"{name}.{env_key}" for name, env_key, _ in refs)
+            raise ValueError(
+                "no secrets backend configured (set SECRETS_BACKEND) "
+                f"for secret refs: {listing}"
+            )
+        env_map: Dict[str, Dict[str, str]] = {}
+        failures: List[str] = []
+        for name, env_key, raw in refs:
+            resolved, error = _resolve_single_ref(service, raw)
+            if error:
+                failures.append(f"{name}.{env_key} ({error})")
+            else:
+                env_map.setdefault(name, {})[env_key] = resolved
+        if failures:
+            raise ValueError("unresolved secret refs: " + ", ".join(failures))
+        logger.info(
+            "Resolved %d secret env refs across %d instance(s) for %s",
+            sum(len(v) for v in env_map.values()),
+            len(env_map),
+            desired.metadata.name,
+        )
+        return env_map
 
     def _record_assignments(
         self, desired: InfraFile, result: ReconcileResult

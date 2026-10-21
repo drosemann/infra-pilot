@@ -691,6 +691,96 @@ const spec: Record<string, any> = {
         },
       },
     },
+    '/api/secrets': {
+      post: {
+        summary: 'Create a secret (stored, or external reference only)',
+        description: "Body: { key, value?, rotate?, rotation_days?, external_ref? }. Set external_ref (vault://<path>#<key>, aws-sm://<name>, azure://<name>) to store the reference only: value must be absent/empty, no version history is kept and the backend holds the plaintext. Resolution happens at read time through the orchestrator secrets API. Roles: secrets:write via instance RBAC.",
+        tags: ['Secrets'],
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['key'],
+                properties: {
+                  key: { type: 'string' },
+                  value: { type: 'string', nullable: true },
+                  external_ref: { type: 'string', nullable: true, description: 'Mutually exclusive with value' },
+                  rotate: { type: 'boolean' },
+                  rotation_days: { type: 'integer' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Secret stored' },
+          '400': { description: 'external_ref and value are mutually exclusive' },
+        },
+      },
+    },
+    '/api/secrets/{key}': {
+      get: {
+        summary: 'Read a secret (resolve=true resolves external references)',
+        description: "Without resolve=true an external row returns {key, external_ref, version} — the reference is not secret. With ?resolve=true the panel forwards to the orchestrator POST /api/v1/secrets/get; the value is cached in-process for 30s and never persisted. Requires a configured ORCHESTRATOR_API_TOKEN.",
+        tags: ['Secrets'],
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'key', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'resolve', in: 'query', schema: { type: 'string', enum: ['true', '1'] } },
+        ],
+        responses: {
+          '200': { description: 'Secret value (stored mode, or external mode with resolve=true)' },
+          '404': { description: 'Not found' },
+          '503': { description: 'Orchestrator not configured or resolution failed' },
+        },
+      },
+    },
+    '/api/secrets/{key}/rotate': {
+      post: {
+        summary: 'Rotate a secret',
+        description: 'Stored mode generates a fresh value and versions it. External mode forwards rotation to the orchestrator POST /api/v1/secrets/rotate (backend holds the new value; the panel row is only bookkept) and returns metadata, never the value.',
+        tags: ['Secrets'],
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'key', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Rotated (metadata only in external mode)' },
+          '503': { description: 'Orchestrator not configured or rotation failed' },
+        },
+      },
+    },
+    '/api/settings/secrets-backend': {
+      get: {
+        summary: 'External secrets backend status (settings UI)',
+        description: "Reports { externalSecrets: { orchestratedReachable, backend, configured } } by probing the orchestrator federation status with the panel's configured ORCHESTRATOR_URL/ORCHESTRATOR_API_TOKEN. Informational: never fails the UI.",
+        tags: ['Secrets'],
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Status',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    externalSecrets: {
+                      type: 'object',
+                      properties: {
+                        orchestratedReachable: { type: 'boolean' },
+                        backend: { type: 'string', enum: ['vault', 'aws', 'azure', 'none', 'unknown'] },
+                        configured: { type: 'boolean' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/notification-channels/{id}/test': {
       post: {
         summary: 'Send test notification',

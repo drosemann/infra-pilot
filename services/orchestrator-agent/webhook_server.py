@@ -15,7 +15,7 @@ import time
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 
 import compute.cloud_vm_provider  # noqa: F401  (self-registers cloud-vm)
 import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
@@ -29,12 +29,15 @@ from manifest.engine import ManifestEngine
 from manifest.schema import InfraFile
 from rate_limiter import RateLimitRegistry, RateLimitRule
 from rbac import Organization, Permission, RBACEngine, Role
+from secrets_service import SECRET_TOKEN_PATTERN, resolve_secrets_service
 
 logger = logging.getLogger(__name__)
 # The federation API token holder acts as platform administrator for the
 # RBAC management API. Tenant users are represented by memberships inside
 # the engine and never authenticate over the wire.
 rbac_engine = RBACEngine()
+# Secrets backend wiring ('none' keeps /api/v1/secrets/* disabled with 503).
+secrets_service = resolve_secrets_service()
 LOCAL_DEVELOPMENT_ENVIRONMENTS = frozenset({"dev", "development", "local"})
 
 # Bound inbound JSON bodies to contain memory-DoS via huge manifests.
@@ -555,6 +558,207 @@ async def deployment_providers(request: web.Request) -> web.Response:
     )
 
 
+# ---------------------------------------------------------------------------
+# Secrets API handlers (/api/v1/secrets/*).
+#
+# Guard order mirrors the RBAC routes: the federation bearer-token
+# middleware already covers every /api/ path, then each handler applies
+# its shared per-request checks (org shape/validation, unknown org 404,
+# actor permission 401/403) before the backend-availability 503. Audit
+# lines go through the module logger like deployment_apply, carrying
+# org/actor/path/key presence and outcome only - never secret values.
+# ---------------------------------------------------------------------------
+
+
+async def _secrets_parse_body(
+    request: web.Request,
+) -> Tuple[Optional[dict], Optional[web.Response]]:
+    """Parse the bounded JSON body as an object; (body, error) tuple."""
+    try:
+        body = await _read_json_body(request)
+    except ValueError as exc:
+        status = 413 if str(exc) == "body too large" else 400
+        return None, web.json_response({"error": str(exc)}, status=status)
+    if not isinstance(body, dict):
+        return None, web.json_response({"error": "invalid JSON body"}, status=400)
+    return body, None
+
+
+def _secrets_require_context(
+    request: web.Request, org_id: Any, permission: Permission
+) -> Optional[web.Response]:
+    """Shared guards: org shape, org existence, actor permission, backend."""
+    if not isinstance(org_id, str) or not org_id:
+        return web.json_response({"error": "org_id is required"}, status=400)
+    if not _SAFE_ID_PATTERN.fullmatch(org_id):
+        return web.json_response({"error": "invalid org_id format"}, status=400)
+    if rbac_engine.get_org(org_id) is None:
+        return web.json_response({"error": f"unknown org: {org_id}"}, status=404)
+    err = _require_actor_permission(request, org_id, permission)
+    if err:
+        return err
+    if secrets_service is None:
+        return web.json_response(
+            {"error": "No secrets backend configured (set SECRETS_BACKEND)"},
+            status=503,
+        )
+    return None
+
+
+def _secrets_path_guard(path: Any, key: Any = None) -> Optional[web.Response]:
+    """Validate the secret path (and optional key) against the allow-list."""
+    if not isinstance(path, str) or not SECRET_TOKEN_PATTERN.fullmatch(path):
+        return web.json_response({"error": "invalid secret path"}, status=400)
+    if key is not None and (
+        not isinstance(key, str) or not SECRET_TOKEN_PATTERN.fullmatch(key)
+    ):
+        return web.json_response({"error": "invalid secret key"}, status=400)
+    return None
+
+
+def _secrets_call_with_renewal(op: Callable[[], Any]) -> Any:
+    """Run a backend operation with one best-effort renew/re-auth retry."""
+    try:
+        return op()
+    except Exception as first:
+        if secrets_service is not None:
+            secrets_service.maybe_renew_lease()
+        try:
+            return op()
+        except Exception:
+            logger.error(
+                "Secrets backend operation failed after renewal retry (%s)",
+                type(first).__name__,
+            )
+            raise
+
+
+def _secrets_actor(request: web.Request) -> str:
+    """Best-effort actor identity for the audit trail (may be anonymous)."""
+    return (
+        request.query.get("actor_user_id")
+        or request.headers.get("X-Actor-User-Id")
+        or request.headers.get("X-User-Id")
+        or "unknown"
+    )
+
+
+def _secrets_audit(
+    request: web.Request,
+    action: str,
+    org_id: str,
+    actor_user_id: str,
+    path: str,
+    key: Optional[str],
+    outcome: str,
+) -> None:
+    """Persist the audit trail for a secrets operation (no secret data)."""
+    logger.info(
+        "secrets_audit action=%s org=%s actor=%s path=%s key=%s outcome=%s from=%s backend=%s",
+        action,
+        org_id,
+        actor_user_id,
+        path,
+        key if key else "-",
+        outcome,
+        request.remote,
+        secrets_service.backend_name if secrets_service else "none",
+    )
+
+
+async def secrets_get(request: web.Request) -> web.Response:
+    """POST /api/v1/secrets/get {org_id, path, key?} - requires secret:read."""
+    body, err = await _secrets_parse_body(request)
+    if err is not None:
+        return err
+    org_id = body.get("org_id")
+    path = body.get("path")
+    key = body.get("key")
+    if not all(isinstance(v, str) and v for v in (org_id, path)):
+        return web.json_response({"error": "org_id and path are required"}, status=400)
+    err = _secrets_path_guard(path, key)
+    if err is not None:
+        return err
+    err = _secrets_require_context(request, org_id, Permission.SECRET_READ)
+    if err is not None:
+        return err
+    actor_user_id = _secrets_actor(request)
+    try:
+        resolved = _secrets_call_with_renewal(lambda: secrets_service.get(path, key))
+    except ValueError:
+        return web.json_response(
+            {"error": "invalid secret path or key"}, status=400
+        )
+    except Exception:
+        return web.json_response({"error": "secrets backend error"}, status=500)
+    if resolved is None:
+        _secrets_audit(request, "get", org_id, actor_user_id, path, key, "missing")
+        missing = f" for key {key}" if key else ""
+        return web.json_response({"error": f"no secret at {path}{missing}"}, status=404)
+    _secrets_audit(request, "get", org_id, actor_user_id, path, key, "resolved")
+    return web.json_response({"path": path, "key": key, "value": resolved})
+
+
+async def secrets_set(request: web.Request) -> web.Response:
+    """POST /api/v1/secrets/set {org_id, path, data} - requires secret:write."""
+    body, err = await _secrets_parse_body(request)
+    if err is not None:
+        return err
+    org_id = body.get("org_id")
+    path = body.get("path")
+    data = body.get("data")
+    if not all(isinstance(v, str) and v for v in (org_id, path)):
+        return web.json_response({"error": "org_id and path are required"}, status=400)
+    if data is None or not isinstance(data, (dict, str)):
+        return web.json_response(
+            {"error": "data must be an object or a string"}, status=400
+        )
+    err = _secrets_path_guard(path)
+    if err is not None:
+        return err
+    err = _secrets_require_context(request, org_id, Permission.SECRET_WRITE)
+    if err is not None:
+        return err
+    actor_user_id = _secrets_actor(request)
+    try:
+        updated = _secrets_call_with_renewal(lambda: secrets_service.set(path, data))
+    except ValueError:
+        return web.json_response({"error": "invalid secret path"}, status=400)
+    except Exception:
+        return web.json_response({"error": "secrets backend error"}, status=500)
+    if not updated:
+        return web.json_response({"error": "secrets backend error"}, status=500)
+    _secrets_audit(request, "set", org_id, actor_user_id, path, None, "updated")
+    return web.json_response({"updated": path}, status=201)
+
+
+async def secrets_rotate(request: web.Request) -> web.Response:
+    """POST /api/v1/secrets/rotate {org_id, path} - requires secret:rotate."""
+    body, err = await _secrets_parse_body(request)
+    if err is not None:
+        return err
+    org_id = body.get("org_id")
+    path = body.get("path")
+    if not all(isinstance(v, str) and v for v in (org_id, path)):
+        return web.json_response({"error": "org_id and path are required"}, status=400)
+    err = _secrets_path_guard(path)
+    if err is not None:
+        return err
+    err = _secrets_require_context(request, org_id, Permission.SECRET_ROTATE)
+    if err is not None:
+        return err
+    actor_user_id = _secrets_actor(request)
+    try:
+        meta = _secrets_call_with_renewal(lambda: secrets_service.rotate(path))
+    except ValueError:
+        return web.json_response({"error": "invalid secret path"}, status=400)
+    except Exception:
+        return web.json_response({"error": "secrets backend error"}, status=500)
+    _secrets_audit(request, "rotate", org_id, actor_user_id, path, None, "rotated")
+    # Metadata only: the rotated value is never returned or logged.
+    return web.json_response({"rotated": path, "at": meta["at"]})
+
+
 WEBHOOK_REPLAY_WINDOW_SECONDS = int(os.getenv("WEBHOOK_REPLAY_WINDOW_SECONDS", "300"))
 
 # Identities seen within the replay window, used to reject replayed
@@ -922,6 +1126,9 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
                 "status": "ok",
                 "service": "orchestrator-agent",
                 "federation": {"enabled": bool(os.getenv("FEDERATION_API_TOKEN", ""))},
+                "secrets_backend": (
+                    secrets_service.backend_name if secrets_service else "none"
+                ),
                 "version": "1.0.0",
             }
         )
@@ -970,6 +1177,11 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
     app.router.add_post("/api/v1/deployments", deployment_apply)
     app.router.add_get("/api/v1/providers", deployment_providers)
+    # Secrets API: handlers below re-check org/actor permissions per route
+    # (federation bearer-token middleware covers the /api/ prefix already).
+    app.router.add_post("/api/v1/secrets/get", secrets_get)
+    app.router.add_post("/api/v1/secrets/set", secrets_set)
+    app.router.add_post("/api/v1/secrets/rotate", secrets_rotate)
 
     # GitOps push webhook: converge toward the manifest sent in the body.
     # Runs the same reconcile path as POST /api/v1/deployments, guarded by

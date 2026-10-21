@@ -61,6 +61,11 @@ class Permission(str, Enum):
     DRIFT_VIEW = "drift:view"
     DRIFT_OVERRIDE = "drift:override"
 
+    # Secrets
+    SECRET_READ = "secret:read"
+    SECRET_WRITE = "secret:write"
+    SECRET_ROTATE = "secret:rotate"
+
 
 ALL_PERMISSIONS: Set[Permission] = set(Permission)
 
@@ -90,6 +95,8 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
         Permission.MANIFEST_DEPLOY,
         Permission.MANIFEST_READ,
         Permission.DRIFT_VIEW,
+        Permission.SECRET_READ,
+        Permission.SECRET_ROTATE,
     },
     "developer": {
         Permission.INSTANCE_READ,
@@ -104,6 +111,7 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
         Permission.NETWORK_READ,
         Permission.MANIFEST_READ,
         Permission.DRIFT_VIEW,
+        Permission.SECRET_READ,
     },
     "viewer": {
         Permission.INSTANCE_READ,

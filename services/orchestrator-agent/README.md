@@ -41,8 +41,35 @@ directory's `.env.example` lists standalone defaults.
 | `GITOPS_WEBHOOK_PORT` | Listener port; Compose sets it to `8500`. |
 | `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN` | Signed webhook verification. |
 | `FEDERATION_API_TOKEN` | Bearer token for `/api/` routes. |
+| `SECRETS_BACKEND` | Secrets backend: `none` (default), `vault`, or `aws` (see `secrets_service.py`). |
+| `SECRETS_CACHE_TTL` | In-process secret cache TTL in seconds (default `60`). |
+| `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID` | VaultBackend connection; AppRole recommended over a static token. |
+| `AWS_REGION`, `AWS_PROFILE` | AWS Secrets Manager backend connection. |
 | `AUTO_SCALE_*`, `SERVER_LIMIT`, `RAM_LIMIT` | Runtime capacity/default settings. |
 | `LOG_LEVEL` | Python log level. |
+
+## Secrets backends
+
+`secrets_service.py` wires the Vault and AWS Secrets Manager backends from
+`secrets_manager.py` into the reconciliation engine and the federation API.
+
+- Backend selection: `SECRETS_BACKEND` (`none` keeps the default no-backend
+  behavior; production deployments should enable one). `hvac`/`boto3` are
+  lazy optional dependencies in `requirements-optional.txt` — the service
+  starts without them and fails closed when a backend is selected but the
+  client library is missing.
+- Federation API (guarded by `FEDERATION_API_TOKEN` and org RBAC):
+  `POST /api/v1/secrets/get|set|rotate`. `get` and `set` require
+  `secret:read` / `secret:write`; `rotate` generates a fresh backend value
+  and is open to `secret:rotate` — it returns metadata only, never the
+  value. Values are never logged; the audit trail records path, actor, and
+  outcome.
+- Manifest reconciliation: environment values of the form
+  `ref:secrets://<path>#<key>` are resolved at apply time (never during
+  `dry_run`) through the backend with the process-level TTL cache.
+  Unresolvable refs fail the deployment (fail closed).
+
+Example policy and IAM snippets: [docs/SECRETS.md](../docs/SECRETS.md).
 
 ## Code map
 
@@ -58,7 +85,7 @@ directory's `.env.example` lists standalone defaults.
 | `vps_container_lifecycle.py` | Container creation, lifecycle, and resource management. |
 | `vps_backup_snapshots.py` | Backup and snapshot creation, rotation, and restoration. |
 | `vps_health_monitoring.py` | Container cloning/migration, health checks, metrics, and usage history. |
-| `db.py`, `secrets_manager.py` | Database and secret-management support. |
+| `db.py`, `secrets_manager.py`, `secrets_service.py` | Database, backend adapters, and the wired secrets service (backend selection, TTL cache, rotation). |
 
 ## Tests
 

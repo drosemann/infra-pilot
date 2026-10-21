@@ -392,6 +392,13 @@ class Config:
     )
     SCAN_POLICY_DEFAULT_ACTION: str = os.getenv("SCAN_POLICY_DEFAULT_ACTION", "block")
 
+    # Secrets backends (see secrets_service.py). SECRETS_BACKEND selects
+    # which backend /api/v1/secrets/* and `ref:secrets://` env refs use;
+    # "none" keeps them disabled and fail closed. validate_secrets is
+    # unaffected by these.
+    secrets_backend: str = os.getenv("SECRETS_BACKEND", "none")
+    secrets_cache_ttl: int = int(os.getenv("SECRETS_CACHE_TTL", "60"))
+
     def validate(self) -> list:
         """Fail fast on insecure configuration; returns insecure settings."""
         insecure = validate_secrets(

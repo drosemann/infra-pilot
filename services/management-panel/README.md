@@ -142,6 +142,26 @@ offered through the OIDC path. Single-instance caveat: authorization
 state (`state`/`nonce`) is in-memory per process; horizontal panel
 deployments need sticky routing until a shared store lands.
 
+## External secrets (Vault / AWS / Azure)
+
+Besides Supabase-stored secrets, a secret row can be **external**: set
+`external_ref` (`vault://<path>#<key>`, `aws-sm://<name>`,
+`azure://<name>`) instead of `value`. The panel stores only the
+reference — no plaintext, no version history. Reads return the ref
+unless `?resolve=true` asks the panel to forward resolution to the
+orchestrator (`POST /api/v1/secrets/get`, federation-token scoped);
+resolved values live in a 30-second in-process cache and are never
+persisted or logged. Rotation of an external secret is forwarded to the
+orchestrator (`POST /api/v1/secrets/rotate`, backend generates the new
+value); the panel only bookkeeps the row.
+
+Enablement: the panel forwards with `ORCHESTRATOR_URL` +
+`ORCHESTRATOR_API_TOKEN` (both required) against `ORCHESTRATOR_ORG_ID`
+(default `panel` — the ops org must exist in the orchestrator RBAC).
+`GET /api/settings/secrets-backend` reports whether the orchestrator is
+reachable and which backend it selected, so the Setup page can show
+backend status without round-tripping a secret.
+
 ## WebSocket authentication
 
 The realtime gateway (`server/ws/`) requires every WebSocket connection to
@@ -208,6 +228,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `WS_MAX_SESSIONS_PER_USER`, `WS_SESSION_LIMIT_POLICY` | Per-user session cap and eviction policy. |
 | `WS_MAX_MESSAGES_PER_MINUTE`, `WS_MAX_SUBSCRIBES_PER_MINUTE` | Gateway rate limits. |
 | `WS_MAX_RATE_STRIKES`, `WS_MAX_VIOLATIONS`, `WS_MAX_MESSAGE_BYTES` | Escalation and frame-size limits. |
+| `ORCHESTRATOR_URL`, `ORCHESTRATOR_API_TOKEN`, `ORCHESTRATOR_ORG_ID` | External-secret forwarding (see "External secrets"). |
 
 ## Code map
 
@@ -216,6 +237,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `src/` | React UI, routes, components, hooks, and browser API clients. |
 | `server/index.ts` | Express routes, authentication, WebSocket gateway wiring, and service startup. |
 | `server/ws/` | Authenticated WebSocket gateway: tickets, ACL, sessions, rate limits, audit. |
+| `server/secrets-external.ts` | External secret refs: parsing, orchestrator resolution/rotation, TTL cache. |
 | `server/openapi.ts` | Panel OpenAPI specification. |
 | `server/*.ts` | Focused backend helpers such as reports, GraphQL, assistant, doctor, and audit sanitisation. |
 | `docs/` | Longer-lived design and setup notes. |

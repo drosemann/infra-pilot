@@ -24,6 +24,8 @@ tags:
     description: Organizations, roles and permissions management
   - name: Deployments
     description: Manifest-based reconciliation and provider discovery
+  - name: Secrets
+    description: Secret get/set/rotate against the configured secrets backend
   - name: GitOps
     description: Signed webhook that converges toward a manifest
 paths:
@@ -128,7 +130,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [status, service, federation, version]
+                required: [status, service, federation, secrets_backend, version]
                 properties:
                   status: { type: string }
                   service: { type: string }
@@ -136,6 +138,9 @@ paths:
                     type: object
                     properties:
                       enabled: { type: boolean }
+                  secrets_backend:
+                    type: string
+                    description: Active secrets backend (none, vault, aws, azure).
                   version: { type: string }
         "401":
           $ref: "#/components/responses/Unauthorized"
@@ -483,6 +488,185 @@ paths:
                   providers:
                     type: array
                     items: { type: string }
+  /api/v1/secrets/get:
+    post:
+      tags: [Secrets]
+      summary: Resolve a stored secret (secret:read required)
+      description: |
+        Reads the secret at the given path (optionally a single key) as the
+        actor identified by ?actor_user_id or X-Actor-User-Id. Responses
+        for 200 carry the secret content; reads are cached in-process for
+        SECRETS_CACHE_TTL seconds and cached entries are invalidated by
+        set/rotate. Secret values are never logged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [org_id, path]
+              properties:
+                org_id: { type: string }
+                path: { type: string, pattern: "^[A-Za-z0-9_/.-]{1,120}$" }
+                key: { type: string, pattern: "^[A-Za-z0-9_/.-]{1,120}$" }
+      responses:
+        "200":
+          description: Secret resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [path, value]
+                properties:
+                  path: { type: string }
+                  key: { type: string, nullable: true }
+                  value:
+                    description: Stored secret content (object, string or scalar)
+        "400":
+          description: Invalid body, path or key
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: secret:read permission required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Unknown org, or no secret stored at path/key
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: Secrets backend error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: No secrets backend configured (set SECRETS_BACKEND)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/secrets/set:
+    post:
+      tags: [Secrets]
+      summary: Create or update a secret (secret:write required)
+      description: |
+        Objects are stored as the full secret at path; bare strings are
+        stored under the reserved key "value" so
+        rotate (which rewrites only "value") applies cleanly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [org_id, path, data]
+              properties:
+                org_id: { type: string }
+                path: { type: string, pattern: "^[A-Za-z0-9_/.-]{1,120}$" }
+                data:
+                  anyOf:
+                    - type: object
+                      description: Key/value map stored under path
+                    - type: string
+                      description: 'Stored as {"value": <string>}'
+      responses:
+        "201":
+          description: Secret stored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated]
+                properties:
+                  updated: { type: string }
+        "400":
+          description: Invalid body, path or data shape
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: secret:write permission required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Unknown org
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: Secrets backend error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: No secrets backend configured (set SECRETS_BACKEND)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/secrets/rotate:
+    post:
+      tags: [Secrets]
+      summary: Rotate a secret with a fresh random value (secret:rotate required)
+      description: |
+        Generates a new random value (64 hex chars), writes it under the
+        reserved key "value" at path and invalidates cached reads. The
+        response is metadata only: the rotated value is never returned in
+        the HTTP response and never logged by the server.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [org_id, path]
+              properties:
+                org_id: { type: string }
+                path: { type: string, pattern: "^[A-Za-z0-9_/.-]{1,120}$" }
+      responses:
+        "200":
+          description: Rotation applied (metadata only, no value returned)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rotated, at]
+                properties:
+                  rotated: { type: string }
+                  at: { type: string, format: date-time }
+        "400":
+          description: Invalid body or path
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: secret:rotate permission required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Unknown org
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "500":
+          description: Secrets backend error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: No secrets backend configured (set SECRETS_BACKEND)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /webhook/gitops:
     post:
       tags: [GitOps]
@@ -588,6 +772,9 @@ components:
         - audit:export
         - manifest:deploy
         - manifest:read
+        - secret:read
+        - secret:write
+        - secret:rotate
     Role:
       type: object
       required: [name]

@@ -14,3 +14,13 @@
 # nothing extra: it drives the remote Docker CLI over the system ``ssh``
 # client, so only an SSH key pair and a reachable VM are required.
 kubernetes>=31.0.0,<34
+
+# Secrets backends (secrets_manager.py / secrets_service.py) import their
+# client SDKs lazily, so the core orchestrator never requires them. Install
+# these only when SECRETS_BACKEND is configured:
+#   hvac  - VaultBackend ("SECRETS_BACKEND=vault")
+#   boto3 - AWSSecretsManagerBackend ("SECRETS_BACKEND=aws")
+# (The Azure Key Vault backend needs azure-identity plus azure-keyvault;
+#  it is intentionally not pinned here.)
+hvac>=1.2,<3
+boto3>=1.28,<2

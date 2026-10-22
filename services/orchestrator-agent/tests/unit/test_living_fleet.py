@@ -7,8 +7,9 @@ import living_fleet
 
 @pytest.fixture()
 def isolated_store(monkeypatch, tmp_path):
-    """Point the JSON store at a temp file so tests never touch real data."""
-    monkeypatch.setattr(living_fleet, "STORE_PATH", str(tmp_path / "fleet.json"))
+    """Point the SQLite store at a temp DB so tests never touch real data."""
+    monkeypatch.setattr(living_fleet, "DB_PATH", str(tmp_path / "fleet.db"))
+    monkeypatch.setattr(living_fleet, "STORE_PATH", str(tmp_path / "legacy.json"))
     monkeypatch.setattr(living_fleet, "ENABLED", True)
     return tmp_path
 
@@ -70,6 +71,24 @@ class TestStore:
         view = living_fleet.rename("w1", "Sir Deploys-a-Lot")
         assert view is not None
         assert view["display_name"] == "Sir Deploys-a-Lot"
+
+    def test_legacy_json_imports_once(self, isolated_store, tmp_path):
+        import json
+
+        legacy = {
+            "old": {
+                "workload_id": "old",
+                "display_name": "old",
+                "born_at": 0,
+                "retired": False,
+                "down_since": None,
+                "vitals": {},
+                "mood": "content",
+                "stage": "adult",
+            }
+        }
+        (tmp_path / "legacy.json").write_text(json.dumps(legacy))
+        assert living_fleet._load_all()["old"]["stage"] == "adult"
 
     def test_explanation_traces_raw_signals(self, isolated_store):
         view = living_fleet.refresh("w1", {"running": True, "restart_count_24h": 2})

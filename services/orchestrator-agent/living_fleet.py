@@ -183,23 +183,81 @@ def explain(vitals: Dict[str, Optional[int]], signals: Dict[str, Any]) -> List[D
     return out
 
 
-# --- persistence (JSON file; SQLite migration is a later phase) ---
+# --- persistence (SQLite; one-way import from the legacy JSON file) ---
+
+DB_PATH = os.getenv(
+    "LIVING_FLEET_DB", os.path.join(os.path.dirname(__file__), "living_fleet.db")
+)
+
+
+def _connect() -> Any:
+    import sqlite3
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS creatures "
+        "(workload_id TEXT PRIMARY KEY, data TEXT NOT NULL)"
+    )
+    return conn
+
+
+def _maybe_import_legacy_json() -> None:
+    """One-way migration: seed the DB from the old JSON store, once."""
+    try:
+        with open(STORE_PATH, "r", encoding="utf-8") as fh:
+            legacy = json.load(fh)
+    except (OSError, ValueError):
+        return
+    if not isinstance(legacy, dict) or not legacy:
+        return
+    conn = _connect()
+    try:
+        existing = conn.execute("SELECT COUNT(*) FROM creatures").fetchone()[0]
+        if existing:
+            return
+        conn.executemany(
+            "INSERT OR IGNORE INTO creatures (workload_id, data) VALUES (?, ?)",
+            [(wid, json.dumps(c)) for wid, c in legacy.items()],
+        )
+        conn.commit()
+        logger.info("living fleet migrated %d creatures from JSON store", len(legacy))
+    finally:
+        conn.close()
 
 
 def _load_all() -> Dict[str, Any]:
     try:
-        with open(STORE_PATH, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-            return data if isinstance(data, dict) else {}
-    except (OSError, ValueError):
+        _maybe_import_legacy_json()
+        conn = _connect()
+        try:
+            rows = conn.execute("SELECT workload_id, data FROM creatures").fetchall()
+        finally:
+            conn.close()
+        out = {}
+        for workload_id, blob in rows:
+            try:
+                creature = json.loads(blob)
+            except ValueError:
+                continue
+            if isinstance(creature, dict):
+                out[workload_id] = creature
+        return out
+    except Exception as exc:
+        logger.warning("fleet store read failed: %s", exc)
         return {}
 
 
 def _save_all(data: Dict[str, Any]) -> None:
-    tmp = STORE_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh)
-    os.replace(tmp, STORE_PATH)
+    conn = _connect()
+    try:
+        conn.executemany(
+            "INSERT INTO creatures (workload_id, data) VALUES (?, ?) "
+            "ON CONFLICT(workload_id) DO UPDATE SET data=excluded.data",
+            [(wid, json.dumps(c)) for wid, c in data.items()],
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def get_or_birth(workload_id: str, display_name: Optional[str] = None) -> Dict[str, Any]:

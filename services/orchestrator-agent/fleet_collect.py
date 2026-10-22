@@ -3,8 +3,9 @@
 Runs as a periodic loop (started by ``build_webhook_app`` when
 ``LIVING_FLEET_ENABLED``). Every signal below comes from an existing source:
 Docker container attrs/stats, the VPS instance record, or the snapshots table.
-Signals with no source stay absent (never defaulted), and one-shot Docker CPU
-is deliberately omitted — it needs two samples to be honest.
+Signals with no source stay absent (never defaulted). CPU uses the standard
+Docker delta formula across two loop samples (the previous sample persists in
+the creature's saved signals); the first loop after a restart reports no CPU.
 """
 
 import asyncio
@@ -37,7 +38,25 @@ def _days_since(value: Any) -> Any:
         return None
 
 
-async def _docker_signals(vm: Any, container_id: str, info: Dict[str, Any]) -> Dict[str, Any]:
+def _cpu_percent(cur: Dict[str, Any], prev: Dict[str, Any]) -> Any:
+    """Standard Docker CPU formula from two samples; ``None`` when unusable."""
+    try:
+        cpu_delta = float(cur["total"]) - float(prev["total"])
+        sys_delta = float(cur["system"]) - float(prev["system"])
+        cpus = int(cur.get("cpus") or 1)
+        if sys_delta <= 0 or cpu_delta < 0 or cpus <= 0:
+            return None
+        return max(0.0, (cpu_delta / sys_delta) * cpus * 100.0)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+async def _docker_signals(
+    vm: Any,
+    container_id: str,
+    info: Dict[str, Any],
+    prev_cpu: Any = None,
+) -> Dict[str, Any]:
     """Gather per-container signals from Docker; fall back to the record."""
     signals: Dict[str, Any] = {}
     try:
@@ -61,8 +80,22 @@ async def _docker_signals(vm: Any, container_id: str, info: Dict[str, Any]) -> D
             usage, limit = mem.get("usage"), mem.get("limit")
             if usage and limit:
                 signals["mem_percent"] = float(usage) / float(limit) * 100.0
+            cpu_stats = stats.get("cpu_stats", {})
+            total = (cpu_stats.get("cpu_usage", {}) or {}).get("total_usage")
+            system = cpu_stats.get("system_cpu_usage")
+            cpus = cpu_stats.get("online_cpus") or len(
+                (cpu_stats.get("cpu_usage", {}) or {}).get("percpu_usage", []) or []
+            )
+            if isinstance(total, (int, float)) and isinstance(system, (int, float)):
+                cur = {"total": total, "system": system, "cpus": cpus or 1}
+                # The sample persists via last_signals and becomes prev next loop.
+                signals["cpu_prev"] = cur
+                if isinstance(prev_cpu, dict):
+                    pct = _cpu_percent(cur, prev_cpu)
+                    if pct is not None:
+                        signals["cpu_percent"] = pct
         except Exception as exc:
-            logger.debug("fleet mem stats unavailable for %s: %s", container_id, exc)
+            logger.debug("fleet stats unavailable for %s: %s", container_id, exc)
         name = getattr(container, "name", None)
         if isinstance(name, str) and name:
             signals["display_name"] = name
@@ -83,10 +116,17 @@ async def collect_once() -> Dict[str, Dict[str, Any]]:
 
     vm = VPSManager()
     instances = getattr(vm, "vps_instances", {}) or {}
+    try:
+        stored = living_fleet._load_all()
+    except Exception:
+        stored = {}
     views: Dict[str, Dict[str, Any]] = {}
     for container_id, info in instances.items():
         try:
-            signals = await _docker_signals(vm, container_id, info or {})
+            prev_cpu = ((stored.get(container_id) or {}).get("last_signals") or {}).get("cpu_prev")
+            if not isinstance(prev_cpu, dict):
+                prev_cpu = None
+            signals = await _docker_signals(vm, container_id, info or {}, prev_cpu)
             age = _days_since((info or {}).get("created_at"))
             if age is not None:
                 signals["days_since_deploy"] = age

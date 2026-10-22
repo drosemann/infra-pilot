@@ -158,7 +158,8 @@ Every signal below comes from an existing source. Absent signals stay absent.
 | `running` | Docker `State.Running`, fallback to instance record `status` | `True`/`False` only when confirmed; unknown stays missing |
 | `restart_count_total` | Docker `State.RestartCount` (cumulative) | Windowed into `restart_count_24h` from persisted samples in `refresh()` |
 | `healthcheck_ok` | Docker `State.Health.Status`, only when a HEALTHCHECK exists | `healthy`→true, `unhealthy`→false, otherwise absent |
-| `mem_percent` | One-shot `container.stats` usage/limit | Reliable one-shot; CPU omitted (needs two samples to be honest) |
+| `mem_percent` | One-shot `container.stats` usage/limit | Reliable one-shot |
+| `cpu_percent` | Standard Docker delta across two loop samples (prev persists in saved signals) | Absent on the first loop after a restart |
 | `display_name` | Docker container name | Adopted at birth only; operator renames are never overwritten |
 | `days_since_deploy` | Instance record `created_at` | Best-effort ISO parse |
 | `days_since_backup`, `last_backup_ok` | `list_snapshots()` latest `created_at` | Absent when no snapshots exist |
@@ -184,7 +185,7 @@ Every signal below comes from an existing source. Absent signals stay absent.
 - [x] Panel proxy, AppCard pet + collapsed why-detail, Dashboard wiring
 - [x] Unit tests (`tests/unit/test_living_fleet.py`), env keys, README units
 - [ ] Proactive Discord nudges (needs dedup store; `careHint` exported for reuse)
-- [ ] CPU pressure signal (needs two-sample stats)
+- [x] CPU pressure signal (two-sample Docker delta)
 - [ ] Uptime/streak/incident signals and evolution templates
 - [ ] Graveyard/retirement UI for deleted workloads
 - [ ] Load-test the collector interval against large fleets

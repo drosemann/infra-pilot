@@ -140,5 +140,11 @@ without updating this file and the API schema):
 | --- | --- | --- |
 | `thriving` | All known vitals high, no recent incident | Bright, animated, occasional happy template line |
 | `content` | Default healthy state | Calm idle |
-| `sleepy` | Long idle / near-zero traffic or CPU for a sustained window (only if signal exists) | Drowsy; **optional in v
-...[truncated 9113 chars]
+| `sleepy` | Long idle / near-zero traffic or CPU for a sustained window (only if signal exists) | Drowsy; **optional in v1, only when an idle signal is wired** |
+| `hungry` | Hunger vital at or below 35 (no successful deploy for ~30 days) | Restless, rattling the food bowl |
+| `sick` | Health vital at or below 35, failed healthcheck, or confirmed stopped | Pale, needs attention; never decorative |
+| `stressed` | CPU at or above 85% or memory at or above 90% | Sweating, fanning itself |
+| `sad` | Any known vital at or below 50 with no stronger mood match | Drooping, generally disappointed |
+| `ghost` | Down 360+ minutes unacknowledged | Haunts the dashboard until resurrected |
+
+*Note: this plan was cut off mid-table by a truncated write; the table above is now complete and matches `services/orchestrator-agent/living_fleet.py`. The remaining design sections (signal inventory, API contracts, rollout phases) are still to be restored.*

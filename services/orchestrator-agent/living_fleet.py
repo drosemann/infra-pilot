@@ -300,7 +300,9 @@ def rename(workload_id: str, display_name: str) -> Optional[Dict[str, Any]]:
     creature = data.get(workload_id)
     if creature is None or creature.get("retired"):
         return None
-    creature["display_name"] = display_name[:64]
+    if not isinstance(display_name, str) or not display_name.strip():
+        return None
+    creature["display_name"] = display_name.strip()[:64]
     _save_all(data)
     return public_view(creature)
 

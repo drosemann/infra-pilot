@@ -127,6 +127,9 @@ def compute_mood(
     """Deterministic mood derivation. Order matters: ghost first, thriving last."""
     if down_minutes >= GHOST_MINUTES:
         return "ghost"
+    if signals.get("running") is False:
+        # Confirmed stopped: never thriving/sad/content on vitals alone.
+        return "sick"
     if (vitals.get("health") is not None and vitals["health"] <= SICK_MAX) or signals.get(
         "healthcheck_ok"
     ) is False:
@@ -222,18 +225,36 @@ def get_or_birth(workload_id: str, display_name: Optional[str] = None) -> Dict[s
 def refresh(workload_id: str, signals: Dict[str, Any]) -> Dict[str, Any]:
     """Recompute vitals/mood/stage from fresh signals. Returns public view."""
     data = _load_all()
-    creature = data.get(workload_id) or get_or_birth(workload_id)
-    data[workload_id] = creature
+    creature = data.get(workload_id)
+    if creature is None:
+        # Birth only on a healthy first sighting; a stopped workload with no
+        # creature gets a transient view, never a persisted birth.
+        if signals.get("running") is not True or signals.get("healthcheck_ok") is False:
+            vitals = compute_vitals(signals)
+            return public_view(
+                {
+                    "workload_id": workload_id,
+                    "display_name": workload_id,
+                    "mood": compute_mood(vitals, signals),
+                    "stage": "egg",
+                    "vitals": vitals,
+                    "retired": False,
+                },
+                signals,
+            )
+        creature = get_or_birth(workload_id)
+        data[workload_id] = creature
     vitals = compute_vitals(signals)
     down_since = creature.get("down_since")
     if signals.get("running") is False and not down_since:
         creature["down_since"] = time.time()
         down_since = creature["down_since"]
-    elif signals.get("running") is not False:
+    elif signals.get("running") is True:
         creature["down_since"] = None
         down_since = None
     down_minutes = (time.time() - down_since) / 60.0 if down_since else 0.0
     creature["vitals"] = vitals
+    creature["last_signals"] = signals
     creature["mood"] = compute_mood(vitals, signals, down_minutes)
     age_days = (time.time() - creature["born_at"]) / 86400.0
     creature["stage"] = stage_for_age_days(age_days)
@@ -276,7 +297,11 @@ async def fleet_list(request) -> Any:  # type: ignore[no-untyped-def]
         return web.json_response({"error": "living fleet disabled"}, status=404)
     data = _load_all()
     return web.json_response(
-        [public_view(c) for c in data.values() if not c.get("retired")]
+        [
+            public_view(c, c.get("last_signals") or {})
+            for c in data.values()
+            if not c.get("retired")
+        ]
     )
 
 
@@ -290,7 +315,7 @@ async def fleet_detail(request) -> Any:  # type: ignore[no-untyped-def]
     creature = data.get(workload_id)
     if creature is None:
         return web.json_response({"error": "unknown workload"}, status=404)
-    return web.json_response(public_view(creature))
+    return web.json_response(public_view(creature, creature.get("last_signals") or {}))
 
 
 async def fleet_rename(request) -> Any:  # type: ignore[no-untyped-def]
@@ -301,11 +326,14 @@ async def fleet_rename(request) -> Any:  # type: ignore[no-untyped-def]
     workload_id = request.match_info["workload_id"]
     try:
         body = await request.json()
-    except ValueError:
+    except Exception:
         return web.json_response({"error": "invalid JSON body"}, status=400)
-    name = str(body.get("display_name", "")).strip()
-    if not name:
+    if not isinstance(body, dict):
+        return web.json_response({"error": "invalid JSON body"}, status=400)
+    raw_name = body.get("display_name")
+    if not isinstance(raw_name, str) or not raw_name.strip():
         return web.json_response({"error": "display_name required"}, status=400)
+    name = raw_name.strip()
     view = rename(workload_id, name)
     if view is None:
         return web.json_response({"error": "unknown or retired workload"}, status=404)

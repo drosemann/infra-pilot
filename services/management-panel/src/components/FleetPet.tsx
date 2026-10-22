@@ -41,6 +41,7 @@ export function FleetPet({ creature }: { creature: CreatureView }) {
   const emoji = MOOD_EMOJI[creature.mood] ?? '❓';
   return (
     <span
+      role="img"
       className="fleet-pet"
       title={`${creature.display_name} is ${creature.mood} (${creature.stage})`}
       aria-label={`${creature.display_name}, mood ${creature.mood}, stage ${creature.stage}`}

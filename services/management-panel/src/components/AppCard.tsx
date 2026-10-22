@@ -1,4 +1,5 @@
 import { FleetPet, type CreatureView } from './FleetPet';
+import { FleetWhy } from './FleetWhy';
 
 interface AppCardProps {
   id: string;
@@ -99,6 +100,11 @@ export const AppCard = ({
           <span className="text-xs font-semibold">{status}</span>
         </div>
       </div>
+
+      {/* Living Fleet: why-detail, collapsed by default */}
+      {creature && creature.explanation && creature.explanation.length > 0 && (
+        <FleetWhy creature={creature} />
+      )}
 
       {/* Uptime */}
       {status === 'running' && (

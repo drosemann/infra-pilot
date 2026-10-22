@@ -17,12 +17,19 @@ export type CreatureMood =
   | 'sad'
   | 'ghost';
 
+export interface CreatureExplanation {
+  vital: string;
+  score: number | null;
+  signals: Record<string, unknown>;
+}
+
 export interface CreatureView {
   workload_id: string;
   display_name: string;
   mood: CreatureMood;
   stage: string;
   vitals: Record<string, number | null>;
+  explanation?: CreatureExplanation[];
   retired: boolean;
 }
 

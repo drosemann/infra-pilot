@@ -45,6 +45,9 @@ notification values. Keep all tokens out of source control.
 The `modules/` directory groups independently loaded features such as
 provisioning, ticketing, backups, monitoring/alerts, databases, resource
 pools, templates, scheduling, role management, and Pterodactyl calls.
+`petCommands.js` adds `/pet` and `/pet-status` Living Fleet views with
+deterministic care hints; it calls the orchestrator fleet API with
+`FEDERATION_API_TOKEN` and never touches the panel database.
 `index.js` wires Discord events and commands; `integration.js` and
 `cli-bridge.js` connect to the surrounding Infra Pilot services.
 

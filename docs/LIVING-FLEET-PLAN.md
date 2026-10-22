@@ -147,4 +147,44 @@ without updating this file and the API schema):
 | `sad` | Any known vital at or below 50 with no stronger mood match | Drooping, generally disappointed |
 | `ghost` | Down 360+ minutes unacknowledged | Haunts the dashboard until resurrected |
 
-*Note: this plan was cut off mid-table by a truncated write; the table above is now complete and matches `services/orchestrator-agent/living_fleet.py`. The remaining design sections (signal inventory, API contracts, rollout phases) are still to be restored.*
+*Note: this plan was cut off mid-table by a truncated write; the table above is now complete and matches `services/orchestrator-agent/living_fleet.py`. What follows is the restored remainder, written as an as-built record.*
+
+## 3. Signal inventory (as wired in `fleet_collect.py`)
+
+Every signal below comes from an existing source. Absent signals stay absent.
+
+| Signal | Source | Notes |
+| --- | --- | --- |
+| `running` | Docker `State.Running`, fallback to instance record `status` | `True`/`False` only when confirmed; unknown stays missing |
+| `restart_count_total` | Docker `State.RestartCount` (cumulative) | Windowed into `restart_count_24h` from persisted samples in `refresh()` |
+| `healthcheck_ok` | Docker `State.Health.Status`, only when a HEALTHCHECK exists | `healthy`→true, `unhealthy`→false, otherwise absent |
+| `mem_percent` | One-shot `container.stats` usage/limit | Reliable one-shot; CPU omitted (needs two samples to be honest) |
+| `display_name` | Docker container name | Adopted at birth only; operator renames are never overwritten |
+| `days_since_deploy` | Instance record `created_at` | Best-effort ISO parse |
+| `days_since_backup`, `last_backup_ok` | `list_snapshots()` latest `created_at` | Absent when no snapshots exist |
+| `uptime_30d_percent`, `deploy_streak`, `recent_incident`, `idle_24h` | — | Not yet wired; corresponding moods degrade gracefully |
+
+## 4. API contracts (as built)
+
+- Orchestrator (behind the existing `/api/` federation-auth middleware):
+  `GET /api/v1/fleet/creatures`, `GET /api/v1/fleet/creatures/{id}`,
+  `POST …/rename` (rename-only mutation, validated at store level).
+- Panel proxy (same auth as the operator session, needs `ORCHESTRATOR_API_TOKEN`):
+  `GET /api/fleet/creatures[/:workloadId]`; 404 when disabled, 502 when unreachable.
+- CLI: `ipilot pet list|status|rename` via typed `ApiClient` methods (paths relative to `/api`).
+- Discord: `/pet`, `/pet-status` with `Bearer FEDERATION_API_TOKEN`, workload IDs, paginated embeds, deterministic care hints. No proactive messages (spam-proof by design).
+- Identity mapping: creature `workload_id` is the orchestrator container/instance id; the panel matches `app.container_id` first, `display_name`→`app.name` second.
+
+## 5. Rollout status
+
+- [x] Mood engine, closed mood enum, explainability trace
+- [x] SQLite store with one-way legacy JSON import
+- [x] Collector loop + birth gating + restart windowing
+- [x] Fleet API + auth, CLI, Discord views + hints
+- [x] Panel proxy, AppCard pet + collapsed why-detail, Dashboard wiring
+- [x] Unit tests (`tests/unit/test_living_fleet.py`), env keys, README units
+- [ ] Proactive Discord nudges (needs dedup store; `careHint` exported for reuse)
+- [ ] CPU pressure signal (needs two-sample stats)
+- [ ] Uptime/streak/incident signals and evolution templates
+- [ ] Graveyard/retirement UI for deleted workloads
+- [ ] Load-test the collector interval against large fleets

@@ -56,6 +56,7 @@ Copy `.env.example` to `.env.local` for standalone development. The root `.env.e
 | `DATABASE_URL`, `REDIS_URL` | Backend service connections. |
 | `CORS_ORIGINS` | Comma-separated permitted browser origins. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Optional hosted-feature configuration. |
+| `ORCHESTRATOR_URL`, `ORCHESTRATOR_API_TOKEN` | Orchestrator forwarding and the Living Fleet proxy (`/api/fleet/creatures`); unset disables both. Dashboard cards show a creature pet with a collapsed why-detail when available. |
 
 ## Code map
 

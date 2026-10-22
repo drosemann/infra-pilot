@@ -5,9 +5,9 @@ from typing import Optional
 
 import typer
 
-from ...client import ApiClient
-from ...config import DEFAULT_API_URL, load_config
-from ...output.formatters import print_output
+from ..client import ApiClient
+from ..config import DEFAULT_API_URL, load_config
+from ..output.formatters import print_output
 
 app = typer.Typer(help="Living Fleet creature status (read-only, plus rename)")
 

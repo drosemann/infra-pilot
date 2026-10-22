@@ -8,6 +8,7 @@
  */
 
 import { Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { randomBytes } from 'crypto';
 import {
   OIDC_PROVIDERS,
@@ -74,6 +75,12 @@ function providerFor(id: string) {
  */
 export function registerSsoRoutes(deps: SsoDeps): void {
   const { app, supabase, supabaseAdmin, authCheck, logAudit, requireInstancePermission, loginLimiter } = deps;
+  const ssoRouteLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 
   /**
    * GET /api/sso/providers - which identity providers are configured and
@@ -117,7 +124,7 @@ export function registerSsoRoutes(deps: SsoDeps): void {
    * GET /api/sso/login/:providerId - start the authorization-code flow
    * (302 to the IdP). Requires SPA base URL configuration in production.
    */
-  app.get('/api/sso/login/:providerId', loginLimiter, async (req: Request, res: Response) => {
+  app.get('/api/sso/login/:providerId', ssoRouteLimiter, loginLimiter, async (req: Request, res: Response) => {
     const provider = providerFor(req.params.providerId);
     if (!provider) {
       return res.status(404).json({ error: 'Unknown SSO provider' });
@@ -151,7 +158,7 @@ export function registerSsoRoutes(deps: SsoDeps): void {
    * identity, and issues a panel session (cookie + Bearer token handed to
    * the SPA via the URL fragment).
    */
-  app.get('/api/sso/callback/:providerId', loginLimiter, async (req: Request, res: Response) => {
+  app.get('/api/sso/callback/:providerId', ssoRouteLimiter, loginLimiter, async (req: Request, res: Response) => {
     const provider = providerFor(req.params.providerId);
     const frontendUrl = frontendUrlFor(req);
     const back = (reason: string) => `/#sso_error=${encodeURIComponent(reason)}`;

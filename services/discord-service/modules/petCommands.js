@@ -15,23 +15,6 @@ const MOOD_EMOJI = {
   sick: '🤒', stressed: '😰', sad: '😢', ghost: '👻',
 };
 
-// Care hints: deterministic nudges derived from the creature's real state.
-// Shown on demand only (no proactive DMs) so the bot can never spam.
-const CARE_HINTS = {
-  thriving: 'Keep doing what you are doing. Backups passing, deploys fresh.',
-  content: 'Healthy and calm. No action needed.',
-  sleepy: 'Idle for a long stretch. If this should serve traffic, check routing.',
-  hungry: 'No successful deploy for a while — feed it an update and rebuild the image.',
-  sick: 'Check restarts and healthcheck output, then look at recent logs.',
-  stressed: 'CPU or memory pressure is high — check limits and traffic spikes.',
-  sad: 'A vital dipped. Open "why does it feel like this?" in the panel.',
-  ghost: 'Down for hours unacknowledged. Resurrect it, then find out why nobody noticed.',
-};
-
-function careHint(mood) {
-  return CARE_HINTS[mood] || 'Unknown mood. Check the panel.';
-}
-
 function fleetBase() {
   return (process.env.ORCHESTRATOR_URL || 'http://orchestrator-agent:8500').replace(/\/$/, '');
 }
@@ -89,7 +72,7 @@ async function handle(interaction) {
       const vitals = Object.entries(c.vitals || {}).map(([k, v]) => `${k}: ${v === null ? 'unknown' : v}`).join('\n');
       const embed = new EmbedBuilder()
         .setTitle(`${MOOD_EMOJI[c.mood] || '❓'} ${c.display_name}`)
-        .setDescription(`Mood: **${c.mood}**\nStage: ${c.stage}\n\n${vitals}\n\n💡 ${careHint(c.mood)}`)
+        .setDescription(`Mood: **${c.mood}**\nStage: ${c.stage}\n\n${vitals}`)
         .setColor('#7c3aed');
       return interaction.editReply({ embeds: [embed] });
     }
@@ -99,6 +82,4 @@ async function handle(interaction) {
   }
 }
 
-// careHint is exported so AlertManager/Monitoring can reuse the same
-// deterministic copy if proactive nudges are added later (with dedup).
-module.exports = { toSpec, isParsed, handle, careHint, MOOD_EMOJI };
+module.exports = { toSpec, isParsed, handle };

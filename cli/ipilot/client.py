@@ -703,3 +703,23 @@ class ApiClient:
         qs = "&".join(params)
         path = f"/changes/history?{qs}" if qs else "/changes/history"
         return self._request("GET", path)
+
+    # ------------------------------------------------------------------
+    # Living Fleet (barecode)
+    # ------------------------------------------------------------------
+
+    def list_creatures(self) -> Any:
+        """List all Living Fleet creatures."""
+        return self._request("GET", "/api/v1/fleet/creatures")
+
+    def get_creature(self, workload_id: str) -> Any:
+        """Get one creature with vitals and explanation."""
+        return self._request("GET", f"/api/v1/fleet/creatures/{workload_id}")
+
+    def rename_creature(self, workload_id: str, display_name: str) -> Any:
+        """Rename a creature (the only allowed mutation)."""
+        return self._request(
+            "POST",
+            f"/api/v1/fleet/creatures/{workload_id}/rename",
+            {"display_name": display_name},
+        )

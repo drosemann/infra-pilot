@@ -18,6 +18,7 @@ from .apikeys import app as apikeys_app
 from .doctor import app as doctor_app
 from .gitops import app as gitops_app
 from .inventory import app as inventory_app
+from .pet import app as pet_app
 from .plugins import app as plugins_app
 from .rollback import app as rollback_app
 from .secrets import app as secrets_app
@@ -37,6 +38,7 @@ register("apikeys", "API key management")(apikeys_app)
 register("templates", "Deployment templates")(templates_app)
 register("tui", "Terminal UI mode")(tui_app)
 register("rollback", "Undo/rollback changes")(rollback_app)
+register("pet", "Living Fleet creature status")(pet_app)
 
 __all__: list[str] = [
     "server_app",
@@ -54,4 +56,5 @@ __all__: list[str] = [
     "templates_app",
     "tui_app",
     "rollback_app",
+    "pet_app",
 ]

@@ -1,3 +1,6 @@
+import { FleetPet, type CreatureView } from './FleetPet';
+import { FleetWhy } from './FleetWhy';
+
 interface AppCardProps {
   id: string;
   name: string;
@@ -8,6 +11,7 @@ interface AppCardProps {
   uptime?: string;
   ports?: Array<{ hostPort: number; containerPort: number; protocol: string }>;
   onClick?: () => void;
+  creature?: CreatureView | null;
 }
 
 export const AppCard = ({
@@ -20,6 +24,7 @@ export const AppCard = ({
   uptime = '3d 14h',
   ports = [],
   onClick,
+  creature = null,
 }: AppCardProps) => {
   const getStatusColor = () => {
     switch (status) {
@@ -81,7 +86,10 @@ export const AppCard = ({
             {getAppIcon()}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-white truncate">{name}</h3>
+            <h3 className="font-semibold text-white truncate">
+              {name}{' '}
+              {creature && <FleetPet creature={creature} />}
+            </h3>
             <p className="text-xs text-slate-400 truncate">{image}</p>
           </div>
         </div>
@@ -92,6 +100,11 @@ export const AppCard = ({
           <span className="text-xs font-semibold">{status}</span>
         </div>
       </div>
+
+      {/* Living Fleet: why-detail, collapsed by default */}
+      {creature && creature.explanation && creature.explanation.length > 0 && (
+        <FleetWhy creature={creature} />
+      )}
 
       {/* Uptime */}
       {status === 'running' && (

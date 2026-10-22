@@ -1191,5 +1191,11 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
         return await verify_gitops_token(request, deployment_apply)
 
     app.router.add_post("/webhook/gitops", gitops_webhook)
+    # Living Fleet (barecode): read-only creature views + rename-only mutation.
+    # Gated by LIVING_FLEET_ENABLED; handlers return 404 while disabled.
+    import living_fleet
+    app.router.add_get("/api/v1/fleet/creatures", living_fleet.fleet_list)
+    app.router.add_get("/api/v1/fleet/creatures/{workload_id}", living_fleet.fleet_detail)
+    app.router.add_post("/api/v1/fleet/creatures/{workload_id}/rename", living_fleet.fleet_rename)
 
     return app

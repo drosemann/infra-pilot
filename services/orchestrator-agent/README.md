@@ -26,6 +26,7 @@ this service on `http://localhost:8500` and supplies its database connection thr
 | `GET /health`, `GET /metrics` | Public | Readiness/health information and Prometheus metrics. |
 | `/api/…` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Federation status, RBAC, provider discovery, and manifest deployment operations. |
 | `/webhook/gitops` | `GITOPS_WEBHOOK_TOKEN` HMAC signature with timestamp/replay validation | Trigger a GitOps manifest reconciliation. |
+| `GET /api/v1/fleet/creatures[/{id}]`, `POST …/rename` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Living Fleet creature views (SQLite store) and rename-only mutation. Disabled (404) unless `LIVING_FLEET_ENABLED=true`. |
 
 Do not expose probe routes, bearer tokens, or webhook secrets directly to
 untrusted networks. Use an ingress, firewall, or private network boundary.
@@ -45,6 +46,7 @@ directory's `.env.example` lists standalone defaults.
 | `SECRETS_CACHE_TTL` | In-process secret cache TTL in seconds (default `60`). |
 | `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID` | VaultBackend connection; AppRole recommended over a static token. |
 | `AWS_REGION`, `AWS_PROFILE` | AWS Secrets Manager backend connection. |
+| `LIVING_FLEET_ENABLED`, `LIVING_FLEET_INTERVAL_S`, `LIVING_FLEET_DB` | Living Fleet collector toggle, collection interval in seconds, and SQLite path (one-way import from the legacy JSON store). |
 | `AUTO_SCALE_*`, `SERVER_LIMIT`, `RAM_LIMIT` | Runtime capacity/default settings. |
 | `LOG_LEVEL` | Python log level. |
 

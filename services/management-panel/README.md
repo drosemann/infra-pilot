@@ -254,6 +254,7 @@ current split — first-class Postgres-only mode is the next roadmap step.
   Per-app roles were already moved to the RBAC store in the previous wave.
   Reads are cached briefly and invalidated on writes; without `DATABASE_URL`
   a process-memory fallback keeps local development usable.
+| `ORCHESTRATOR_URL`, `ORCHESTRATOR_API_TOKEN` | Orchestrator forwarding and the Living Fleet proxy (`/api/fleet/creatures`); unset disables both. Dashboard cards show a creature pet with a collapsed why-detail when available. |
 
 ## Code map
 

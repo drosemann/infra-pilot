@@ -1149,6 +1149,39 @@ app.get('/api/apps/:appId/autopilot', verifyAuth, requireAppId('read'), async (r
 });
 
 app.get('/api/workspaces', verifyAuth, requireWildcardScope(), async (req: Request, res: Response) => {
+// Living Fleet proxy: the browser never talks to the orchestrator directly.
+// Disabled (404) unless ORCHESTRATOR_API_TOKEN is set, mirroring deployment forwarding.
+app.get('/api/fleet/creatures', verifyAuth, async (_req: Request, res: Response) => {
+  if (!ORCHESTRATOR_API_TOKEN) return res.status(404).json({ error: 'Living fleet disabled' });
+  try {
+    const resp = await axios.get(`${ORCHESTRATOR_URL}/api/v1/fleet/creatures`, {
+      headers: { Authorization: `Bearer ${ORCHESTRATOR_API_TOKEN}` },
+      timeout: 10000,
+    });
+    res.json(resp.data);
+  } catch (err: any) {
+    res.status(502).json({ error: 'Fleet unavailable' });
+  }
+});
+
+app.get('/api/fleet/creatures/:workloadId', verifyAuth, async (req: Request, res: Response) => {
+  if (!ORCHESTRATOR_API_TOKEN) return res.status(404).json({ error: 'Living fleet disabled' });
+  try {
+    const resp = await axios.get(
+      `${ORCHESTRATOR_URL}/api/v1/fleet/creatures/${encodeURIComponent(req.params.workloadId)}`,
+      {
+        headers: { Authorization: `Bearer ${ORCHESTRATOR_API_TOKEN}` },
+        timeout: 10000,
+      }
+    );
+    res.json(resp.data);
+  } catch (err: any) {
+    if (err?.response?.status === 404) return res.status(404).json({ error: 'Unknown creature' });
+    res.status(502).json({ error: 'Fleet unavailable' });
+  }
+});
+
+app.get('/api/workspaces', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   try {
     res.json(await listWorkspaces(userId));

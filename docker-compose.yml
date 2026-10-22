@@ -188,6 +188,7 @@ services:
       SERVER_CREATION_CHANNEL_ID: ${SERVER_CREATION_CHANNEL_ID:-}
       LOCATION_ID: ${LOCATION_ID:-1}
       API_BASE_URL: http://management-panel:3001
+      FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:-}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-infra_pilot}

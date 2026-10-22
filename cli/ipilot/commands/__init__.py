@@ -25,6 +25,7 @@ from .maintenance import app as maintenance_app
 from .metrics import app as metrics_app
 from .notifications import app as notifications_app
 from .orgs import app as orgs_app
+from .pet import app as pet_app
 from .plugins import app as plugins_app
 from .reports import app as reports_app
 from .rollback import app as rollback_app
@@ -57,6 +58,7 @@ register("orgs", "Organizations")(orgs_app)
 register("databases", "Managed databases")(databases_app)
 register("reports", "Usage reports")(reports_app)
 register("two-factor", "Two-factor authentication")(two_factor_app)
+register("pet", "Living Fleet creature status")(pet_app)
 
 __all__: list[str] = [
     "server_app",
@@ -84,4 +86,5 @@ __all__: list[str] = [
     "databases_app",
     "reports_app",
     "two_factor_app",
+    "pet_app",
 ]

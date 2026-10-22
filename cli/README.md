@@ -28,6 +28,7 @@ command.
 | `orgs`, `databases`, `reports` | Organizations and memberships, managed databases, and usage reports. |
 | `two-factor`, `search` | Panel-account 2FA management and global search. |
 | `doctor`, `tui`, `rollback` | Diagnostics, terminal UI, and change recovery. |
+| `pet` | Living Fleet creature status (`list`, `status`) and rename; read-only except the name. |
 | `login`, `logout`, `completion`, `interactive`, `batch`, `docs` | Global authentication, shell, interactive, batch, and documentation helpers. |
 
 The installed CLI is the source of truth for flags and availability:

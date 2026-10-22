@@ -24,6 +24,7 @@ const TemplateManager = require('./modules/templateManager');
 const ResourcePools = require('./modules/resourcePools');
 const DbManager = require('./modules/dbManager');
 const LegacyCommands = require('./modules/legacyCommands');
+const PetCommands = require('./modules/petCommands');
 
 const COMMAND_MODULES = [
   { name: 'VPSCommands', module: VPSCommands },
@@ -36,6 +37,7 @@ const COMMAND_MODULES = [
   { name: 'ResourcePools', module: ResourcePools },
   { name: 'DbManager', module: DbManager },
   { name: 'LegacyCommands', module: LegacyCommands },
+  { name: 'PetCommands', module: PetCommands },
 ];
 const ERROR_TEXT = '❌ An error occurred while running this command.';
 
@@ -191,6 +193,7 @@ async function registerCommands() {
     ...ResourcePools.toSpec(),
     ...DbManager.toSpec(),
     ...LegacyCommands.toSpec(),
+    ...PetCommands.toSpec(),
   ];
   try {
     await client.application.commands.set(allCommands);

@@ -944,5 +944,8 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     app.router.add_get("/api/v1/fleet/creatures", living_fleet.fleet_list)
     app.router.add_get("/api/v1/fleet/creatures/{workload_id}", living_fleet.fleet_detail)
     app.router.add_post("/api/v1/fleet/creatures/{workload_id}/rename", living_fleet.fleet_rename)
+    import fleet_collect
+
+    fleet_collect.register(app)
 
     return app

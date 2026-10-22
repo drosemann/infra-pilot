@@ -242,7 +242,10 @@ def refresh(workload_id: str, signals: Dict[str, Any]) -> Dict[str, Any]:
                 },
                 signals,
             )
-        creature = get_or_birth(workload_id)
+        birth_name = signals.get("display_name")
+        creature = get_or_birth(
+            workload_id, birth_name if isinstance(birth_name, str) else None
+        )
         data[workload_id] = creature
     vitals = compute_vitals(signals)
     down_since = creature.get("down_since")
@@ -253,6 +256,21 @@ def refresh(workload_id: str, signals: Dict[str, Any]) -> Dict[str, Any]:
         creature["down_since"] = None
         down_since = None
     down_minutes = (time.time() - down_since) / 60.0 if down_since else 0.0
+    # Window the cumulative Docker restart counter into a real 24h delta
+    # from persisted samples instead of fabricating history.
+    total = signals.get("restart_count_total")
+    if isinstance(total, (int, float)):
+        now = time.time()
+        samples = [
+            (ts, c)
+            for ts, c in (creature.get("restart_samples") or [])
+            if now - ts <= 86400.0
+        ] + [(now, float(total))]
+        creature["restart_samples"] = samples[-48:]
+        signals = dict(
+            signals, restart_count_24h=max(0.0, float(total) - samples[0][1])
+        )
+        vitals = compute_vitals(signals)
     creature["vitals"] = vitals
     creature["last_signals"] = signals
     creature["mood"] = compute_mood(vitals, signals, down_minutes)

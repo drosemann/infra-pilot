@@ -24,6 +24,7 @@ command.
 | `gitops`, `ssh`, `inventory`, `secrets` | Declarative operations, remote-access records, metadata, and secret workflows. |
 | `plugins`, `templates`, `webhooks`, `apikeys` | Extensibility and automation configuration. |
 | `doctor`, `tui`, `rollback` | Diagnostics, terminal UI, and change recovery. |
+| `pet` | Living Fleet creature status (`list`, `status`) and rename; read-only except the name. |
 | `login`, `logout`, `completion`, `interactive`, `batch`, `docs` | Global authentication, shell, interactive, batch, and documentation helpers. |
 
 The installed CLI is the source of truth for flags and availability:

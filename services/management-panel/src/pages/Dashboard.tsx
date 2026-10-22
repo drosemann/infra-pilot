@@ -9,6 +9,7 @@ import { SystemOverview } from "../components/SystemOverview";
 import { ResourceDistribution } from "../components/ResourceDistribution";
 import { LiveLogs } from "../components/LiveLogs";
 import { AppCard } from "../components/AppCard";
+import type { CreatureView } from "../components/FleetPet";
 
 const workflowCards = [
   {
@@ -31,6 +32,8 @@ const workflowCards = [
 export const Dashboard = () => {
   const navigate = useNavigate();
   const [apps, setApps] = useState<DockerApp[]>([]);
+  // Living Fleet creatures keyed by workload_id; empty when the feature is disabled.
+  const [creatures, setCreatures] = useState<Record<string, CreatureView>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -43,6 +46,15 @@ export const Dashboard = () => {
     try {
       const appsData = await apiClient.listApps();
       setApps(appsData);
+      try {
+        const fleet = await apiClient.listCreatures();
+        const byId: Record<string, CreatureView> = {};
+        for (const c of fleet) byId[c.workload_id] = c;
+        setCreatures(byId);
+      } catch {
+        // Fleet proxy disabled or unreachable — cards render without pets.
+        setCreatures({});
+      }
     } catch (error) {
       toast.error("Failed to load dashboard");
     } finally {
@@ -225,6 +237,11 @@ export const Dashboard = () => {
                   memory={Math.floor(Math.random() * 512) + 128}
                   uptime="3d 14h"
                   ports={app.ports}
+                  creature={
+                    (app.container_id && creatures[app.container_id]) ||
+                    Object.values(creatures).find((c) => c.display_name === app.name) ||
+                    null
+                  }
                   onClick={() => navigate(`/apps/${app.id}`)}
                 />
               ))}

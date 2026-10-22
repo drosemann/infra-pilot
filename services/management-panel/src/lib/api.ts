@@ -6,6 +6,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, BackupArtifactsResponse, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
+import type { CreatureView } from '../components/FleetPet';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -75,6 +76,12 @@ class APIClient {
   // Docker app endpoints
   async listApps(): Promise<DockerApp[]> {
     const res = await this.api.get('/api/apps');
+    return res.data;
+  }
+
+  // Living Fleet: best-effort creature views via the panel proxy (404 when disabled).
+  async listCreatures(): Promise<CreatureView[]> {
+    const res = await this.api.get('/api/fleet/creatures');
     return res.data;
   }
 

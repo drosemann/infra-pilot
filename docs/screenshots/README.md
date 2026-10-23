@@ -47,7 +47,10 @@ enough to pass the `check-added-large-files` hook.
 
 ### 0. CI (automatic)
 
-Every PR touching `services/management-panel/` (or a manual run of the `Screenshots` workflow) captures all six PNGs plus `tour.gif` on `ubuntu-latest` and commits them back into the PR branch with `[skip ci]`. No local run needed; fork PRs get the images as run artifacts instead. Artifacts are also uploaded per run.
+Every PR touching `services/management-panel/` (or a manual run of the `Screenshots` workflow) captures all
+six PNGs plus `tour.gif` on `ubuntu-latest`. PR runs commit them back into the PR branch with `[skip ci]`;
+manual `workflow_dispatch` runs commit them to the selected workflow branch with `[skip ci]`. No local run
+needed; fork PRs get the images as run artifacts instead. Artifacts are also uploaded per run.
 
 Use browser captures for future updates. The capture script includes safe demo
 API responses, so it can run without a separate backend or personal data.
@@ -59,7 +62,7 @@ Python 3 with Pillow installed (`python3 -m pip install Pillow`) to rebuild the 
 
 ```bash
 cd services/management-panel
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
 npx playwright install chromium
 npm run dev:frontend &
 node ../../scripts/capture-screenshots.mjs

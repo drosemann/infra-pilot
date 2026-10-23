@@ -1,0 +1,79 @@
+name: Screenshots
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'services/management-panel/**'
+      - 'scripts/capture-screenshots.mjs'
+      - '.github/workflows/screenshots.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    name: Capture panel screenshots
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/management-panel/package-lock.json
+
+      - name: Install panel dependencies
+        working-directory: services/management-panel
+        run: npm install --legacy-peer-deps
+
+      - name: Install Playwright Chromium
+        working-directory: services/management-panel
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Vite frontend
+        working-directory: services/management-panel
+        run: |
+          (npm run dev:frontend -- --host 127.0.0.1 --port 5173 > /tmp/vite.log 2>&1 &)
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:5173 > /dev/null && exit 0
+            sleep 2
+          done
+          echo "Vite did not start in time"; tail -50 /tmp/vite.log; exit 1
+
+      - name: Capture screenshots
+        working-directory: services/management-panel
+        run: node ../../scripts/capture-screenshots.mjs
+
+      - name: Rebuild tour GIF
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 -c "from PIL import Image; from pathlib import Path; p=Path('docs/screenshots'); f=[Image.open(p / n).convert('RGB').resize((800, 450)).convert('P', palette=Image.Palette.ADAPTIVE) for n in ['01-dashboard.png', '02-monitoring.png', '03-applications.png', '04-backups.png', '05-cli-gitops.png', '06-deployments.png']]; f[0].save(p / 'tour.gif', save_all=True, append_images=f[1:], duration=1800, loop=0, optimize=True)"
+
+      - name: Commit updated screenshots
+        if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots/*.png docs/screenshots/tour.gif
+          git diff --cached --quiet && echo "Screenshots unchanged" && exit 0
+          git commit -m "docs(screenshots): refresh panel captures [skip ci]"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: panel-screenshots
+          path: docs/screenshots/

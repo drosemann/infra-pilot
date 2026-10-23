@@ -45,6 +45,10 @@ enough to pass the `check-added-large-files` hook.
 
 ## Regenerating
 
+### 0. CI (automatic)
+
+Every PR touching `services/management-panel/` (or a manual run of the `Screenshots` workflow) captures all six PNGs plus `tour.gif` on `ubuntu-latest` and commits them back into the PR branch with `[skip ci]`. No local run needed; fork PRs get the images as run artifacts instead. Artifacts are also uploaded per run.
+
 Use browser captures for future updates. The capture script includes safe demo
 API responses, so it can run without a separate backend or personal data.
 

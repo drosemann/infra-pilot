@@ -91,7 +91,7 @@ you already own.
 | --- | --- |
 | ![Settings](./docs/screenshots/05-cli-gitops.png) | ![Deployments](./docs/screenshots/06-deployments.png) |
 | General settings, 2FA (TOTP + backup codes), and metrics integration. | Git deployments: repos, branches, enable/disable, and push history. |
-| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). |
+| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). | |
 
 ---
 

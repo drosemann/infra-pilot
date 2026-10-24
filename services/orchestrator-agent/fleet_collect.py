@@ -23,7 +23,7 @@ INTERVAL_S = int(os.getenv("LIVING_FLEET_INTERVAL_S", "60"))
 
 
 def _days_since(value: Any) -> Any:
-    """Parse ISO-8601 or datetime into age in days; ``None`` when unparseable."""
+    """Parse ISO-8601 or datetime into age in days; ``None`` when unparsable."""
     try:
         if isinstance(value, datetime):
             dt = value

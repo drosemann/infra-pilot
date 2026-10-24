@@ -17,7 +17,7 @@
 
 ## Wie wir entwickeln
 
- - Bevorzuge die kleinste produktionsreife Änderung, die das eigentliche
+- Bevorzuge die kleinste produktionsreife Änderung, die das eigentliche
   Problem löst. Verstehe das bestehende Verhalten, bevor du Abstraktionen oder
   Konfigurationen hinzufügst.
 - Setze den Ablauf für Nutzerinnen und Nutzer durchgängig um. CLI,
@@ -40,7 +40,7 @@
 
 ## Projektstruktur
 
- - `cli/` — `ipilot`-Kommandozeilenclient
+- `cli/` — `ipilot`-Kommandozeilenclient
 - `services/management-panel/` — React-Oberfläche, Express-API und WebSocket-Server
 - `services/orchestrator-agent/` — Python-Agent, Manifeste, RBAC und Webhooks
 - `services/discord-service/` — optionale Integration für Discord und Pterodactyl
@@ -53,11 +53,11 @@ Lies vor Änderungen an einem Service dessen README und vorhandene Tests.
 Prüfe bei serviceübergreifendem Verhalten den Vertrag an jeder Schnittstelle,
 statt anzunehmen, dass die Tests einer Komponente den gesamten Ablauf abdecken.
 
-# Wie du entwicklen sollst
+## Wie du entwicklen sollst
 
 - keine sub agents nur ein single agent
-- sei sparsam mit tokens 
+- sei sparsam mit tokens
 - wenn du etwas nicht weißt gib es zu und probiere nicht etliche male und verschwende tokens
 - sei token effizient
-- wenn ich bullshit sage sag es mir 
+- wenn ich bullshit sage sag es mir
 - sei kreativ, mach ruhig wilde features die erstmal dumm wirken

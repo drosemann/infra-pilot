@@ -147,4 +147,7 @@ without updating this file and the API schema):
 | `sad` | Any known vital at or below 50 with no stronger mood match | Drooping, generally disappointed |
 | `ghost` | Down 360+ minutes unacknowledged | Haunts the dashboard until resurrected |
 
-*Note: this plan was cut off mid-table by a truncated write; the table above is now complete and matches `services/orchestrator-agent/living_fleet.py`. The remaining design sections (signal inventory, API contracts, rollout phases) are still to be restored.*
+*Note: this plan was cut off mid-table by a truncated write; the table above
+is now complete and matches `services/orchestrator-agent/living_fleet.py`.
+The remaining design sections (signal inventory, API contracts, rollout
+phases) are still to be restored.*

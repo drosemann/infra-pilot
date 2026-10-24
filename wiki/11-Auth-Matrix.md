@@ -76,10 +76,10 @@ checked at last audit (170 routes).
 
 ### Pre-auth by design (rate-limited, no bearer)
 
-| Route | Method | Guard | Notes |
-|-------|--------|-------|-------|
-| `/api/auth/2fa/verify` | POST | `loginLimiter` | TOTP login step `{ temp_token, totp_code }` |
-| `/api/auth/2fa/verify-backup` | POST | `loginLimiter` | Backup-code login step `{ temp_token, backup_code }` |
+| Route                         | Method | Guard          | Notes                                                |
+| ----------------------------- | ------ | -------------- | ---------------------------------------------------- |
+| `/api/auth/2fa/verify`        | POST   | `loginLimiter` | TOTP login step `{ temp_token, totp_code }`          |
+| `/api/auth/2fa/verify-backup` | POST   | `loginLimiter` | Backup-code login step `{ temp_token, backup_code }` |
 
 Full user flow: [14-Two-Factor-Auth](./14-Two-Factor-Auth.md).
 

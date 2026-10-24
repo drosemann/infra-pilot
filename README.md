@@ -91,7 +91,7 @@ you already own.
 | --- | --- |
 | ![Settings](./docs/screenshots/05-cli-gitops.png) | ![Deployments](./docs/screenshots/06-deployments.png) |
 | General settings, 2FA (TOTP + backup codes), and metrics integration. | Git deployments: repos, branches, enable/disable, and push history. |
-| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). |
+| Auth apps: Google/Microsoft Authenticator, Authy, 1Password, Bitwarden, Aegis, andOTP. Details: [wiki/14-Two-Factor-Auth](./wiki/14-Two-Factor-Auth.md). | |
 
 ---
 
@@ -456,7 +456,41 @@ branches.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+The current project code for which maintainer Daniel Rosemann holds the
+rights is made available under the MIT License; see [LICENSE](./LICENSE).
+Third-party dependencies and other third-party materials remain subject
+to their respective license terms.
+
+### License history
+
+The Git history records these license changes:
+
+- 2025-04-16: a project-specific restrictive license prohibited
+  redistribution and commercial use.
+- 2026-04-16: the license changed to GPL-3.0.
+- 2026-05-05: the license changed from GPL-3.0 to MIT.
+
+The recorded history therefore does not show an MIT-to-GPL-to-MIT
+sequence: the earlier license was the restrictive project-specific
+license. This update keeps the historical commits intact. Previously
+published versions remain subject to the license terms that accompanied
+them; this notice does not retroactively relicense them.
+
+### Historical contributor records
+
+The current source tree does not include Tonchain's issue-triage guide
+or its reference from `CONTRIBUTING.md`. They are omitted from the
+current MIT-licensed tree because no separate permission to include
+those contributions under MIT has been confirmed. The two
+Server-Filter README commits from March 2025 cancel each other out:
+the README before and after those commits is byte-for-byte identical.
+No content from those edits remains in the current tree.
+
+Those historical commits have not been deleted or rewritten and may
+remain visible in GitHub's contributor graph. Maintainer Daniel
+Rosemann confirms that the historical `Dev Coder` identity was his
+temporary Git configuration and that he authored those commits. Git
+author metadata by itself is not proof of copyright ownership.
 
 Started as `dmh-hosting` in March 2025, evolved into `infra-pilot`
 as an internal tool for lean VPS and game-server operations.

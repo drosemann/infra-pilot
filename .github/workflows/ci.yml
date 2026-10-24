@@ -542,7 +542,7 @@ jobs:
       - name: Install codespell
         run: pip install codespell
       - name: Run codespell
-        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use"
+        run: codespell --skip=".git,node_modules,target,*.jar,*.png,*.svg" --ignore-words-list="infra,teh,ba,dae,hist,datas,re-use,alle,deine"
 
   # ── Infrastructure ─────────────────────────────────────────────────
   infra-lint-python:

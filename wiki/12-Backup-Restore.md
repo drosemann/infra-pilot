@@ -15,13 +15,13 @@ This creates a `pg_dump` custom-format backup at
 
 Options:
 
-| Option            | Description                                          |
-|-------------------|------------------------------------------------------|
-| `--keep N`        | Keep only the N most recent local backups (default 10) |
-| `--keep-daily N`  | Borg daily retention (default 7)                     |
-| `--keep-weekly N` | Borg weekly retention (default 4)                    |
-| `--keep-monthly N`| Borg monthly retention (default 6)                   |
-| `--out DIR`       | Use a different output directory                     |
+| Option             | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `--keep N`         | Keep only the N most recent local backups (default 10) |
+| `--keep-daily N`   | Borg daily retention (default 7)                       |
+| `--keep-weekly N`  | Borg weekly retention (default 4)                      |
+| `--keep-monthly N` | Borg monthly retention (default 6)                     |
+| `--out DIR`        | Use a different output directory                       |
 
 Every artifact gets a `.sha256` sidecar, verified at the end of each
 run. Concurrent runs are guarded by a `flock` lock

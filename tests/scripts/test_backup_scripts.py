@@ -143,9 +143,18 @@ class TestDbRestoreHelp:
 
     def test_dry_run_accepts_dump_header_without_docker(self, tmp_path):
         """Verify dry-run passes on header check alone (no daemon needed)."""
+        tool_dir = tmp_path / "bin"
+        tool_dir.mkdir()
+        for tool in ("dirname", "head"):
+            (tool_dir / tool).symlink_to(shutil.which(tool))
         good = tmp_path / "good.dump"
         good.write_bytes(b"PGDMPfake-toc")
-        proc = run(RESTORE, str(good), "--dry-run")
+        proc = run(
+            RESTORE,
+            str(good),
+            "--dry-run",
+            env={"PATH": str(tool_dir)},
+        )
         assert proc.returncode == 0
         assert "Dry-run OK" in proc.stdout
 
@@ -188,7 +197,24 @@ case "$*" in
   'compose ls') echo infra-pilot ;;
   *pg_dump*) echo dump ;;
   'volume inspect infra-pilot_grafana_data') exit "${VOLUME_STATUS:-0}" ;;
-  'run '*) ;;
+  'run '*)
+    out_dir=""
+    archive=""
+    while [[ "$#" -gt 0 ]]; do
+      if [[ "$1" == "-v" && "${2:-}" == *":/out" ]]; then
+        out_dir="${2%:/out}"
+        shift 2
+      elif [[ "$1" == /out/* ]]; then
+        archive="${1#/out/}"
+        shift
+      else
+        shift
+      fi
+    done
+    if [[ -n "$out_dir" && -n "$archive" ]]; then
+      : > "$out_dir/$archive"
+    fi
+    ;;
   *) exit 99 ;;
 esac
 """,

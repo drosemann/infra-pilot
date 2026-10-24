@@ -11,6 +11,7 @@ MODULES = [
     "rollback",
     "gitops",
     "inventory",
+    "pet",
 ]
 
 
@@ -356,6 +357,20 @@ class TestLogsCommands:
 
 
 class TestBackupCommands:
+    def test_get_client_uses_config_profile(self, monkeypatch):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        ctx = MagicMock(obj={"profile": "production"})
+        client = MagicMock()
+        monkeypatch.setattr(
+            backup,
+            "load_config",
+            lambda profile: {"api_url": "https://api", "token": "t"},
+        )
+        monkeypatch.setattr(backup, "ApiClient", lambda url, token: client)
+
+        assert backup._get_client(ctx) is client
+
     def test_list(self, client, invoke):
         client.list_backups.return_value = {"backups": []}
         result = invoke(["backup", "list", "srv-1"])
@@ -367,10 +382,145 @@ class TestBackupCommands:
         result = invoke(["backup", "list"])
         assert result.exit_code == 0
 
+    def test_list_local_dry_run(self, invoke):
+        result = invoke(["backup", "list", "--out", "backups", "--dry-run"])
+        assert result.exit_code == 0
+        assert "would list local files" in result.output
+
+    def test_list_local_missing_directory(self, invoke, tmp_path):
+        result = invoke(["backup", "list", "--out", str(tmp_path / "missing")])
+        assert result.exit_code == 0
+        assert "directory not found" in result.output
+
+    def test_list_local_filters_and_reports_age(self, invoke, monkeypatch, tmp_path):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        captured = []
+        monkeypatch.setattr(
+            backup, "print_output", lambda data, output: captured.append(data)
+        )
+        for name in (
+            "infra-pilot_1.dump",
+            "redis_1.rdb.gpg",
+            "grafana_1.tgz.sha256",
+            "ignored.txt",
+        ):
+            (tmp_path / name).write_text("backup")
+
+        result = invoke(["backup", "list", "--out", str(tmp_path)])
+
+        assert result.exit_code == 0
+        rows = captured[0]["backups"]
+        assert [row["file"] for row in rows] == [
+            "grafana_1.tgz.sha256",
+            "infra-pilot_1.dump",
+            "redis_1.rdb.gpg",
+        ]
+        assert all(row["size_bytes"] == 6 for row in rows)
+        assert all(row["age"].endswith("m") for row in rows)
+
+    @pytest.mark.parametrize(
+        ("age_seconds", "expected"),
+        [(120, "2m"), (7200, "2h"), (172800, "2d")],
+    )
+    def test_age_formats_elapsed_time(self, monkeypatch, age_seconds, expected):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        monkeypatch.setattr(backup.time, "time", lambda: 1_000_000)
+        monkeypatch.setattr(
+            backup.os.path, "getmtime", lambda path: 1_000_000 - age_seconds
+        )
+
+        assert backup._age("unused") == expected
+
+    def test_list_api_dry_run(self, invoke):
+        result = invoke(["backup", "list", "srv-1", "--dry-run"])
+        assert result.exit_code == 0
+        assert "GET /backup-jobs?app_id=srv-1" in result.output
+
     def test_create(self, client, invoke):
         result = invoke(["backup", "create", "srv-1", "--s3", "bucket:path"])
         assert result.exit_code == 0
         client.create_backup.assert_called_once_with("srv-1", s3_target="bucket:path")
+
+    def test_create_api_dry_run(self, invoke):
+        result = invoke(
+            ["backup", "create", "srv-1", "--s3", "bucket:path", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        assert "POST /backup-jobs" in result.output
+        assert "bucket:path" in result.output
+
+    def test_create_local_dry_run_includes_all_options(self, invoke, tmp_path):
+        result = invoke(
+            [
+                "backup",
+                "create",
+                "--keep",
+                "4",
+                "--out",
+                str(tmp_path / "backups"),
+                "--s3",
+                "s3://bucket/backups",
+                "--borg-repo",
+                "/mnt/borg",
+                "--rclone-remote",
+                "remote:backups",
+                "--skip-redis",
+                "--skip-grafana",
+                "--dry-run",
+            ]
+        )
+        assert result.exit_code == 0
+        for option in (
+            "--keep 4",
+            "--out",
+            "--s3 s3://bucket/backups",
+            "--borg-repo /mnt/borg",
+            "--rclone-remote remote:backups",
+            "--skip-redis",
+            "--skip-grafana",
+            "--dry-run",
+        ):
+            assert option in result.output
+
+    def test_create_local_requires_backup_script(self, invoke, monkeypatch, tmp_path):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        monkeypatch.setattr(
+            backup, "_backup_script", lambda: str(tmp_path / "missing-script")
+        )
+        result = invoke(["backup", "create"])
+        assert result.exit_code == 1
+        assert "Local backup script not found" in result.output
+
+    @pytest.mark.parametrize(("returncode", "expected_exit"), [(0, 0), (3, 3)])
+    def test_create_local_runs_script_and_preserves_exit_code(
+        self, invoke, monkeypatch, tmp_path, returncode, expected_exit
+    ):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        script = tmp_path / "db-backup.sh"
+        script.touch()
+        calls = []
+        monkeypatch.setattr(backup, "_backup_script", lambda: str(script))
+        monkeypatch.setattr(
+            backup.subprocess,
+            "run",
+            lambda cmd, check: calls.append((cmd, check))
+            or MagicMock(returncode=returncode),
+        )
+
+        result = invoke(["backup", "create"])
+
+        assert result.exit_code == expected_exit
+        assert calls[0][0][:3] == ["bash", str(script), "--keep"]
+        assert calls[0][1] is False
+
+    def test_create_rejects_local_options_in_api_mode(self, invoke):
+        result = invoke(["backup", "create", "srv-1", "--out", "backups"])
+        assert result.exit_code == 1
+        assert "require omitting SERVER" in result.output
 
     def test_schedule(self, client, invoke):
         result = invoke(
@@ -477,6 +627,110 @@ class TestBackupCommands:
 
         result = CliRunner().invoke(main_app, ["backup", "list"])
         assert result.exit_code == 0
+
+
+class TestBackupVerify:
+    def test_dry_run(self, invoke):
+        result = invoke(["backup", "verify", "backup.dump", "--dry-run"])
+        assert result.exit_code == 0
+        assert "pgdmp-header" in result.output
+
+    def test_missing_file(self, invoke, tmp_path):
+        result = invoke(["backup", "verify", str(tmp_path / "missing.dump")])
+        assert result.exit_code == 1
+        assert "file not found" in result.output
+
+    def test_invalid_header(self, invoke, monkeypatch, tmp_path):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        file = tmp_path / "backup.dump"
+        file.write_bytes(b"invalid")
+        monkeypatch.setattr(backup.shutil, "which", lambda name: None)
+        result = invoke(["backup", "verify", str(file)])
+        assert result.exit_code == 1
+        assert "pgdmp_header" in result.output
+
+    def test_valid_header_without_pg_restore(self, invoke, monkeypatch, tmp_path):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        file = tmp_path / "backup.dump"
+        file.write_bytes(b"PGDMPcontents")
+        monkeypatch.setattr(backup.shutil, "which", lambda name: None)
+        result = invoke(["backup", "verify", str(file)])
+        assert result.exit_code == 0
+        assert "skipped (pg_restore not in PATH)" in result.output
+
+    @pytest.mark.parametrize(
+        ("returncode", "stdout", "stderr", "expected_exit", "expected"),
+        [
+            (0, "one;\ntwo;\n", "", 0, "pg_restore_entries"),
+            (1, "", "bad archive", 1, "pg_restore failed: bad archive"),
+        ],
+    )
+    def test_pg_restore_result(
+        self,
+        invoke,
+        monkeypatch,
+        tmp_path,
+        returncode,
+        stdout,
+        stderr,
+        expected_exit,
+        expected,
+    ):
+        import cli.ipilot.commands.infrastructure.backup as backup
+
+        file = tmp_path / "backup.dump"
+        file.write_bytes(b"PGDMPcontents")
+        monkeypatch.setattr(backup.shutil, "which", lambda name: "/usr/bin/pg_restore")
+        monkeypatch.setattr(
+            backup.subprocess,
+            "run",
+            lambda *args, **kwargs: MagicMock(
+                returncode=returncode, stdout=stdout, stderr=stderr
+            ),
+        )
+
+        result = invoke(["backup", "verify", str(file)])
+
+        assert result.exit_code == expected_exit
+        assert expected in result.output
+        if returncode == 0:
+            assert "2" in result.output
+
+
+class TestPetCommands:
+    def test_get_client_uses_config_profile(self, monkeypatch):
+        import cli.ipilot.commands.pet as pet
+
+        ctx = MagicMock(obj={"profile": "production"})
+        client = MagicMock()
+        monkeypatch.setattr(
+            pet,
+            "load_config",
+            lambda profile: {"api_url": "https://api", "token": "t"},
+        )
+        monkeypatch.setattr(pet, "ApiClient", lambda url, token: client)
+
+        assert pet._get_client(ctx) is client
+
+    def test_list(self, client, invoke):
+        client.list_creatures.return_value = []
+        result = invoke(["pet", "list"])
+        assert result.exit_code == 0
+        client.list_creatures.assert_called_once_with()
+
+    def test_status(self, client, invoke):
+        client.get_creature.return_value = {"workload_id": "api-1"}
+        result = invoke(["pet", "status", "api-1", "--output", "json"])
+        assert result.exit_code == 0
+        client.get_creature.assert_called_once_with("api-1")
+
+    def test_rename(self, client, invoke):
+        client.rename_creature.return_value = {"display_name": "Friendly API"}
+        result = invoke(["pet", "rename", "api-1", "Friendly API", "--output", "json"])
+        assert result.exit_code == 0
+        client.rename_creature.assert_called_once_with("api-1", "Friendly API")
 
 
 class TestInventoryExtras:

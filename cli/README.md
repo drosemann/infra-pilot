@@ -50,4 +50,13 @@ files.
 
 ```bash
 pytest tests/cli/ -v
+pytest tests/orchestrator/test_feature_flags.py -v  # feature-flag evaluation contract
+```
+
+## Feature flags
+
+`ipilot flags ...` manages panel feature flags: `list`, `evaluate`,
+`create <key>`, `rollout <key> --env production --percent 50`, and
+`kill <key>` (disables everywhere at once). Writes require a panel admin.
+```
 ```

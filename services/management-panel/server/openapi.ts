@@ -509,4 +509,28 @@ const spec: Record<string, any> = {
   },
 };
 
+spec.components.schemas.FeatureFlag = { type: 'object', properties: { key: { type: 'string' }, enabled: { type: 'boolean' } } };
+spec.paths['/feature-flags/evaluate'] = {
+  get: {
+    summary: 'Evaluate feature flags for the caller',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Resolved flag map' }, '401': { description: 'Unauthorized' } },
+  },
+};
+spec.paths['/feature-flags'] = {
+  get: {
+    summary: 'List flag definitions (admin)',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Flag definitions' }, '403': { description: 'Admin required' } },
+  },
+  post: {
+    summary: 'Create a feature flag (admin)',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '201': { description: 'Flag created' }, '400': { description: 'Invalid input' } },
+  },
+};
+
 export default spec;

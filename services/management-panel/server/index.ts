@@ -66,6 +66,7 @@ import {
 import { runBenchmark } from './benchmark.ts';
 import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
 import { buildPlan } from './assistant.ts';
+import { FLAG_REGISTRY, evaluateFlag, validateFlagKey, validateRule, envOverride } from './feature-flags.ts';
 import { executeGraphQL } from './graphql.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
@@ -3451,11 +3452,31 @@ interface TerminalRoom {
 
 const terminalRooms = new Map<string, TerminalRoom>();
 
+// Long-lived flag subscribers (?channel=feature-flags). Kept outside rooms:
+// they only receive invalidation broadcasts pushed on every flag write.
+const flagSubscribers = new Set<WebSocket>();
+
+function broadcastFlagChange(changedKey?: string) {
+  const msg = JSON.stringify({ type: 'feature-flags:changed', key: changedKey || null, at: new Date().toISOString() });
+  for (const client of flagSubscribers) {
+    if (client.readyState === WebSocket.OPEN) client.send(msg);
+  }
+}
+
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url || '', 'http://localhost');
   const appId = url.searchParams.get('appId');
   const sessionId = url.searchParams.get('sessionId');
   const displayName = url.searchParams.get('displayName') || 'Anonymous';
+
+  // Feature-flag invalidation channel: no auth on the socket itself, it only
+  // carries "something changed" nudges — clients refetch over authenticated HTTP.
+  if (url.searchParams.get('channel') === 'feature-flags') {
+    flagSubscribers.add(ws);
+    ws.on('close', () => { flagSubscribers.delete(ws); });
+    ws.send(JSON.stringify({ type: 'feature-flags:hello' }));
+    return;
+  }
 
   // Collaborative Terminal connection
   if (sessionId) {
@@ -4466,6 +4487,154 @@ app.post('/api/graphql', verifyAuth, async (req: Request, res: Response) => {
     },
   });
   res.json(result);
+});
+
+// ============================================================================
+// FEATURE FLAGS — panel is the single source of truth (DB), thin consumers
+// read via /evaluate. Authoritative server-side evaluation only; the browser
+// receives resolved values, never targeting rules.
+// ============================================================================
+async function requireFlagAdmin(req: Request, res: Response): Promise<string | null> {
+  const userId = (req as any).user.id;
+  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', userId).maybeSingle();
+  if (profile?.role !== 'admin') {
+    res.status(403).json({ error: 'Admin required' });
+    return null;
+  }
+  return userId;
+}
+
+async function loadFlagsFromDb(): Promise<any[]> {
+  const { data: flags } = await supabase.from('feature_flags').select('*').eq('status', 'active');
+  const { data: rules } = await supabase.from('feature_flag_rules').select('*');
+  return (flags || []).map((f: any) => ({
+    ...f,
+    rules: Object.fromEntries((rules || []).filter((r: any) => r.flag_key === f.key).map((r: any) => [r.environment, r])),
+  }));
+}
+
+async function upsertFlagRule(flagKey: string, rule: any, updatedBy: string) {
+  const { data: existing } = await supabase.from('feature_flag_rules').select('flag_key').eq('flag_key', flagKey).eq('environment', rule.environment).maybeSingle();
+  if (existing) {
+    const { error } = await supabase.from('feature_flag_rules').update({ ...rule, updated_by: updatedBy }).eq('flag_key', flagKey).eq('environment', rule.environment);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from('feature_flag_rules').insert({ flag_key: flagKey, ...rule, updated_by: updatedBy });
+    if (error) throw new Error(error.message);
+  }
+}
+
+function withRegistryFallback(dbFlags: any[]): any[] {
+  const seen = new Set(dbFlags.map((f: any) => f.key));
+  return [...dbFlags, ...FLAG_REGISTRY.filter((f) => !seen.has(f.key))];
+}
+
+// Service-token or user auth for flag reads. Service callers (orchestrator,
+// CLI, Discord) present FEATURE_FLAGS_SERVICE_TOKEN and assert the subject
+// via ?userId=&orgId=&projectId (same pattern as the federation API: the
+// token holder asserts identity for scoping, the token is the trust root).
+async function verifyFlagReader(req: Request, res: Response, next: NextFunction) {
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  const serviceToken = process.env.FEATURE_FLAGS_SERVICE_TOKEN;
+  if (serviceToken && token) {
+    const a = Buffer.from(token);
+    const b = Buffer.from(serviceToken);
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+      if (!(req as any).user) (req as any).user = {};
+      (req as any).user.id = (req.query.userId as string) || 'service';
+      (req as any).flagServiceToken = true;
+      return next();
+    }
+  }
+  return verifyAuth(req, res, next);
+}
+
+// GET /api/feature-flags/evaluate — any authenticated user, resolved map only.
+app.get('/api/feature-flags/evaluate', verifyFlagReader, async (req: Request, res: Response) => {
+  try {
+    const env = (process.env.NODE_ENV === 'production' ? 'production' : 'development') as 'development' | 'staging' | 'production';
+    const subject = {
+      userId: (req as any).user.id,
+      orgId: req.query.orgId as string | undefined,
+      projectId: req.query.projectId as string | undefined,
+    };
+    let flags: any[] = FLAG_REGISTRY;
+    try {
+      flags = withRegistryFallback(await loadFlagsFromDb());
+    } catch {
+      // DB down: fall through to compiled-in registry + env overrides.
+    }
+    const out: Record<string, boolean | string> = {};
+    for (const f of flags) {
+      const ov = envOverride(f.key);
+      out[f.key] = ov !== null ? ov : evaluateFlag(f, env, subject);
+    }
+    res.json({ evaluatedAt: new Date().toISOString(), environment: env, flags: out });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/feature-flags — admin: full definitions + rules.
+app.get('/api/feature-flags', verifyAuth, async (req: Request, res: Response) => {
+  const userId = await requireFlagAdmin(req, res);
+  if (!userId) return;
+  try {
+    res.json({ flags: withRegistryFallback(await loadFlagsFromDb()) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/feature-flags — admin: create flag + per-env rules.
+app.post('/api/feature-flags', verifyAuth, async (req: Request, res: Response) => {
+  const userId = await requireFlagAdmin(req, res);
+  if (!userId) return;
+  const { key, description, value_type, default_value, fail_mode, expires_at, rules } = req.body;
+  if (!validateFlagKey(key)) return res.status(400).json({ error: 'Invalid flag key slug' });
+  const { data, error } = await supabase.from('feature_flags').insert({
+    key, description: description || '', value_type: value_type || 'boolean',
+    default_value: default_value ?? false, fail_mode: fail_mode || 'closed',
+    expires_at: expires_at || null, created_by: userId,
+  }).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  for (const r of rules || []) {
+    const errMsg = validateRule(r);
+    if (errMsg) return res.status(400).json({ error: errMsg });
+    await upsertFlagRule(key, r, userId);
+  }
+  await logAudit(userId, 'flag:create', 'feature_flag', key, null, req.body, (req as any).ip);
+  broadcastFlagChange(key);
+  res.status(201).json({ flag: data });
+});
+
+// PATCH /api/feature-flags/:key — admin: update definition or env rule.
+app.patch('/api/feature-flags/:key', verifyAuth, async (req: Request, res: Response) => {
+  const userId = await requireFlagAdmin(req, res);
+  if (!userId) return;
+  const { data: before } = await supabase.from('feature_flags').select('*').eq('key', req.params.key).maybeSingle();
+  if (req.body.rule) {
+    const errMsg = validateRule(req.body.rule);
+    if (errMsg) return res.status(400).json({ error: errMsg });
+    try { await upsertFlagRule(req.params.key, req.body.rule, userId); } catch (err: any) { return res.status(400).json({ error: err.message }); }
+  } else {
+    const { error } = await supabase.from('feature_flags').update(req.body).eq('key', req.params.key);
+    if (error) return res.status(400).json({ error: error.message });
+  }
+  broadcastFlagChange(req.params.key);
+  await logAudit(userId, 'flag:update', 'feature_flag', req.params.key, before, req.body, (req as any).ip);
+  res.json({ ok: true });
+});
+
+// POST /api/feature-flags/:key/kill — admin: instant kill switch (all envs off).
+app.post('/api/feature-flags/:key/kill', verifyAuth, async (req: Request, res: Response) => {
+  const userId = await requireFlagAdmin(req, res);
+  if (!userId) return;
+  const { data: before } = await supabase.from('feature_flag_rules').select('*').eq('flag_key', req.params.key);
+  await supabase.from('feature_flag_rules').update({ enabled: false, rollout_percentage: 0 }).eq('flag_key', req.params.key);
+  await logAudit(userId, 'flag:kill', 'feature_flag', req.params.key, before, { enabled: false }, (req as any).ip);
+  broadcastFlagChange(req.params.key);
+  res.json({ ok: true, killed: req.params.key });
 });
 
 // Global error handling middleware

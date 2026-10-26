@@ -132,6 +132,10 @@ services:
       # requests without a matching Authorization header get a 401.
       FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:?FEDERATION_API_TOKEN must be set (see .env.example or scripts/generate-env.sh)}
       PYTHONUNBUFFERED: "1"
+      FEATURE_FLAGS_ENABLED: ${FEATURE_FLAGS_ENABLED:-false}
+      FEATURE_FLAGS_PANEL_URL: ${FEATURE_FLAGS_PANEL_URL:-http://management-panel:3001}
+      FEATURE_FLAGS_POLL_SECONDS: ${FEATURE_FLAGS_POLL_SECONDS:-30}
+      FEATURE_FLAGS_SERVICE_TOKEN: ${FEATURE_FLAGS_SERVICE_TOKEN:-}
     ports:
       - "${ORCHESTRATOR_WEBHOOK_PORT:-8500}:8500"
     healthcheck:
@@ -189,6 +193,9 @@ services:
       LOCATION_ID: ${LOCATION_ID:-1}
       API_BASE_URL: http://management-panel:3001
       FEDERATION_API_TOKEN: ${FEDERATION_API_TOKEN:-}
+      FEATURE_FLAGS_ENABLED: ${FEATURE_FLAGS_ENABLED:-false}
+      FEATURE_FLAGS_PANEL_URL: ${FEATURE_FLAGS_PANEL_URL:-http://management-panel:3001}
+      FEATURE_FLAGS_SERVICE_TOKEN: ${FEATURE_FLAGS_SERVICE_TOKEN:-}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: ${POSTGRES_USER:-infra_pilot}

@@ -15,6 +15,16 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+def _flags_enabled() -> bool:
+    if os.getenv("FEATURE_FLAGS_ENABLED", "false").lower() != "true":
+        return os.getenv("LIVING_FLEET_ENABLED", "false").lower() == "true"
+    try:
+        from .feature_flags import client as _flag_client, is_enabled
+        _flag_client.start()
+        return is_enabled("living_fleet", default=False)
+    except Exception:
+        return False
+
 ENABLED = os.getenv("LIVING_FLEET_ENABLED", "false").lower() == "true"
 STORE_PATH = os.getenv(
     "LIVING_FLEET_STORE", os.path.join(os.path.dirname(__file__), "living_fleet.json")
@@ -293,7 +303,7 @@ def rename(workload_id: str, display_name: str) -> Optional[Dict[str, Any]]:
 async def fleet_list(request) -> Any:  # type: ignore[no-untyped-def]
     from aiohttp import web
 
-    if not ENABLED:
+    if not _flags_enabled():
         return web.json_response({"error": "living fleet disabled"}, status=404)
     data = _load_all()
     return web.json_response(
@@ -308,7 +318,7 @@ async def fleet_list(request) -> Any:  # type: ignore[no-untyped-def]
 async def fleet_detail(request) -> Any:  # type: ignore[no-untyped-def]
     from aiohttp import web
 
-    if not ENABLED:
+    if not _flags_enabled():
         return web.json_response({"error": "living fleet disabled"}, status=404)
     workload_id = request.match_info["workload_id"]
     data = _load_all()
@@ -321,7 +331,7 @@ async def fleet_detail(request) -> Any:  # type: ignore[no-untyped-def]
 async def fleet_rename(request) -> Any:  # type: ignore[no-untyped-def]
     from aiohttp import web
 
-    if not ENABLED:
+    if not _flags_enabled():
         return web.json_response({"error": "living fleet disabled"}, status=404)
     workload_id = request.match_info["workload_id"]
     try:
@@ -339,3 +349,4 @@ async def fleet_rename(request) -> Any:  # type: ignore[no-untyped-def]
         return web.json_response({"error": "unknown or retired workload"}, status=404)
     logger.info("fleet rename: %s", workload_id)
     return web.json_response(view)
+

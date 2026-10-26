@@ -5,6 +5,8 @@ const http = require('http');
 dotenv.config();
 
 const pterodactyl = require('./modules/pterodactyl');
+const featureFlags = require('./feature-flags');
+featureFlags.start();
 const { validateEmail, validateUsername, validatePassword } = require('./modules/validation');
 const { loadServerLimits, saveServerLimits } = require('./modules/serverLimits');
 

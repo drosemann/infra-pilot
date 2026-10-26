@@ -4550,7 +4550,14 @@ async function verifyFlagReader(req: Request, res: Response, next: NextFunction)
 }
 
 // GET /api/feature-flags/evaluate — any authenticated user, resolved map only.
-app.get('/api/feature-flags/evaluate', verifyFlagReader, async (req: Request, res: Response) => {
+const featureFlagsEvaluateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.get('/api/feature-flags/evaluate', featureFlagsEvaluateLimiter, verifyFlagReader, async (req: Request, res: Response) => {
   try {
     const env = (process.env.NODE_ENV === 'production' ? 'production' : 'development') as 'development' | 'staging' | 'production';
     const subject = {

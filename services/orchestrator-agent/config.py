@@ -158,7 +158,10 @@ class Config:
 
     # GitOps
     GITOPS_MAX_VERSIONS_PER_VPS: int = 50
+    FEATURE_FLAGS_ENABLED: bool = os.getenv("FEATURE_FLAGS_ENABLED", "false").lower() == "true"
     GITOPS_WEBHOOK_PORT: int = 8500
+    FEATURE_FLAGS_PANEL_URL: str = os.getenv("FEATURE_FLAGS_PANEL_URL", "http://localhost:3001")
+    FEATURE_FLAGS_POLL_SECONDS: int = int(os.getenv("FEATURE_FLAGS_POLL_SECONDS", "30"))
 
     # Auto-scale (overridable via environment variables)
     AUTO_SCALE_COOLDOWN_MINUTES: int = int(

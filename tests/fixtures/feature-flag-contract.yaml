@@ -1,0 +1,34 @@
+# Feature-flag evaluation contract — shared fixture for the TS and Python evaluators.
+# Both implementations MUST return `expected` for every case. Bucket rule:
+# bucket = sha256("flagKey:subjectId") first 2 bytes BE % 100; on if bucket < rollout.
+cases:
+  - name: kill switch beats allow-list
+    flag: { key: discord_service_v2, status: active, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: false, rollout_percentage: 100, target_user_ids: [u1], deny_user_ids: [] }
+    subject: { userId: u1 }
+    expected: false
+  - name: deny beats allow
+    flag: { key: discord_service_v2, status: active, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: true, rollout_percentage: 0, target_user_ids: [u1], deny_user_ids: [u1] }
+    subject: { userId: u1 }
+    expected: false
+  - name: explicit allow beats zero rollout
+    flag: { key: living_fleet, status: active, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: true, rollout_percentage: 0, target_org_ids: [org9], target_user_ids: [], deny_user_ids: [] }
+    subject: { userId: u2, orgId: org9 }
+    expected: true
+  - name: archived flag returns default
+    flag: { key: living_fleet, status: archived, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: true, rollout_percentage: 100, target_user_ids: [], deny_user_ids: [] }
+    subject: { userId: anyone }
+    expected: false
+  - name: full rollout on for any subject
+    flag: { key: living_fleet, status: active, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: true, rollout_percentage: 100, target_user_ids: [], deny_user_ids: [] }
+    subject: { userId: random-user-42 }
+    expected: true
+  - name: zero rollout off without allow-list
+    flag: { key: living_fleet, status: active, expires_at: null, value_type: boolean, default_value: false }
+    rule: { environment: production, enabled: true, rollout_percentage: 0, target_user_ids: [], deny_user_ids: [] }
+    subject: { userId: random-user-42 }
+    expected: false

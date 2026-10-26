@@ -8,6 +8,15 @@ Pre-1.0: no tagged releases yet; entries track `main`.
 
 ### Added
 
+- Feature flags: panel-owned `feature_flags`/`feature_flag_rules` tables with
+  per-environment enable/rollout/targeting, admin UI at `/feature-flags`,
+  `GET /api/feature-flags/evaluate` + kill switch, RBAC
+  `feature-flag:read/manage` permissions, orchestrator `feature_flags.py`
+  consumer (gates `living_fleet`), `ipilot flags` CLI group, Discord
+  `feature-flags.js` consumer, and a shared evaluation contract fixture
+  (`tests/fixtures/feature-flag-contract.yaml`). Opt-in via
+  `FEATURE_FLAGS_ENABLED`; env override `FEATURE_FLAG_<KEY>` always wins.
+
 - Safe update flow: `scripts/update.sh` (backup first,
   `git pull --ff-only`, rebuild, health + volume verification;
   refuses `-v` / `--volumes`). Tested by

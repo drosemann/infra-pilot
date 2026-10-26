@@ -165,4 +165,10 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 
 ---
 
+| `flags list` | List flag definitions (admin) |
+| `flags evaluate` | Show evaluated flag values for you |
+| `flags create <key>` | Create a flag (admin) |
+| `flags rollout <key> [--env production] [--enable/--disable] [--percent N]` | Toggle or percentage-roll-out a flag (admin) |
+| `flags kill <key>` | Kill switch: disable everywhere (admin) |
+
 *Source: `ipilot <command> --help` for each command*

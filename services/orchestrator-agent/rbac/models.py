@@ -54,6 +54,8 @@ class Permission(str, Enum):
     # Audit
     AUDIT_READ = "audit:read"
     AUDIT_EXPORT = "audit:export"
+    FEATURE_FLAG_READ = "feature-flag:read"
+    FEATURE_FLAG_MANAGE = "feature-flag:manage"
 
     # GitOps
     MANIFEST_DEPLOY = "manifest:deploy"
@@ -90,6 +92,7 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
         Permission.MANIFEST_DEPLOY,
         Permission.MANIFEST_READ,
         Permission.DRIFT_VIEW,
+        Permission.FEATURE_FLAG_READ,
     },
     "developer": {
         Permission.INSTANCE_READ,
@@ -104,12 +107,14 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
         Permission.NETWORK_READ,
         Permission.MANIFEST_READ,
         Permission.DRIFT_VIEW,
+        Permission.FEATURE_FLAG_READ,
     },
     "viewer": {
         Permission.INSTANCE_READ,
         Permission.NETWORK_READ,
         Permission.MANIFEST_READ,
         Permission.DRIFT_VIEW,
+        Permission.FEATURE_FLAG_READ,
         Permission.BILLING_READ,
         Permission.AUDIT_READ,
     },
@@ -119,6 +124,7 @@ BUILT_IN_ROLES: Dict[str, Set[Permission]] = {
         Permission.INSTANCE_READ,
         Permission.AUDIT_READ,
         Permission.AUDIT_EXPORT,
+        Permission.FEATURE_FLAG_READ,
     },
 }
 
@@ -187,3 +193,6 @@ class Membership:
     granted_by: str = ""
     granted_at: datetime = field(default_factory=datetime.now)
     expires_at: Optional[datetime] = None
+
+
+

@@ -18,6 +18,7 @@ import { Deployments } from './pages/Deployments';
 import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
 import { AuditLog } from './pages/AuditLog';
+import { FeatureFlags } from './pages/FeatureFlags';
 import { KnowledgeBase } from './pages/KnowledgeBase';
 import { ActivityFeed } from './components/ActivityFeed';
 import { MainLayout } from './components/MainLayout';
@@ -179,6 +180,7 @@ export default function App() {
                       <Route path="/deployments" element={<Deployments />} />
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/audit" element={<AuditLog />} />
+        <Route path="/feature-flags" element={<FeatureFlags />} />
                       <Route path="/activity" element={<ActivityFeed limit={50} />} />
                       <Route path="/knowledge-base" element={<KnowledgeBase />} />
                       <Route path="/knowledge-base/:articleId" element={<KnowledgeBase />} />

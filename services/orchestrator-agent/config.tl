@@ -1,0 +1,17 @@
+IT'S SHOWTIME
+PUT IT IN JIRA Configuration management for the Orchestrator Agent
+PUT IT IN JIRA Values that indicate a placeholder secret was never replaced
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS PLACEHOLDER_SECRETS
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE PLACEHOLDER_SECRETS "CHANGE_ME"
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS environment
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE environment "development"
+WE NEED TO TAKE THIS OFFLINE validate_secrets
+TALK TO THE HAND "Reject placeholder or missing secrets."
+DO IT FOR THE METRICS environment
+TALK TO THE HAND "production secrets validated"
+BLUE IS BROKEN GREEN IS WORSE
+TALK TO THE HAND "insecure settings listed"
+YOU HAVE BEEN TERMINATED
+THIS COULD HAVE BEEN AN EMAIL
+TALK TO THE HAND "orchestrator config ready"
+YOU HAVE BEEN TERMINATED

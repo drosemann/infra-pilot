@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { exec, spawn } from 'child_process';
+import { exec, execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
@@ -68,6 +68,7 @@ import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
 import { buildPlan } from './assistant.ts';
 import { FLAG_REGISTRY, evaluateFlag, validateFlagKey, validateRule, envOverride } from './feature-flags.ts';
 import { executeGraphQL } from './graphql.ts';
+import { annotateResources, parseBlamePorcelain, resourceSpans } from './git-blame.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -83,6 +84,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', false);
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Run real diagnostics. The optional `issue` filters to a category:
@@ -4228,6 +4230,47 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ history: data || [] });
+});
+
+const gitopsBlameRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // max 60 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests to /api/gitops/blame. Please try again later.' },
+});
+
+app.get('/api/gitops/blame', verifyAuth, gitopsBlameRateLimiter, async (req: Request, res: Response) => {
+  const rel = String(req.query.path || 'ipilot-config.yaml');
+  const staleDaysParam = req.query.staleDays;
+  const parsedStaleDays = typeof staleDaysParam === 'string' && staleDaysParam.trim() ? Number(staleDaysParam) : 180;
+  const staleDays = Number.isFinite(parsedStaleDays) ? parsedStaleDays : 180;
+  if (!/^[A-Za-z0-9._\/-]+\.ya?ml$/.test(rel) || rel.includes('..')) {
+    return res.status(400).json({ error: 'path must be a repo-relative .yaml/.yml file' });
+  }
+  const repoDir = process.env.GITOPS_REPO_DIR || process.cwd();
+  const abs = path.resolve(repoDir, rel);
+  const root = path.resolve(repoDir);
+  if (abs !== root && !abs.startsWith(root + path.sep)) {
+    return res.status(400).json({ error: 'path escapes the repo dir' });
+  }
+  let text: string;
+  try {
+    text = await fs.readFile(abs, 'utf8');
+  } catch {
+    return res.status(404).json({ error: 'config file not found: ' + rel });
+  }
+  try {
+    const env = { ...process.env };
+    for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CEILING_DIRECTORIES']) delete env[key];
+    const { stdout } = await execFileAsync('git', ['blame', '--line-porcelain', '--', path.basename(abs)], {
+      cwd: path.dirname(abs), env, maxBuffer: 32 * 1024 * 1024,
+    });
+    const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
+    return res.json({ file: rel, annotations });
+  } catch (err) {
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'git blame failed' });
+  }
 });
 
 app.post('/api/changes/:id/undo', verifyAuth, async (req: Request, res: Response) => {

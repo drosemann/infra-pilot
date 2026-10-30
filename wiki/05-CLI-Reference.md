@@ -63,6 +63,8 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 | --------- | ------------- |
 | `gitops export [-o file.yaml] [-s server]` | Export current infra as YAML |
 | `gitops plan [-f file.yaml]` | Show diff between current state and YAML |
+| `gitops plan [-f file.yaml] [--blame]` | Show diff, optionally annotated with git authorship and risk |
+| `gitops blame [-f file.yaml] [--stale-days N]` | Show git author, commit, age, and risk per server resource |
 | `gitops apply [-f file.yaml] [--dry-run] [-y]` | Apply YAML config to infra |
 | `gitops drift [--scan]` | Detect configuration drift |
 | `gitops import-config <file>` | Import from YAML file |

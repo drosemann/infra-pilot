@@ -82,6 +82,12 @@ export const Sidebar = ({
       route: "/deployments",
     },
     {
+      id: "git-blame",
+      label: "Git Blame",
+      icon: "🔍",
+      route: "/git-blame",
+    },
+    {
       id: "logs",
       label: "Logs",
       icon: "📝",

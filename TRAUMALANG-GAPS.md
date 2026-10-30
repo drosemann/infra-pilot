@@ -164,6 +164,20 @@ Was pro Datei konkret fehlt bzw. nur angerissen ist:
 
 - Backend-Batch 22 (35 Dateien, alle voll gelesen, nur Huellen + `TALK TO THE HAND`): 11 `commands/*/__init__`-Marker (Inhalt steckt in den flachen `<name>.tl`-Ports), `vpsManager` (Tabellen, Lifecycle, Stats, Backups, Retention, Restore, Exec, 371 Zeilen), discord-`smoke` (Modul-Load, Validation, RoleManager, 47 Zeilen), `install` (Tool-Checks, Setup-Key, Clone, Token, Build, Run; Key nur als Name), orchestrator-`conftest` (No-DB-Stub, Mock-Docker, 153 Zeilen), `test_imports` (Modul-Importe, 36 Zeilen), 19 Unit-Tests (DB-Migration, Cogs, OpenAPI-Contract, Secrets, Auth-Observability, LivingFleet, Config-Validation, Federation, Compute, RBAC-API/Store/Engine, Manifest-Schema/Engine, RateLimiter, Hardening, Webhook-Auth, VPS-Manager, Deploy-API; Fixture-Tokens nur generisch). Nicht abbildbar: `pytest`/`unittest`-Fixtures, `aiohttp`-TestClient, `docker-py`-Mocks, SQL-Strings, HMAC-Logik, exakte Status-Asserts.
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:f03ea8ceadcee90dd19c5897069e1485a90cd847d2b8855c70b33199dbe56b3a -->
+
+- `cli/ipilot/commands/gitops/blame.tl` / `tests/cli/test_gitops_blame.tl` (neu):
+  blame-aware GitOps (`run_git_blame`, `parse_blame_porcelain`, `resource_spans`,
+  `annotate` mit uncommitted/stale/many-hands/unknown-Risiken, `blame`-Command,
+  `plan --blame`). Fehlt: echte git-Subprocess-Semantik (nur Huellen +
+  `TALK TO THE HAND`). Panel-Dateien (`server/git-blame.ts`,
+  `src/pages/GitBlame.tsx`, Tests) haben keine `.tl`-Zwillinge
+  (`services/management-panel/` komplett offen, siehe 2f).
+
+<!-- /coderabbit-ai-generated:v1 -->
+
 ## 2. Noch gar nicht übersetzte Quelldateien
 
 ### 2a. `cli/ipilot/commands/`-Submodule (alle erledigt, siehe Abschnitt 1 und Batches)

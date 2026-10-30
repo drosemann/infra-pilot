@@ -16,5 +16,8 @@ THIS COULD HAVE BEEN AN EMAIL
 WE NEED TO TAKE THIS OFFLINE import_config
 TALK TO THE HAND "Import infrastructure config from a YAML file."
 THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE gitops_blame
+TALK TO THE HAND "Show git authorship per infrastructure resource."
+THIS COULD HAVE BEEN AN EMAIL
 TALK TO THE HAND "gitops ready"
 YOU HAVE BEEN TERMINATED

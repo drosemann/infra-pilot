@@ -533,4 +533,17 @@ spec.paths['/feature-flags'] = {
   },
 };
 
+spec.paths['/gitops/blame'] = {
+  get: {
+    summary: 'Blame-aware GitOps: authorship per server resource',
+    tags: ['GitOps'],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      { name: 'path', in: 'query', required: false, schema: { type: 'string' } },
+      { name: 'staleDays', in: 'query', required: false, schema: { type: 'integer' } },
+    ],
+    responses: { '200': { description: 'Blame annotations' }, '400': { description: 'Invalid path' }, '404': { description: 'Config file not found' }, '500': { description: 'Git blame failed', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } },
+  },
+};
+
 export default spec;

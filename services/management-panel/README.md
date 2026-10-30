@@ -29,6 +29,21 @@ npm run dev
 visit uses the setup flow. For the complete dependency stack, start the repository root with `docker compose
 up -d` instead.
 
+## Git blame
+
+Blame-aware GitOps page at `/git-blame` (sidebar: Git Blame). Shows who last
+touched each server resource in a repo-relative YAML config, plus ownership
+risk flags (`uncommitted`, `stale`, `many-hands`, `unknown`):
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/gitops/blame?path=<file>&staleDays=<n>` | Blame annotations per server resource. |
+
+`path` must be a repo-relative `.yaml`/`.yml` file inside `GITOPS_REPO_DIR`
+(defaults to the panel working directory); traversal and absolute paths are
+rejected. `staleDays` (default 180) sets the freshness threshold. The CLI
+counterpart is `ipilot gitops blame` / `gitops plan --blame`.
+
 ## API and authentication
 
 | Surface | URL | Notes |

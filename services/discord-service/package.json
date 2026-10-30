@@ -22,6 +22,6 @@
     "pg": "^8.23.1",
     "pretty-bytes": "^7.2.0",
     "quickchart-js": "^4.0.0",
-    "systeminformation": "^5.33.15"
+    "systeminformation": "^5.33.16"
   }
 }

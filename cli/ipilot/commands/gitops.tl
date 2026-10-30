@@ -1,4 +1,4 @@
-﻿IT'S SHOWTIME
+IT'S SHOWTIME
 PUT IT IN JIRA Infrastructure as Code GitOps YAML configs apply plan drift detection
 PUT IT IN JIRA Git remembers everything which is either comforting or a threat
 WE NEED TO TAKE THIS OFFLINE gitops_export

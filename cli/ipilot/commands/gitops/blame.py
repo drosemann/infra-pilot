@@ -46,7 +46,10 @@ def run_git_blame(path: str) -> str:
             capture_output=True,
             text=True,
             check=False,
+            timeout=30,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise BlameError(f"git blame timed out for {path}") from exc
     except OSError as exc:
         raise BlameError(f"git not available: {exc}") from exc
     if proc.returncode != 0:
@@ -75,10 +78,10 @@ def parse_blame_porcelain(output: str) -> Dict[int, BlameLine]:
                 author_time=author_time,
             )
         elif raw.startswith("author "):
-            author = raw[len("author "):]
+            author = raw[len("author ") :]
         elif raw.startswith("author-time "):
             try:
-                author_time = int(raw[len("author-time "):])
+                author_time = int(raw[len("author-time ") :])
             except ValueError:
                 author_time = 0
         else:
@@ -96,6 +99,7 @@ def resource_spans(text: str) -> List[Tuple[str, int, int]]:
     """
     lines = text.splitlines()
     servers_indent: Optional[int] = None
+    item_indent: Optional[int] = None
     spans: List[Tuple[str, int, int]] = []
     pending_name = ""
     pending_start = 0
@@ -107,19 +111,36 @@ def resource_spans(text: str) -> List[Tuple[str, int, int]]:
         if servers_indent is None:
             if re.match(r"servers\s*:", stripped):
                 servers_indent = indent
+                if re.match(r"servers\s*:\s*\[\s*\]", stripped):
+                    break
             continue
-        if indent <= servers_indent:
+        is_item = bool(re.match(r"-($|\s)", stripped))
+        if indent < servers_indent or (indent == servers_indent and not is_item):
             if pending_name:
                 spans.append((pending_name, pending_start, idx - 1))
                 pending_name = ""
-            servers_indent = None
-            continue
-        match = re.match(r"-\s*name\s*:\s*(.+)", stripped)
-        if match:
+            break
+        if is_item and item_indent is None:
+            item_indent = indent
+        if is_item and indent == item_indent:
             if pending_name:
                 spans.append((pending_name, pending_start, idx - 1))
-            pending_name = match.group(1).strip().strip("'\"")
+            pending_name = ""
             pending_start = idx
+            name_line = stripped[1:].strip()
+        elif item_indent is not None and indent == item_indent + 2:
+            name_line = stripped
+        else:
+            continue
+        match = re.match(r"name\s*:\s*(.*)", name_line)
+        if match and not pending_name:
+            value = match.group(1).strip()
+            if value.startswith(("'", '"')):
+                quote = value[0]
+                end = value.find(quote, 1)
+                pending_name = value[1:end] if end != -1 else value
+            else:
+                pending_name = re.split(r"\s+#", value, maxsplit=1)[0].strip()
     if pending_name:
         spans.append((pending_name, pending_start, len(lines)))
     return spans
@@ -149,7 +170,9 @@ def annotate(
             )
             continue
         authors = sorted({entry.author for _, entry in entries})
-        uncommitted_lines = [num for num, entry in entries if entry.commit == ZERO_COMMIT]
+        uncommitted_lines = [
+            num for num, entry in entries if entry.commit == ZERO_COMMIT
+        ]
         recency = {
             num: current if entry.commit == ZERO_COMMIT else entry.author_time
             for num, entry in entries
@@ -166,9 +189,11 @@ def annotate(
         if newest.commit == ZERO_COMMIT:
             last_changed = "uncommitted"
         else:
-            last_changed = datetime.fromtimestamp(
-                newest.author_time, tz=timezone.utc
-            ).date().isoformat()
+            last_changed = (
+                datetime.fromtimestamp(newest.author_time, tz=timezone.utc)
+                .date()
+                .isoformat()
+            )
         result.append(
             ResourceBlame(
                 name=name,

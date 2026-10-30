@@ -1,4 +1,4 @@
-﻿import { useNavigate, useLocation } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import { useState } from "react";
 import { useConfig } from "../lib/types";
 import { LanguageSelector } from "../i18n/LanguageSelector";

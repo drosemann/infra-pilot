@@ -32,12 +32,17 @@ describe('GitOps blame API', () => {
 
   before(async () => {
     repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-blame-repo-'));
-    execSync('git init -q', { cwd: repoDir });
-    execSync('git config user.email t@example.test', { cwd: repoDir });
-    execSync('git config user.name Tester', { cwd: repoDir });
+    const env = { ...process.env };
+    for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CEILING_DIRECTORIES']) delete env[key];
+    const gitOptions = { cwd: repoDir, env };
+    execSync('git init -q', gitOptions);
+    execSync('git config user.email t@example.test', gitOptions);
+    execSync('git config user.name Tester', gitOptions);
     fs.writeFileSync(path.join(repoDir, 'ipilot-config.yaml'), CONFIG);
-    execSync('git add .', { cwd: repoDir });
-    execSync('git commit -qm init', { cwd: repoDir });
+    execSync('git add .', gitOptions);
+    execSync('git -c commit.gpgsign=false commit -qm init', {
+      ...gitOptions, env: { ...env, GIT_AUTHOR_NAME: 'Tester', GIT_AUTHOR_EMAIL: 't@example.test', GIT_COMMITTER_NAME: 'Tester', GIT_COMMITTER_EMAIL: 't@example.test', GIT_AUTHOR_DATE: '2001-01-01T00:00:00+0000', GIT_COMMITTER_DATE: '2001-01-01T00:00:00+0000' },
+    });
 
     plainDir = fs.mkdtempSync(path.join(os.tmpdir(), 'git-blame-plain-'));
     fs.writeFileSync(path.join(plainDir, 'ipilot-config.yaml'), CONFIG);
@@ -81,11 +86,38 @@ describe('GitOps blame API', () => {
 
   it('flags stale authorship on demand', async () => {
     const res = await request(
-      server, 'GET', '/api/gitops/blame?path=ipilot-config.yaml&staleDays=0', undefined, 'usertoken',
+      server, 'GET', '/api/gitops/blame?path=ipilot-config.yaml&staleDays=30', undefined, 'usertoken',
     );
     assert.equal(res.status, 200);
     for (const annotation of (res.body as any).annotations) {
       assert.ok((annotation.risk as string[]).includes('stale'));
+    }
+  });
+
+  it('preserves zero and defaults invalid or missing staleDays', async () => {
+    const originalNow = Date.now;
+    Date.now = () => new Date('2001-01-02T00:00:00Z').getTime();
+    try {
+      for (const [query, stale] of [['?staleDays=0', true], ['?staleDays=invalid', false], ['', false]]) {
+        const res = await request(server, 'GET', '/api/gitops/blame' + query, undefined, 'usertoken');
+        assert.equal(res.status, 200);
+        assert.equal((res.body as any).annotations[0].risk.includes('stale'), stale);
+      }
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  it('ignores inherited Git repository locations', async () => {
+    const previous = process.env.GIT_DIR;
+    process.env.GIT_DIR = path.join(plainDir, '.git');
+    try {
+      const res = await request(server, 'GET', '/api/gitops/blame', undefined, 'usertoken');
+      assert.equal(res.status, 200);
+      assert.equal((res.body as any).annotations[0].lastAuthor, 'Tester');
+    } finally {
+      if (previous === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = previous;
     }
   });
 

@@ -60,7 +60,25 @@ describe('git-blame resource spans', () => {
   it('finds server entries and closes the block on a sibling key', () => {
     assert.deepEqual(resourceSpans(CONFIG), [
       { name: 'web', start: 4, end: 5 },
-      { name: 'db', start: 6, end: 8 },
+      { name: 'db', start: 6, end: 7 },
+    ]);
+  });
+
+  it('handles unindented items and ignores nested names and later blocks', () => {
+    const config = [
+      'spec:', '  servers:', '  - name: web # comment', '    disks:',
+      '      - name: nested', '  - type: db', '    name: db', '  backups: []',
+      '  servers:', '  - name: ignored',
+    ].join('\n');
+    assert.deepEqual(resourceSpans(config), [
+      { name: 'web', start: 3, end: 5 }, { name: 'db', start: 6, end: 7 },
+    ]);
+  });
+
+  it('ends a named span at an unnamed server and preserves quoted comments', () => {
+    const config = "servers:\n  - type: x\n    name: 'web # prod' # comment\n  - type: y\n  - name: db\n";
+    assert.deepEqual(resourceSpans(config), [
+      { name: 'web # prod', start: 2, end: 3 }, { name: 'db', start: 5, end: 5 },
     ]);
   });
 

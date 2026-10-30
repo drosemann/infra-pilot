@@ -1,5 +1,6 @@
 """Unit tests for blame-aware GitOps (gitops blame + plan --blame)."""
 
+import os
 import subprocess
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
@@ -43,7 +44,7 @@ spec:
 """
 
 
-def make_repo(path, files):
+def make_repo(path, files, date=None):
     subprocess.run(["git", "init", "-q", str(path)], check=True)
     subprocess.run(
         ["git", "-C", str(path), "config", "user.email", "t@example.test"],
@@ -55,8 +56,19 @@ def make_repo(path, files):
     for name, content in files.items():
         (path / name).write_text(content, encoding="utf-8")
     subprocess.run(["git", "-C", str(path), "add", "."], check=True)
+    env = os.environ.copy()
+    env.update(
+        GIT_AUTHOR_NAME="Tester",
+        GIT_AUTHOR_EMAIL="t@example.test",
+        GIT_COMMITTER_NAME="Tester",
+        GIT_COMMITTER_EMAIL="t@example.test",
+    )
+    if date is not None:
+        env.update(GIT_AUTHOR_DATE=date, GIT_COMMITTER_DATE=date)
     subprocess.run(
-        ["git", "-C", str(path), "commit", "-qm", "init"], check=True
+        ["git", "-C", str(path), "-c", "commit.gpgsign=false", "commit", "-qm", "init"],
+        check=True,
+        env=env,
     )
     return path
 
@@ -73,7 +85,9 @@ def runner(client, monkeypatch, tmp_path):
     monkeypatch.setattr(gitops, "_get_client", lambda ctx: client)
     config_dir = tmp_path / ".ipilot"
     monkeypatch.setattr("cli.ipilot.config.CONFIG_DIR", str(config_dir))
-    monkeypatch.setattr("cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json"))
+    monkeypatch.setattr(
+        "cli.ipilot.config.CONFIG_FILE", str(config_dir / "config.json")
+    )
     return CliRunner()
 
 
@@ -103,7 +117,20 @@ def test_parse_blame_missing_author_defaults_unknown():
 
 def test_resource_spans_finds_servers():
     spans = blame_mod.resource_spans(CONFIG_YAML)
-    assert spans == [("web", 4, 5), ("db", 6, 8)]
+    assert spans == [("web", 4, 5), ("db", 6, 7)]
+
+
+def test_resource_spans_end_of_file_and_unindented_items():
+    assert blame_mod.resource_spans(
+        "spec:\n  servers:\n    - name: web\n      type: x\n"
+    ) == [("web", 3, 4)]
+    text = "spec:\n  servers:\n  - name: web # comment\n    type: x\n  - type: y\n    name: db\n  backups: []\n  servers:\n  - name: ignored\n"
+    assert blame_mod.resource_spans(text) == [("web", 3, 4), ("db", 5, 6)]
+
+
+def test_resource_spans_ignores_nested_items_and_unnamed_servers():
+    text = "spec:\n  servers:\n    - type: x\n      name: 'web # prod' # comment\n      disks:\n        - name: nested\n    - type: y\n    - name: db\n"
+    assert blame_mod.resource_spans(text) == [("web # prod", 3, 6), ("db", 8, 8)]
 
 
 def test_resource_spans_no_servers():
@@ -185,6 +212,17 @@ def test_run_git_blame_no_git_binary(monkeypatch, tmp_path):
         blame_mod.run_git_blame(str(tmp_path / "plan.yaml"))
 
 
+def test_run_git_blame_timeout(monkeypatch, tmp_path):
+    def timeout(*args, **kwargs):
+        assert kwargs["timeout"] > 0
+        raise subprocess.TimeoutExpired("git", kwargs["timeout"])
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+    with pytest.raises(blame_mod.BlameError, match="timed out") as error:
+        blame_mod.run_git_blame(str(tmp_path / "plan.yaml"))
+    assert isinstance(error.value.__cause__, subprocess.TimeoutExpired)
+
+
 def test_run_git_blame_empty_stderr(monkeypatch, tmp_path):
     completed = subprocess.CompletedProcess(
         args=["git"], returncode=1, stdout="", stderr=""
@@ -209,16 +247,14 @@ def test_blame_file_returns_annotations(tmp_path):
 
 def test_blame_command_reports_authors(client, invoke, tmp_path):
     make_repo(tmp_path, {"plan.yaml": CONFIG_YAML})
-    result = invoke(
-        ["gitops", "blame", "--file", str(tmp_path / "plan.yaml")]
-    )
+    result = invoke(["gitops", "blame", "--file", str(tmp_path / "plan.yaml")])
     assert result.exit_code == 0
     assert "web" in result.output
     assert "Tester" in result.output
 
 
 def test_blame_command_stale_flag(client, invoke, tmp_path):
-    make_repo(tmp_path, {"plan.yaml": CONFIG_YAML})
+    make_repo(tmp_path, {"plan.yaml": CONFIG_YAML}, date="2001-01-01T00:00:00+0000")
     result = invoke(
         [
             "gitops",
@@ -226,7 +262,7 @@ def test_blame_command_stale_flag(client, invoke, tmp_path):
             "--file",
             str(tmp_path / "plan.yaml"),
             "--stale-days",
-            "0",
+            "30",
         ]
     )
     assert result.exit_code == 0
@@ -273,3 +309,13 @@ def test_plan_blame_fails_outside_repo(client, invoke, tmp_path):
     client.list_servers.return_value = [{"name": "web", "type": "standard"}]
     result = invoke(["gitops", "plan", "--file", str(target), "--blame"])
     assert result.exit_code == 1
+
+
+def test_plan_blame_fallback_when_no_spans(client, invoke, tmp_path):
+    target = tmp_path / "plan.yaml"
+    target.write_text("spec:\n  servers: []\n", encoding="utf-8")
+    client.list_servers.return_value = [{"name": "removed"}]
+    result = invoke(["gitops", "plan", "--file", str(target), "--blame"])
+    assert result.exit_code == 0
+    assert "removed" in result.output
+    assert "unknown" in result.output

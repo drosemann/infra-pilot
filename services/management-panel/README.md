@@ -1,4 +1,4 @@
-﻿# Management Panel
+# Management Panel
 
 React/TypeScript frontend and Express/WebSocket backend for operating Docker
 applications, backups, configuration, monitoring, and the panel-facing Infra

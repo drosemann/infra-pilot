@@ -81,7 +81,7 @@ jobs:
     # Screenshots are committed to main only. Committing them onto PR branches
     # caused binary merge conflicts on every stacked PR, so PR runs publish
     # the captures as an artifact instead.
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     name: Commit panel screenshots
     permissions:

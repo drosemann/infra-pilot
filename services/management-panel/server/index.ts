@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
 import { promises as fs } from 'fs';
-import { exec, spawn } from 'child_process';
+import { exec, execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
@@ -84,6 +84,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', false);
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Run real diagnostics. The optional `issue` filters to a category:
@@ -4241,7 +4242,9 @@ const gitopsBlameRateLimiter = rateLimit({
 
 app.get('/api/gitops/blame', verifyAuth, gitopsBlameRateLimiter, async (req: Request, res: Response) => {
   const rel = String(req.query.path || 'ipilot-config.yaml');
-  const staleDays = Number.parseInt(String(req.query.staleDays || '180'), 10) || 180;
+  const staleDaysParam = req.query.staleDays;
+  const parsedStaleDays = typeof staleDaysParam === 'string' && staleDaysParam.trim() ? Number(staleDaysParam) : 180;
+  const staleDays = Number.isFinite(parsedStaleDays) ? parsedStaleDays : 180;
   if (!/^[A-Za-z0-9._\/-]+\.ya?ml$/.test(rel) || rel.includes('..')) {
     return res.status(400).json({ error: 'path must be a repo-relative .yaml/.yml file' });
   }
@@ -4258,15 +4261,13 @@ app.get('/api/gitops/blame', verifyAuth, gitopsBlameRateLimiter, async (req: Req
     return res.status(404).json({ error: 'config file not found: ' + rel });
   }
   try {
-    const prevCwd = process.cwd();
-    try {
-      process.chdir(path.dirname(abs));
-      const { stdout } = await runCommand('git', ['blame', '--line-porcelain', '--', path.basename(abs)]);
-      const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
-      return res.json({ file: rel, annotations });
-    } finally {
-      process.chdir(prevCwd);
-    }
+    const env = { ...process.env };
+    for (const key of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_INDEX_FILE', 'GIT_OBJECT_DIRECTORY', 'GIT_ALTERNATE_OBJECT_DIRECTORIES', 'GIT_CEILING_DIRECTORIES']) delete env[key];
+    const { stdout } = await execFileAsync('git', ['blame', '--line-porcelain', '--', path.basename(abs)], {
+      cwd: path.dirname(abs), env, maxBuffer: 32 * 1024 * 1024,
+    });
+    const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
+    return res.json({ file: rel, annotations });
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : 'git blame failed' });
   }

@@ -73,37 +73,55 @@ export function parseBlamePorcelain(output: string): Map<number, BlameLine> {
  */
 export function resourceSpans(text: string): ResourceSpan[] {
   const lines = text.split('\n');
+  if (lines.at(-1) === '') lines.pop();
   const spans: ResourceSpan[] = [];
   let serversIndent: number | null = null;
+  let itemIndent: number | null = null;
   let pendingName = '';
   let pendingStart = 0;
   const closePending = (end: number) => {
-    if (pendingName) {
-      spans.push({ name: pendingName, start: pendingStart, end });
-      pendingName = '';
-    }
+    if (pendingName) spans.push({ name: pendingName, start: pendingStart, end });
+    pendingName = '';
   };
-  lines.forEach((raw, i) => {
+  for (const [i, raw] of lines.entries()) {
     const idx = i + 1;
     const stripped = raw.trim();
-    if (!stripped || stripped.startsWith('#')) return;
+    if (!stripped || stripped.startsWith('#')) continue;
     const indent = raw.length - raw.trimStart().length;
     if (serversIndent === null) {
-      if (/^servers\s*:/.test(stripped)) serversIndent = indent;
-      return;
+      if (/^servers\s*:/.test(stripped)) {
+        serversIndent = indent;
+        if (/^servers\s*:\s*\[\s*\]/.test(stripped)) break;
+      }
+      continue;
     }
-    if (indent <= serversIndent) {
+    const isItem = /^-(?:\s|$)/.test(stripped);
+    if (indent < serversIndent || (indent === serversIndent && !isItem)) {
       closePending(idx - 1);
-      serversIndent = null;
-      return;
+      break;
     }
-    const match = /^-\s*name\s*:\s*(.+)/.exec(stripped);
-    if (match) {
+    if (isItem && itemIndent === null) itemIndent = indent;
+    let nameLine: string;
+    if (isItem && indent === itemIndent) {
       closePending(idx - 1);
-      pendingName = match[1].trim().replace(/^['"]|['"]$/g, '');
       pendingStart = idx;
+      nameLine = stripped.slice(1).trim();
+    } else if (itemIndent !== null && indent === itemIndent + 2) {
+      nameLine = stripped;
+    } else {
+      continue;
     }
-  });
+    const match = /^name\s*:\s*(.*)/.exec(nameLine);
+    if (match && !pendingName) {
+      const value = match[1].trim();
+      if (value.startsWith("'") || value.startsWith('"')) {
+        const end = value.indexOf(value[0], 1);
+        pendingName = end === -1 ? value : value.slice(1, end);
+      } else {
+        pendingName = value.split(/\s+#/, 1)[0].trim();
+      }
+    }
+  }
   closePending(lines.length);
   return spans;
 }

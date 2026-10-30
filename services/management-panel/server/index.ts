@@ -4231,7 +4231,15 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   res.json({ history: data || [] });
 });
 
-app.get('/api/gitops/blame', verifyAuth, async (req: Request, res: Response) => {
+const gitopsBlameRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // max 60 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests to /api/gitops/blame. Please try again later.' },
+});
+
+app.get('/api/gitops/blame', verifyAuth, gitopsBlameRateLimiter, async (req: Request, res: Response) => {
   const rel = String(req.query.path || 'ipilot-config.yaml');
   const staleDays = Number.parseInt(String(req.query.staleDays || '180'), 10) || 180;
   if (!/^[A-Za-z0-9._\/-]+\.ya?ml$/.test(rel) || rel.includes('..')) {

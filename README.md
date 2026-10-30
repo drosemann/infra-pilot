@@ -32,6 +32,7 @@ It is an internal operations tool, not a public hosting platform.
 - [Security](#security)
 - [Testing and quality gates](#testing-and-quality-gates)
 - [Project structure](#project-structure)
+- [TraumaLang port](#traumalang-port)
 - [Documentation map](#documentation-map)
 - [Contributing](#contributing)
 - [Support](#support)
@@ -403,6 +404,16 @@ Service guides:
 - [management-panel README](./services/management-panel/README.md)
 - [orchestrator-agent README](./services/orchestrator-agent/README.md)
 - [discord-service README](./services/discord-service/README.md)
+
+---
+
+## TraumaLang port
+
+Selected modules exist as [TraumaLang v2.2](https://github.com/drosemann/TraumaLang)
+programs (`.tl`, satirical language compiling to C via `traumalang`).
+See [docs/TRAUMALANG](./docs/TRAUMALANG.md) for the translated files and
+keyword mappings, and [TRAUMALANG-GAPS](./TRAUMALANG-GAPS.md) for everything
+still missing. Build/test status of all `.tl` files: not executed.
 
 ---
 

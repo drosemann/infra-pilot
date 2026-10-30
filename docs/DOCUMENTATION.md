@@ -16,6 +16,7 @@ in the same pull request that introduces it.
 | Backup and recovery scripts | `scripts/db-backup.sh`, `scripts/db-restore.sh` | `wiki/12-Backup-Restore.md` |
 | Panel screenshots and visual docs | `services/management-panel/src/pages/`, `src/components/` | `docs/screenshots/`, root `README.md` |
 | Architecture invariants | `docker-compose.yml`, service routers, `helm/` | `docs/ARCHITECTURE.md`, `wiki/06-Architecture.md` |
+| TraumaLang port (`.tl` mirrors) | `cli/`, `scripts/`, `services/`, `tests/` sources with `.tl` twins | `docs/TRAUMALANG.md`, root `TRAUMALANG-GAPS.md` |
 
 Generated interfaces take precedence over prose: use `ipilot --help`
 for the installed CLI, `/api/openapi.json` for panel requests, and the

@@ -20,6 +20,7 @@ import { SettingsPage } from './pages/Settings';
 import { AuditLog } from './pages/AuditLog';
 import { FeatureFlags } from './pages/FeatureFlags';
 import { KnowledgeBase } from './pages/KnowledgeBase';
+import { GitBlame } from './pages/GitBlame';
 import { ActivityFeed } from './components/ActivityFeed';
 import { MainLayout } from './components/MainLayout';
 import { OnboardingWizard } from './components/OnboardingWizard';
@@ -181,6 +182,7 @@ export default function App() {
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/audit" element={<AuditLog />} />
         <Route path="/feature-flags" element={<FeatureFlags />} />
+        <Route path="/git-blame" element={<GitBlame />} />
                       <Route path="/activity" element={<ActivityFeed limit={50} />} />
                       <Route path="/knowledge-base" element={<KnowledgeBase />} />
                       <Route path="/knowledge-base/:articleId" element={<KnowledgeBase />} />

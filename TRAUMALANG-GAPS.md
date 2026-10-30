@@ -1,4 +1,4 @@
-# TraumaLang-Port — Lücken, offene Arbeiten, Anleitung
+﻿# TraumaLang-Port — Lücken, offene Arbeiten, Anleitung
 
 Stand: 179 `.tl`-Dateien (Backend-Batches 1-22). Sprache: [TraumaLang v2.2](https://github.com/drosemann/TraumaLang)
 (Compiler `traumalang`, `.tl` → C via GCC; Referenz: `docs/LANGUAGE.md`, `docs/GRAMMAR.md`,
@@ -163,6 +163,8 @@ Was pro Datei konkret fehlt bzw. nur angerissen ist:
 - Backend-Batch 21 (11 Dateien, alle voll gelesen, nur Huellen + `TALK TO THE HAND`): `test_update_flow`-Rest (Stub-Tools, Help/CheckOnly/FullFlow/Volumes/SkipBackup/NoDocker, 212 Zeilen), `test_report_bot` (Mocha Constructor/Command/Button/Cron, 46 Zeilen), `test_naming_resolver` (Yaml/Base/Overrides/Merge/Map/Resolve/Env, 186 Zeilen), `resolver` (Yaml-Map Merge Env Override, 81 Zeilen), k6 `smoke`/`soak`/`spike`/`common` (Szenarien, Thresholds, Manifest-Builder, 37/44/46/195 Zeilen; Token nur als Env-Namen), 4 leere `__init__`-Markierungen. Nicht abbildbar: `pytest`/`mocha`-Fixtures, `subprocess`-Stubs, k6-`http`/`check`/`crypto`, `yaml.safe_load`.
 
 - Backend-Batch 22 (35 Dateien, alle voll gelesen, nur Huellen + `TALK TO THE HAND`): 11 `commands/*/__init__`-Marker (Inhalt steckt in den flachen `<name>.tl`-Ports), `vpsManager` (Tabellen, Lifecycle, Stats, Backups, Retention, Restore, Exec, 371 Zeilen), discord-`smoke` (Modul-Load, Validation, RoleManager, 47 Zeilen), `install` (Tool-Checks, Setup-Key, Clone, Token, Build, Run; Key nur als Name), orchestrator-`conftest` (No-DB-Stub, Mock-Docker, 153 Zeilen), `test_imports` (Modul-Importe, 36 Zeilen), 19 Unit-Tests (DB-Migration, Cogs, OpenAPI-Contract, Secrets, Auth-Observability, LivingFleet, Config-Validation, Federation, Compute, RBAC-API/Store/Engine, Manifest-Schema/Engine, RateLimiter, Hardening, Webhook-Auth, VPS-Manager, Deploy-API; Fixture-Tokens nur generisch). Nicht abbildbar: `pytest`/`unittest`-Fixtures, `aiohttp`-TestClient, `docker-py`-Mocks, SQL-Strings, HMAC-Logik, exakte Status-Asserts.
+
+- `cli/ipilot/commands/gitops/blame.tl` / `tests/cli/test_gitops_blame.tl` (neu): blame-aware GitOps (`run_git_blame`, `parse_blame_porcelain`, `resource_spans`, `annotate` mit uncommitted/stale/many-hands/unknown-Risiken, `blame`-Command, `plan --blame`). Fehlt: echte git-Subprocess-Semantik (nur Huellen + `TALK TO THE HAND`). Panel-Dateien (`server/git-blame.ts`, `src/pages/GitBlame.tsx`, Tests) haben keine `.tl`-Zwillinge (`services/management-panel/` komplett offen, siehe 2f).
 
 ## 2. Noch gar nicht übersetzte Quelldateien
 

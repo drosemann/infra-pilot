@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router";
+﻿import { useNavigate, useLocation } from "react-router";
 import { useState } from "react";
 import { useConfig } from "../lib/types";
 import { LanguageSelector } from "../i18n/LanguageSelector";
@@ -80,6 +80,12 @@ export const Sidebar = ({
       label: "Deployments",
       icon: "🚀",
       route: "/deployments",
+    },
+    {
+      id: "git-blame",
+      label: "Git Blame",
+      icon: "🔍",
+      route: "/git-blame",
     },
     {
       id: "logs",

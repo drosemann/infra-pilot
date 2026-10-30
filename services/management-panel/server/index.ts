@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -68,6 +68,7 @@ import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
 import { buildPlan } from './assistant.ts';
 import { FLAG_REGISTRY, evaluateFlag, validateFlagKey, validateRule, envOverride } from './feature-flags.ts';
 import { executeGraphQL } from './graphql.ts';
+import { annotateResources, parseBlamePorcelain, resourceSpans } from './git-blame.ts';
 // plugin-registry and change-approval-engine moved to experimental
 
 dotenv.config({ path: '.env.local' });
@@ -4228,6 +4229,33 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ history: data || [] });
+});
+
+app.get('/api/gitops/blame', verifyAuth, async (req: Request, res: Response) => {
+  const rel = String(req.query.path || 'ipilot-config.yaml');
+  const staleDays = Number.parseInt(String(req.query.staleDays || '180'), 10) || 180;
+  if (!/^[A-Za-z0-9._\/-]+\.ya?ml$/.test(rel) || rel.includes('..')) {
+    return res.status(400).json({ error: 'path must be a repo-relative .yaml/.yml file' });
+  }
+  const repoDir = process.env.GITOPS_REPO_DIR || process.cwd();
+  const abs = path.resolve(repoDir, rel);
+  const root = path.resolve(repoDir);
+  if (abs !== root && !abs.startsWith(root + path.sep)) {
+    return res.status(400).json({ error: 'path escapes the repo dir' });
+  }
+  let text: string;
+  try {
+    text = await fs.readFile(abs, 'utf8');
+  } catch {
+    return res.status(404).json({ error: 'config file not found: ' + rel });
+  }
+  try {
+    const { stdout } = await execAsync('git blame --line-porcelain -- ' + JSON.stringify(path.basename(abs)), { cwd: path.dirname(abs) });
+    const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
+    return res.json({ file: rel, annotations });
+  } catch (err) {
+    return res.status(500).json({ error: err instanceof Error ? err.message : 'git blame failed' });
+  }
 });
 
 app.post('/api/changes/:id/undo', verifyAuth, async (req: Request, res: Response) => {

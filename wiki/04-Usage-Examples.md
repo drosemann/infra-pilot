@@ -1,4 +1,4 @@
-# Usage Examples
+﻿# Usage Examples
 
 ## GitOps: Infrastructure as Code
 
@@ -15,6 +15,8 @@ ipilot gitops apply -f production.yaml -y
 
 # Scan for configuration drift
 ipilot gitops drift --scan
+ipilot gitops plan -f production.yaml --blame
+ipilot gitops blame -f production.yaml --stale-days 90
 ```
 
 ## SSH Session Management

@@ -1,20 +1,31 @@
 IT'S SHOWTIME
-PUT IT IN JIRA discord-service entry point
-PUT IT IN JIRA VPSCommands Monitoring HealthChecks AlertManager TaskScheduler Maintenance
-PUT IT IN JIRA TemplateManager ResourcePools DbManager LegacyCommands PetCommands
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS DISCORD_TOKEN
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE DISCORD_TOKEN "env"
+PUT IT IN JIRA Discord bot entry point server creation tickets status roles fleet
+PUT IT IN JIRA Secrets via env never as literals token login gated
+PUT IT IN JIRA Server types minecraft nodejs teamspeak database python
 WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS MAX_SERVERS_PER_USER
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE MAX_SERVERS_PER_USER "1"
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS ERROR_TEXT
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE ERROR_TEXT "command error"
-WE NEED TO TAKE THIS OFFLINE start_bot
-TALK TO THE HAND "discord bot starting"
-DO IT FOR THE METRICS DISCORD_TOKEN
-TALK TO THE HAND "bot logged in"
-BLUE IS BROKEN GREEN IS WORSE
-TALK TO THE HAND "DISCORD_TOKEN missing"
-YOU HAVE BEEN TERMINATED
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE MAX_SERVERS_PER_USER "3"
+I WAS DOUBLE-BOOKED ON 2 OFFSITES handle_email
+TALK TO THE HAND "Validate email step to username."
 THIS COULD HAVE BEEN AN EMAIL
-TALK TO THE HAND "discord-service ready"
+I WAS DOUBLE-BOOKED ON 2 OFFSITES handle_username
+TALK TO THE HAND "Validate username step to password."
+THIS COULD HAVE BEEN AN EMAIL
+I WAS DOUBLE-BOOKED ON 2 OFFSITES handle_password
+TALK TO THE HAND "Validate password step to processing."
+THIS COULD HAVE BEEN AN EMAIL
+I WAS DOUBLE-BOOKED ON 2 OFFSITES process_creation
+TALK TO THE HAND "Create pterodactyl user server save limits assign role."
+THIS COULD HAVE BEEN AN EMAIL
+I WAS DOUBLE-BOOKED ON 2 OFFSITES register_commands
+TALK TO THE HAND "Register slash commands from all modules."
+THIS COULD HAVE BEEN AN EMAIL
+TALK TO THE HAND "Bot ready init all modules"
+TALK TO THE HAND "Member join route to status"
+TALK TO THE HAND "Command dispatch server create limit modules tickets stats status"
+TALK TO THE HAND "Button servertype select tickets close status refresh"
+TALK TO THE HAND "Reaction add remove role manager"
+TALK TO THE HAND "Message registration state machine email username password"
+TALK TO THE HAND "Health endpoint webhook server listen"
+TALK TO THE HAND "Login gated or disabled without token"
+TALK TO THE HAND "discord index ready"
 YOU HAVE BEEN TERMINATED

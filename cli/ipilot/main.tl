@@ -1,28 +1,24 @@
 IT'S SHOWTIME
-PUT IT IN JIRA CLI entry point for Infra Pilot
-PUT IT IN JIRA The entry point where a small request acquires dependencies
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS api_url
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE api_url "http://localhost:3001"
-WE NEED TO TAKE THIS OFFLINE login
-TALK TO THE HAND "Log in to the API with your API key."
-DO IT FOR THE METRICS api_url
-TALK TO THE HAND "login token stored"
-YOU HAVE BEEN TERMINATED
+PUT IT IN JIRA Infra Pilot CLI main entry point Typer app
+PUT IT IN JIRA Root commands login logout assets list create delete benchmark diagnose docs
+PUT IT IN JIRA Benchmark diagnose alias doctor via CliRunner interactive docs generation
+WE NEED TO TAKE THIS OFFLINE get_client
+TALK TO THE HAND "Load config and return ApiClient."
 THIS COULD HAVE BEEN AN EMAIL
-WE NEED TO TAKE THIS OFFLINE logout
-TALK TO THE HAND "Logged out"
+WE NEED TO TAKE THIS OFFLINE login_logout
+TALK TO THE HAND "Save or remove API token."
 THIS COULD HAVE BEEN AN EMAIL
-WE NEED TO TAKE THIS OFFLINE version
-TALK TO THE HAND "ipilot version 2.0.0"
+WE NEED TO TAKE THIS OFFLINE asset_commands
+TALK TO THE HAND "List create delete assets deploy branch."
+THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE benchmark_diagnose
+TALK TO THE HAND "Alias doctor via CliRunner invoke."
+THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE docs_generate
+TALK TO THE HAND "Generate CLI reference markdown."
 THIS COULD HAVE BEEN AN EMAIL
 WE NEED TO TAKE THIS OFFLINE interactive
-TALK TO THE HAND "Open an interactive REPL-like mode."
+TALK TO THE HAND "Rich prompt REPL loop exit on quit."
 THIS COULD HAVE BEEN AN EMAIL
-WE NEED TO TAKE THIS OFFLINE completion
-TALK TO THE HAND "Set up shell completion for the CLI."
-THIS COULD HAVE BEEN AN EMAIL
-WE NEED TO TAKE THIS OFFLINE batch
-TALK TO THE HAND "Run multiple commands defined in a YAML file."
-THIS COULD HAVE BEEN AN EMAIL
-TALK TO THE HAND "CLI entry point ready"
+TALK TO THE HAND "main ready"
 YOU HAVE BEEN TERMINATED

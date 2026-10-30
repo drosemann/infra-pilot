@@ -1,23 +1,24 @@
 IT'S SHOWTIME
-PUT IT IN JIRA Bounded deterministic rate limiting primitives for the API server
-PUT IT IN JIRA hot path uses fixed-capacity state tables and ring buffers
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS MAX_RATE_LIMIT_KEYS
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE MAX_RATE_LIMIT_KEYS "4096"
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS MAX_REQUESTS_PER_WINDOW
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE MAX_REQUESTS_PER_WINDOW "10000"
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS MAX_RULES
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE MAX_RULES "64"
-WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS rate_limit_strategy
-I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE rate_limit_strategy "sliding_window"
-WE NEED TO TAKE THIS OFFLINE rate_limit_config
-TALK TO THE HAND "RateLimitConfig requests window strategy burst concurrency max_keys."
+PUT IT IN JIRA Hardened rate limiting guards every inbound request
+PUT IT IN JIRA Per-path allow-lists force clients onto known-good routes
+PUT IT IN JIRA Token bucket sliding fixed window concurrency strategies
+WE NEED TO TAKE THIS OFFLINE token_bucket
+TALK TO THE HAND "Consume refill deterministic time step asserts."
 THIS COULD HAVE BEEN AN EMAIL
-WE NEED TO TAKE THIS OFFLINE check_rate_limit
-DO IT FOR THE METRICS MAX_REQUESTS_PER_WINDOW
-TALK TO THE HAND "request allowed"
-BLUE IS BROKEN GREEN IS WORSE
-TALK TO THE HAND "rate limit exceeded"
-YOU HAVE BEEN TERMINATED
+WE NEED TO TAKE THIS OFFLINE sliding_window
+TALK TO THE HAND "Prune add count ring buffer asserts."
+THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE limiter_checks
+TALK TO THE HAND "Token sliding fixed concurrency remaining reset reset-time."
+THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE reset_stats
+TALK TO THE HAND "Reset one or all keys return config stats."
+THIS COULD HAVE BEEN AN EMAIL
+I WAS DOUBLE-BOOKED ON 2 OFFSITES rate_limit_middleware
+TALK TO THE HAND "429 with retry-after headers or pass through."
+THIS COULD HAVE BEEN AN EMAIL
+WE NEED TO TAKE THIS OFFLINE rule_registry
+TALK TO THE HAND "Path rules methods match check default rules per prefix."
 THIS COULD HAVE BEEN AN EMAIL
 TALK TO THE HAND "rate limiter ready"
 YOU HAVE BEEN TERMINATED

@@ -4258,9 +4258,15 @@ app.get('/api/gitops/blame', verifyAuth, gitopsBlameRateLimiter, async (req: Req
     return res.status(404).json({ error: 'config file not found: ' + rel });
   }
   try {
-    const { stdout } = await execAsync('git blame --line-porcelain -- ' + JSON.stringify(path.basename(abs)), { cwd: path.dirname(abs) });
-    const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
-    return res.json({ file: rel, annotations });
+    const prevCwd = process.cwd();
+    try {
+      process.chdir(path.dirname(abs));
+      const { stdout } = await runCommand('git', ['blame', '--line-porcelain', '--', path.basename(abs)]);
+      const annotations = annotateResources(resourceSpans(text), parseBlamePorcelain(stdout), staleDays);
+      return res.json({ file: rel, annotations });
+    } finally {
+      process.chdir(prevCwd);
+    }
   } catch (err) {
     return res.status(500).json({ error: err instanceof Error ? err.message : 'git blame failed' });
   }

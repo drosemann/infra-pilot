@@ -18,6 +18,7 @@ from .apikeys import app as apikeys_app
 from .doctor import app as doctor_app
 from .gitops import app as gitops_app
 from .inventory import app as inventory_app
+from .pet import app as pet_app
 from .plugins import app as plugins_app
 from .rollback import app as rollback_app
 from .secrets import app as secrets_app
@@ -25,6 +26,7 @@ from .ssh import app as ssh_app
 from .templates import app as templates_app
 from .tui import app as tui_app
 from .webhooks import app as webhooks_app
+from .feature_flags import app as feature_flags_app
 
 register("gitops", "Infrastructure as Code (GitOps)")(gitops_app)
 register("ssh", "SSH session management")(ssh_app)
@@ -33,10 +35,12 @@ register("secrets", "Secret management")(secrets_app)
 register("plugins", "Plugin management")(plugins_app)
 register("doctor", "System diagnostics")(doctor_app)
 register("webhooks", "Webhook management")(webhooks_app)
+register("flags", "Feature flag management")(feature_flags_app)
 register("apikeys", "API key management")(apikeys_app)
 register("templates", "Deployment templates")(templates_app)
 register("tui", "Terminal UI mode")(tui_app)
 register("rollback", "Undo/rollback changes")(rollback_app)
+register("pet", "Living Fleet creature status")(pet_app)
 
 __all__: list[str] = [
     "server_app",
@@ -54,4 +58,5 @@ __all__: list[str] = [
     "templates_app",
     "tui_app",
     "rollback_app",
+    "pet_app",
 ]

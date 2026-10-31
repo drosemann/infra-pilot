@@ -205,6 +205,8 @@ configMaps:
   create: true
   data:
     LOG_LEVEL: INFO
+    FEATURE_FLAGS_ENABLED: "false"
+    FEATURE_FLAGS_POLL_SECONDS: "30"
     MAX_CONNECTIONS: "100"
     CACHE_TTL: "300"
 

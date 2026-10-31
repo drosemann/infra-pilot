@@ -24,6 +24,7 @@ command.
 | `gitops`, `ssh`, `inventory`, `secrets` | Declarative operations, remote-access records, metadata, and secret workflows. |
 | `plugins`, `templates`, `webhooks`, `apikeys` | Extensibility and automation configuration. |
 | `doctor`, `tui`, `rollback` | Diagnostics, terminal UI, and change recovery. |
+| `pet` | Living Fleet creature status (`list`, `status`) and rename; read-only except the name. |
 | `login`, `logout`, `completion`, `interactive`, `batch`, `docs` | Global authentication, shell, interactive, batch, and documentation helpers. |
 
 The installed CLI is the source of truth for flags and availability:
@@ -49,4 +50,13 @@ files.
 
 ```bash
 pytest tests/cli/ -v
+pytest tests/orchestrator/test_feature_flags.py -v  # feature-flag evaluation contract
+```
+
+## Feature flags
+
+`ipilot flags ...` manages panel feature flags: `list`, `evaluate`,
+`create <key>`, `rollout <key> --env production --percent 50`, and
+`kill <key>` (disables everywhere at once). Writes require a panel admin.
+```
 ```

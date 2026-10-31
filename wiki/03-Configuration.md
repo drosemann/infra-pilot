@@ -47,3 +47,16 @@ select a profile and output format in the current CLI build.
 - The Discord service has access to `/var/run/docker.sock` in Compose; restrict it to trusted hosts and administrators.
 
 See [`.env.example`](../.env.example) and the service-level `.env.example` files for exact defaults.
+
+## Feature flags
+
+- The panel owns flags (`feature_flags` + `feature_flag_rules` tables).
+  Admins manage them at `/feature-flags` in the UI; every change is audit-logged.
+- Consumers (orchestrator `feature_flags.py`, CLI `ipilot flags`, Discord
+  `feature-flags.js`) poll `GET /api/feature-flags/evaluate` every 30 s,
+  plus an immediate WebSocket push (`?channel=feature-flags`) on every write.
+  Set `FEATURE_FLAGS_ENABLED=true` to opt in; default is `false` (code defaults apply).
+- Kill switch: `POST /api/feature-flags/:key/kill` (or the Kill button, or
+  `ipilot flags kill <key>`) disables a flag in all environments at once.
+- Incident escape hatch: `FEATURE_FLAG_<KEY>=true|false` env var beats the
+  remote value in every consumer; the React app also honours `VITE_FEATURE_FLAG_<KEY>`.

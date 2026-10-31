@@ -63,6 +63,8 @@ Global flags: `--output`/`-o` (json, table, yaml, plain), `--profile`/`-p`, `--n
 | --------- | ------------- |
 | `gitops export [-o file.yaml] [-s server]` | Export current infra as YAML |
 | `gitops plan [-f file.yaml]` | Show diff between current state and YAML |
+| `gitops plan [-f file.yaml] [--blame]` | Show diff, optionally annotated with git authorship and risk |
+| `gitops blame [-f file.yaml] [--stale-days N]` | Show git author, commit, age, and risk per server resource |
 | `gitops apply [-f file.yaml] [--dry-run] [-y]` | Apply YAML config to infra |
 | `gitops drift [--scan]` | Detect configuration drift |
 | `gitops import-config <file>` | Import from YAML file |
@@ -164,5 +166,11 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 | `diagnose [--server] [--issue connectivity\|performance\|disk]` | Issue diagnosis (alias for `doctor diagnose`) |
 
 ---
+
+| `flags list` | List flag definitions (admin) |
+| `flags evaluate` | Show evaluated flag values for you |
+| `flags create <key>` | Create a flag (admin) |
+| `flags rollout <key> [--env production] [--enable/--disable] [--percent N]` | Toggle or percentage-roll-out a flag (admin) |
+| `flags kill <key>` | Kill switch: disable everywhere (admin) |
 
 *Source: `ipilot <command> --help` for each command*

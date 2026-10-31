@@ -509,4 +509,41 @@ const spec: Record<string, any> = {
   },
 };
 
+spec.components.schemas.FeatureFlag = { type: 'object', properties: { key: { type: 'string' }, enabled: { type: 'boolean' } } };
+spec.paths['/feature-flags/evaluate'] = {
+  get: {
+    summary: 'Evaluate feature flags for the caller',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Resolved flag map' }, '401': { description: 'Unauthorized' } },
+  },
+};
+spec.paths['/feature-flags'] = {
+  get: {
+    summary: 'List flag definitions (admin)',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Flag definitions' }, '403': { description: 'Admin required' } },
+  },
+  post: {
+    summary: 'Create a feature flag (admin)',
+    tags: ['FeatureFlags'],
+    security: [{ bearerAuth: [] }],
+    responses: { '201': { description: 'Flag created' }, '400': { description: 'Invalid input' } },
+  },
+};
+
+spec.paths['/gitops/blame'] = {
+  get: {
+    summary: 'Blame-aware GitOps: authorship per server resource',
+    tags: ['GitOps'],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      { name: 'path', in: 'query', required: false, schema: { type: 'string' } },
+      { name: 'staleDays', in: 'query', required: false, schema: { type: 'integer' } },
+    ],
+    responses: { '200': { description: 'Blame annotations' }, '400': { description: 'Invalid path' }, '404': { description: 'Config file not found' }, '500': { description: 'Git blame failed', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } } },
+  },
+};
+
 export default spec;

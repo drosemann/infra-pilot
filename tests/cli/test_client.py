@@ -445,6 +445,21 @@ ENDPOINT_CASES = [
         "/changes/history?resource_type=server&resource_id=srv-1",
         None,
     ),
+    ("list_creatures", (), "GET", "/v1/fleet/creatures", None),
+    (
+        "get_creature",
+        ("workload-1",),
+        "GET",
+        "/v1/fleet/creatures/workload-1",
+        None,
+    ),
+    (
+        "rename_creature",
+        ("workload-1", "Friendly API"),
+        "POST",
+        "/v1/fleet/creatures/workload-1/rename",
+        {"display_name": "Friendly API"},
+    ),
 ]
 
 

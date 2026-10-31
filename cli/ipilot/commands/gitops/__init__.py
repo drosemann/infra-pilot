@@ -1,5 +1,6 @@
 """Infrastructure as Code (GitOps) - YAML configs, apply, plan, drift detection."""
 
+import dataclasses
 import json
 import os
 from datetime import datetime
@@ -11,6 +12,14 @@ import yaml
 from ...client import ApiClient
 from ...config import DEFAULT_API_URL, load_config
 from ...output.formatters import print_output
+from .blame import (
+    BlameError,
+    annotate,
+    blame_file,
+    parse_blame_porcelain,
+    resource_spans,
+    run_git_blame,
+)
 
 app = typer.Typer(help="Infrastructure as Code (GitOps) commands")
 
@@ -98,6 +107,9 @@ def plan(
     file: str = typer.Option(
         "ipilot-config.yaml", "--file", "-f", help="YAML config file"
     ),
+    show_blame: bool = typer.Option(
+        False, "--blame", help="Annotate changes with git authorship"
+    ),
 ):
     """Show diff between current infra and YAML config (plan)."""
     client = _get_client(ctx)
@@ -148,6 +160,24 @@ def plan(
         if name not in {ds.get("name") for ds in desired_servers}:
             changes.append({"action": "delete", "resource": "server", "name": name})
 
+    blame_by_name: Dict[str, Dict[str, str]] = {}
+    if show_blame:
+        try:
+            blame_by_name = {
+                item.name: {
+                    "last_author": item.last_author,
+                    "risk": ",".join(item.risk) or "-",
+                }
+                for item in blame_file(file)
+            }
+        except BlameError as exc:
+            print_output({"error": str(exc)}, "plain")
+            raise typer.Exit(code=1)
+    if show_blame:
+        for change in changes:
+            info = blame_by_name.get(change.get("name", ""), {})
+            change["last_author"] = info.get("last_author", "unknown")
+            change["risk"] = info.get("risk", "-")
     if not changes:
         print_output(
             {"message": "No changes detected. Infrastructure is up-to-date."}, "plain"
@@ -155,6 +185,34 @@ def plan(
         return
 
     print_output(changes, "table")
+
+
+@app.command("blame")
+def blame_command(
+    ctx: typer.Context,
+    file: str = typer.Option(
+        "ipilot-config.yaml", "--file", "-f", help="YAML config file"
+    ),
+    stale_days: int = typer.Option(
+        180, "--stale-days", help="Days after which authorship counts as stale"
+    ),
+):
+    """Show git authorship per infrastructure resource."""
+    if not os.path.exists(file):
+        print_output({"error": f"Config file not found: {file}"}, "plain")
+        raise typer.Exit(code=1)
+    try:
+        annotations = blame_file(file, stale_days)
+    except BlameError as exc:
+        print_output({"error": str(exc)}, "plain")
+        raise typer.Exit(code=1)
+    if not annotations:
+        print_output({"message": "No servers found in config file."}, "plain")
+        return
+    print_output(
+        [dataclasses.asdict(item) for item in annotations],
+        ctx.obj.get("output", "table"),
+    )
 
 
 @app.command()

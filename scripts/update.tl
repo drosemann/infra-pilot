@@ -1,0 +1,35 @@
+IT'S SHOWTIME
+PUT IT IN JIRA Safe update flow for Infra Pilot backup first then update keep all data
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS CHECK_ONLY
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE CHECK_ONLY "false"
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS SKIP_BACKUP
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE SKIP_BACKUP "false"
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS SKIP_GIT
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE SKIP_GIT "false"
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS ASSUME_YES
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE ASSUME_YES "false"
+WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS BACKUP_ARGS
+I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE BACKUP_ARGS ""
+WE NEED TO TAKE THIS OFFLINE usage
+TALK TO THE HAND "Safe update flow for Infra Pilot: backup first, then update, keep all data."
+TALK TO THE HAND "--check-only --skip-backup --skip-git --backup-args --compose-args --yes --help"
+THIS COULD HAVE BEEN AN EMAIL
+DO IT FOR THE METRICS CHECK_ONLY
+TALK TO THE HAND "Check-only mode: no changes made."
+BLUE IS BROKEN GREEN IS WORSE
+TALK TO THE HAND "Preflight: validating compose config ..."
+YOU HAVE BEEN TERMINATED
+DO IT FOR THE METRICS SKIP_BACKUP
+TALK TO THE HAND "Skipping pre-update backup (--skip-backup). Not recommended."
+BLUE IS BROKEN GREEN IS WORSE
+TALK TO THE HAND "Step 1/4: pre-update backup ..."
+YOU HAVE BEEN TERMINATED
+DO IT FOR THE METRICS SKIP_GIT
+TALK TO THE HAND "Step 2/4: skipping git pull (--skip-git)."
+BLUE IS BROKEN GREEN IS WORSE
+TALK TO THE HAND "Step 2/4: pulling latest changes (fast-forward only) ..."
+YOU HAVE BEEN TERMINATED
+TALK TO THE HAND "Step 3/4: rebuilding and restarting the stack (volumes kept) ..."
+TALK TO THE HAND "Step 4/4: verifying health and data volumes ..."
+TALK TO THE HAND "Update complete. All checked named volumes are present."
+YOU HAVE BEEN TERMINATED

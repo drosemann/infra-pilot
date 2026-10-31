@@ -57,6 +57,17 @@ and Pterodactyl boundary, Prometheus/Grafana on `/metrics`.
 
 ---
 
+## Feature flags
+
+Panel Postgres is the single source of truth (`feature_flags`,
+`feature_flag_rules`); orchestrator, CLI, and Discord service are
+read-only consumers polling `GET /api/feature-flags/evaluate`.
+Evaluation order: archived/expired → default; missing/disabled rule →
+off; deny-list → off; allow-list → on; percentage bucket
+`sha256("flag:subject") % 100 < rollout` → on, else off. Fallback:
+cache → `FEATURE_FLAG_<KEY>` env override → code default. A flag
+never replaces auth/RBAC — it only hides or blocks a feature early.
+
 ## Invariants
 
 1. Panel operational `/api/*` routes require authentication.

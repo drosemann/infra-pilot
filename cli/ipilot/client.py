@@ -152,6 +152,16 @@ class ApiClient:
     # Authentication
     # ------------------------------------------------------------------
 
+    def list_flags(self) -> Any:
+        return self._get("/feature-flags")
+    def evaluate_flags(self) -> Any:
+        return self._get("/feature-flags/evaluate")
+    def create_flag(self, key: str, description: str = "") -> Any:
+        return self._post("/feature-flags", {"key": key, "description": description})
+    def set_flag_rule(self, key: str, environment: str, enabled: bool, rollout: int = 0) -> Any:
+        return self._request("PATCH", f"/feature-flags/{key}", {"rule": {"environment": environment, "enabled": enabled, "rollout_percentage": rollout}})
+    def kill_flag(self, key: str) -> Any:
+        return self._post(f"/feature-flags/{key}/kill")
     def login(self, api_key: str) -> Any:
         """Authenticate with an API key.
 
@@ -703,3 +713,23 @@ class ApiClient:
         qs = "&".join(params)
         path = f"/changes/history?{qs}" if qs else "/changes/history"
         return self._request("GET", path)
+
+    # ------------------------------------------------------------------
+    # Living Fleet (barecode)
+    # ------------------------------------------------------------------
+
+    def list_creatures(self) -> Any:
+        """List all Living Fleet creatures."""
+        return self._request("GET", "/v1/fleet/creatures")
+
+    def get_creature(self, workload_id: str) -> Any:
+        """Get one creature with vitals and explanation."""
+        return self._request("GET", f"/v1/fleet/creatures/{workload_id}")
+
+    def rename_creature(self, workload_id: str, display_name: str) -> Any:
+        """Rename a creature (the only allowed mutation)."""
+        return self._request(
+            "POST",
+            f"/v1/fleet/creatures/{workload_id}/rename",
+            {"display_name": display_name},
+        )

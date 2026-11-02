@@ -76,6 +76,12 @@ export const Sidebar = ({
       attrs: { "data-tour": "apps" },
     },
     {
+      id: "deploy-freeze",
+      label: "Deploy Freeze",
+      icon: "🧊",
+      route: "/deploy-freeze",
+    },
+    {
       id: "deployments",
       label: "Deployments",
       icon: "🚀",

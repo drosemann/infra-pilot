@@ -67,6 +67,17 @@ import { runBenchmark } from './benchmark.ts';
 import { buildReport, reportToCsv, reportToPdf } from './reports.ts';
 import { buildPlan } from './assistant.ts';
 import { FLAG_REGISTRY, evaluateFlag, validateFlagKey, validateRule, envOverride } from './feature-flags.ts';
+import {
+  DEFAULT_FREEZE_POLICY,
+  EMPTY_SIGNALS,
+  evaluateDeployFreeze,
+  validateFreezePolicy,
+  validateFreezeSignals,
+  validateFreezeWindow,
+  type FreezePolicy,
+  type FreezeSignals,
+  type FreezeWindow,
+} from './deploy-freeze.ts';
 import { executeGraphQL } from './graphql.ts';
 import { annotateResources, parseBlamePorcelain, resourceSpans } from './git-blame.ts';
 // plugin-registry and change-approval-engine moved to experimental
@@ -2877,6 +2888,107 @@ app.delete('/api/notification-channels/:id', verifyAuth, async (req: Request, re
 // GIT DEPLOYMENT ROUTES (stored in shared_config as JSON array)
 // ============================================================================
 
+const getSharedConfig = async (key: string): Promise<any> => {
+  const { data } = await supabase.from('shared_config').select('value').eq('key', key).maybeSingle();
+  return data?.value ?? null;
+};
+
+const setSharedConfig = async (key: string, value: any): Promise<void> => {
+  await supabase.from('shared_config').upsert({ key, value }, { onConflict: 'key' });
+};
+
+const getFreezeWindows = async (): Promise<FreezeWindow[]> =>
+  (await getSharedConfig('deploy_freeze_windows')) || [];
+
+const getFreezePolicy = async (): Promise<FreezePolicy> => ({
+  ...DEFAULT_FREEZE_POLICY,
+  ...((await getSharedConfig('deploy_freeze_policy')) || {}),
+});
+
+const getStoredFreezeSignals = async (): Promise<FreezeSignals> => ({
+  ...EMPTY_SIGNALS,
+  ...((await getSharedConfig('deploy_freeze_signals')) || {}),
+});
+
+/** Live signal: unacknowledged alert_history entries of this user (24h) count as critical. Never throws. */
+const countOpenCriticalAlerts = async (userId: string): Promise<number> => {
+  try {
+    const { data: configs } = await supabase.from('alert_configs').select('id').eq('user_id', userId);
+    if (!configs || configs.length === 0) return 0;
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count } = await supabase
+      .from('alert_history')
+      .select('id', { count: 'exact', head: true })
+      .in('alert_config_id', configs.map((c: any) => c.id))
+      .eq('acknowledged', false)
+      .gte('triggered_at', since);
+    return count || 0;
+  } catch {
+    return 0;
+  }
+};
+
+const currentFreezeDecision = async (userId: string, environment: string) => {
+  const [windows, policy, stored] = await Promise.all([
+    getFreezeWindows(),
+    getFreezePolicy(),
+    getStoredFreezeSignals(),
+  ]);
+  const signals: FreezeSignals = {
+    ...stored,
+    open_critical_alerts: await countOpenCriticalAlerts(userId),
+  };
+  return { decision: evaluateDeployFreeze(windows, policy, signals, environment), windows, policy, signals };
+};
+
+/**
+ * Gate for deployment-creating routes. Returns true when the request may
+ * proceed. Dry runs never deploy and always pass. A frozen deployment is
+ * rejected with 423 unless an admin supplies emergencyOverride + reason and
+ * every active freeze reason allows an override (audited either way).
+ */
+const enforceDeployFreeze = async (
+  req: Request,
+  res: Response,
+  opts: { dryRun?: boolean; environment?: string },
+): Promise<boolean> => {
+  if (opts.dryRun) return true;
+  const userId = (req as any).user.id;
+  const environment = opts.environment || 'production';
+  const { decision } = await currentFreezeDecision(userId, environment);
+  if (!decision.frozen) return true;
+
+  const { emergencyOverride, overrideReason } = req.body || {};
+  if (emergencyOverride) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile?.role === 'admin' && typeof overrideReason === 'string' && overrideReason.trim().length >= 10 && decision.override_allowed) {
+      await logAudit(userId, 'deploy-freeze:override', 'deployment', undefined, null, {
+        environment,
+        overrideReason: overrideReason.trim(),
+        reasons: decision.reasons,
+      }, (req as any).ip);
+      return true;
+    }
+    await logAudit(userId, 'deploy-freeze:override-denied', 'deployment', undefined, null, {
+      environment,
+      reasons: decision.reasons,
+    }, (req as any).ip);
+  }
+
+  res.status(423).json({
+    error: 'Deployment frozen',
+    freeze: decision,
+    hint: decision.override_allowed
+      ? 'Admins may retry with emergencyOverride=true and overrideReason (>=10 chars).'
+      : 'At least one active freeze reason does not allow an emergency override.',
+  });
+  return false;
+};
+
 const getDeployments = async (): Promise<any[]> => {
   const { data } = await supabase
     .from('shared_config')
@@ -2956,6 +3068,15 @@ app.get('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
 app.post('/api/deployments', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
   const { name, repoUrl, branch, containerId, targetDir, installCommand, restartCommand, dryRun } = req.body;
+
+  // Deployment freeze (idea #48): evaluated before field validation so a
+  // frozen environment answers 423 without leaking further behavior. Fails
+  // open on store errors, mirroring the feature-flag registry fallback.
+  try {
+    if (!(await enforceDeployFreeze(req, res, { dryRun: !!dryRun, environment: req.body.environment || 'production' }))) return;
+  } catch (err) {
+    console.error('Deploy freeze check failed, allowing deployment:', (err as any)?.message || err);
+  }
 
   if (!name || !repoUrl) {
     return res.status(400).json({ error: 'name and repoUrl are required' });
@@ -4685,6 +4806,94 @@ app.post('/api/feature-flags/:key/kill', verifyAuth, async (req: Request, res: R
   await logAudit(userId, 'flag:kill', 'feature_flag', req.params.key, before, { enabled: false }, (req as any).ip);
   broadcastFlagChange(req.params.key);
   res.json({ ok: true, killed: req.params.key });
+});
+
+// ============================================================================
+// DEPLOYMENT FREEZE ROUTES (idea #48)
+// ============================================================================
+
+// GET /api/deploy-freeze?environment=production — current decision + inputs.
+app.get('/api/deploy-freeze', verifyAuth, async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+  try {
+    const environment = (req.query.environment as string) || 'production';
+    const { decision, windows, policy, signals } = await currentFreezeDecision(userId, environment);
+    res.json({ ...decision, windows, policy, signals });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/deploy-freeze/windows — admin: create a freeze window.
+app.post('/api/deploy-freeze/windows', verifyAuth, async (req: Request, res: Response) => {
+  const adminId = await requireFlagAdmin(req, res);
+  if (!adminId) return;
+  const errMsg = validateFreezeWindow(req.body);
+  if (errMsg) return res.status(400).json({ error: errMsg });
+  try {
+    const windows = await getFreezeWindows();
+    const now = new Date().toISOString();
+    const window: FreezeWindow = {
+      id: crypto.randomUUID(),
+      title: req.body.title.trim(),
+      reason: req.body.reason,
+      environment: req.body.environment,
+      starts_at: new Date(req.body.starts_at).toISOString(),
+      ends_at: req.body.ends_at ? new Date(req.body.ends_at).toISOString() : null,
+      allow_emergency_override: req.body.allow_emergency_override ?? true,
+      created_by: adminId,
+      created_at: now,
+    };
+    windows.push(window);
+    await setSharedConfig('deploy_freeze_windows', windows);
+    await logAudit(adminId, 'deploy-freeze:create', 'deploy_freeze', window.id, null, window, (req as any).ip);
+    res.status(201).json({ window });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/deploy-freeze/windows/:id — admin: remove a freeze window.
+app.delete('/api/deploy-freeze/windows/:id', verifyAuth, async (req: Request, res: Response) => {
+  const adminId = await requireFlagAdmin(req, res);
+  if (!adminId) return;
+  const windows = await getFreezeWindows();
+  const index = windows.findIndex((w) => w.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Freeze window not found' });
+  const [removed] = windows.splice(index, 1);
+  await setSharedConfig('deploy_freeze_windows', windows);
+  await logAudit(adminId, 'deploy-freeze:delete', 'deploy_freeze', req.params.id, removed, null, (req as any).ip);
+  res.json({ success: true });
+});
+
+// PUT /api/deploy-freeze/policy — admin: update freeze policy.
+app.put('/api/deploy-freeze/policy', verifyAuth, async (req: Request, res: Response) => {
+  const adminId = await requireFlagAdmin(req, res);
+  if (!adminId) return;
+  const errMsg = validateFreezePolicy(req.body);
+  if (errMsg) return res.status(400).json({ error: errMsg });
+  const before = await getFreezePolicy();
+  const policy: FreezePolicy = { ...before, ...req.body };
+  await setSharedConfig('deploy_freeze_policy', policy);
+  await logAudit(adminId, 'deploy-freeze:policy', 'deploy_freeze', 'policy', before, policy, (req as any).ip);
+  res.json({ policy });
+});
+
+// PUT /api/deploy-freeze/signals — admin: update SLO/quality-gate signal snapshot.
+app.put('/api/deploy-freeze/signals', verifyAuth, async (req: Request, res: Response) => {
+  const adminId = await requireFlagAdmin(req, res);
+  if (!adminId) return;
+  const errMsg = validateFreezeSignals(req.body);
+  if (errMsg) return res.status(400).json({ error: errMsg });
+  const signals: FreezeSignals = {
+    ...EMPTY_SIGNALS,
+    ...req.body,
+    open_critical_alerts: 0, // always counted live, never stored
+    signals_updated_at: new Date().toISOString(),
+  };
+  await setSharedConfig('deploy_freeze_signals', signals);
+  await logAudit(adminId, 'deploy-freeze:signals', 'deploy_freeze', 'signals', null, signals, (req as any).ip);
+  res.json({ signals });
 });
 
 // Global error handling middleware

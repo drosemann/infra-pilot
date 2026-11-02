@@ -19,6 +19,7 @@ import { Reports } from './pages/Reports';
 import { SettingsPage } from './pages/Settings';
 import { AuditLog } from './pages/AuditLog';
 import { FeatureFlags } from './pages/FeatureFlags';
+import { DeployFreeze } from './pages/DeployFreeze';
 import { KnowledgeBase } from './pages/KnowledgeBase';
 import { GitBlame } from './pages/GitBlame';
 import { ActivityFeed } from './components/ActivityFeed';
@@ -182,6 +183,7 @@ export default function App() {
                       <Route path="/reports" element={<Reports />} />
                       <Route path="/audit" element={<AuditLog />} />
         <Route path="/feature-flags" element={<FeatureFlags />} />
+        <Route path="/deploy-freeze" element={<DeployFreeze />} />
         <Route path="/git-blame" element={<GitBlame />} />
                       <Route path="/activity" element={<ActivityFeed limit={50} />} />
                       <Route path="/knowledge-base" element={<KnowledgeBase />} />

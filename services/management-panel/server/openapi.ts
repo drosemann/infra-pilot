@@ -533,6 +533,42 @@ spec.paths['/feature-flags'] = {
   },
 };
 
+spec.paths['/deploy-freeze'] = {
+  get: {
+    summary: 'Deployment freeze status: decision, windows, policy, signals',
+    tags: ['Deployments'],
+    security: [{ bearerAuth: [] }],
+    parameters: [
+      { name: 'environment', in: 'query', required: false, schema: { type: 'string' } },
+    ],
+    responses: { '200': { description: 'Freeze decision' }, '401': { description: 'Unauthorized' } },
+  },
+};
+spec.paths['/deploy-freeze/windows'] = {
+  post: {
+    summary: 'Create a deployment freeze window (admin)',
+    tags: ['Deployments'],
+    security: [{ bearerAuth: [] }],
+    responses: { '201': { description: 'Window created' }, '400': { description: 'Invalid input' }, '403': { description: 'Admin required' } },
+  },
+};
+spec.paths['/deploy-freeze/policy'] = {
+  put: {
+    summary: 'Update the deployment freeze policy (admin)',
+    tags: ['Deployments'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Policy updated' }, '400': { description: 'Invalid input' } },
+  },
+};
+spec.paths['/deploy-freeze/signals'] = {
+  put: {
+    summary: 'Update SLO/quality-gate signal snapshot (admin)',
+    tags: ['Deployments'],
+    security: [{ bearerAuth: [] }],
+    responses: { '200': { description: 'Signals updated' }, '400': { description: 'Invalid input' } },
+  },
+};
+
 spec.paths['/gitops/blame'] = {
   get: {
     summary: 'Blame-aware GitOps: authorship per server resource',

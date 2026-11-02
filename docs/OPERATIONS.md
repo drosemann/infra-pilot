@@ -118,6 +118,18 @@ Details: [wiki/13-Update-Flow](../wiki/13-Update-Flow.md).
 
 ---
 
+## Deployment freeze
+
+- Panel page `/deploy-freeze` (also `GET /api/deploy-freeze?environment=production`):
+  freeze windows, policy, and the live decision with reasons.
+- A frozen environment answers `POST /api/deployments` with `423`
+  (`dryRun: true` always passes). Triggers: active window, unacknowledged
+  alerts of the last 24h, error budget below the policy floor, or failed
+  quality gates. SLO/quality signals come from `PUT /api/deploy-freeze/signals`.
+- Emergency override: admin role, `emergencyOverride: true` plus
+  `overrideReason` (min. 10 chars), and only when every active reason allows
+  it. Overrides and denials are audit-logged (`deploy-freeze:override*`).
+
 ## Troubleshooting entry points
 
 - [wiki/10-Troubleshooting](../wiki/10-Troubleshooting.md)

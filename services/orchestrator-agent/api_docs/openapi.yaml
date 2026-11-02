@@ -462,6 +462,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "423":
+          description: Deployment blocked by freeze gate (dry_run or freeze_override with freeze_reason bypasses it)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "403":
           description: manifest:deploy permission required
           content:
@@ -483,6 +488,20 @@ paths:
                   providers:
                     type: array
                     items: { type: string }
+  /api/v1/deploy-freeze:
+    get:
+      tags: [Deployments]
+      summary: Deployment freeze gate status
+      responses:
+        "200":
+          description: Freeze status (DEPLOY_FREEZE / DEPLOY_FREEZE_WINDOWS)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  frozen: { type: boolean }
+                  reason: { type: string }
   /webhook/gitops:
     post:
       tags: [GitOps]

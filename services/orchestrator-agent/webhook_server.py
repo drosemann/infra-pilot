@@ -18,6 +18,7 @@ from enum import Enum
 from typing import Any, Callable, Optional
 
 import compute.docker_provider  # noqa: F401  (self-registers the built-in provider)
+import deploy_freeze
 import psutil
 import rbac_store
 from aiohttp import web
@@ -504,9 +505,19 @@ async def deployment_apply(request: web.Request) -> web.Response:
         return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
     except Exception as exc:
         return web.json_response({"error": f"invalid manifest: {exc}"}, status=400)
+    allowed, freeze_reason = deploy_freeze.check_deploy_allowed(body, dry_run=dry_run)
+    if not allowed:
+        logger.warning("deployment blocked by freeze: %s", freeze_reason)
+        return web.json_response(
+            {"error": "deployment frozen", "reason": freeze_reason}, status=423
+        )
     result = await ManifestEngine(dry_run=dry_run).reconcile(desired)
     status = 200 if not result.errors else 207
     return web.json_response(_serialize_rbac(result), status=status)
+
+
+async def deploy_freeze_status(request: web.Request) -> web.Response:
+    return web.json_response(deploy_freeze.status())
 
 
 async def deployment_providers(request: web.Request) -> web.Response:
@@ -929,6 +940,7 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     app.router.add_get("/api/v1/rbac/orgs/{org_id}/members", rbac_org_members)
     app.router.add_post("/api/v1/deployments", deployment_apply)
     app.router.add_get("/api/v1/providers", deployment_providers)
+    app.router.add_get("/api/v1/deploy-freeze", deploy_freeze_status)
 
     # GitOps push webhook: converge toward the manifest sent in the body.
     # Runs the same reconcile path as POST /api/v1/deployments, guarded by

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import { toast } from 'sonner';
 
@@ -178,12 +178,12 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
   return (
     <div className="flex gap-4 h-[600px]">
       {/* File Browser Sidebar */}
-      <div className="w-64 flex-shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
-        <div className="p-3 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+      <div className="w-64 flex-shrink-0 bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden flex flex-col">
+        <div className="p-3 border-b border-slate-200 dark:border-white/10">
+          <div className="flex items-center gap-1 text-xs text-white/40 dark:text-white/45 flex-wrap">
             {breadcrumbs.map((crumb, idx) => (
               <React.Fragment key={idx}>
-                {idx > 0 && <span className="text-slate-400">/</span>}
+                {idx > 0 && <span className="text-white/45">/</span>}
                 <button
                   onClick={() => navigateBreadcrumb(idx)}
                   className="hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[80px]"
@@ -196,9 +196,9 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {loading ? (
-            <div className="text-center py-4 text-sm text-slate-500">Loading...</div>
+            <div className="text-center py-4 text-sm text-white/40">Loading...</div>
           ) : files.length === 0 ? (
-            <div className="text-center py-4 text-sm text-slate-500">Empty directory</div>
+            <div className="text-center py-4 text-sm text-white/40">Empty directory</div>
           ) : (
             <div className="space-y-0.5">
               {currentPath !== '/' && (
@@ -207,7 +207,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
                     const parent = currentPath.split('/').slice(0, -1).join('/') || '/';
                     navigateToDir(parent);
                   }}
-                  className="w-full text-left px-2 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                  className="w-full text-left px-2 py-1.5 text-sm text-white/60 dark:text-white/45 hover:bg-slate-100 dark:hover:bg-white/10 rounded"
                 >
                   ..
                 </button>
@@ -217,7 +217,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
                   {file.isDirectory ? (
                     <button
                       onClick={() => navigateToDir(file.path)}
-                      className="w-full text-left px-2 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded truncate"
+                      className="w-full text-left px-2 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-white/10 rounded truncate"
                     >
                       {file.name}/
                     </button>
@@ -227,7 +227,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
                       className={`w-full text-left px-2 py-1.5 text-sm rounded truncate ${
                         selectedFile === file.path
                           ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          : 'text-white/70 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/10'
                       }`}
                     >
                       {file.name}
@@ -243,19 +243,19 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
       {/* Editor Area */}
       <div className="flex-1 flex flex-col">
         {!selectedFile ? (
-          <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-            <p className="text-slate-500 dark:text-slate-400">Select a file to edit</p>
+          <div className="flex-1 flex items-center justify-center bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-lg">
+            <p className="text-white/40 dark:text-white/45">Select a file to edit</p>
           </div>
         ) : fileLoading ? (
-          <div className="flex-1 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-            <p className="text-slate-500">Loading file...</p>
+          <div className="flex-1 flex items-center justify-center bg-white dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 rounded-lg">
+            <p className="text-white/40">Loading file...</p>
           </div>
         ) : (
           <>
             {/* Toolbar */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-mono text-slate-600 dark:text-slate-400 truncate max-w-[300px]">
+                <span className="text-sm font-mono text-white/60 dark:text-white/45 truncate max-w-[300px]">
                   {selectedFile}
                 </span>
                 {isDirty && (
@@ -267,21 +267,21 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
               <div className="flex gap-2">
                 <button
                   onClick={handleValidate}
-                  className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors"
+                  className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-white/10 text-white/70 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/20 rounded transition-colors"
                 >
                   Validate
                 </button>
                 <button
                   onClick={handleDiscard}
                   disabled={!isDirty}
-                  className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs bg-slate-100 dark:bg-white/10 text-white/70 dark:text-white/60 hover:bg-slate-200 dark:hover:bg-white/20 rounded transition-colors disabled:opacity-50"
                 >
                   Discard
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!isDirty || saving}
-                  className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50"
+                  className="primary-button"
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -298,7 +298,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
             )}
 
             {/* Editor with Syntax Highlighting */}
-            <div className="flex-1 relative bg-slate-900 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden font-mono text-sm">
+            <div className="flex-1 relative bg-black/40 dark:bg-[#080a10] border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden font-mono text-sm">
               <pre
                 ref={highlightRef}
                 className="absolute inset-0 m-0 p-4 pointer-events-none whitespace-pre-wrap break-all overflow-auto text-green-400"
@@ -318,7 +318,7 @@ export const ConfigEditor: React.FC<ConfigEditorProps> = ({ appId, initialPath }
             </div>
 
             {/* Status Bar */}
-            <div className="flex justify-between items-center mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex justify-between items-center mt-1 text-xs text-white/40 dark:text-white/45">
               <span>Language: {language}</span>
               <span>{content.split('\n').length} lines | {content.length} chars</span>
             </div>

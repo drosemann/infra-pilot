@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { AccessLog } from '../lib/types';
 
@@ -27,22 +27,22 @@ export const AccessLogViewer = () => {
       case 'success': return 'text-green-400';
       case 'failed': return 'text-red-400';
       case 'pending': return 'text-yellow-400';
-      default: return 'text-slate-400';
+      default: return 'text-white/45';
     }
   };
 
   if (loading) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <p className="text-slate-400">Loading access logs...</p>
+      <div className="card p-6">
+        <p className="text-white/45">Loading access logs...</p>
       </div>
     );
   }
 
   if (logs.length === 0) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 text-center">
-        <p className="text-slate-400">No access logs yet</p>
+      <div className="card p-6 text-center">
+        <p className="text-white/45">No access logs yet</p>
       </div>
     );
   }
@@ -52,7 +52,7 @@ export const AccessLogViewer = () => {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-slate-400 border-b border-slate-700">
+            <tr className="border-b border-white/10 text-left text-white/45">
               <th className="pb-3 pr-4">Time</th>
               <th className="pb-3 pr-4">Action</th>
               <th className="pb-3 pr-4">Source IP</th>
@@ -62,16 +62,16 @@ export const AccessLogViewer = () => {
           </thead>
           <tbody>
             {logs.map((log) => (
-              <tr key={log.id} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
-                <td className="py-3 pr-4 text-slate-300 whitespace-nowrap">
+              <tr key={log.id} className="border-b border-white/5">
+                <td className="py-3 pr-4 whitespace-nowrap text-white/60">
                   {new Date(log.created_at).toLocaleString()}
                 </td>
                 <td className="py-3 pr-4 text-white">{log.action}</td>
-                <td className="py-3 pr-4 text-slate-300 font-mono">{log.source_ip}</td>
+                <td className="py-3 pr-4 font-mono text-white/60">{log.source_ip}</td>
                 <td className={`py-3 pr-4 font-semibold ${getStatusColor(log.status)}`}>
                   {log.status}
                 </td>
-                <td className="py-3 text-slate-400 max-w-xs truncate">{log.details}</td>
+                <td className="py-3 text-white/45 max-w-xs truncate">{log.details}</td>
               </tr>
             ))}
           </tbody>

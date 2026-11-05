@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { setup2FA, verify2FASetup, disable2FA, get2FABackupCodes } from '../lib/auth';
 import { apiClient } from '../lib/api';
 import { BrandButton } from './BrandButton';
@@ -109,14 +109,14 @@ export const TwoFactorSetup = () => {
 
   if (state === 'loading') {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <p className="text-slate-400">Loading...</p>
+      <div className="card p-6">
+        <p className="text-white/45">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+    <div className="card p-6">
       <h2 className="text-lg font-semibold text-white mb-4">Two-Factor Authentication</h2>
 
       {error && (
@@ -127,7 +127,7 @@ export const TwoFactorSetup = () => {
 
       {state === 'initial' && (
         <div>
-          <p className="text-sm text-slate-400 mb-4">
+          <p className="mb-4 text-sm text-white/55">
             Add an extra layer of security to your account by enabling two-factor authentication.
           </p>
           <BrandButton label="Enable Two-Factor Authentication" onClick={handleStartSetup} />
@@ -136,10 +136,10 @@ export const TwoFactorSetup = () => {
 
       {state === 'setup' && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-white/55">
             Scan the QR code with your authenticator app
             (Google Authenticator, Microsoft Authenticator,
-            Authy, 1Password, Bitwarden, Aegis, andOTP — any
+            Authy, 1Password, Bitwarden, Aegis, andOTP â€” any
             TOTP app works) or enter the setup key manually.
             Codes are 6 digits, refresh every 30 seconds
             (TOTP / RFC 6238, SHA-1).
@@ -149,13 +149,13 @@ export const TwoFactorSetup = () => {
             <img src={qrUrl} alt="TOTP QR Code" className="rounded-lg" />
           </div>
 
-          <div className="bg-slate-900 rounded p-3">
-            <p className="text-xs text-slate-500 mb-1">Manual Setup Key:</p>
+          <div className="rounded-xl bg-black/40 p-3">
+            <p className="mb-1 text-xs text-white/40">Manual Setup Key:</p>
             <p className="text-sm text-white font-mono select-all break-all">{secret}</p>
           </div>
 
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Verification Code</label>
+            <label className="mb-1 block text-sm text-white/55">Verification Code</label>
             <input
               type="text"
               inputMode="numeric"
@@ -164,9 +164,9 @@ export const TwoFactorSetup = () => {
               onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
               maxLength={6}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500 text-center tracking-widest font-mono"
+              className="input-field w-full text-sm text-center tracking-widest font-mono"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="mt-1 text-xs text-white/40">
               Enter the current 6-digit code from your app.
               If it just rolled over, wait for the next code.
             </p>
@@ -188,7 +188,7 @@ export const TwoFactorSetup = () => {
 
           <div className="grid grid-cols-2 gap-2">
             {backupCodes.map((code, i) => (
-              <div key={i} className="bg-slate-900 rounded p-2 text-center">
+              <div key={i} className="rounded-xl bg-black/40 p-2 text-center">
                 <span className="text-sm text-white font-mono">{code}</span>
               </div>
             ))}
@@ -197,13 +197,13 @@ export const TwoFactorSetup = () => {
           <div className="flex gap-2">
             <button
               onClick={handleCopyCodes}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-colors"
+              className="secondary-button"
             >
               Copy Codes
             </button>
             <button
               onClick={handleDownloadCodes}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded transition-colors"
+              className="secondary-button"
             >
               Download
             </button>
@@ -216,18 +216,18 @@ export const TwoFactorSetup = () => {
       {state === 'enabled' && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-green-400">
-            <span className="text-lg">✓</span>
+            <span className="text-lg">âœ“</span>
             <span className="text-sm font-medium">Two-factor authentication is active</span>
           </div>
 
           <div>
-            <label className="block text-sm text-slate-400 mb-1">Confirm password to disable</label>
+            <label className="mb-1 block text-sm text-white/55">Confirm password to disable</label>
             <input
               type="password"
               value={disablePassword}
               onChange={(e) => setDisablePassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+              className="input-field w-full text-sm"
             />
           </div>
 

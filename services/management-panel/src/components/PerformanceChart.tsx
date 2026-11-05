@@ -1,6 +1,6 @@
-interface PerformanceChartProps {
+﻿interface PerformanceChartProps {
   data: number[];
-  color?: string;
+
   height?: number;
   label?: string;
   value?: string;
@@ -9,7 +9,7 @@ interface PerformanceChartProps {
 
 export const PerformanceChart = ({
   data,
-  color = 'from-blue-500 to-cyan-500',
+
   height = 120,
   label = 'TPS',
   value,
@@ -22,9 +22,9 @@ export const PerformanceChart = ({
   const range = max - min || 1;
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-slate-400">{label}</span>
+        <span className="text-sm text-white/45">{label}</span>
         {value && <span className="text-lg font-bold text-white">{value}</span>}
       </div>
       <div className="relative" style={{ height }}>
@@ -60,7 +60,7 @@ export const PerformanceChart = ({
           />
         </svg>
       </div>
-      <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
+      <div className="flex items-center justify-between mt-2 text-xs text-white/40">
         <span>5m ago</span>
         <span>now</span>
       </div>

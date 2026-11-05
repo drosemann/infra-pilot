@@ -1,5 +1,5 @@
-/**
- * FleetWhy — "Why does it feel like this?" detail view for a creature.
+﻿/**
+ * FleetWhy â€” "Why does it feel like this?" detail view for a creature.
  * Renders the per-vital scores and contributing raw signals straight from
  * the fleet API explanation trace. Collapsed by default; no fetching here.
  */
@@ -17,18 +17,18 @@ export function FleetWhy({ creature }: { creature: CreatureView }) {
   const rows = creature.explanation ?? [];
   if (rows.length === 0) return null;
   return (
-    <details className="fleet-why mt-2 text-xs text-slate-400">
+    <details className="fleet-why mt-2 text-xs text-white/45">
       <summary className="cursor-pointer select-none hover:text-slate-200">
         Why does {creature.display_name} feel {creature.mood}?
       </summary>
       <ul className="mt-1 space-y-1 pl-1">
         {rows.map((row) => (
           <li key={row.vital}>
-            <span className="font-semibold text-slate-300">{row.vital}</span>
+            <span className="font-semibold text-white/60">{row.vital}</span>
             {': '}
             {row.score === null ? 'unknown' : row.score}
             {Object.keys(row.signals).length > 0 && (
-              <span className="text-slate-500">
+              <span className="text-white/40">
                 {' ('}
                 {Object.entries(row.signals)
                   .map(([k, v]) => `${k}=${formatSignalValue(v)}`)

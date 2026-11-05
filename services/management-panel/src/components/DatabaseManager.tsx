@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 import { Database, DockerApp } from '../lib/types';
 import { toast } from 'sonner';
@@ -88,7 +88,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
   };
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading databases...</div>;
+    return <div className="text-white/45 py-4">Loading databases...</div>;
   }
 
   return (
@@ -100,7 +100,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
             setShowForm(!showForm);
             setNewDbCredentials(null);
           }}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+          className="primary-button"
         >
           {showForm ? 'Cancel' : 'New Database'}
         </button>
@@ -115,7 +115,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
             <p>Database: {newDbCredentials.database}</p>
             <p>Username: {newDbCredentials.username}</p>
             <p>Password: <span className="text-red-400 font-bold">{newDbCredentials.password}</span></p>
-            <p className="text-yellow-400 text-xs mt-2">⚠️ This password will not be shown again. Save it now.</p>
+            <p className="text-yellow-400 text-xs mt-2">âš ï¸ This password will not be shown again. Save it now.</p>
           </div>
           <button
             onClick={() => setNewDbCredentials(null)}
@@ -127,7 +127,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
       )}
 
       {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div>
             <input
               type="text"
@@ -138,7 +138,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
                 if (nameError) validateName(e.target.value);
               }}
               onBlur={() => validateName(name)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
             />
             {nameError && <p className="text-red-400 text-xs mt-1">{nameError}</p>}
           </div>
@@ -146,7 +146,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
             <select
               value={selectedAppId}
               onChange={(e) => setSelectedAppId(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white outline-none focus:border-blue-500"
             >
               <option value="">Link to app (optional)...</option>
               {apps.map((app) => (
@@ -157,7 +157,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
           <button
             onClick={handleCreate}
             disabled={!!nameError}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded transition-colors"
+            className="primary-button w-full"
           >
             Create Database
           </button>
@@ -166,24 +166,24 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
 
       <div className="space-y-2">
         {databases.length === 0 ? (
-          <p className="text-slate-500 text-sm">No databases created yet</p>
+          <p className="text-white/40 text-sm">No databases created yet</p>
         ) : (
           databases.map((db) => (
-            <div key={db.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+            <div key={db.id} className="flex items-center justify-between p-3 bg-white/[0.04] rounded-lg border border-white/10">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${getStatusColor(db.status)}`} />
                   <p className="text-sm font-semibold text-white">{db.name}</p>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  {db.host}:{db.port} · Created: {new Date(db.createdAt).toLocaleDateString()}
-                  {db.appId && ' · Linked to app'}
+                <p className="text-xs text-white/45 mt-1">
+                  {db.host}:{db.port} Â· Created: {new Date(db.createdAt).toLocaleDateString()}
+                  {db.appId && ' Â· Linked to app'}
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowPassword({ ...showPassword, [db.id]: !showPassword[db.id] })}
-                  className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-white rounded transition-colors"
+                  className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 text-white rounded transition-colors"
                 >
                   {showPassword[db.id] ? 'Hide Credentials' : 'Show Credentials'}
                 </button>
@@ -194,7 +194,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
                     );
                     toast.success('Connection string copied');
                   }}
-                  className="px-2 py-1 text-xs bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 rounded transition-colors"
+                  className="secondary-button"
                 >
                   Connect Info
                 </button>
@@ -206,7 +206,7 @@ export const DatabaseManager = ({ appId }: DatabaseManagerProps) => {
                 </button>
               </div>
               {showPassword[db.id] && (
-                <div className="absolute mt-20 right-0 bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl z-10 text-xs font-mono text-white space-y-1">
+                <div className="absolute mt-20 right-0 bg-black/40 border border-white/10 rounded-lg p-3 shadow-xl z-10 text-xs font-mono text-white space-y-1">
                   <p>Host: {db.host}</p>
                   <p>Port: {db.port}</p>
                   <p>Database: {db.database}</p>

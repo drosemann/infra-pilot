@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { apiClient } from '../lib/api';
 import { ServerPreset, JAVA_VERSIONS } from '../lib/types';
@@ -145,25 +145,25 @@ export const AppForm = () => {
   if (loading) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-600 dark:text-slate-300">Loading...</p>
+        <p className="text-white/45">Loading…</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
+    <div className="mx-auto max-w-3xl px-2 py-8">
+      <h1 className="text-4xl font-semibold tracking-tight text-white mb-8">
         {isEdit ? 'Edit App' : 'Create New App'}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
 
         {!isEdit && (
-          <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+          <fieldset className="card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">
               Create your first server
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+            <p className="text-sm text-white/55 mb-3">
               Pick a preset to pre-fill resources, image, ports, and environment variables.
             </p>
             <div className="flex gap-2">
@@ -173,7 +173,7 @@ export const AppForm = () => {
                   setSelectedPreset(e.target.value);
                   applyPreset(e.target.value);
                 }}
-                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                className="input-field flex-1"
               >
                 <option value="">Select a preset</option>
                 {presets.map((preset) => (
@@ -187,11 +187,11 @@ export const AppForm = () => {
         )}
 
         {!isEdit && selectedPreset === 'discord-bot' && (
-          <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+          <fieldset className="card p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">
               Discord Bot Token
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mb-3">
+            <p className="text-sm text-white/55 mb-3">
               Validate your Discord bot token before starting the container.
             </p>
             <div className="flex gap-2 mb-3">
@@ -203,13 +203,13 @@ export const AppForm = () => {
                   setValidationResult(null);
                 }}
                 placeholder="Paste your Discord bot token"
-                className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono text-sm"
+                className="input-field flex-1 font-mono text-sm"
               />
               <button
                 type="button"
                 onClick={handleValidateDiscordToken}
                 disabled={validating || !discordToken}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+                className="secondary-button"
               >
                 {validating ? 'Validating...' : 'Validate'}
               </button>
@@ -217,9 +217,9 @@ export const AppForm = () => {
             {validationResult && (
               <div className={`text-sm px-3 py-2 rounded ${validationResult.valid ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300'}`}>
                 {validationResult.valid ? (
-                  <span>✓ Valid — <strong>{validationResult.botName}</strong> (in {validationResult.guildCount} guild{validationResult.guildCount !== 1 ? 's' : ''})</span>
+                  <span>âœ“ Valid â€” <strong>{validationResult.botName}</strong> (in {validationResult.guildCount} guild{validationResult.guildCount !== 1 ? 's' : ''})</span>
                 ) : (
-                  <span>✗ {validationResult.error}</span>
+                  <span>âœ— {validationResult.error}</span>
                 )}
               </div>
             )}
@@ -227,14 +227,14 @@ export const AppForm = () => {
         )}
 
         {/* Basic Info */}
-        <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+        <fieldset className="card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">
             Basic Information
           </h2>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-white/55 mb-1">
                 App Name *
               </label>
               <input
@@ -243,12 +243,12 @@ export const AppForm = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., My Web App"
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-white/55 mb-1">
                 Docker Image *
               </label>
               <input
@@ -257,12 +257,12 @@ export const AppForm = () => {
                 value={formData.image}
                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 placeholder="e.g., nginx:latest"
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-white/55 mb-1">
                 Description
               </label>
               <textarea
@@ -270,12 +270,12 @@ export const AppForm = () => {
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Optional description"
                 rows={3}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-white/55 mb-1">
                 Memory Limit
               </label>
               <input
@@ -283,19 +283,19 @@ export const AppForm = () => {
                 value={formData.memoryLimit}
                 onChange={(e) => setFormData({ ...formData, memoryLimit: e.target.value })}
                 placeholder="e.g., 512m, 1g"
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-field w-full"
               />
             </div>
 
             {selectedPreset.startsWith('minecraft') && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-white/55 mb-1">
                   Java Version
                 </label>
                 <select
                   value={formData.javaVersion}
                   onChange={(e) => setFormData({ ...formData, javaVersion: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="input-field w-full"
                 >
                   <option value="">Select Java version</option>
                   {JAVA_VERSIONS.map((v) => (
@@ -308,13 +308,13 @@ export const AppForm = () => {
         </fieldset>
 
         {/* Ports */}
-        <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Ports</h2>
+        <fieldset className="card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Ports</h2>
 
           <div className="space-y-2 mb-4">
             {formData.ports.map((port, idx) => (
               <div key={idx} className="flex gap-2 items-center">
-                <span className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="text-sm text-white/60">
                   {port.hostPort}:{port.containerPort}/{port.protocol}
                 </span>
                 <button
@@ -325,7 +325,7 @@ export const AppForm = () => {
                       ports: formData.ports.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
+                  className="text-sm font-medium text-red-400/90 hover:text-red-400"
                 >
                   Remove
                 </button>
@@ -339,19 +339,19 @@ export const AppForm = () => {
               value={newPort.hostPort}
               onChange={(e) => setNewPort({ ...newPort, hostPort: e.target.value })}
               placeholder="Host port"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <input
               type="number"
               value={newPort.containerPort}
               onChange={(e) => setNewPort({ ...newPort, containerPort: e.target.value })}
               placeholder="Container port"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <select
               value={newPort.protocol}
               onChange={(e) => setNewPort({ ...newPort, protocol: e.target.value })}
-              className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field w-auto"
             >
               <option value="tcp">TCP</option>
               <option value="udp">UDP</option>
@@ -367,7 +367,7 @@ export const AppForm = () => {
                   setNewPort({ hostPort: '', containerPort: '', protocol: 'tcp' });
                 }
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="secondary-button"
             >
               Add
             </button>
@@ -375,15 +375,15 @@ export const AppForm = () => {
         </fieldset>
 
         {/* Environment Variables */}
-        <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+        <fieldset className="card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">
             Environment Variables
           </h2>
 
           <div className="space-y-2 mb-4">
             {Object.entries(formData.environmentVars).map(([key, value]) => (
               <div key={key} className="flex gap-2 items-center">
-                <span className="text-sm text-slate-600 dark:text-slate-400 font-mono">
+                <span className="font-mono text-sm text-white/60">
                   {key}={value}
                 </span>
                 <button
@@ -392,7 +392,7 @@ export const AppForm = () => {
                     const { [key]: _, ...rest } = formData.environmentVars;
                     setFormData({ ...formData, environmentVars: rest });
                   }}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
+                  className="text-sm font-medium text-red-400/90 hover:text-red-400"
                 >
                   Remove
                 </button>
@@ -406,14 +406,14 @@ export const AppForm = () => {
               value={newEnvKey}
               onChange={(e) => setNewEnvKey(e.target.value)}
               placeholder="KEY"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <input
               type="text"
               value={newEnvValue}
               onChange={(e) => setNewEnvValue(e.target.value)}
               placeholder="value"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <button
               type="button"
@@ -430,7 +430,7 @@ export const AppForm = () => {
                   setNewEnvValue('');
                 }
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="secondary-button"
             >
               Add
             </button>
@@ -438,14 +438,14 @@ export const AppForm = () => {
         </fieldset>
 
         {/* Volumes */}
-        <fieldset className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Volumes</h2>
+        <fieldset className="card p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Volumes</h2>
 
           <div className="space-y-2 mb-4">
             {formData.volumes.map((volume, idx) => (
               <div key={idx} className="flex gap-2 items-center">
-                <span className="text-sm text-slate-600 dark:text-slate-400 font-mono">
-                  {volume.hostPath} → {volume.containerPath}
+                <span className="font-mono text-sm text-white/60">
+                  {volume.hostPath} â†’ {volume.containerPath}
                 </span>
                 <button
                   type="button"
@@ -455,7 +455,7 @@ export const AppForm = () => {
                       volumes: formData.volumes.filter((_, i) => i !== idx),
                     });
                   }}
-                  className="text-red-600 hover:text-red-700 text-sm font-medium"
+                  className="text-sm font-medium text-red-400/90 hover:text-red-400"
                 >
                   Remove
                 </button>
@@ -469,14 +469,14 @@ export const AppForm = () => {
               value={newVolume.hostPath}
               onChange={(e) => setNewVolume({ ...newVolume, hostPath: e.target.value })}
               placeholder="/host/path"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <input
               type="text"
               value={newVolume.containerPath}
               onChange={(e) => setNewVolume({ ...newVolume, containerPath: e.target.value })}
               placeholder="/container/path"
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+              className="input-field flex-1"
             />
             <button
               type="button"
@@ -489,7 +489,7 @@ export const AppForm = () => {
                   setNewVolume({ hostPath: '', containerPath: '' });
                 }
               }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              className="secondary-button"
             >
               Add
             </button>
@@ -501,7 +501,7 @@ export const AppForm = () => {
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-semibold rounded-lg transition-colors"
+            className="primary-button font-semibold"
           >
             {submitting ? 'Saving...' : isEdit ? 'Update App' : 'Create App'}
           </button>
@@ -509,7 +509,7 @@ export const AppForm = () => {
             type="button"
             onClick={() => navigate('/dashboard')}
             disabled={submitting}
-            className="px-6 py-3 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="secondary-button"
           >
             Cancel
           </button>

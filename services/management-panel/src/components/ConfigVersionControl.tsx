@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { ConfigVersion } from '../lib/types';
 import { toast } from 'sonner';
@@ -60,7 +60,7 @@ export const ConfigVersionControl = ({ appId }: ConfigVersionControlProps) => {
   };
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading config versions...</div>;
+    return <div className="text-white/45 py-4">Loading config versions...</div>;
   }
 
   return (
@@ -73,12 +73,12 @@ export const ConfigVersionControl = ({ appId }: ConfigVersionControlProps) => {
             placeholder="Change summary..."
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
-            className="px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+            className="px-3 py-1.5 bg-white/10 border border-white/10 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
           />
           <button
             onClick={handleCreateSnapshot}
             disabled={creating}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            className="primary-button"
           >
             {creating ? 'Saving...' : 'Save Snapshot'}
           </button>
@@ -86,25 +86,25 @@ export const ConfigVersionControl = ({ appId }: ConfigVersionControlProps) => {
       </div>
 
       {versions.length === 0 ? (
-        <p className="text-slate-500 text-sm">No config versions saved yet</p>
+        <p className="text-white/40 text-sm">No config versions saved yet</p>
       ) : (
         <div className="space-y-2">
           {versions.map((v) => (
             <div
               key={v.id}
-              className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+              className="flex items-center justify-between p-3 bg-white/[0.04] rounded-lg border border-white/10 hover:border-white/25 transition-colors"
             >
               <div className="flex items-center gap-4">
                 <span className="text-blue-400 font-mono text-sm">v{v.version}</span>
                 <div>
                   <p className="text-sm text-white">{v.change_summary || 'No summary'}</p>
-                  <p className="text-xs text-slate-500">{new Date(v.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-white/40">{new Date(v.created_at).toLocaleString()}</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setSelectedVersion(v); setShowDiff(true); }}
-                  className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors"
+                  className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 text-white/60 rounded transition-colors"
                 >
                   View
                 </button>
@@ -124,15 +124,15 @@ export const ConfigVersionControl = ({ appId }: ConfigVersionControlProps) => {
 
       {showDiff && selectedVersion && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDiff(false)}>
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-black/40 border border-white/10 rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Version {selectedVersion.version}</h3>
-              <button onClick={() => setShowDiff(false)} className="text-slate-400 hover:text-white">✕</button>
+              <button onClick={() => setShowDiff(false)} className="text-white/45 hover:text-white">âœ•</button>
             </div>
-            <pre className="text-xs text-slate-300 bg-slate-800 p-4 rounded-lg overflow-x-auto">
+            <pre className="text-xs text-white/60 bg-white/[0.04] p-4 rounded-lg overflow-x-auto">
               {JSON.stringify(selectedVersion.config_snapshot, null, 2)}
             </pre>
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-white/40 mt-2">
               Created: {new Date(selectedVersion.created_at).toLocaleString()}
             </p>
           </div>

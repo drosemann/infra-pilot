@@ -1,4 +1,4 @@
-interface SystemGaugeProps {
+﻿interface SystemGaugeProps {
   label: string;
   value: number;
   max: number;
@@ -25,7 +25,7 @@ export const SystemGauge = ({
   };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col items-center">
+    <div className="card p-4 flex flex-col items-center">
       <svg width={size} height={size / 2 + 20} viewBox="0 0 200 120">
         <path
           d="M 20 100 A 80 80 0 0 1 180 100"
@@ -49,7 +49,7 @@ export const SystemGauge = ({
           {value}/{max} {unit}
         </text>
       </svg>
-      <span className="text-sm text-slate-300 mt-2">{label}</span>
+      <span className="text-sm text-white/60 mt-2">{label}</span>
     </div>
   );
 };

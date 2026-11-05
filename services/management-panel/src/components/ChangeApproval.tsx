@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { ChangeRequest, ChangeRequestInput } from '../lib/types';
 import { toast } from 'sonner';
@@ -79,7 +79,7 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
       case 'approved': return 'bg-green-500/20 text-green-400 border-green-500/30';
       case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
       case 'emergency': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+      default: return 'bg-white/5 text-white/45 border-white/10';
     }
   };
 
@@ -89,55 +89,55 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
         <h3 className="text-lg font-semibold text-white">Change Approval</h3>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+          className="primary-button"
         >
           {showForm ? 'Cancel' : 'New Request'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+        <div className="card p-4 space-y-3">
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Action *</label>
+            <label className="text-xs text-white/45 block mb-1">Action *</label>
             <input
               value={form.action}
               onChange={e => setForm(f => ({ ...f, action: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white"
               placeholder="e.g., restart, deploy, delete"
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Reason *</label>
+            <label className="text-xs text-white/45 block mb-1">Reason *</label>
             <input
               value={form.reason}
               onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white"
               placeholder="Why is this change needed?"
             />
           </div>
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Details</label>
+            <label className="text-xs text-white/45 block mb-1">Details</label>
             <textarea
               value={form.details}
               onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white resize-none"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white resize-none"
               rows={3}
               placeholder="Additional details..."
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-white/60">
             <input
               type="checkbox"
               checked={form.isBreakGlass}
               onChange={e => setForm(f => ({ ...f, isBreakGlass: e.target.checked }))}
-              className="rounded border-slate-600"
+              className="rounded border-white/10"
             />
             Break Glass (Emergency override - auto-approved)
           </label>
           <button
             onClick={handleCreate}
             disabled={submitting || !form.action || !form.reason}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded text-sm"
+            className="primary-button w-full"
           >
             {submitting ? 'Creating...' : 'Create Change Request'}
           </button>
@@ -151,8 +151,8 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
             onClick={() => setFilter(f)}
             className={`px-3 py-1 text-xs rounded border capitalize ${
               filter === f
-                ? 'bg-blue-600 border-blue-600 text-white'
-                : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+                ? 'bg-white text-black border-white'
+                : 'bg-white/[0.04] border-white/10 text-white/45 hover:border-white/25'
             }`}
           >
             {f}
@@ -161,15 +161,15 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
       </div>
 
       {loading ? (
-        <p className="text-slate-400 text-sm">Loading...</p>
+        <p className="text-white/45 text-sm">Loading...</p>
       ) : requests.length === 0 ? (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6 text-center">
-          <p className="text-slate-400">No change requests</p>
+        <div className="card p-6 text-center">
+          <p className="text-white/45">No change requests</p>
         </div>
       ) : (
         <div className="space-y-2">
           {requests.map((req) => (
-            <div key={req.id} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div key={req.id} className="card p-4">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -178,13 +178,13 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
                     </span>
                     <span className="text-sm font-semibold text-white">{req.action}</span>
                   </div>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-white/45">
                     by {req.userName} on {new Date(req.createdAt).toLocaleString()}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-300 mb-1">{req.reason}</p>
-              {req.details && <p className="text-xs text-slate-500 mb-2">{req.details}</p>}
+              <p className="text-sm text-white/60 mb-1">{req.reason}</p>
+              {req.details && <p className="text-xs text-white/40 mb-2">{req.details}</p>}
               {req.isBreakGlass && (
                 <p className="text-xs text-purple-400 mb-2">Break Glass emergency override</p>
               )}
@@ -202,13 +202,13 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
                       <input
                         value={rejectReason}
                         onChange={e => setRejectReason(e.target.value)}
-                        className="flex-1 px-2 py-1 text-xs bg-slate-700 border border-slate-600 rounded text-white"
+                        className="flex-1 px-2 py-1 text-xs bg-white/10 border border-white/10 rounded text-white"
                         placeholder="Reason for rejection..."
                       />
                       <button onClick={() => handleReject(req.id)} className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded">
                         Confirm
                       </button>
-                      <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="px-3 py-1 text-xs bg-slate-600 text-white rounded">
+                      <button onClick={() => { setRejectingId(null); setRejectReason(''); }} className="px-3 py-1 text-xs bg-white/10 text-white rounded">
                         Cancel
                       </button>
                     </div>
@@ -224,7 +224,7 @@ export const ChangeApproval = ({ appId }: ChangeApprovalProps) => {
               )}
 
               {req.reviewerName && (
-                <p className="text-xs text-slate-500 mt-2">
+                <p className="text-xs text-white/40 mt-2">
                   Reviewed by {req.reviewerName}{req.reviewedAt ? ` at ${new Date(req.reviewedAt).toLocaleString()}` : ''}
                   {req.rejectReason && ` - Reason: ${req.rejectReason}`}
                 </p>

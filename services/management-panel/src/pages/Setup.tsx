@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { apiClient } from "../lib/api";
@@ -271,7 +271,7 @@ const finishSuccessfulSetup = (
 
 const SimpleLogo = ({ size = 64 }: { size?: number }) => (
   <div
-    className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-3xl"
+    className="flex items-center justify-center rounded-2xl bg-white font-bold text-black"
     style={{ width: size, height: size }}
   >
     IP
@@ -434,67 +434,67 @@ export const Setup = () => {
 
   if (step === "mode") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center bg-[#080a10] p-4">
         <div className="w-full max-w-2xl">
           {/* Header */}
           <div className="text-center mb-12">
             <div className="flex justify-center mb-6">
               <SimpleLogo size={64} />
             </div>
-            <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
+            <h1 className="mb-2 text-4xl font-semibold tracking-tight text-white">
               Welcome to Docker Panel
             </h1>
-            <p className="text-lg text-slate-600 dark:text-slate-300">
+            <p className="text-lg text-white/55">
               Let's set up your self-hosted Docker management platform
             </p>
           </div>
 
           {/* Mode Selection */}
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-6">
+            <h2 className="mb-6 text-2xl font-semibold tracking-tight text-white">
               Choose Your Setup Mode
             </h2>
 
             <button
               onClick={() => handleModeSelect("personal")}
-              className="w-full p-6 border-2 border-slate-200 dark:border-slate-700 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left"
+              className="card w-full p-6 text-left transition-colors hover:border-white/25"
             >
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                🏠 Personal Mode
+              <h3 className="mb-2 text-xl font-semibold text-white">
+                ðŸ  Personal Mode
               </h3>
-              <p className="text-slate-600 dark:text-slate-300 mb-3">
+              <p className="mb-3 text-white/55">
                 Self-hosted Docker panel for your apps
               </p>
-              <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1">
-                <li>✓ Simple Docker app management</li>
-                <li>✓ Start, stop, restart containers</li>
-                <li>✓ View logs and configure environments</li>
-                <li>✓ Perfect for hobby projects and self-hosting</li>
+              <ul className="space-y-1 text-sm text-white/45">
+                <li>âœ“ Simple Docker app management</li>
+                <li>âœ“ Start, stop, restart containers</li>
+                <li>âœ“ View logs and configure environments</li>
+                <li>âœ“ Perfect for hobby projects and self-hosting</li>
               </ul>
             </button>
 
             <button
               onClick={() => handleModeSelect("business")}
-              className="w-full p-6 border-2 border-slate-200 dark:border-slate-700 rounded-lg hover:border-purple-500 dark:hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all text-left"
+              className="card w-full p-6 text-left transition-colors hover:border-white/25"
             >
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
-                🚀 Hosting Business Mode
+              <h3 className="mb-2 text-xl font-semibold text-white">
+                ðŸš€ Hosting Business Mode
               </h3>
-              <p className="text-slate-600 dark:text-slate-300 mb-3">
+              <p className="mb-3 text-white/55">
                 Full-featured hosting control panel
               </p>
-              <ul className="text-sm text-slate-500 dark:text-slate-400 space-y-1">
-                <li>✓ All Personal Mode features</li>
-                <li>✓ Customer account management</li>
-                <li>✓ Plans, pricing, and billing</li>
-                <li>✓ White-label and team management</li>
+              <ul className="space-y-1 text-sm text-white/45">
+                <li>âœ“ All Personal Mode features</li>
+                <li>âœ“ Customer account management</li>
+                <li>âœ“ Plans, pricing, and billing</li>
+                <li>âœ“ White-label and team management</li>
               </ul>
             </button>
           </div>
 
           {/* Info */}
-          <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <div className="card mt-8 p-4">
+            <p className="text-sm text-white/60">
               <strong>Note:</strong> You can change modes later. Personal Mode
               is recommended for most self-hosters.
             </p>
@@ -505,17 +505,17 @@ export const Setup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#080a10] p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <SimpleLogo size={48} />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+          <h1 className="text-3xl font-semibold tracking-tight text-white">
             Create Admin Account
           </h1>
-          <p className="text-slate-600 dark:text-slate-300 mt-2">
+          <p className="mt-2 text-white/55">
             {mode === "personal"
               ? "Setting up Personal Mode"
               : "Setting up Hosting Business Mode"}
@@ -525,7 +525,7 @@ export const Setup = () => {
         {/* Form */}
         <form onSubmit={handleCreateAdmin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-white/55">
               Display Name
             </label>
             <input
@@ -533,13 +533,13 @@ export const Setup = () => {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field w-full"
               disabled={loading}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-white/55">
               Email
             </label>
             <input
@@ -547,13 +547,13 @@ export const Setup = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@example.com"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field w-full"
               disabled={loading}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-white/55">
               Password
             </label>
             <input
@@ -561,7 +561,7 @@ export const Setup = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Min. 8 characters"
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-field w-full"
               disabled={loading}
             />
           </div>
@@ -569,7 +569,7 @@ export const Setup = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-semibold rounded-lg transition-colors"
+            className="auth-button mt-6 font-semibold"
           >
             {loading ? "Setting up..." : "Complete Setup"}
           </button>
@@ -578,7 +578,7 @@ export const Setup = () => {
             type="button"
             onClick={() => setStep("mode")}
             disabled={loading}
-            className="w-full px-4 py-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+            className="w-full px-4 py-2 text-sm text-white/45 transition-colors hover:text-white"
           >
             Back to Mode Selection
           </button>

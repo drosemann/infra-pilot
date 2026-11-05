@@ -1,4 +1,4 @@
-import { ChevronRight, FolderOpen, Folder } from 'lucide-react';
+﻿import { ChevronRight, FolderOpen, Folder } from 'lucide-react';
 import { useState } from 'react';
 import type { KBCategory } from '../../lib/types';
 
@@ -28,14 +28,14 @@ export function CategoryTree({ categories, selected, onSelect, onAddCategory, on
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Categories</h3>
+        <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Categories</h3>
         <button onClick={onAddCategory} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">+ Add</button>
       </div>
 
       <button
         onClick={() => onSelect(null)}
         className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-          selected === null ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+          selected === null ? 'bg-white text-black' : 'text-white/60 hover:bg-white/10'
         }`}
       >
         <FolderOpen className="w-4 h-4" />
@@ -77,7 +77,7 @@ function CategoryItem({ category, depth, selected, collapsed, onToggle, onSelect
     <div>
       <div
         className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-          selected === category.id ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+          selected === category.id ? 'bg-white text-black' : 'text-white/60 hover:bg-white/10'
         }`}
         style={{ paddingLeft: `${12 + depth * 16}px` }}
       >
@@ -92,15 +92,15 @@ function CategoryItem({ category, depth, selected, collapsed, onToggle, onSelect
           {hasChildren ? <Folder className="w-4 h-4" /> : <FolderOpen className="w-4 h-4" />}
           <span>{category.name}</span>
           {category.articleCount !== undefined && (
-            <span className="ml-auto text-xs text-slate-500">{category.articleCount}</span>
+            <span className="ml-auto text-xs text-white/40">{category.articleCount}</span>
           )}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(category.id); }}
-          className="p-0.5 text-slate-500 hover:text-red-400 transition-colors opacity-0 hover:opacity-100"
+          className="p-0.5 text-white/40 hover:text-red-400 transition-colors opacity-0 hover:opacity-100"
           title="Delete category"
         >
-          <span className="text-xs">✕</span>
+          <span className="text-xs">âœ•</span>
         </button>
       </div>
       {hasChildren && !collapsed && (

@@ -41,55 +41,54 @@ export const Reports = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-2 py-8">
       <PageHeader eyebrow="Analyze">
-        <h1 className="text-3xl font-bold text-white mb-2">Reports</h1>
-        <p className="text-slate-400">Resource usage reports and analytics</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Reports</h1>
+        <p className="mt-2 text-white/55">Resource usage and incidents, exportable.</p>
       </PageHeader>
 
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Generate Report</h2>
-        <div className="flex items-end gap-4">
+      <div className="card p-6">
+        <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Start Date</label>
+            <label className="mb-1 block text-xs text-white/45">Start date</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+              className="input-field text-sm"
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">End Date</label>
+            <label className="mb-1 block text-xs text-white/45">End date</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+              className="input-field text-sm"
             />
           </div>
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors disabled:opacity-50"
+            className="primary-button"
           >
-            {loading ? 'Generating...' : 'Generate'}
+            {loading ? 'Generating…' : 'Generate'}
           </button>
           {reportData && (
             <>
               <button
                 onClick={() => handleExport('csv')}
                 disabled={exporting}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded transition-colors disabled:opacity-50"
+                className="secondary-button"
               >
-                {exporting ? 'Exporting...' : '📥 Export CSV'}
+                {exporting ? 'Exporting…' : 'Export CSV'}
               </button>
               <button
                 onClick={() => handleExport('pdf')}
                 disabled={exporting}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded transition-colors disabled:opacity-50"
+                className="secondary-button"
               >
-                {exporting ? 'Exporting...' : '📄 Export PDF'}
+                {exporting ? 'Exporting…' : 'Export PDF'}
               </button>
             </>
           )}
@@ -99,42 +98,42 @@ export const Reports = () => {
       {reportData && (
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-blue-400">{(reportData.metrics || []).length}</p>
-              <p className="text-xs text-slate-400">Metric Data Points</p>
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-semibold text-white">{(reportData.metrics || []).length}</p>
+              <p className="mt-1 text-xs text-white/45">Metric data points</p>
             </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-green-400">{(reportData.backups || []).filter((b: any) => b.status === 'success').length}</p>
-              <p className="text-xs text-slate-400">Successful Backups</p>
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-semibold text-white">{(reportData.backups || []).filter((b: any) => b.status === 'success').length}</p>
+              <p className="mt-1 text-xs text-white/45">Successful backups</p>
             </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-red-400">{(reportData.alerts || []).length}</p>
-              <p className="text-xs text-slate-400">Alerts Triggered</p>
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-semibold text-white">{(reportData.alerts || []).length}</p>
+              <p className="mt-1 text-xs text-white/45">Alerts triggered</p>
             </div>
           </div>
 
           {reportData.metrics && reportData.metrics.length > 0 && (
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-              <h3 className="text-md font-semibold text-white mb-3">Recent Metrics</h3>
+            <div className="card p-4">
+              <h3 className="mb-3 font-semibold text-white">Recent metrics</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-400 border-b border-slate-700">
-                      <th className="pb-2 pr-4">App</th>
-                      <th className="pb-2 pr-4">CPU</th>
-                      <th className="pb-2 pr-4">Memory</th>
-                      <th className="pb-2 pr-4">TPS</th>
-                      <th className="pb-2">Time</th>
+                    <tr className="border-b border-white/10 text-left text-white/45">
+                      <th className="pb-2 pr-4 font-medium">App</th>
+                      <th className="pb-2 pr-4 font-medium">CPU</th>
+                      <th className="pb-2 pr-4 font-medium">Memory</th>
+                      <th className="pb-2 pr-4 font-medium">TPS</th>
+                      <th className="pb-2 font-medium">Time</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportData.metrics.slice(0, 20).map((m: any) => (
-                      <tr key={m.id} className="border-b border-slate-800">
-                        <td className="py-2 pr-4 text-slate-300">{m.app_id?.slice(0, 8)}</td>
+                      <tr key={m.id} className="border-b border-white/5">
+                        <td className="py-2 pr-4 text-white/60">{m.app_id?.slice(0, 8)}</td>
                         <td className="py-2 pr-4 text-white">{m.cpu_percent}%</td>
                         <td className="py-2 pr-4 text-white">{m.memory_used_mb}MB</td>
                         <td className="py-2 pr-4 text-white">{m.tps}</td>
-                        <td className="py-2 text-slate-400">{new Date(m.recorded_at).toLocaleDateString()}</td>
+                        <td className="py-2 text-white/45">{new Date(m.recorded_at).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -144,25 +143,25 @@ export const Reports = () => {
           )}
 
           {reportData.alerts && reportData.alerts.length > 0 && (
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-              <h3 className="text-md font-semibold text-white mb-3">Alert Summary</h3>
+            <div className="card p-4">
+              <h3 className="mb-3 font-semibold text-white">Alert summary</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-slate-400 border-b border-slate-700">
-                      <th className="pb-2 pr-4">Type</th>
-                      <th className="pb-2 pr-4">Value</th>
-                      <th className="pb-2 pr-4">Threshold</th>
-                      <th className="pb-2">Triggered</th>
+                    <tr className="border-b border-white/10 text-left text-white/45">
+                      <th className="pb-2 pr-4 font-medium">Type</th>
+                      <th className="pb-2 pr-4 font-medium">Value</th>
+                      <th className="pb-2 pr-4 font-medium">Threshold</th>
+                      <th className="pb-2 font-medium">Triggered</th>
                     </tr>
                   </thead>
                   <tbody>
                     {reportData.alerts.slice(0, 20).map((a: any) => (
-                      <tr key={a.id} className="border-b border-slate-800">
-                        <td className="py-2 pr-4 text-slate-300">{a.metric_type}</td>
+                      <tr key={a.id} className="border-b border-white/5">
+                        <td className="py-2 pr-4 text-white/60">{a.metric_type}</td>
                         <td className="py-2 pr-4 text-white">{a.metric_value}</td>
                         <td className="py-2 pr-4 text-white">{a.threshold}</td>
-                        <td className="py-2 text-slate-400">{new Date(a.triggered_at).toLocaleDateString()}</td>
+                        <td className="py-2 text-white/45">{new Date(a.triggered_at).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>

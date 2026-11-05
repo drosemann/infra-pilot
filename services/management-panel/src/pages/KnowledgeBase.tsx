@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiClient } from '../lib/api';
 import type { KBArticle, KBCategory } from '../lib/types';
@@ -114,14 +114,14 @@ export function KnowledgeBase() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-2 py-8">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Knowledge Base</h1>
-        <p className="text-slate-400">Internal documentation and guides</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Knowledge Base</h1>
+        <p className="mt-2 text-white/55">Internal documentation and guides.</p>
       </div>
 
       <div className="flex gap-6 h-[calc(100vh-280px)] min-h-[500px]">
-        <div className="w-56 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-lg p-4 overflow-y-auto">
+        <div className="w-56 flex-shrink-0 card overflow-y-auto p-4">
           <CategoryTree
             categories={categories}
             selected={selectedCategory}
@@ -131,9 +131,9 @@ export function KnowledgeBase() {
           />
         </div>
 
-        <div className="w-72 flex-shrink-0 bg-slate-900 border border-slate-800 rounded-lg p-4 overflow-y-auto">
+        <div className="w-72 flex-shrink-0 card overflow-y-auto p-4">
           {loading ? (
-            <div className="text-center py-8 text-slate-500">Loading...</div>
+            <div className="py-8 text-center text-white/45">Loading…</div>
           ) : (
             <ArticleList
               articles={filteredArticles}
@@ -147,7 +147,7 @@ export function KnowledgeBase() {
           )}
         </div>
 
-        <div className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-6 overflow-hidden">
+        <div className="card flex-1 overflow-hidden p-6">
           {editing ? (
             <ArticleEditor
               article={selectedArticle}
@@ -162,10 +162,10 @@ export function KnowledgeBase() {
               onBack={() => setSelectedArticleId(null)}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-slate-500">
+            <div className="flex h-full items-center justify-center text-white/45">
               <div className="text-center">
                 <p className="text-lg mb-2">Select an article or create a new one</p>
-                <button onClick={handleCreate} className="text-sm text-blue-400 hover:underline">
+                <button onClick={handleCreate} className="mt-2 text-sm text-white underline-offset-4 hover:underline">
                   Create your first article
                 </button>
               </div>

@@ -1,4 +1,4 @@
-# Infra Pilot Wiki
+﻿# Infra Pilot Wiki
 
 - [Home](Home.md)
 - [Installation](01-Installation.md)
@@ -11,8 +11,10 @@
 - [Security](08-Security.md)
 - [FAQ](09-FAQ.md)
 - [Troubleshooting](10-Troubleshooting.md)
+- [Auth Matrix](11-Auth-Matrix.md)
 - [Backup & Restore](12-Backup-Restore.md)
 - [Update Flow](13-Update-Flow.md)
+- [Two-Factor Auth](14-Two-Factor-Auth.md)
 
 ## Quick Links
 

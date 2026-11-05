@@ -1,4 +1,4 @@
-# Infra Pilot CLI (`ipilot`)
+﻿# Infra Pilot CLI (`ipilot`)
 
 Python/Typer command-line client for the management-panel API. It defaults to `http://localhost:3001` and
 supports table or JSON-oriented output.
@@ -58,5 +58,3 @@ pytest tests/orchestrator/test_feature_flags.py -v  # feature-flag evaluation co
 `ipilot flags ...` manages panel feature flags: `list`, `evaluate`,
 `create <key>`, `rollout <key> --env production --percent 50`, and
 `kill <key>` (disables everywhere at once). Writes require a panel admin.
-```
-```

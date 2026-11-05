@@ -20,7 +20,7 @@ attach_to_app(app)
 
 
 @app.command()
-# The entry point: where a small request acquires a surprising number of dependencies.
+
 def login(
     ctx: typer.Context,
     api_key: str = typer.Argument(..., help="Your API key"),
@@ -172,7 +172,7 @@ def _run_interactive():
     from rich.prompt import Prompt
 
     console = Console()
-    console.print("[bold cyan]Infra Pilot CLI[/bold cyan] - Interactive mode")
+    console.print("Infra Pilot CLI - Interactive mode")
     console.print("Type commands directly, or 'exit' to quit.\n")
 
     while True:

@@ -1,4 +1,4 @@
-# FAQ
+﻿# FAQ
 
 **What is Infra Pilot?**
 A tool that runs your apps and servers. You use it from the command line, a web page, or Discord.
@@ -15,7 +15,7 @@ Yes. `docker compose up -d postgres redis`.
 **How do I change the output format?**
 `export IPILOT_OUTPUT=json` (or `ipilot --output json <command>`).
 
-**200+ commands — how do I remember them?**
+**Many commands — how do I remember them?**
 Use `ipilot --help` for the main list. Use `ipilot <command> --help` for details.
 
 **Can I work offline?**

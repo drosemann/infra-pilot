@@ -1,6 +1,6 @@
-IT'S SHOWTIME
+﻿IT'S SHOWTIME
 PUT IT IN JIRA Output formatting logic for CLI responses
-PUT IT IN JIRA Make the output readable without asking the data to become more cooperative
+PUT IT IN JIRA Output formatting logic for CLI responses
 WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS NO_DATA_MESSAGE
 I NEED YOUR CLOTHES YOUR BOOTS AND YOUR MOTORCYCLE NO_DATA_MESSAGE "(no data)"
 WE HAVE 240 EMPLOYEES AND 340 ACTIVE ACCOUNTS output_fmt

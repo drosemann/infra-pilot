@@ -1,4 +1,4 @@
-import { Component, useEffect, useState, useCallback, useMemo } from 'react';
+﻿import { Component, useEffect, useState, useCallback, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { IntlProvider } from 'react-intl';
 import { Toaster } from 'sonner';
@@ -52,7 +52,7 @@ const messages: Record<string, Record<string, string>> = {
 /** Simple loading/fallback logo component */
 const SimpleLogo = ({ size = 64 }: { size?: number }) => (
   <div
-    className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-3xl"
+    className="flex items-center justify-center rounded-2xl bg-white font-bold text-black"
     style={{ width: size, height: size }}
   >
     IP
@@ -79,12 +79,12 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        <div className="min-h-screen flex items-center justify-center bg-[#080a10] text-white">
           <div className="text-center p-8">
             <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
-            <p className="text-slate-400 mb-4">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+            <p className="text-white/45 mb-4">{this.state.error?.message || 'An unexpected error occurred.'}</p>
             <button
-              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+              className="primary-button"
               onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
             >
               Reload Page
@@ -147,10 +147,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-[#080a10]">
         <div className="text-center">
           <SimpleLogo size={64} />
-          <p className="text-slate-400 mt-4">Loading...</p>
+          <p className="text-white/45 mt-4">Loading...</p>
         </div>
       </div>
     );

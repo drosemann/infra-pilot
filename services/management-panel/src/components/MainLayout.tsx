@@ -67,10 +67,10 @@ export const MainLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col ara-surface">
         {/* Header */}
-        <header className="sticky top-0 z-20 border-b border-white/10 bg-[#080a10]/80 backdrop-blur-2xl">
+        <header className="glass-chrome sticky top-0 z-20 border-b border-white/10">
           <div className="px-4 py-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-6">
-              {/* Organization Selector & Search */}
+              {/* Status & Search */}
               <div className="flex items-center gap-4 flex-1">
                 <div className="hidden items-center gap-2 text-xs font-medium text-white/45 xl:flex">
                   <span
@@ -78,14 +78,14 @@ export const MainLayout = () => {
                       healthy === null
                         ? "h-2 w-2 rounded-full bg-white/40"
                         : healthy
-                          ? "h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]"
-                          : "h-2 w-2 rounded-full bg-red-400 shadow-[0_0_12px_rgba(248,113,113,0.8)]"
+                          ? "h-2 w-2 rounded-full bg-emerald-400"
+                          : "h-2 w-2 rounded-full bg-red-400"
                     }
                   />
                   {healthy === null
                     ? "Checking management-panel API…"
                     : healthy
-                      ? "Management-panel API operational"
+                      ? "API operational"
                       : "Degraded — check monitoring"}
                 </div>
                 <button
@@ -107,15 +107,8 @@ export const MainLayout = () => {
                     />
                   </svg>
                 </button>
-                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 shadow-lg shadow-black/20 transition-colors hover:bg-white/[0.1] sm:flex">
-                  <span className="text-sm text-white">
-                    Acme Corp / Production
-                  </span>
-                  <span className="text-white/45">▼</span>
-                </div>
                 <div className="flex-1 max-w-md">
-                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 shadow-lg shadow-black/20 focus-within:border-white/25 focus-within:ring-1 focus-within:ring-white/20">
-                    <span className="text-white/45">🔍</span>
+                  <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 focus-within:border-white/25">
                     <input
                       type="text"
                       placeholder="Search apps, containers, logs..."
@@ -132,32 +125,16 @@ export const MainLayout = () => {
 
               {/* Right Section */}
               <div className="flex items-center gap-4">
-                {/* Notifications */}
-                <button className="relative rounded-full border border-white/10 bg-white/[0.04] p-2 transition-colors hover:bg-white/[0.1]">
-                  <span className="text-lg">🔔</span>
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
-                </button>
-
-                {/* System Status */}
-                <button className="rounded-full border border-white/10 bg-white/[0.04] p-2 transition-colors hover:bg-white/[0.1]">
-                  <span className="text-lg">📊</span>
-                </button>
-
-                {/* Settings */}
-                <button className="rounded-full border border-white/10 bg-white/[0.04] p-2 transition-colors hover:bg-white/[0.1]">
-                  <span className="text-lg">⚙️</span>
-                </button>
-
                 {/* User Profile */}
                 {user && (
-                  <div className="flex items-center gap-3 border-l border-white/10 pl-4">
+                  <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p className="text-sm font-medium text-white">
-                        {user.display_name || "John Doe"}
+                        {user.display_name || user.email}
                       </p>
-                      <p className="text-xs text-white/45">
-                        {user.role || "Admin"}
-                      </p>
+                      {user.role && (
+                        <p className="text-xs text-white/45">{user.role}</p>
+                      )}
                     </div>
                     <UserAvatar
                       value={user.id || user.email}
@@ -166,12 +143,10 @@ export const MainLayout = () => {
                     />
                     <button
                       onClick={handleLogout}
-                      className="ml-2 rounded-full border border-white/10 p-1 transition-colors hover:bg-white/10"
+                      className="ml-2 rounded-full border border-white/10 p-2 text-xs text-white/45 transition-colors hover:bg-white/10 hover:text-white"
                       title="Logout"
                     >
-                      <span className="text-sm text-white/45 hover:text-white">
-                        ✕
-                      </span>
+                      Logout
                     </button>
                   </div>
                 )}
@@ -182,7 +157,7 @@ export const MainLayout = () => {
           </div>
         </header>
 
-        {/* Main Content Area */}
+        {/* Main Area */}
         <main className="flex-1 overflow-auto" id="main-content">
           <div className="p-4 sm:p-6 lg:p-8">
             <div className="page-enter mx-auto w-full max-w-[1600px]">

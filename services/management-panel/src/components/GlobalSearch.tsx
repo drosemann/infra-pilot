@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Search, FileText, Server, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
@@ -58,22 +58,22 @@ export function GlobalSearch() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" onClick={() => setIsOpen(false)}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-700">
-          <Search className="w-5 h-5 text-gray-400" />
-          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search apps, backups, audit logs..." className="flex-1 bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400" />
-          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded text-gray-400">ESC</kbd>
+      <div className="glass-sheet w-full max-w-lg mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 p-4 border-b border-white/10">
+          <Search className="w-5 h-5 text-white/40" />
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search apps, backups, audit logs..." className="flex-1 bg-transparent outline-none text-white placeholder:text-white/35" />
+          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-xs bg-white/10 rounded text-white/40">ESC</kbd>
         </div>
         <div className="max-h-80 overflow-y-auto p-2">
-          {loading && <div className="text-center py-4 text-gray-400"><div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" /></div>}
-          {!loading && query.length >= 2 && results.length === 0 && <p className="text-center py-4 text-gray-400">No results found</p>}
+          {loading && <div className="text-center py-4 text-white/40"><div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto" /></div>}
+          {!loading && query.length >= 2 && results.length === 0 && <p className="text-center py-4 text-white/40">No results found</p>}
           {results.map(r => {
             const Icon = icons[r.type];
             return (
-              <button key={`${r.type}-${r.id}`} onClick={() => goto(r)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-left">
-                <Icon className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-700 dark:text-gray-200">{r.name}</span>
-                <span className="ml-auto text-xs text-gray-400 uppercase">{r.type}</span>
+              <button key={`${r.type}-${r.id}`} onClick={() => goto(r)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/10 text-left">
+                <Icon className="w-4 h-4 text-white/40" />
+                <span className="text-sm text-white/80">{r.name}</span>
+                <span className="ml-auto text-xs text-white/40 uppercase">{r.type}</span>
               </button>
             );
           })}

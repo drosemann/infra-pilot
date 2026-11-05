@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useIntl, FormattedMessage } from 'react-intl';
 import { toast } from 'sonner';
 import { apiClient } from '../lib/api';
@@ -117,7 +117,7 @@ export const BulkOperations = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">
             <FormattedMessage id="bulk.title" />
@@ -126,7 +126,7 @@ export const BulkOperations = () => {
             <select
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+              className="bg-white/10 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
             >
               {BULK_ACTIONS.map((a) => (
                 <option key={a.action} value={a.action}>{a.label}</option>
@@ -135,7 +135,7 @@ export const BulkOperations = () => {
             <button
               onClick={handleExecute}
               disabled={executing || count === 0}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg transition-colors text-sm"
+              className="primary-button"
             >
               <FormattedMessage id="bulk.execute" /> ({count})
             </button>
@@ -152,12 +152,12 @@ export const BulkOperations = () => {
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm text-slate-400">
+            <label className="flex items-center gap-2 text-sm text-white/45">
               <input
                 type="checkbox"
                 checked={allSelected}
                 onChange={allSelected ? clearSelection : selectAll}
-                className="rounded bg-slate-700 border-slate-600"
+                className="rounded bg-white/10 border-white/10"
               />
               <FormattedMessage id="bulk.selectAll" />
             </label>
@@ -167,13 +167,13 @@ export const BulkOperations = () => {
               </button>
             )}
           </div>
-          <span className="text-sm text-slate-400">{count} selected</span>
+          <span className="text-sm text-white/45">{count} selected</span>
         </div>
 
         {loading ? (
-          <p className="text-slate-400"><FormattedMessage id="common.loading" /></p>
+          <p className="text-white/45"><FormattedMessage id="common.loading" /></p>
         ) : items.length === 0 ? (
-          <p className="text-slate-400 text-sm">No items available</p>
+          <p className="text-white/45 text-sm">No items available</p>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
@@ -182,28 +182,28 @@ export const BulkOperations = () => {
                 className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                   isSelected(item.id)
                     ? 'bg-blue-900/20 border-blue-700'
-                    : 'bg-slate-700/50 border-slate-600 hover:border-slate-500'
+                    : 'bg-white/5 border-white/10 hover:border-white/25'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isSelected(item.id)}
                   onChange={() => toggle(item.id)}
-                  className="rounded bg-slate-700 border-slate-600"
+                  className="rounded bg-white/10 border-white/10"
                 />
                 <div className="flex-1">
                   <p className="text-sm text-white">{item.name}</p>
-                  <p className="text-xs text-slate-400">{item.type}</p>
+                  <p className="text-xs text-white/45">{item.type}</p>
                 </div>
                 {progress[item.id] && (
                   <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-slate-600 rounded-full overflow-hidden">
+                    <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-blue-500 transition-all"
                         style={{ width: `${progress[item.id].progress}%` }}
                       />
                     </div>
-                    <span className="text-xs text-slate-400">{progress[item.id].status}</span>
+                    <span className="text-xs text-white/45">{progress[item.id].status}</span>
                   </div>
                 )}
               </div>
@@ -213,16 +213,16 @@ export const BulkOperations = () => {
       </div>
 
       {history.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="card p-6">
           <h3 className="text-lg font-semibold text-white mb-4">
             <FormattedMessage id="bulk.history" />
           </h3>
           <div className="space-y-2">
             {history.map((entry: any) => (
-              <div key={entry.batchId} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+              <div key={entry.batchId} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
                 <div>
                   <p className="text-sm text-white">{entry.action}</p>
-                  <p className="text-xs text-slate-400">{entry.itemCount} items - {new Date(entry.timestamp).toLocaleString()}</p>
+                  <p className="text-xs text-white/45">{entry.itemCount} items - {new Date(entry.timestamp).toLocaleString()}</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded ${
                   entry.status === 'completed' ? 'bg-green-900/50 text-green-400' :

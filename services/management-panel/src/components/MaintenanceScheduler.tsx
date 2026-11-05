@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { MaintenanceWindow, DockerApp } from '../lib/types';
 import { toast } from 'sonner';
@@ -66,14 +66,14 @@ export const MaintenanceScheduler = () => {
     switch (status) {
       case 'scheduled': return 'bg-blue-500/10 text-blue-400';
       case 'active': return 'bg-green-500/10 text-green-400';
-      case 'completed': return 'bg-slate-500/10 text-slate-400';
+      case 'completed': return 'bg-white/5 text-white/50';
       case 'cancelled': return 'bg-red-500/10 text-red-400';
-      default: return 'bg-slate-500/10 text-slate-400';
+      default: return 'bg-white/5 text-white/50';
     }
   };
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading maintenance windows...</div>;
+    return <div className="py-4 text-white/45">Loading maintenance windows…</div>;
   }
 
   return (
@@ -82,32 +82,32 @@ export const MaintenanceScheduler = () => {
         <h4 className="text-md font-semibold text-white">Maintenance Windows</h4>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+          className="primary-button"
         >
           {showForm ? 'Cancel' : 'Schedule'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+        <div className="card space-y-3 p-4">
           <input
             type="text"
             placeholder="Window title"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+            className="input-field w-full text-sm"
           />
           <input
             type="text"
             placeholder="Description (optional)"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+            className="input-field w-full text-sm"
           />
           <select
             value={form.app_id}
             onChange={(e) => setForm({ ...form, app_id: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+            className="input-field w-full text-sm"
           >
             <option value="">All apps (global)</option>
             {apps.map((app) => (
@@ -116,27 +116,27 @@ export const MaintenanceScheduler = () => {
           </select>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Start</label>
+              <label className="mb-1 block text-xs text-white/45">Start</label>
               <input
                 type="datetime-local"
                 value={form.starts_at}
                 onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">End</label>
+              <label className="mb-1 block text-xs text-white/45">End</label>
               <input
                 type="datetime-local"
                 value={form.ends_at}
                 onChange={(e) => setForm({ ...form, ends_at: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               />
             </div>
           </div>
           <button
             onClick={handleCreate}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
+            className="primary-button w-full"
           >
             Create Window
           </button>
@@ -145,10 +145,10 @@ export const MaintenanceScheduler = () => {
 
       <div className="space-y-2">
         {windows.length === 0 ? (
-          <p className="text-slate-500 text-sm">No maintenance windows scheduled</p>
+          <p className="text-sm text-white/45">No maintenance windows scheduled</p>
         ) : (
           windows.map((w) => (
-            <div key={w.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+            <div key={w.id} className="card flex items-center justify-between p-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white">{w.title}</span>
@@ -157,9 +157,9 @@ export const MaintenanceScheduler = () => {
                   </span>
                 </div>
                 {w.description && (
-                  <p className="text-xs text-slate-400 mt-1">{w.description}</p>
+                  <p className="mt-1 text-xs text-white/45">{w.description}</p>
                 )}
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="mt-1 text-xs text-white/40">
                   {new Date(w.starts_at).toLocaleString()} - {new Date(w.ends_at).toLocaleString()}
                 </p>
               </div>
@@ -177,11 +177,11 @@ export const MaintenanceScheduler = () => {
       </div>
 
       {windows.length > 0 && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <p className="text-sm text-slate-400 mb-3">Calendar View (Upcoming)</p>
+        <div className="card p-4">
+          <p className="mb-3 text-sm text-white/45">Calendar View (Upcoming)</p>
           <div className="grid grid-cols-7 gap-1">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-              <div key={d} className="text-center text-xs text-slate-500 py-1">{d}</div>
+              <div key={d} className="py-1 text-center text-xs text-white/35">{d}</div>
             ))}
             {Array.from({ length: 35 }, (_, i) => {
               const hasWindow = windows.some((w) => {
@@ -195,7 +195,7 @@ export const MaintenanceScheduler = () => {
                 <div
                   key={i}
                   className={`text-center text-xs py-2 rounded ${
-                    hasWindow ? 'bg-blue-600/20 text-blue-400' : 'text-slate-500'
+                    hasWindow ? 'bg-white text-black' : 'text-white/35'
                   }`}
                 >
                   {new Date(new Date().getFullYear(), new Date().getMonth(), i - new Date().getDay() + 1).getDate()}

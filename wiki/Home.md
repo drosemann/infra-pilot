@@ -1,4 +1,4 @@
-# Infra Pilot
+﻿# Infra Pilot
 
 Infra Pilot is a learning project for operating Docker-backed infrastructure through a Python CLI, a
 React/Express management panel, an aiohttp orchestrator, and an optional Discord/Pterodactyl integration.
@@ -44,7 +44,7 @@ Start with Installation below, then open
 - [Usage Examples](04-Usage-Examples.md) and [CLI Reference](05-CLI-Reference.md) — user-facing command guidance.
 - [Architecture](06-Architecture.md) and [Auth Matrix](11-Auth-Matrix.md) — service boundaries and protected interfaces.
 - [Backup & Restore](12-Backup-Restore.md),
-  [Troubleshooting](10-Troubleshooting.md), and [Security](08-Security.md) —
+  [Troubleshooting](10-Troubleshooting.md), and [Security](08-Security.md) — €”
   operational guidance.
 
 The checked-in source of truth for public APIs is

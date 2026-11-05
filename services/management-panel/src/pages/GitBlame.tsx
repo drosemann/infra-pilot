@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { apiClient } from '../lib/api';
 
 interface BlameAnnotation {
@@ -13,10 +13,10 @@ interface BlameAnnotation {
 }
 
 function riskStyle(risk: string[]): string {
-  if (risk.includes('uncommitted')) return 'text-red-600 font-semibold';
-  if (risk.includes('stale')) return 'text-amber-600';
-  if (risk.includes('many-hands')) return 'text-blue-600';
-  return 'text-slate-500';
+  if (risk.includes('uncommitted')) return 'font-semibold text-red-400';
+  if (risk.includes('stale')) return 'text-amber-300';
+  if (risk.includes('many-hands')) return 'text-sky-300';
+  return 'text-white/40';
 }
 
 /** Blame-aware GitOps: who last touched each server resource, and whether that ownership looks risky. */
@@ -44,61 +44,60 @@ export function GitBlame() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Git Blame</h1>
-      <p className="text-sm text-slate-600">
+    <div className="mx-auto max-w-5xl space-y-6 px-2 py-8">
+      <h1 className="text-4xl font-semibold tracking-tight text-white">Git Blame</h1>
+      <p className="mt-2 max-w-2xl text-white/55">
         Authorship per infrastructure resource. Uncommitted, stale, or widely-shared ownership is flagged as risk.
       </p>
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-white/55">
           Config file (repo-relative)
-          <input
-            className="border rounded px-2 py-1 w-64"
+          <input            className="input-field w-64"
             value={filePath}
             onChange={(e) => setFilePath(e.target.value)}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className="flex flex-col gap-1 text-sm text-white/55">
           Stale after (days)
           <input
             type="number"
             min={1}
-            className="border rounded px-2 py-1 w-24"
+            className="input-field w-24"
             value={staleDays}
             onChange={(e) => setStaleDays(Number(e.target.value) || 180)}
           />
         </label>
         <button
-          className="px-3 py-1 rounded bg-slate-800 text-white disabled:opacity-50"
+          className="primary-button"
           disabled={loading}
           onClick={load}
         >
-          {loading ? 'Loading…' : 'Blame'}
+          {loading ? 'Loadingâ€¦' : 'Blame'}
         </button>
       </div>
-      {error && <p className="text-red-500">{error}</p>}
-      {rows && rows.length === 0 && <p className="text-sm">No servers found in this file.</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      {rows && rows.length === 0 && <p className="text-sm text-white/45">No servers found in this file.</p>}
       {rows && rows.length > 0 && (
-        <table className="w-full text-sm border-collapse">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b">
-              <th className="py-1 pr-3">Resource</th>
-              <th className="py-1 pr-3">Last author</th>
-              <th className="py-1 pr-3">Commit</th>
-              <th className="py-1 pr-3">Changed</th>
-              <th className="py-1 pr-3">Authors</th>
-              <th className="py-1 pr-3">Risk</th>
+            <tr className="border-b border-white/10 text-left text-white/45">
+              <th className="py-2 pr-3 font-medium">Resource</th>
+              <th className="py-2 pr-3 font-medium">Last author</th>
+              <th className="py-2 pr-3 font-medium">Commit</th>
+              <th className="py-2 pr-3 font-medium">Changed</th>
+              <th className="py-2 pr-3 font-medium">Authors</th>
+              <th className="py-2 pr-3 font-medium">Risk</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.name} className="border-b">
-                <td className="py-1 pr-3 font-mono">{r.name}</td>
-                <td className="py-1 pr-3">{r.lastAuthor}</td>
-                <td className="py-1 pr-3 font-mono">{r.lastCommit}</td>
-                <td className="py-1 pr-3">{r.lastChanged}</td>
-                <td className="py-1 pr-3">{r.authors.join(', ') || '—'}</td>
-                <td className={`py-1 pr-3 ${riskStyle(r.risk)}`}>{r.risk.join(', ') || '—'}</td>
+              <tr key={r.name} className="border-b border-white/5">
+                <td className="py-2 pr-3 font-mono text-white">{r.name}</td>
+                <td className="py-2 pr-3 text-white/70">{r.lastAuthor}</td>
+                <td className="py-2 pr-3 font-mono text-white">{r.lastCommit}</td>
+                <td className="py-2 pr-3 text-white/70">{r.lastChanged}</td>
+                <td className="py-2 pr-3 text-white/70">{r.authors.join(', ') || 'â€”'}</td>
+                <td className={`py-2 pr-3 ${riskStyle(r.risk)}`}>{r.risk.join(', ') || 'â€”'}</td>
               </tr>
             ))}
           </tbody>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
+import { PageHeader } from '../components/PageHeader';
 
 interface FlagRow {
   key: string;
@@ -58,21 +59,30 @@ export function FeatureFlags() {
   };
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Feature Flags</h1>
-      {error && <p className="text-red-500">{error}</p>}
+    <div className="mx-auto max-w-5xl space-y-6 px-2 py-8">
+      <PageHeader eyebrow="Ship">
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Feature Flags</h1>
+        <p className="mt-2 text-white/55">Roll out gradually. Kill instantly.</p>
+      </PageHeader>
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+      {flags.length === 0 && !error && (
+        <div className="card p-12 text-center">
+          <p className="text-white/55">No feature flags yet.</p>
+        </div>
+      )}
       {flags.map((f) => (
-        <div key={f.key} className="border rounded p-4 space-y-2">
-          <div className="flex items-center justify-between">
+        <div key={f.key} className="card space-y-3 p-5">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <code className="font-mono font-bold">{f.key}</code>
-              <p className="text-sm opacity-70">{f.description}</p>
+              <p className="font-mono font-semibold text-white">{f.key}</p>
+              <p className="mt-1 text-sm text-white/50">{f.description}</p>
               {f.expires_at && new Date(f.expires_at) < new Date() && (
-                <p className="text-sm text-amber-500">Expired — evaluating to default.</p>
+                <p className="mt-1 text-sm text-amber-400/90">Expired — evaluating to default.</p>
               )}
             </div>
             <button
-              className="px-3 py-1 rounded bg-red-600 text-white disabled:opacity-50"
+              className="secondary-button"
               disabled={busy === f.key}
               onClick={() => kill(f.key)}
             >
@@ -80,24 +90,24 @@ export function FeatureFlags() {
             </button>
           </div>
           {Object.values(f.rules || {}).map((r) => (
-            <div key={r.environment} className="flex items-center gap-3 text-sm">
-              <span className="w-28">{r.environment}</span>
-              <label className="flex items-center gap-1">
+            <div key={r.environment} className="flex flex-wrap items-center gap-4 text-sm text-white/70">
+              <span className="w-28 text-white/45">{r.environment}</span>
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={r.enabled}
                   disabled={busy === f.key}
                   onChange={(e) => patchRule(f.key, r.environment, { enabled: e.target.checked })}
                 />
-                enabled
+                Enabled
               </label>
-              <label className="flex items-center gap-1">
-                rollout
+              <label className="flex items-center gap-2">
+                Rollout
                 <input
                   type="number"
                   min={0}
                   max={100}
-                  className="w-16 border rounded px-1"
+                  className="input-field w-20"
                   defaultValue={r.rollout_percentage}
                   onBlur={(e) => patchRule(f.key, r.environment, { rollout_percentage: Number(e.target.value) })}
                 />

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
+import { apiClient } from '../lib/api';
 
 interface MetricPoint {
   timestamp: string;
@@ -81,7 +82,7 @@ function Gauge({ value, max, label, unit, color }: {
   return (
     <div style={{ textAlign: 'center', padding: '12px' }}>
       <svg width="100" height="100" viewBox="0 0 100 100">
-        <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+        <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
         <circle cx="50" cy="50" r="40" fill="none" stroke={color} strokeWidth="8"
           strokeDasharray={circumference} strokeDashoffset={offset}
           transform="rotate(-90 50 50)" strokeLinecap="round" />
@@ -90,7 +91,7 @@ function Gauge({ value, max, label, unit, color }: {
           {Math.round(value)}{unit === '%' ? '%' : ''}
         </text>
       </svg>
-      <div style={{ marginTop: '4px', fontSize: '12px', color: '#8b95a5' }}>
+      <div style={{ marginTop: '4px', fontSize: '12px', color: 'rgba(245,245,247,0.45)' }}>
         {label} (max: {max}{unit})
       </div>
     </div>
@@ -106,14 +107,14 @@ function MetricCard({ title, value, unit, trend, color }: {
 }) {
   return (
     <div style={{
-      background: '#11182b',
+      background: 'rgba(255,255,255,0.04)',
       borderRadius: '10px',
       padding: '16px',
-      border: '1px solid #1e293b',
+      border: '1px solid rgba(255,255,255,0.09)',
     }}>
-      <div style={{ fontSize: '12px', color: '#8b95a5', marginBottom: '8px' }}>{title}</div>
-      <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#e9f0ff' }}>
-        {value}<span style={{ fontSize: '14px', color: '#8b95a5', marginLeft: '4px' }}>{unit}</span>
+      <div style={{ fontSize: '12px', color: 'rgba(245,245,247,0.45)', marginBottom: '8px' }}>{title}</div>
+      <div style={{ fontSize: '28px', fontWeight: '600', color: '#f5f5f7' }}>
+        {value}<span style={{ fontSize: '14px', color: 'rgba(245,245,247,0.45)', marginLeft: '4px' }}>{unit}</span>
       </div>
       {trend && (
         <div style={{ fontSize: '12px', color: trend === 'up' ? '#4bd37b' : trend === 'down' ? '#f44336' : '#8b95a5', marginTop: '4px' }}>
@@ -133,47 +134,37 @@ export default function RealtimeMetrics({ appId }: { appId?: string }) {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const params = appId ? `?appId=${appId}` : '';
-        const res = await fetch(`/api/metrics/realtime${params}`);
-        if (res.ok) {
-          const data = await res.json();
-          setRealtime(data);
-        }
-      } catch (e) {
-        console.error('Failed to fetch realtime metrics:', e);
+        const data = await apiClient.getRealtimeMetrics(appId);
+        setRealtime(data);
+      } catch {
+        /* keep last known values */
       }
     };
 
     fetchMetrics();
-    const interval = setInterval(fetchMetrics, 5000);
+    const interval = setInterval(fetchMetrics, 30000);
     return () => clearInterval(interval);
   }, [appId]);
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const params = new URLSearchParams({ period, resolution: '5m' });
-        if (appId) params.set('appId', appId);
-        const res = await fetch(`/api/metrics/history?${params}`);
-        if (res.ok) {
-          const data: HistoryData = await res.json();
-          if (data.data) {
-            setHistory(data.data.map((d) => ({
-              timestamp: d.timestamp,
-              value: d.cpu || 0,
-            })));
-          }
+        const data: HistoryData = await apiClient.getMetricsHistory(appId, period, '5m');
+        if (data.data) {
+          setHistory(data.data.map((d) => ({
+            timestamp: d.timestamp,
+            value: d.cpu || 0,
+          })));
         }
-      } catch (e) {
-        console.error('Failed to fetch history:', e);
+      } catch {
+        setHistory([]);
       }
     };
     fetchHistory();
   }, [period, appId]);
 
   useEffect(() => {
-    fetch('/api/metrics/grafana-url')
-      .then(r => r.json())
+    apiClient.getGrafanaUrl()
       .then(data => {
         if (data.url) setGrafanaUrl(data.url);
       })
@@ -189,8 +180,8 @@ export default function RealtimeMetrics({ appId }: { appId?: string }) {
               padding: '6px 16px',
               borderRadius: '6px',
               border: 'none',
-              background: period === p ? '#6C5CE7' : '#1e293b',
-              color: '#e9f0ff',
+              background: period === p ? '#f5f5f7' : 'rgba(255,255,255,0.06)',
+              color: period === p ? '#1d1d1f' : '#f5f5f7',
               cursor: 'pointer',
               fontWeight: period === p ? '600' : '400',
             }}>
@@ -218,13 +209,13 @@ export default function RealtimeMetrics({ appId }: { appId?: string }) {
       )}
 
       <div style={{
-        background: '#11182b',
+        background: 'rgba(255,255,255,0.04)',
         borderRadius: '10px',
         padding: '16px',
-        border: '1px solid #1e293b',
+        border: '1px solid rgba(255,255,255,0.09)',
         marginBottom: '16px',
       }}>
-        <div style={{ fontSize: '14px', fontWeight: '600', color: '#e9f0ff', marginBottom: '12px' }}>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: '#f5f5f7', marginBottom: '12px' }}>
           CPU Usage &mdash; Last {period}
         </div>
         <SparklineChart data={history} color="#4ea8ff" height={120} width={600} />
@@ -232,12 +223,12 @@ export default function RealtimeMetrics({ appId }: { appId?: string }) {
 
       {grafanaUrl && (
         <div style={{
-          background: '#11182b',
+          background: 'rgba(255,255,255,0.04)',
           borderRadius: '10px',
           padding: '16px',
-          border: '1px solid #1e293b',
+          border: '1px solid rgba(255,255,255,0.09)',
         }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#e9f0ff', marginBottom: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#f5f5f7', marginBottom: '12px' }}>
             Grafana Dashboard
           </div>
           <iframe src={grafanaUrl} style={{

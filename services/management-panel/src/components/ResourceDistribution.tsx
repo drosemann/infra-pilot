@@ -1,36 +1,58 @@
-interface ResourceDistributionProps {
-  cpu: number;
-  memory: number;
-  disk: number;
-  other?: number;
-}
+import { useState, useEffect } from 'react';
+import { apiClient } from '../lib/api';
 
-export const ResourceDistribution = ({
-  cpu = 23,
-  memory = 39,
-  disk = 28,
-  other = 10,
-}: ResourceDistributionProps) => {
-  const resources = [
-    { name: 'CPU', value: cpu, color: '#3b82f6', bgColor: 'bg-blue-500' },
-    { name: 'Memory', value: memory, color: '#a855f7', bgColor: 'bg-purple-500' },
-    { name: 'Disk', value: disk, color: '#06b6d4', bgColor: 'bg-cyan-500' },
-    { name: 'Other', value: other, color: '#64748b', bgColor: 'bg-slate-500' },
-  ];
+export const ResourceDistribution = () => {
+  const [shares, setShares] = useState<Array<{ name: string; value: number; color: string }> | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
-  const total = cpu + memory + disk + other;
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const stats = await apiClient.getRealtimeMetrics();
+        if (!active) return;
+        setShares([
+          { name: 'CPU', value: Math.round(stats.cpu.current), color: '#3b82f6' },
+          { name: 'Memory', value: Math.round(stats.memory.percent), color: '#a855f7' },
+          { name: 'Disk', value: Math.round(stats.disk.percent), color: '#06b6d4' },
+        ]);
+        setUnavailable(false);
+      } catch {
+        if (active) setUnavailable(true);
+      }
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (!shares) {
+    return (
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold tracking-tight text-white">Resource Distribution</h3>
+        <div className="card p-6 text-center">
+          <p className="text-white/55">
+            {unavailable ? 'Host metrics unavailable.' : 'Loading…'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const total = shares.reduce((sum, r) => sum + r.value, 0) || 1;
   let currentAngle = -90; // Start from top
 
-  const segments = resources.map((resource) => {
+  const segments = shares.map((resource) => {
     const sliceAngle = (resource.value / total) * 360;
     const startAngle = currentAngle;
     const endAngle = currentAngle + sliceAngle;
 
-    // Convert angles to radians
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
 
-    // Calculate path points
     const x1 = 50 + 45 * Math.cos(startRad);
     const y1 = 50 + 45 * Math.sin(startRad);
     const x2 = 50 + 45 * Math.cos(endRad);
@@ -47,49 +69,37 @@ export const ResourceDistribution = ({
 
     currentAngle = endAngle;
 
-    return {
-      ...resource,
-      path,
-      startAngle,
-      endAngle,
-      labelAngle: (startAngle + endAngle) / 2,
-    };
+    return { ...resource, path };
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <h3 className="text-xl font-bold text-white">Resource Distribution</h3>
+    <div className="space-y-4">
+      <h3 className="text-xl font-semibold tracking-tight text-white">Resource Distribution</h3>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* Pie Chart */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 flex items-center justify-center">
-          <svg width="200" height="200" viewBox="0 0 100 100">
+      <div className="grid grid-cols-2 gap-6">
+        <div className="card flex items-center justify-center p-6">
+          <svg width="160" height="160" viewBox="0 0 100 100">
             {segments.map((segment) => (
               <path
                 key={segment.name}
                 d={segment.path}
                 fill={segment.color}
-                opacity="0.8"
+                opacity="0.85"
               />
             ))}
-            {/* Center circle for donut effect */}
-            <circle cx="50" cy="50" r="25" fill="#1f2937" />
+            <circle cx="50" cy="50" r="25" fill="#101014" />
           </svg>
         </div>
 
-        {/* Legend */}
         <div className="space-y-3">
-          {resources.map((resource) => (
-            <div
-              key={resource.name}
-              className="flex items-center justify-between p-3 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors"
-            >
+          {shares.map((resource) => (
+            <div key={resource.name} className="card flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-3 h-3 rounded-full ${resource.bgColor}`}
-                ></div>
-                <span className="text-sm text-slate-300">{resource.name}</span>
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: resource.color }}
+                />
+                <span className="text-sm text-white/60">{resource.name}</span>
               </div>
               <span className="text-sm font-semibold text-white">{resource.value}%</span>
             </div>

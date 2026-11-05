@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { MetricCard } from './MetricCard';
 
@@ -12,13 +12,13 @@ export const MetricsOverview = () => {
         const data = await apiClient.getAggregatedMetrics();
         setMetrics(data);
       } catch {
-        setMetrics({ totalApps: 0, totalPlayers: 0, avgCpu: 0, avgMemory: 0, serverCount: 0, lagSpikes: 0 });
+        setMetrics(null);
       } finally {
         setLoading(false);
       }
     };
     load();
-    const interval = setInterval(load, 10000);
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -26,9 +26,9 @@ export const MetricsOverview = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-slate-800 border border-slate-700 rounded-lg p-6 animate-pulse">
-            <div className="h-4 bg-slate-700 rounded w-24 mb-4" />
-            <div className="h-8 bg-slate-700 rounded w-16" />
+          <div key={i} className="card animate-pulse p-6">
+            <div className="mb-4 h-4 w-24 rounded bg-white/10" />
+            <div className="h-8 w-16 rounded bg-white/10" />
           </div>
         ))}
       </div>
@@ -38,28 +38,28 @@ export const MetricsOverview = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <MetricCard
-        icon="🖥️"
+        icon="ðŸ–¥ï¸"
         label="Total Servers"
         value={metrics?.serverCount || 0}
-        accentColor="blue"
+        hint="Across all apps"
       />
       <MetricCard
-        icon="👥"
+        icon="ðŸ‘¥"
         label="Total Players"
         value={metrics?.totalPlayers || 0}
-        accentColor="green"
+        hint="Across all apps"
       />
       <MetricCard
-        icon="⚡"
+        icon="âš¡"
         label="Avg CPU"
         value={`${metrics?.avgCpu || 0}%`}
-        accentColor="purple"
+        hint="Across all apps"
       />
       <MetricCard
-        icon="💾"
+        icon="ðŸ’¾"
         label="Avg Memory"
         value={`${metrics?.avgMemory || 0}%`}
-        accentColor="orange"
+        hint="Across all apps"
       />
     </div>
   );

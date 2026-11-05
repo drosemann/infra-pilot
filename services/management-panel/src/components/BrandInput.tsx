@@ -7,8 +7,8 @@ type Props = React.InputHTMLAttributes<HTMLInputElement> & {
 export const BrandInput: React.FC<Props> = ({ label, ...rest }) => {
   return (
     <div>
-      {label && <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>}
-      <input className="w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:outline-none focus:border-brand-accent" {...rest} />
+      {label && <label className="mb-1 block text-sm font-medium text-white/55">{label}</label>}
+      <input className="input-field w-full text-sm" {...rest} />
     </div>
   );
 };

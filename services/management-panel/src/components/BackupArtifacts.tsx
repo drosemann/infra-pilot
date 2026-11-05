@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { BackupArtifact } from '../lib/types';
 
@@ -35,32 +35,32 @@ export const BackupArtifacts = () => {
   }, []);
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading backup files...</div>;
+    return <div className="py-4 text-white/45">Loading backup files…</div>;
   }
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-md font-semibold text-white">Backup Files</h4>
-        <span className="text-xs text-slate-400">
+        <h4 className="font-semibold text-white">Backup Files</h4>
+        <span className="text-xs text-white/45">
           {lastSuccess
             ? `Last success: ${new Date(lastSuccess * 1000).toLocaleString()}`
             : 'No successful backup yet'}
         </span>
       </div>
       {artifacts.length === 0 ? (
-        <p className="text-slate-500 text-sm">No backup files found</p>
+        <p className="text-sm text-white/45">No backup files found</p>
       ) : (
         <div className="space-y-1">
           {artifacts.slice(0, 10).map((a) => (
             <div
               key={a.name}
-              className="flex items-center justify-between text-xs bg-slate-800 border border-slate-700 rounded-lg px-3 py-2"
+              className="card flex items-center justify-between px-3 py-2 text-xs"
             >
-              <span className="text-slate-200 truncate mr-3">{a.name}</span>
-              <span className="text-slate-500 whitespace-nowrap">
-                {formatSize(a.size_bytes)} · {formatAge(a.mtime_ms)} · sha256{' '}
-                {a.sha256_present ? '✓' : '—'}
+              <span className="mr-3 truncate text-white/70">{a.name}</span>
+              <span className="text-white/40 whitespace-nowrap">
+                {formatSize(a.size_bytes)} Â· {formatAge(a.mtime_ms)} Â· sha256{' '}
+                {a.sha256_present ? 'âœ“' : 'â€”'}
               </span>
             </div>
           ))}

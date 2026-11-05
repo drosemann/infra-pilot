@@ -3,12 +3,12 @@ import { PageHeader } from '../components/PageHeader';
 
 export const Deployments = () => {
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-2 py-8">
       <PageHeader eyebrow="Ship">
-        <h1 className="text-3xl font-bold text-white mb-2">Deployments</h1>
-        <p className="text-slate-400">
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Releases</h1>
+        <p className="mt-2 text-white/55">
           Connect Git repositories to containers. Pushes deploy through the
-          GitOps webhook with per-deployment history and enable/disable control.
+          GitOps webhook with per-deployment history.
         </p>
       </PageHeader>
 

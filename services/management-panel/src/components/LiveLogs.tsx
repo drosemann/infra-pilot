@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiClient } from '../lib/api';
 
 interface LogEntry {
@@ -31,56 +31,7 @@ function highlightText(text: string, query: string) {
 }
 
 export const LiveLogs = ({
-  logs = [
-    {
-      id: '1423',
-      timestamp: '2024-05-14T18:15:23.123Z',
-      app: 'web-frontend',
-      level: 'INFO',
-      message: 'GET /api/v1/users 200 45ms',
-      status: 'success',
-    },
-    {
-      id: '1424',
-      timestamp: '2024-05-14T18:15:24.456Z',
-      app: 'api-gateway',
-      level: 'INFO',
-      message: 'Request processesI successfully',
-      status: 'success',
-    },
-    {
-      id: '1425',
-      timestamp: '2024-05-14T18:15:25.789Z',
-      app: 'worker',
-      level: 'WARN',
-      message: 'Job queue size high: 1850',
-      status: 'failed',
-    },
-    {
-      id: '1426',
-      timestamp: '2024-05-14T18:15:26.012Z',
-      app: 'mail-service',
-      level: 'ERROR',
-      message: 'Failed to connect to SMTP server',
-      status: 'failed',
-    },
-    {
-      id: '1427',
-      timestamp: '2024-05-14T18:15:26.345Z',
-      app: 'postgres-db',
-      level: 'INFO',
-      message: 'Checkpoint completed',
-      status: 'success',
-    },
-    {
-      id: '1428',
-      timestamp: '2024-05-14T18:15:27.678Z',
-      app: 'redis-cache',
-      level: 'INFO',
-      message: 'Key expired: session:abc123',
-      status: 'success',
-    },
-  ],
+  logs = [],
   isLive = true,
   maxHeight = 'max-h-96',
   appId,
@@ -153,7 +104,7 @@ export const LiveLogs = ({
       case 'DEBUG':
         return 'bg-gray-500/10 text-gray-400';
       default:
-        return 'bg-slate-500/10 text-slate-400';
+        return 'bg-slate-500/10 text-white/45';
     }
   };
 
@@ -174,7 +125,7 @@ export const LiveLogs = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="text-xl font-bold text-white">Logs</h3>
+          <h3 className="text-xl font-semibold tracking-tight text-white">Logs</h3>
           {mode === 'live' && (
             <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-sm">
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -187,27 +138,27 @@ export const LiveLogs = ({
             onClick={() => setMode(mode === 'live' ? 'search' : 'live')}
             className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
               mode === 'search'
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                ? 'primary-button'
+                : 'secondary-button'
             }`}
           >
-            {mode === 'live' ? '🔍 Search' : '🔴 Live'}
+            {mode === 'live' ? 'ðŸ” Search' : 'ðŸ”´ Live'}
           </button>
           {mode === 'live' && (
             <button
               onClick={() => setIsPaused(!isPaused)}
               className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                 isPaused
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'primary-button'
+                  : 'secondary-button'
               }`}
             >
-              {isPaused ? '▶ Resume' : '⏸ Pause'}
+              {isPaused ? 'â–¶ Resume' : 'â¸ Pause'}
             </button>
           )}
           {mode === 'live' && (
-            <button onClick={() => setDisplayLogs([])} className="px-3 py-1.5 text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 rounded transition-colors">
-              🗑 Clear
+            <button onClick={() => setDisplayLogs([])} className="secondary-button">
+              ðŸ—‘ Clear
             </button>
           )}
         </div>
@@ -215,18 +166,18 @@ export const LiveLogs = ({
 
       {/* Search / Filter Bar */}
       {mode === 'search' && (
-        <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-800 border border-slate-700 rounded-lg">
+        <div className="card flex flex-wrap items-center gap-3 p-3">
           <input
             type="text"
             placeholder="Search logs..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-[200px] px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            className="input-field min-w-[200px] flex-1 text-sm"
           />
           <select
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+            className="input-field text-sm"
           >
             {LOG_LEVELS.map((l) => (
               <option key={l} value={l}>{l}</option>
@@ -236,22 +187,22 @@ export const LiveLogs = ({
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+            className="input-field text-sm"
           />
           <input
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="px-3 py-1.5 bg-slate-900 border border-slate-600 rounded text-sm text-slate-200 focus:outline-none focus:border-blue-500"
+            className="input-field text-sm"
           />
           <button
             onClick={() => performSearch(1)}
-            className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="primary-button"
           >
             Search
           </button>
           {totalResults > 0 && (
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-white/45">
               Showing {searchResults.length} of {totalResults} results
             </span>
           )}
@@ -259,13 +210,13 @@ export const LiveLogs = ({
       )}
 
       {/* Logs Container */}
-      <div className={`${maxHeight} overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg`}>
+      <div className={`${maxHeight} card overflow-y-auto`}>
         {loading ? (
-          <div className="flex items-center justify-center py-8 text-slate-400">
+          <div className="flex items-center justify-center py-8 text-white/45">
             Searching logs...
           </div>
         ) : currentLogs.length === 0 ? (
-          <div className="flex items-center justify-center py-8 text-slate-500">
+          <div className="flex items-center justify-center py-8 text-white/45">
             No results
           </div>
         ) : (
@@ -273,12 +224,12 @@ export const LiveLogs = ({
             {currentLogs.map((log, idx) => (
               <div
                 key={log.id || idx}
-                className="flex items-start gap-3 px-4 py-2 border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
+                className="flex items-start gap-3 border-b border-white/5 px-4 py-2"
               >
-                <span className="text-slate-500 flex-shrink-0 w-20">
+                <span className="flex-shrink-0 text-white/35 w-20">
                   {log.id}
                 </span>
-                <span className="text-slate-500 flex-shrink-0 w-32">
+                <span className="flex-shrink-0 text-white/35 w-32">
                   {formatTime(log.timestamp)}
                 </span>
                 <span
@@ -288,7 +239,7 @@ export const LiveLogs = ({
                 </span>
                 <span className="text-blue-400 flex-shrink-0 w-24">{log.app}:</span>
                 <span
-                  className="text-slate-300 flex-1"
+                  className="flex-1 text-white/70"
                   dangerouslySetInnerHTML={{
                     __html: mode === 'search' && debouncedSearch
                       ? highlightText(log.message, debouncedSearch)
@@ -307,17 +258,17 @@ export const LiveLogs = ({
           <button
             disabled={currentPage <= 1}
             onClick={() => performSearch(currentPage - 1)}
-            className="px-3 py-1 text-sm bg-slate-700 text-slate-300 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="secondary-button"
           >
             Previous
           </button>
-          <span className="text-sm text-slate-400">
+          <span className="text-sm text-white/45">
             Page {currentPage} of {Math.ceil(totalResults / 50)}
           </span>
           <button
             disabled={currentPage >= Math.ceil(totalResults / 50)}
             onClick={() => performSearch(currentPage + 1)}
-            className="px-3 py-1 text-sm bg-slate-700 text-slate-300 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="secondary-button"
           >
             Next
           </button>

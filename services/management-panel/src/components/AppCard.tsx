@@ -1,4 +1,4 @@
-import { FleetPet, type CreatureView } from './FleetPet';
+﻿import { FleetPet, type CreatureView } from './FleetPet';
 import { FleetWhy } from './FleetWhy';
 
 interface AppCardProps {
@@ -6,8 +6,8 @@ interface AppCardProps {
   name: string;
   image: string;
   status: 'running' | 'stopped' | 'restarting' | 'error';
-  cpu: number;
-  memory: number;
+  cpu?: number;
+  memory?: number;
   uptime?: string;
   ports?: Array<{ hostPort: number; containerPort: number; protocol: string }>;
   onClick?: () => void;
@@ -21,7 +21,7 @@ export const AppCard = ({
   status,
   cpu,
   memory,
-  uptime = '3d 14h',
+  uptime,
   ports = [],
   onClick,
   creature = null,
@@ -54,43 +54,34 @@ export const AppCard = ({
         };
       default:
         return {
-          bg: 'bg-slate-500/10',
-          text: 'text-slate-400',
-          dot: 'bg-slate-500',
+          bg: 'bg-white/5',
+          text: 'text-white/45',
+          dot: 'bg-white/30',
         };
     }
   };
 
   const statusColor = getStatusColor();
 
-  const getAppIcon = () => {
-    if (image.includes('postgres') || image.includes('mysql'))
-      return '🗄️';
-    if (image.includes('redis')) return '💾';
-    if (image.includes('nginx') || image.includes('httpd')) return '🌐';
-    if (image.includes('node')) return '📦';
-    if (image.includes('python')) return '🐍';
-    if (image.includes('java')) return '☕';
-    return '🐳';
-  };
+  const getAppInitial = () => (name.trim().charAt(0) || '?').toUpperCase();
 
   return (
     <div
       onClick={onClick}
-      className="bg-slate-800 border border-slate-700 rounded-lg p-6 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all cursor-pointer group"
+      className="card p-6 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all cursor-pointer group"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center text-lg group-hover:bg-blue-600/20 transition-colors">
-            {getAppIcon()}
+          <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center text-lg group-hover:bg-white/10 transition-colors">
+            {getAppInitial()}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white truncate">
               {name}{' '}
               {creature && <FleetPet creature={creature} />}
             </h3>
-            <p className="text-xs text-slate-400 truncate">{image}</p>
+            <p className="text-xs text-white/45 truncate">{image}</p>
           </div>
         </div>
 
@@ -107,8 +98,8 @@ export const AppCard = ({
       )}
 
       {/* Uptime */}
-      {status === 'running' && (
-        <p className="text-xs text-slate-400 mb-4">Uptime: {uptime}</p>
+      {status === 'running' && uptime && (
+        <p className="text-xs text-white/45 mb-4">Uptime: {uptime}</p>
       )}
 
       {/* Resource Usage */}
@@ -116,13 +107,13 @@ export const AppCard = ({
         {/* CPU */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <span className="text-xs text-slate-400">CPU</span>
-            <span className="text-sm font-semibold text-white">{cpu}%</span>
+            <span className="text-xs text-white/45">CPU</span>
+            <span className="text-sm font-semibold text-white">{cpu !== undefined ? `${cpu}%` : '—'}</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-600"
-              style={{ width: `${cpu}%` }}
+              className="h-full bg-blue-500"
+              style={{ width: `${cpu ?? 0}%` }}
             ></div>
           </div>
         </div>
@@ -130,13 +121,13 @@ export const AppCard = ({
         {/* Memory */}
         <div>
           <div className="flex justify-between items-center mb-1">
-            <span className="text-xs text-slate-400">MEM</span>
-            <span className="text-sm font-semibold text-white">{memory}MB</span>
+            <span className="text-xs text-white/45">MEM</span>
+            <span className="text-sm font-semibold text-white">{memory !== undefined ? `${memory}MB` : '—'}</span>
           </div>
-          <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-purple-500 to-purple-600"
-              style={{ width: `${Math.min(memory / 2, 100)}%` }}
+              className="h-full bg-white/40"
+              style={{ width: `${memory !== undefined ? Math.min(memory / 2, 100) : 0}%` }}
             ></div>
           </div>
         </div>
@@ -144,19 +135,19 @@ export const AppCard = ({
 
       {/* Ports */}
       {ports.length > 0 && (
-        <div className="border-t border-slate-700 pt-3">
-          <p className="text-xs text-slate-400 mb-2">Ports:</p>
+        <div className="border-t border-white/10 pt-3">
+          <p className="text-xs text-white/45 mb-2">Ports:</p>
           <div className="flex flex-wrap gap-1">
             {ports.slice(0, 2).map((port, idx) => (
               <span
                 key={idx}
-                className="text-xs bg-slate-700 text-slate-300 px-2 py-1 rounded"
+                className="text-xs bg-white/10 text-white/60 px-2 py-1 rounded"
               >
                 {port.hostPort}:{port.containerPort}
               </span>
             ))}
             {ports.length > 2 && (
-              <span className="text-xs bg-slate-700 text-slate-400 px-2 py-1 rounded">
+              <span className="text-xs bg-white/10 text-white/45 px-2 py-1 rounded">
                 +{ports.length - 2}
               </span>
             )}

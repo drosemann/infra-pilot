@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Users, Share2, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -123,21 +123,21 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
 
   if (!connected && !sessionId) {
     return (
-      <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+      <div className="card p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Collaborative Terminal</h3>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-slate-400 block mb-1">Your Display Name</label>
+            <label className="text-xs text-white/45 block mb-1">Your Display Name</label>
             <input
               value={userName}
               onChange={e => setUserName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+              className="w-full px-3 py-2 bg-white/10 border border-white/10 rounded text-sm text-white"
               placeholder="Your name"
             />
           </div>
           <button
             onClick={connect}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
+            className="primary-button w-full"
           >
             Start Session
           </button>
@@ -147,8 +147,8 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
   }
 
   return (
-    <div className="rounded-lg border border-slate-700 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-900 text-slate-300 text-xs">
+    <div className="rounded-lg border border-white/10 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-black/40 text-white/60 text-xs">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-2">
             <Users className="w-3.5 h-3.5" />
@@ -157,10 +157,10 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
           <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowChat(!showChat)} className={`p-1 rounded hover:bg-slate-700 ${showChat ? 'bg-slate-700' : ''}`}>
+          <button onClick={() => setShowChat(!showChat)} className={`p-1 rounded hover:bg-white/10 ${showChat ? 'bg-white/10' : ''}`}>
             <MessageSquare className="w-3.5 h-3.5" />
           </button>
-          <button onClick={copyShareLink} className="p-1 rounded hover:bg-slate-700">
+          <button onClick={copyShareLink} className="p-1 rounded hover:bg-white/10">
             <Share2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -174,7 +174,7 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
             ))}
             <div ref={endRef} />
           </div>
-          <form onSubmit={sendCommand} className="flex bg-slate-900 border-t border-slate-700">
+          <form onSubmit={sendCommand} className="flex bg-black/40 border-t border-white/10">
             <span className="px-3 py-2 text-green-400 font-mono text-sm">$</span>
             <input
               value={input}
@@ -186,40 +186,40 @@ export const CollaborativeTerminal = ({ appId, sessionId: initialSessionId, disp
         </div>
 
         {/* Connected Users Sidebar */}
-        <div className="w-48 border-l border-slate-700 bg-slate-900">
-          <div className="p-2 border-b border-slate-700">
-            <p className="text-xs text-slate-400 font-semibold">Connected Users</p>
+        <div className="w-48 border-l border-white/10 bg-black/40">
+          <div className="p-2 border-b border-white/10">
+            <p className="text-xs text-white/45 font-semibold">Connected Users</p>
           </div>
           <div className="p-2 space-y-2 max-h-32 overflow-y-auto">
             {users.map((user) => (
               <div key={user.userId} className="flex items-center gap-2 text-xs">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                <span className="text-slate-300 truncate">{user.displayName}</span>
+                <span className="text-white/60 truncate">{user.displayName}</span>
               </div>
             ))}
-            {users.length === 0 && <p className="text-xs text-slate-500">No other users</p>}
+            {users.length === 0 && <p className="text-xs text-white/40">No other users</p>}
           </div>
 
-          <div className="p-2 border-t border-slate-700">
-            <p className="text-xs text-slate-400 mb-1">Session ID</p>
-            <p className="text-xs text-slate-500 font-mono truncate">{sessionId || appId}</p>
+          <div className="p-2 border-t border-white/10">
+            <p className="text-xs text-white/45 mb-1">Session ID</p>
+            <p className="text-xs text-white/40 font-mono truncate">{sessionId || appId}</p>
           </div>
 
           {showChat && (
-            <div className="border-t border-slate-700 flex-1 flex flex-col" style={{ height: 'calc(100% - 150px)' }}>
-              <div className="p-2 border-b border-slate-700">
-                <p className="text-xs text-slate-400 font-semibold">Chat</p>
+            <div className="border-t border-white/10 flex-1 flex flex-col" style={{ height: 'calc(100% - 150px)' }}>
+              <div className="p-2 border-b border-white/10">
+                <p className="text-xs text-white/45 font-semibold">Chat</p>
               </div>
               <div className="flex-1 p-2 overflow-y-auto space-y-1">
                 {chatMessages.map((msg, i) => (
                   <div key={i} className="text-xs">
                     <span className="text-blue-400">{msg.displayName}: </span>
-                    <span className="text-slate-300">{msg.text}</span>
+                    <span className="text-white/60">{msg.text}</span>
                   </div>
                 ))}
                 <div ref={chatEndRef} />
               </div>
-              <form onSubmit={sendChat} className="flex border-t border-slate-700">
+              <form onSubmit={sendChat} className="flex border-t border-white/10">
                 <input
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}

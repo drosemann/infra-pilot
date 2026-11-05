@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
+import { PageHeader } from '../components/PageHeader';
 
 interface FreezeReason {
   kind: 'window' | 'critical_alerts' | 'error_budget' | 'quality_gate';
@@ -115,60 +116,65 @@ export function DeployFreeze() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Deployment Freeze</h1>
-          <p className="text-sm opacity-70">
-            Blockiert Deployments bei Freeze-Fenstern, offenen kritischen Alerts, aufgebrauchtem Error Budget
-            oder fehlgeschlagenen Quality-Gates. Notfall-Override nur mit Admin-Rolle und Begründung.
-          </p>
-        </div>
-        <select
-          className="border rounded px-2 py-1 bg-transparent"
-          value={environment}
-          onChange={(e) => setEnvironment(e.target.value)}
-        >
-          {ENVIRONMENTS.map((e) => (
-            <option key={e} value={e}>{e}</option>
-          ))}
-        </select>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-8 px-2 py-8">
+      <PageHeader
+        eyebrow="Ship"
+        actions={
+          <select
+            className="input-field w-auto text-sm"
+            aria-label="Environment"
+            value={environment}
+            onChange={(e) => setEnvironment(e.target.value)}
+          >
+            {ENVIRONMENTS.map((e) => (
+              <option key={e} value={e}>{e}</option>
+            ))}
+          </select>
+        }
+      >
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Deployment Freeze</h1>
+        <p className="mt-2 max-w-2xl text-white/55">
+          Blocks deployments during freeze windows, open critical alerts, depleted error budget
+          or failed quality gates. Emergency override requires the admin role and a reason.
+        </p>
+      </PageHeader>
 
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       {state && (
-        <div className={`border rounded p-4 ${state.frozen ? 'border-red-500' : 'border-green-600'}`}>
-          <p className="font-bold">{state.frozen ? 'EINGEFROREN — Deployments blockiert (423)' : 'Offen — Deployments möglich'}</p>
+        <div className={`card p-5 ${state.frozen ? 'border-red-500/40' : 'border-emerald-500/30'}`}>
+          <p className="font-semibold text-white">
+            {state.frozen ? 'Frozen — deployments blocked' : 'Open — deployments allowed'}
+          </p>
           {state.reasons.length > 0 && (
-            <ul className="list-disc ml-5 mt-2 text-sm">
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-white/60">
               {state.reasons.map((r, i) => (
                 <li key={i}>
                   {r.message}
-                  {!r.allow_emergency_override && ' (kein Notfall-Override möglich)'}
+                  {!r.allow_emergency_override && ' (no emergency override available)'}
                 </li>
               ))}
             </ul>
           )}
-          <p className="text-xs opacity-70 mt-2">
-            Offene kritische Alerts (24h): {state.signals.open_critical_alerts}
-            {' · '}Error Budget: {state.signals.error_budget_remaining_percent ?? '—'}%
-            {' · '}Quality-Checks fehlgeschlagen: {state.signals.failed_quality_checks ?? '—'}
+          <p className="mt-3 text-xs text-white/40">
+            Open critical alerts (24h): {state.signals.open_critical_alerts}
+            {' · '}Error budget: {state.signals.error_budget_remaining_percent ?? '—'}%
+            {' · '}Failed quality checks: {state.signals.failed_quality_checks ?? '—'}
           </p>
         </div>
       )}
 
-      <div className="border rounded p-4 space-y-3">
-        <h2 className="font-bold">Neues Freeze-Fenster</h2>
+      <div className="card space-y-3 p-5">
+        <h2 className="text-lg font-semibold text-white">New freeze window</h2>
         <div className="flex flex-wrap gap-2">
           <input
-            className="border rounded px-2 py-1 bg-transparent min-w-52"
-            placeholder="Titel (z. B. Change-Freeze Black Friday)"
+            className="input-field min-w-52 flex-1"
+            placeholder="Title (e.g. Black Friday change freeze)"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
           <select
-            className="border rounded px-2 py-1 bg-transparent"
+            className="input-field w-auto"
             value={form.reason}
             onChange={(e) => setForm({ ...form, reason: e.target.value })}
           >
@@ -177,7 +183,7 @@ export function DeployFreeze() {
             <option value="maintenance">maintenance</option>
           </select>
           <select
-            className="border rounded px-2 py-1 bg-transparent"
+            className="input-field w-auto"
             value={form.environment}
             onChange={(e) => setForm({ ...form, environment: e.target.value })}
           >
@@ -188,56 +194,56 @@ export function DeployFreeze() {
           </select>
           <input
             type="datetime-local"
-            className="border rounded px-2 py-1 bg-transparent"
-            title="Ende (leer = offen)"
+            className="input-field w-auto"
+            title="Ends at (empty = open-ended)"
             value={form.ends_at}
             onChange={(e) => setForm({ ...form, ends_at: e.target.value })}
           />
           <button
-            className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+            className="primary-button"
             disabled={busy}
             onClick={createWindow}
           >
-            Anlegen
+            Create
           </button>
         </div>
       </div>
 
       <div className="space-y-2">
-        <h2 className="font-bold">Aktive und geplante Fenster ({state?.windows.length ?? 0})</h2>
+        <h2 className="text-lg font-semibold text-white">Active and scheduled windows ({state?.windows.length ?? 0})</h2>
         {(state?.windows ?? []).map((w) => (
-          <div key={w.id} className="border rounded p-3 flex items-center justify-between text-sm">
+          <div key={w.id} className="card flex items-center justify-between p-4 text-sm">
             <div>
-              <code className="font-mono font-bold">{w.title}</code>
-              <p className="opacity-70">
-                {w.reason} · {w.environment} · seit {new Date(w.starts_at).toLocaleString()}
-                {w.ends_at ? ` · bis ${new Date(w.ends_at).toLocaleString()}` : ' · ohne Ende'}
-                {!w.allow_emergency_override && ' · kein Override'}
+              <p className="font-semibold text-white">{w.title}</p>
+              <p className="mt-1 text-white/45">
+                {w.reason} · {w.environment} · since {new Date(w.starts_at).toLocaleString()}
+                {w.ends_at ? ` · until ${new Date(w.ends_at).toLocaleString()}` : ' · open-ended'}
+                {!w.allow_emergency_override && ' · no override'}
               </p>
             </div>
             <button
-              className="px-3 py-1 rounded bg-red-600 text-white disabled:opacity-50"
+              className="secondary-button"
               disabled={busy}
               onClick={() => removeWindow(w.id)}
             >
-              Aufheben
+              Lift
             </button>
           </div>
         ))}
       </div>
 
       {state && (
-        <div className="border rounded p-4 space-y-2 text-sm">
-          <h2 className="font-bold">Policy</h2>
+        <div className="card space-y-3 p-5 text-sm">
+          <h2 className="text-lg font-semibold text-white">Policy</h2>
           {(
             [
-              ['enabled', 'Freeze aktiv'],
-              ['freeze_on_critical_alerts', 'Bei kritischen Alerts einfrieren'],
-              ['freeze_on_failed_quality_gate', 'Bei fehlgeschlagenen Quality-Gates einfrieren'],
-              ['allow_emergency_override', 'Notfall-Override erlauben'],
+              ['enabled', 'Freeze enabled'],
+              ['freeze_on_critical_alerts', 'Freeze on critical alerts'],
+              ['freeze_on_failed_quality_gate', 'Freeze on failed quality gates'],
+              ['allow_emergency_override', 'Allow emergency override'],
             ] as const
           ).map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2">
+            <label key={key} className="flex items-center gap-2 text-white/70">
               <input
                 type="checkbox"
                 checked={state.policy[key]}
@@ -247,13 +253,13 @@ export function DeployFreeze() {
               {label}
             </label>
           ))}
-          <label className="flex items-center gap-2">
-            Error-Budget-Untergrenze (%)
+          <label className="flex items-center gap-2 text-white/70">
+            Error budget floor (%)
             <input
               type="number"
               min={0}
               max={100}
-              className="w-20 border rounded px-1 bg-transparent"
+              className="input-field w-20"
               defaultValue={state.policy.error_budget_floor_percent ?? 5}
               key={String(state.policy.error_budget_floor_percent)}
               onBlur={(e) => togglePolicy({ error_budget_floor_percent: Number(e.target.value) })}

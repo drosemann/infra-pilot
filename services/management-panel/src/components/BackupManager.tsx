@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { BackupJob, DockerApp } from '../lib/types';
 import { toast } from 'sonner';
@@ -72,44 +72,36 @@ export const BackupManager = () => {
     }
   };
 
-  const getScheduleIcon = (type: string) => {
-    switch (type) {
-      case 'hourly': return '🕐';
-      case 'daily': return '📅';
-      case 'weekly': return '📆';
-      default: return '✋';
-    }
-  };
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading backup jobs...</div>;
+    return <div className="py-4 text-white/45">Loading backup jobs…</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-md font-semibold text-white">Backup Jobs</h4>
+        <h4 className="font-semibold text-white">Backup Jobs</h4>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+          className="primary-button"
         >
           {showForm ? 'Cancel' : 'New Backup Job'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+        <div className="card space-y-3 p-4">
           <input
             type="text"
             placeholder="Backup name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400 outline-none focus:border-blue-500"
+            className="input-field w-full text-sm"
           />
           <select
             value={form.app_id}
             onChange={(e) => setForm({ ...form, app_id: e.target.value })}
-            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+            className="input-field w-full text-sm"
           >
             <option value="">Select app...</option>
             {apps.map((app) => (
@@ -118,11 +110,11 @@ export const BackupManager = () => {
           </select>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Schedule</label>
+              <label className="mb-1 block text-xs text-white/45">Schedule</label>
               <select
                 value={form.schedule_type}
                 onChange={(e) => setForm({ ...form, schedule_type: e.target.value as any })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               >
                 <option value="hourly">Hourly</option>
                 <option value="daily">Daily</option>
@@ -131,20 +123,20 @@ export const BackupManager = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Retention (backups)</label>
+              <label className="mb-1 block text-xs text-white/45">Retention (backups)</label>
               <input
                 type="number"
                 min={1}
                 max={365}
                 value={form.retention_count}
                 onChange={(e) => setForm({ ...form, retention_count: parseInt(e.target.value) || 7 })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               />
             </div>
           </div>
           <button
             onClick={handleCreate}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
+            className="primary-button w-full"
           >
             Create Backup Job
           </button>
@@ -153,19 +145,19 @@ export const BackupManager = () => {
 
       <div className="space-y-2">
         {jobs.length === 0 ? (
-          <p className="text-slate-500 text-sm">No backup jobs configured</p>
+          <p className="text-sm text-white/45">No backup jobs configured</p>
         ) : (
           jobs.map((job) => (
-            <div key={job.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+            <div key={job.id} className="card flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
-                <span className="text-lg">{getScheduleIcon(job.schedule_type)}</span>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/70">{job.schedule_type}</span>
                 <div>
                   <p className="text-sm font-semibold text-white">{job.name}</p>
-                  <p className="text-xs text-slate-400">
-                    {job.schedule_type} · Retention: {job.retention_count} · {job.status}
+                  <p className="text-xs text-white/45">
+                    {job.schedule_type} Â· Retention: {job.retention_count} Â· {job.status}
                   </p>
                   {job.last_run && (
-                    <p className="text-xs text-slate-500">Last run: {new Date(job.last_run).toLocaleString()}</p>
+                    <p className="text-xs text-white/40">Last run: {new Date(job.last_run).toLocaleString()}</p>
                   )}
                 </div>
               </div>

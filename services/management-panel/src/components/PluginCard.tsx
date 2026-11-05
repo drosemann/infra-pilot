@@ -1,4 +1,4 @@
-import { Plugin } from '../lib/types';
+﻿import { Plugin } from '../lib/types';
 
 interface PluginCardProps {
   plugin: Plugin;
@@ -20,23 +20,23 @@ export const PluginCard = ({ plugin, onInstall, onUninstall, installing, uninsta
       configuration: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
       integration: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
     };
-    return colors[cat] || 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+    return colors[cat] || 'bg-slate-500/20 text-white/45 border-slate-500/30';
   };
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors flex flex-col">
+    <div className="card p-4 hover:border-white/25 transition-colors flex flex-col">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 min-w-0">
           {plugin.iconUrl ? (
             <img src={plugin.iconUrl} alt="" className="w-10 h-10 rounded-lg shrink-0" />
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center text-slate-400 text-lg shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-white/45 text-lg shrink-0">
               {plugin.name[0]}
             </div>
           )}
           <div className="min-w-0">
             <h4 className="text-sm font-semibold text-white truncate">{plugin.name}</h4>
-            <p className="text-xs text-slate-400">v{plugin.version} by {plugin.author}</p>
+            <p className="text-xs text-white/45">v{plugin.version} by {plugin.author}</p>
           </div>
         </div>
         <span className={`px-2 py-0.5 text-xs rounded border shrink-0 ${getCategoryColor(plugin.category)}`}>
@@ -44,10 +44,10 @@ export const PluginCard = ({ plugin, onInstall, onUninstall, installing, uninsta
         </span>
       </div>
 
-      <p className="text-xs text-slate-400 mb-3 line-clamp-2 flex-1">{plugin.description}</p>
+      <p className="text-xs text-white/45 mb-3 line-clamp-2 flex-1">{plugin.description}</p>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-white/40">
           <span>{plugin.downloads.toLocaleString()} downloads</span>
           {plugin.installed && (
             <span className="text-green-400">Installed</span>
@@ -58,7 +58,7 @@ export const PluginCard = ({ plugin, onInstall, onUninstall, installing, uninsta
           <button
             onClick={() => onUninstall(plugin.id)}
             disabled={uninstalling === plugin.id}
-            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-slate-600 text-white rounded transition-colors"
+            className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 disabled:bg-white/10 text-white rounded transition-colors"
           >
             {uninstalling === plugin.id ? 'Removing...' : 'Uninstall'}
           </button>
@@ -66,7 +66,7 @@ export const PluginCard = ({ plugin, onInstall, onUninstall, installing, uninsta
           <button
             onClick={() => onInstall(plugin.id)}
             disabled={installing === plugin.id}
-            className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded transition-colors"
+            className="primary-button"
           >
             {installing === plugin.id ? 'Installing...' : 'Install'}
           </button>

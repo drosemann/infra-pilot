@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { apiClient } from '../lib/api';
 import { AlertConfig as AlertConfigType } from '../lib/types';
 import { toast } from 'sonner';
@@ -71,30 +71,30 @@ export const AlertConfig = () => {
   };
 
   if (loading) {
-    return <div className="text-slate-400 py-4">Loading alert configs...</div>;
+    return <div className="py-4 text-white/45">Loading alert configs…</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-md font-semibold text-white">Alert Thresholds</h4>
+        <h4 className="font-semibold text-white">Alert Thresholds</h4>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+          className="primary-button"
         >
           {showForm ? 'Cancel' : 'Add Rule'}
         </button>
       </div>
 
       {showForm && (
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 space-y-3">
+        <div className="card space-y-3 p-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Metric</label>
+              <label className="mb-1 block text-xs text-white/45">Metric</label>
               <select
                 value={form.metric_type}
                 onChange={(e) => setForm({ ...form, metric_type: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               >
                 {METRIC_TYPES.map((m) => (
                   <option key={m} value={m}>{m}</option>
@@ -102,11 +102,11 @@ export const AlertConfig = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Operator</label>
+              <label className="mb-1 block text-xs text-white/45">Operator</label>
               <select
                 value={form.operator}
                 onChange={(e) => setForm({ ...form, operator: e.target.value as any })}
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white outline-none focus:border-blue-500"
+                className="input-field w-full text-sm"
               >
                 {OPERATORS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -115,7 +115,7 @@ export const AlertConfig = () => {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
+            <label className="mb-1 block text-xs text-white/45">
               Threshold: <span className="text-white font-bold">{form.threshold}</span>
             </label>
             <input
@@ -128,7 +128,7 @@ export const AlertConfig = () => {
             />
           </div>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-white/70">
               <input
                 type="checkbox"
                 checked={form.enabled}
@@ -137,7 +137,7 @@ export const AlertConfig = () => {
               />
               Enabled
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
+            <label className="flex items-center gap-2 text-sm text-white/70">
               <input
                 type="checkbox"
                 checked={form.notify_email}
@@ -149,7 +149,7 @@ export const AlertConfig = () => {
           </div>
           <button
             onClick={handleCreate}
-            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded transition-colors"
+            className="primary-button w-full"
           >
             Create Alert Rule
           </button>
@@ -158,19 +158,19 @@ export const AlertConfig = () => {
 
       <div className="space-y-2">
         {configs.length === 0 ? (
-          <p className="text-slate-500 text-sm">No alert rules configured</p>
+          <p className="text-sm text-white/45">No alert rules configured</p>
         ) : (
           configs.map((config) => (
-            <div key={config.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg border border-slate-700">
+            <div key={config.id} className="card flex items-center justify-between p-3">
               <div className="flex items-center gap-3">
-                <span className={`w-2 h-2 rounded-full ${config.enabled ? 'bg-green-500' : 'bg-slate-500'}`} />
+                <span className={`w-2 h-2 rounded-full ${config.enabled ? 'bg-green-500' : 'bg-white/30'}`} />
                 <div>
                   <p className="text-sm text-white">
                     {config.metric_type} {config.operator} {config.threshold}
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-white/45">
                     {config.enabled ? 'Active' : 'Disabled'}
-                    {config.notify_email ? ' · Email alerts on' : ''}
+                    {config.notify_email ? ' Â· Email alerts on' : ''}
                   </p>
                 </div>
               </div>

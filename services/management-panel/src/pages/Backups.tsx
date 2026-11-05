@@ -5,10 +5,10 @@ import { PageHeader } from '../components/PageHeader';
 
 export const Backups = () => {
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-5xl space-y-8 px-2 py-8">
       <PageHeader eyebrow="Protect">
-        <h1 className="text-3xl font-bold text-white mb-2">Backups</h1>
-        <p className="text-slate-400">Database and server backup automation</p>
+        <h1 className="text-4xl font-semibold tracking-tight text-white">Backups</h1>
+        <p className="mt-2 text-white/55">Automatic copies of databases and servers.</p>
       </PageHeader>
 
       <BackupStatus />

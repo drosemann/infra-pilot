@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from rich import print as rprint
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -14,33 +15,32 @@ logger = logging.getLogger(__name__)
 
 _console = Console()
 
-STYLE_TITLE = "bold cyan"
-STYLE_KEY = "cyan"
+STYLE_TITLE = "bold"
+STYLE_KEY = "default"
 STYLE_ERROR = "red"
 STYLE_SUCCESS = "green"
-STYLE_INFO = "blue"
+STYLE_INFO = "default"
 STYLE_WARNING = "yellow"
-STYLE_NO_DATA = "yellow"
+STYLE_NO_DATA = "dim"
 
 
-# Cosmetic improvements; the underlying problem remains tastefully untouched.
 def get_console() -> Console:
     """Return the shared Rich Console instance."""
     return _console
 
 
 def print_table(data: List[Dict], title: Optional[str] = None):
-    """Print a list of dicts as a Rich table.
+    """Print a list of dicts as a minimal Rich table.
 
     Args:
         data: List of dictionaries to render as rows.
         title: Optional table title.
     """
     if not data:
-        _console.print(f"[{STYLE_WARNING}](no data)[/{STYLE_WARNING}]")
+        _console.print(f"[{STYLE_NO_DATA}](no data)[/{STYLE_NO_DATA}]")
         return
     keys = list(data[0].keys())
-    table = RichTable(title=title, title_style=STYLE_TITLE)
+    table = RichTable(title=title, title_style=STYLE_TITLE, box=box.SIMPLE)
     for key in keys:
         table.add_column(key, style=STYLE_KEY, no_wrap=True)
     for item in data:
@@ -48,8 +48,8 @@ def print_table(data: List[Dict], title: Optional[str] = None):
     _console.print(table)
 
 
-def print_panel(text: str, title: Optional[str] = None, style: str = "green"):
-    """Print text inside a Rich Panel.
+def print_panel(text: str, title: Optional[str] = None, style: str = "default"):
+    """Print text inside a minimal Rich Panel.
 
     Args:
         text: The message body.
@@ -91,12 +91,12 @@ def print_success(message: str):
 
 
 def print_info(message: str):
-    """Print an informational message in blue.
+    """Print an informational message in the default style.
 
     Args:
         message: The info text.
     """
-    _console.print(f"[{STYLE_INFO}]{message}[/{STYLE_INFO}]")
+    _console.print(message)
 
 
 def spinner() -> Progress:

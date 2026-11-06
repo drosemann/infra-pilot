@@ -24,6 +24,7 @@ command.
 | `gitops`, `ssh`, `inventory`, `secrets` | Declarative operations, remote-access records, metadata, and secret workflows. |
 | `plugins`, `templates`, `webhooks`, `apikeys` | Extensibility and automation configuration. |
 | `doctor`, `tui`, `rollback` | Diagnostics, terminal UI, and change recovery. |
+| `incident` | Incident workflow: create, ack, note, assign, escalate, resolve, postmortem draft. |
 | `pet` | Living Fleet creature status (`list`, `status`) and rename; read-only except the name. |
 | `login`, `logout`, `completion`, `interactive`, `batch`, `docs` | Global authentication, shell, interactive, batch, and documentation helpers. |
 
@@ -58,3 +59,13 @@ pytest tests/orchestrator/test_feature_flags.py -v  # feature-flag evaluation co
 `ipilot flags ...` manages panel feature flags: `list`, `evaluate`,
 `create <key>`, `rollout <key> --env production --percent 50`, and
 `kill <key>` (disables everywhere at once). Writes require a panel admin.
+
+## Incidents & On-Call
+
+`ipilot incident ...` drives the orchestrator incident workflow over the
+same `/v1/` paths as `ipilot pet`: `create <service> <title> [--severity]
+[--runbook] [--reporter]`, `list [--status] [--service]`, `show <id>`,
+`note <id> <message> [--actor]`, `ack <id>`, `assign <id> <owner>`,
+`escalate <id> [--force]`, `resolve <id> --note <text>`, and
+`postmortem <id>` (blameless DRAFT, must be reviewed by a human).
+Details: [docs/INCIDENTS.md](../docs/INCIDENTS.md).

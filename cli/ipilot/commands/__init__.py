@@ -27,6 +27,7 @@ from .templates import app as templates_app
 from .tui import app as tui_app
 from .webhooks import app as webhooks_app
 from .feature_flags import app as feature_flags_app
+from .incidents import app as incidents_app
 
 register("gitops", "Infrastructure as Code (GitOps)")(gitops_app)
 register("ssh", "SSH session management")(ssh_app)
@@ -36,6 +37,7 @@ register("plugins", "Plugin management")(plugins_app)
 register("doctor", "System diagnostics")(doctor_app)
 register("webhooks", "Webhook management")(webhooks_app)
 register("flags", "Feature flag management")(feature_flags_app)
+register("incident", "Incident & on-call workflow")(incidents_app)
 register("apikeys", "API key management")(apikeys_app)
 register("templates", "Deployment templates")(templates_app)
 register("tui", "Terminal UI mode")(tui_app)
@@ -58,5 +60,6 @@ __all__: list[str] = [
     "templates_app",
     "tui_app",
     "rollback_app",
+    "incidents_app",
     "pet_app",
 ]

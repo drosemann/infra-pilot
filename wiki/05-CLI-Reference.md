@@ -140,6 +140,24 @@ Built-in: kubernetes, docker, aws, hetzner, cloudflare, proxmox, ansible, nomad,
 | `apikeys create <name> [--role] [--expire]` | Create API key |
 | `apikeys revoke <id>` | Revoke API key |
 
+## Incidents & On-Call
+
+| Command | Description |
+| --------- | ------------- |
+| `incident create <service> <title> [--severity] [--runbook] [--reporter]` | Create incident, duty owner auto-assigned |
+| `incident list [--status] [--service]` | List incidents, newest first (`escalation_due` flags overdue) |
+| `incident show <id>` | Full incident with audit timeline |
+| `incident note <id> <message> [--actor]` | Append a status update |
+| `incident ack <id> [--actor]` | Acknowledge (a human is on it) |
+| `incident assign <id> <owner> [--actor]` | Manual reassign (audited) |
+| `incident escalate <id> [--force]` | Next rota level (deferred in quiet hours unless `--force`) |
+| `incident resolve <id> --note <text> [--actor]` | Resolve (note required) |
+| `incident postmortem <id>` | Blameless postmortem DRAFT (human review required) |
+
+Rota, deadlines, and quiet hours are configured on the orchestrator via
+`INCIDENTS_ESCALATION`, `INCIDENTS_ESCALATE_AFTER_S`, and
+`INCIDENTS_QUIET_HOURS`. Full workflow: `docs/INCIDENTS.md`.
+
 ## Undo / Rollback
 
 | Command | Description |

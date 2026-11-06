@@ -26,6 +26,7 @@ this service on `http://localhost:8500` and supplies its database connection thr
 | `GET /health`, `GET /metrics` | Public | Readiness/health information and Prometheus metrics. |
 | `/api/…` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Federation status, RBAC, provider discovery, and manifest deployment operations. |
 | `/webhook/gitops` | `GITOPS_WEBHOOK_TOKEN` HMAC signature with timestamp/replay validation | Trigger a GitOps manifest reconciliation. |
+| `POST/GET /api/v1/incidents*` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Incident workflow: duty routing, escalation chain, postmortem drafts ([docs/INCIDENTS.md](../../docs/INCIDENTS.md)). |
 | `GET /api/v1/fleet/creatures[/{id}]`, `POST …/rename` | `Authorization: Bearer <FEDERATION_API_TOKEN>` | Living Fleet creature views (SQLite store) and rename-only mutation. Disabled (404) unless `LIVING_FLEET_ENABLED=true`. |
 
 Do not expose probe routes, bearer tokens, or webhook secrets directly to
@@ -43,6 +44,7 @@ directory's `.env.example` lists standalone defaults.
 | `GITHUB_WEBHOOK_SECRET`, `GITOPS_WEBHOOK_TOKEN` | Signed webhook verification. |
 | `FEDERATION_API_TOKEN` | Bearer token for `/api/` routes. |
 | `LIVING_FLEET_ENABLED`, `LIVING_FLEET_INTERVAL_S`, `LIVING_FLEET_DB` | Living Fleet collector toggle, collection interval in seconds, and SQLite path (one-way import from the legacy JSON store). |
+| `INCIDENTS_STORE`, `INCIDENTS_ESCALATION`, `INCIDENTS_ESCALATE_AFTER_S`, `INCIDENTS_QUIET_HOURS` | Incident JSON store, rota levels (`alice|bob;carol`), escalation deadline, quiet hours. |
 | `AUTO_SCALE_*`, `SERVER_LIMIT`, `RAM_LIMIT` | Runtime capacity/default settings. |
 | `LOG_LEVEL` | Python log level. |
 
@@ -54,6 +56,7 @@ directory's `.env.example` lists standalone defaults.
 | `manifest/` | Infra-file schema and reconciliation engine. |
 | `rbac/`, `rbac_store.py` | Role/organization model and persistence helpers. |
 | `webhook_server.py` | aiohttp routing, signatures, auth, and HTTP serialization. |
+| `incidents.py` | Incident & on-call logic: duty routing, escalation chain, postmortem drafts, JSON store. |
 | `vps_manager.py` | Compatibility entry point for VPS manager imports. |
 | `vps_docker_support.py` | VPS configuration, validation, and shared Docker helpers. |
 | `vps_instance_persistence.py` | VPS inventory and database persistence. |

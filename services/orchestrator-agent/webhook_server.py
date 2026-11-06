@@ -952,9 +952,18 @@ async def build_webhook_app(bot_instance=None) -> web.Application:
     app.router.add_post("/webhook/gitops", gitops_webhook)
     # Living Fleet (barecode): read-only creature views + rename-only mutation.
     # Gated by LIVING_FLEET_ENABLED; handlers return 404 while disabled.
+    import incidents
     import living_fleet
     app.router.add_get("/api/v1/fleet/creatures", living_fleet.fleet_list)
     app.router.add_get("/api/v1/fleet/creatures/{workload_id}", living_fleet.fleet_detail)
     app.router.add_post("/api/v1/fleet/creatures/{workload_id}/rename", living_fleet.fleet_rename)
+    app.router.add_post("/api/v1/incidents", incidents.incident_create)
+    app.router.add_get("/api/v1/incidents", incidents.incident_list)
+    app.router.add_get("/api/v1/incidents/{incident_id}", incidents.incident_detail)
+    app.router.add_post("/api/v1/incidents/{incident_id}/status", incidents.incident_status)
+    app.router.add_post("/api/v1/incidents/{incident_id}/notes", incidents.incident_note)
+    app.router.add_post("/api/v1/incidents/{incident_id}/assign", incidents.incident_assign)
+    app.router.add_post("/api/v1/incidents/{incident_id}/escalate", incidents.incident_escalate)
+    app.router.add_get("/api/v1/incidents/{incident_id}/postmortem", incidents.incident_postmortem)
 
     return app

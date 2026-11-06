@@ -733,3 +733,87 @@ class ApiClient:
             f"/v1/fleet/creatures/{workload_id}/rename",
             {"display_name": display_name},
         )
+
+    # ------------------------------------------------------------------
+    # Incidents & On-Call (orchestrator /v1/incidents, Ideen #69/#17/#75/#81)
+    # ------------------------------------------------------------------
+
+    def list_incidents(
+        self, status: Optional[str] = None, service: Optional[str] = None
+    ) -> Any:
+        """List incidents (newest first, optional status/service filter)."""
+        params = []
+        if status:
+            params.append(f"status={status}")
+        if service:
+            params.append(f"service={service}")
+        qs = "&".join(params)
+        path = f"/v1/incidents?{qs}" if qs else "/v1/incidents"
+        return self._request("GET", path)
+
+    def get_incident(self, incident_id: str) -> Any:
+        """Get one incident with full timeline."""
+        return self._request("GET", f"/v1/incidents/{incident_id}")
+
+    def create_incident(
+        self,
+        service: str,
+        title: str,
+        severity: str = "medium",
+        runbook: str = "",
+        reporter: str = "",
+    ) -> Any:
+        """Create an incident (duty owner auto-assigned from rota level 0)."""
+        return self._request(
+            "POST",
+            "/v1/incidents",
+            {
+                "service": service,
+                "title": title,
+                "severity": severity,
+                "runbook": runbook,
+                "reporter": reporter,
+            },
+        )
+
+    def set_incident_status(
+        self, incident_id: str, status: str, note: str = "", actor: str = ""
+    ) -> Any:
+        """Change incident status (resolving requires a resolution note)."""
+        return self._request(
+            "POST",
+            f"/v1/incidents/{incident_id}/status",
+            {"status": status, "note": note, "actor": actor},
+        )
+
+    def add_incident_note(self, incident_id: str, note: str, actor: str = "") -> Any:
+        """Append a status update to the incident timeline."""
+        return self._request(
+            "POST",
+            f"/v1/incidents/{incident_id}/notes",
+            {"note": note, "actor": actor},
+        )
+
+    def assign_incident(self, incident_id: str, owner: str, actor: str = "") -> Any:
+        """Manually assign an incident owner (audited in timeline)."""
+        return self._request(
+            "POST",
+            f"/v1/incidents/{incident_id}/assign",
+            {"owner": owner, "actor": actor},
+        )
+
+    def escalate_incident(
+        self, incident_id: str, actor: str = "", force: bool = False
+    ) -> Any:
+        """Escalate to the next level (deferred in quiet hours unless forced)."""
+        return self._request(
+            "POST",
+            f"/v1/incidents/{incident_id}/escalate",
+            {"actor": actor, "force": force},
+        )
+
+    def get_postmortem_draft(self, incident_id: str) -> Any:
+        """Fetch the blameless postmortem DRAFT (always unreviewed)."""
+        return self._request(
+            "GET", f"/v1/incidents/{incident_id}/postmortem"
+        )

@@ -48,6 +48,7 @@ It is an internal operations tool, not a public hosting platform.
 | Container fleet UI | Management panel `:5173` | Apps, logs, metrics, terminals |
 | Panel API + Swagger | Management panel `:3001` | `/api/openapi.json`, `/api/docs` |
 | GitOps reconciliation | Orchestrator `:8500` | Signed webhooks, manifests |
+| Incident workflow | Orchestrator `:8500` + `ipilot incident` | Duty routing, escalation chain, postmortem drafts |
 | Scriptable operations | `ipilot` CLI | Same control plane as the UI |
 | Metrics stack | `monitoring` profile | Prometheus `:9090`, Grafana `:3000` |
 | ChatOps integration | `discord` profile | Discord service `:3002` |
@@ -283,7 +284,7 @@ Generated contracts take precedence over prose:
 | `GET /metrics` | Network-restricted | Prometheus scraping |
 | `POST /webhook/gitops` | HMAC signature | Manifest reconciliation |
 | `/api/*` (panel operational) | Panel session | App and ops management |
-| `/api/*` (orchestrator) | Bearer token | Federation, RBAC, deploy |
+| `/api/*` (orchestrator) | Bearer token | Federation, RBAC, deploy, incidents |
 
 Auth matrix: [wiki/11-Auth-Matrix](./wiki/11-Auth-Matrix.md).
 
@@ -422,7 +423,7 @@ still missing. Build/test status of all `.tl` files: not executed.
 | Audience | Start here |
 | --- | --- |
 | New users | [wiki/Home](./wiki/Home.md), [wiki/01-Installation](./wiki/01-Installation.md) |
-| Operators | [wiki/03-Configuration](./wiki/03-Configuration.md), [wiki/12-Backup-Restore](./wiki/12-Backup-Restore.md) |
+| Operators | [wiki/03-Configuration](./wiki/03-Configuration.md), [wiki/12-Backup-Restore](./wiki/12-Backup-Restore.md), [docs/INCIDENTS](./docs/INCIDENTS.md) |
 | Developers | [docs/DOCUMENTATION](./docs/DOCUMENTATION.md), [docs/ARCHITECTURE](./docs/ARCHITECTURE.md) |
 | API consumers | Panel `/api/docs`, orchestrator `api_docs/openapi.yaml` |
 | Security reviewers | [SECURITY](./SECURITY.md), [wiki/08-Security](./wiki/08-Security.md) |

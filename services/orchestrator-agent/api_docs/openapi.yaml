@@ -502,6 +502,80 @@ paths:
                 properties:
                   frozen: { type: boolean }
                   reason: { type: string }
+  /api/v1/incidents:
+    get:
+      tags: [Incidents]
+      summary: List incidents (optional ?status=&service= filters)
+      responses:
+        "200":
+          description: Incident list (compact view, newest first)
+    post:
+      tags: [Incidents]
+      summary: Create an incident (service, severity, title, runbook, reporter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [service, title]
+              properties:
+                service: { type: string }
+                severity: { type: string, enum: [critical, high, medium, low], default: medium }
+                title: { type: string }
+                runbook: { type: string }
+                reporter: { type: string }
+      responses:
+        "201":
+          description: Incident created (duty owner auto-assigned from rota level 0)
+        "400":
+          description: Invalid body
+  /api/v1/incidents/{incident_id}:
+    get:
+      tags: [Incidents]
+      summary: Incident detail incl. timeline
+      responses:
+        "200":
+          description: Full incident with timeline
+        "404":
+          description: Unknown incident
+  /api/v1/incidents/{incident_id}/status:
+    post:
+      tags: [Incidents]
+      summary: Change status (open/acknowledged/resolved; resolving needs a note)
+      responses:
+        "200":
+          description: Updated incident
+        "400":
+          description: Invalid status or missing resolution note
+  /api/v1/incidents/{incident_id}/notes:
+    post:
+      tags: [Incidents]
+      summary: Append a status update to the timeline
+      responses:
+        "200":
+          description: Updated incident
+  /api/v1/incidents/{incident_id}/assign:
+    post:
+      tags: [Incidents]
+      summary: Manually assign an owner (audited in timeline)
+      responses:
+        "200":
+          description: Updated incident
+  /api/v1/incidents/{incident_id}/escalate:
+    post:
+      tags: [Incidents]
+      summary: Escalate to next level (deferred during quiet hours unless forced)
+      responses:
+        "200":
+          description: Escalation result (escalated flag + reason)
+  /api/v1/incidents/{incident_id}/postmortem:
+    get:
+      tags: [Incidents]
+      summary: Blameless postmortem DRAFT from the timeline (always unreviewed)
+      responses:
+        "200":
+          description: Postmortem draft markdown
   /webhook/gitops:
     post:
       tags: [GitOps]

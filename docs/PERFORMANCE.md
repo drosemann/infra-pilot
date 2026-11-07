@@ -4,21 +4,19 @@ Living log of measured performance work. Each entry names the branch,
 the user-facing effect, and how to verify it. Numbers are measured,
 not estimated — entries without a measurement say so.
 
-## chore/dead-code-build — smaller repo, modern build target
+## perf/rate-limiter — no asserts or preallocation on the hot path
 
-- Removed tracked `python.exe` (274KB interpreter binary at repo root):
-  smaller clone/fetch, no stray binary on PATH. If your workflow needs
-  it back, keep it outside git (suggest `/*.exe` in `.gitignore`).
-- `vite.config.ts`: non-Windows build target `safari13` → `es2020`.
-  safari13 forces downlevel transpilation + helpers into every bundle;
-  es2020 matches what the code actually uses. Expect faster builds and
-  a smaller bundle (compare `vite build` output sizes before/after).
-- Deliberately NOT deleted (correction of the review): orchestrator
-  `fun_wave1-5.py` are lazily imported inside CLI command functions,
-  so they cost zero startup/memory until invoked; the CLI `fun_wave*`
-  commands are unregistered but harmless. The `.tl` mirrors and
-  `traumalang-*` trees are a source-of-truth decision, not a perf
-  issue — left for you. `effect` is genuinely used
-  (`ServerOperationsHub`, `src/lib/effect/`) — kept.
-- Verify: `git count-objects -v` / fresh clone size; `npm run build`
-  duration + output bytes. (Not run in this branch — run before merge.)
+- `rate_limiter.py` `TokenBucket.consume_at`/`refill_at`: removed 9
+  per-request `assert`s. Invariants are still checked at construction
+  (`RateLimitConfig.__post_init__`, `__post_init__`); request-time
+  validation was pure overhead (and behavior changed under `python -O`).
+- `SlidingWindowEntry`: ring buffer preallocating `[0.0] * capacity`
+  (up to 10k floats per key, ~80KB × 4096 keys worst case) replaced
+  with `deque(maxlen=capacity)` — memory now scales with actual
+  traffic. `.timestamps` stays a plain-list view (property + setter)
+  so existing callers/tests are unaffected.
+- Not changed: single cheap guard asserts in `check_*` dispatchers
+  (negligible cost, kept as documentation).
+- Verify: `pytest tests/unit/test_rate_limiter.py` (existing suite
+  covers burst, pruning, per-key isolation, registry). (Not run in
+  this branch — run before merge.)

@@ -18,13 +18,13 @@ import type { CliResult } from './cli-bridge.ts';
 declare global {
   namespace Express {
     interface Request {
-      cli: (command: string) => CliResult;
+      cli: (command: string) => Promise<CliResult>;
     }
   }
 }
 
 export function cliMiddleware(req: Request, _res: Response, next: NextFunction) {
-  req.cli = (command: string) => cli(command);
+  req.cli = (command: string) => cli(command); // async: await req.cli(...) in handlers
   next();
 }
 
@@ -38,28 +38,28 @@ export function cliMiddleware(req: Request, _res: Response, next: NextFunction) 
 // Example: Replace app.get('/api/servers', ...)
 //   import { cli } from './cli-bridge.js';
 //   app.get('/api/servers', verifyAuth, async (req, res) => {
-//     const result = cli('server list');
+//     const result = await cli('server list');
 //     if (result.success) return res.json(result.data);
 //     return res.status(500).json({ error: result.error });
 //   });
 
 // Example: Replace app.get('/api/servers/:id/logs', ...)
 //   app.get('/api/servers/:id/logs', verifyAuth, async (req, res) => {
-//     const result = cli(`logs fetch "${req.params.id}" --lines ${req.query.lines || 50}`);
+//     const result = await cli(`logs fetch "${req.params.id}" --lines ${req.query.lines || 50}`);
 //     if (result.success) return res.json(result.data);
 //     return res.status(500).json({ error: result.error });
 //   });
 
 // Example: Replace app.get('/api/backups', ...)
 //   app.get('/api/backups', verifyAuth, async (req, res) => {
-//     const result = cli(`backup list${req.query.server ? ` "${req.query.server}"` : ''}`);
+//     const result = await cli(`backup list${req.query.server ? ` "${req.query.server}"` : ''}`);
 //     if (result.success) return res.json(result.data);
 //     return res.status(500).json({ error: result.error });
 //   });
 
 // Example: Replace app.get('/api/health', ...)
 //   app.get('/api/health', async (req, res) => {
-//     const result = cli('health');
+//     const result = await cli('health');
 //     if (result.success) return res.json(result.data);
 //     return res.json({ status: 'unhealthy' });
 //   });

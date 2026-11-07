@@ -99,6 +99,14 @@ app.disable('x-powered-by');
 app.set('trust proxy', false);
 
 const execAsync = promisify(exec);
+
+// Clamp client-controlled `?limit=` to [1, max], falling back to `def`.
+// Keeps list endpoints bounded: payload size stays flat as tables grow.
+function boundedLimit(req: Request, def: number, max: number): number {
+  const raw = parseInt((req.query as any)?.limit as string, 10);
+  if (!Number.isFinite(raw) || raw <= 0) return def;
+  return Math.min(raw, max);
+}
 const execFileAsync = promisify(execFile);
 
 /**
@@ -1542,7 +1550,7 @@ app.get('/api/customers', verifyAuth, customersLimiter, async (req: Request, res
       }
     }
     // After potential seeding, fetch and return
-    const { data, error } = await supabase.from('customers').select('*').eq('owner_user_id', userId);
+    const { data, error } = await supabase.from('customers').select('*').eq('owner_user_id', userId).limit(boundedLimit(req, 200, 500));
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
@@ -3583,6 +3591,42 @@ const terminalRooms = new Map<string, TerminalRoom>();
 // they only receive invalidation broadcasts pushed on every flag write.
 const flagSubscribers = new Set<WebSocket>();
 
+// Shared docker-stats sampler: one 5s interval per appId, broadcast to all
+// subscribers. Previously every subscriber spawned `docker stats` every 2s.
+const METRICS_INTERVAL_MS = 5000;
+const metricsSubs = new Map<string, { clients: Set<WebSocket>; timer: NodeJS.Timeout }>();
+
+async function sampleAppMetrics(appId: string) {
+  const entry = metricsSubs.get(appId);
+  if (!entry) return;
+  try {
+    const { stdout } = await runCommand('docker', ['stats', appId, '--no-stream', '--format', '{{json .}}']);
+    const msg = JSON.stringify({ type: 'metrics', appId, data: JSON.parse(stdout) });
+    for (const client of entry.clients) {
+      if (client.readyState === WebSocket.OPEN) client.send(msg);
+    }
+  } catch {}
+}
+
+function subscribeMetrics(ws: WebSocket, appId: string) {
+  let entry = metricsSubs.get(appId);
+  if (!entry) {
+    entry = { clients: new Set(), timer: setInterval(() => { void sampleAppMetrics(appId); }, METRICS_INTERVAL_MS) };
+    metricsSubs.set(appId, entry);
+  }
+  entry.clients.add(ws);
+}
+
+function unsubscribeMetrics(ws: WebSocket, appId: string) {
+  const entry = metricsSubs.get(appId);
+  if (!entry) return;
+  entry.clients.delete(ws);
+  if (entry.clients.size === 0) {
+    clearInterval(entry.timer);
+    metricsSubs.delete(appId);
+  }
+}
+
 function broadcastFlagChange(changedKey?: string) {
   const msg = JSON.stringify({ type: 'feature-flags:changed', key: changedKey || null, at: new Date().toISOString() });
   for (const client of flagSubscribers) {
@@ -3701,15 +3745,8 @@ wss.on('connection', (ws, req) => {
         ws.on('close', () => { logStream.kill(); });
       }
       if (msg.type === 'subscribe:metrics' && msg.appId) {
-        const interval = setInterval(async () => {
-          try {
-            const { stdout } = await runCommand('docker', ['stats', msg.appId, '--no-stream', '--format', '{{json .}}']);
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'metrics', appId: msg.appId, data: JSON.parse(stdout) }));
-            }
-          } catch {}
-        }, 2000);
-        ws.on('close', () => clearInterval(interval));
+        subscribeMetrics(ws, msg.appId);
+        ws.on('close', () => unsubscribeMetrics(ws, msg.appId));
       }
     } catch {}
   });
@@ -3724,6 +3761,7 @@ app.get('/api/ssh/sessions', verifyAuth, async (req: Request, res: Response) => 
   const { status } = req.query;
   let query = supabase.from('ssh_sessions').select('*').eq('user_id', userId).order('started_at', { ascending: false });
   if (status) query = query.eq('status', status as string);
+  query = query.limit(boundedLimit(req, 50, 200));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ sessions: data || [] });
@@ -3819,6 +3857,7 @@ app.get('/api/inventory', verifyAuth, async (req: Request, res: Response) => {
   if (region) query = query.eq('region', region as string);
   if (owner) query = query.eq('owner', owner as string);
   if (provider) query = query.eq('provider', provider as string);
+  query = query.limit(boundedLimit(req, 100, 500));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ inventory: data || [] });
@@ -4006,7 +4045,7 @@ app.delete('/api/secrets/:key/access/:role', verifyAuth, async (req: Request, re
 
 app.get('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId);
+  const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId).limit(boundedLimit(req, 100, 500));
   if (error) return res.status(500).json({ error: error.message });
   res.json({ webhooks: data || [] });
 });
@@ -4062,7 +4101,7 @@ app.get('/api/webhooks/:id/logs', verifyAuth, async (req: Request, res: Response
   const userId = (req as any).user.id;
   const { data: webhook } = await supabase.from('webhooks').select('id').eq('id', req.params.id).eq('user_id', userId).single();
   if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
-  const { data, error } = await supabase.from('webhook_logs').select('*').eq('webhook_id', webhook.id).order('delivered_at', { ascending: false });
+  const { data, error } = await supabase.from('webhook_logs').select('*').eq('webhook_id', webhook.id).order('delivered_at', { ascending: false }).limit(boundedLimit(req, 100, 500));
   if (error) return res.status(500).json({ error: error.message });
   res.json({ logs: data || [] });
 });
@@ -4108,6 +4147,7 @@ app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
   const { installed } = req.query;
   let query = supabase.from('plugins').select('*').eq('user_id', userId);
   if (installed === 'true') query = query.eq('installed', true);
+  query = query.limit(boundedLimit(req, 100, 500));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   const builtinPlugins = [
@@ -4352,6 +4392,7 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false });
   if (resource_type) query = query.eq('resource_type', resource_type as string);
   if (resource_id) query = query.eq('resource_id', resource_id as string);
+  query = query.limit(boundedLimit(req, 50, 200));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ history: data || [] });

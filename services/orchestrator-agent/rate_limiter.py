@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
@@ -55,19 +55,13 @@ class TokenBucket:
     last_refill: float = field(default_factory=time.time)
 
     def consume_at(self, now: float, tokens: float = 1.0) -> bool:
-        assert now >= 0.0
-        assert 0.0 < tokens <= self.capacity
-        assert 0.0 <= self.tokens <= self.capacity
-        assert self.refill_rate > 0.0
 
         elapsed = max(0.0, now - self.last_refill)
         self.tokens = min(self.capacity, self.tokens + elapsed * self.refill_rate)
         self.last_refill = now
-        assert 0.0 <= self.tokens <= self.capacity
 
         if self.tokens >= tokens:
             self.tokens -= tokens
-            assert 0.0 <= self.tokens <= self.capacity
             return True
         return False
 
@@ -75,62 +69,59 @@ class TokenBucket:
         return self.consume_at(time.time(), tokens)
 
     def refill_at(self, now: float) -> None:
-        assert now >= 0.0
-        assert 0.0 <= self.tokens <= self.capacity
         elapsed = max(0.0, now - self.last_refill)
         self.tokens = min(self.capacity, self.tokens + elapsed * self.refill_rate)
         self.last_refill = now
-        assert 0.0 <= self.tokens <= self.capacity
 
     def refill(self) -> None:
         self.refill_at(time.time())
 
-
 @dataclass
 class SlidingWindowEntry:
+    """Sliding-window timestamps backed by a bounded deque.
+
+    Memory grows with actual traffic (up to ``capacity`` entries),
+    not with the configured limit: previously every key preallocated
+    ``[0.0] * capacity`` floats (up to 10k per key).
+    """
+
     capacity: int
-    timestamps: List[float] = field(init=False)
-    start: int = 0
-    count_used: int = 0
+    _timestamps: deque = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         assert 1 <= self.capacity <= MAX_REQUESTS_PER_WINDOW
-        self.timestamps = [0.0] * self.capacity
-        assert len(self.timestamps) == self.capacity
+        self._timestamps = deque(maxlen=self.capacity)
+
+    # Plain-list view kept for older callers/tests that read or
+    # assign `.timestamps` directly.
+    @property
+    def timestamps(self) -> List[float]:
+        return list(self._timestamps)
+
+    @timestamps.setter
+    def timestamps(self, values: List[float]) -> None:
+        self._timestamps = deque(values, maxlen=self.capacity)
 
     def prune_at(self, now: float, window_seconds: float) -> None:
-        assert now >= 0.0
-        assert window_seconds > 0.0
         cutoff = now - window_seconds
-        while self.count_used > 0 and self.timestamps[self.start] <= cutoff:
-            self.start = (self.start + 1) % self.capacity
-            self.count_used -= 1
-        assert 0 <= self.count_used <= self.capacity
+        timestamps = self._timestamps
+        while timestamps and timestamps[0] <= cutoff:
+            timestamps.popleft()
 
     def add_at(self, now: float, window_seconds: float) -> bool:
-        assert now >= 0.0
-        assert window_seconds > 0.0
         self.prune_at(now, window_seconds)
-        if self.count_used >= self.capacity:
+        if len(self._timestamps) >= self.capacity:
             return False
-        pos = (self.start + self.count_used) % self.capacity
-        self.timestamps[pos] = now
-        self.count_used += 1
-        assert 0 < self.count_used <= self.capacity
+        self._timestamps.append(now)
         return True
 
     def count_at(self, now: float, window_seconds: float) -> int:
-        assert now >= 0.0
-        assert window_seconds > 0.0
         self.prune_at(now, window_seconds)
-        assert 0 <= self.count_used <= self.capacity
-        return self.count_used
+        return len(self._timestamps)
 
     def oldest(self) -> Optional[float]:
-        assert 0 <= self.count_used <= self.capacity
-        if self.count_used == 0:
-            return None
-        return self.timestamps[self.start]
+        timestamps = self._timestamps
+        return timestamps[0] if timestamps else None
 
     # Compatibility helpers for existing callers/tests.
     def prune(self, window_seconds: float) -> None:

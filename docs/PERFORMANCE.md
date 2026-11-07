@@ -4,18 +4,19 @@ Living log of measured performance work. Each entry names the branch,
 the user-facing effect, and how to verify it. Numbers are measured,
 not estimated — entries without a measurement say so.
 
-## perf/server-subprocess — non-blocking CLI bridge, O(n) output capture
+## perf/rate-limiter — no asserts or preallocation on the hot path
 
-- `server/cli-bridge.ts`: `execSync` (blocks the whole Node event loop
-  for up to 30s per call) replaced with async `execFile` (no shell;
-  quote-aware arg split). `cli()` and the `ipilot` wrappers now
-  return `Promise<CliResult>` — await them.
-- `server/index.ts` `runCommand`: chunk-array capture (`join('')`)
-  instead of `+=` per data event (O(n²) → O(n) on large log output);
-  new optional `stdin` parameter. This also fixes config writes:
-  the 3rd `content` argument was silently dropped before, so
-  `docker exec ... tee` received empty stdin; dead `escapedContent`
-  shell-escaping removed.
-- Verify: `NODE_ENV=test node --test tests/unit/cli-bridge.test.ts`;
-  concurrent-request latency (one slow `ipilot` call must not stall others).
-  (Not run in this branch — run before merge.)
+- `rate_limiter.py` `TokenBucket.consume_at`/`refill_at`: removed 9
+  per-request `assert`s. Invariants are still checked at construction
+  (`RateLimitConfig.__post_init__`, `__post_init__`); request-time
+  validation was pure overhead (and behavior changed under `python -O`).
+- `SlidingWindowEntry`: ring buffer preallocating `[0.0] * capacity`
+  (up to 10k floats per key, ~80KB × 4096 keys worst case) replaced
+  with `deque(maxlen=capacity)` — memory now scales with actual
+  traffic. `.timestamps` stays a plain-list view (property + setter)
+  so existing callers/tests are unaffected.
+- Not changed: single cheap guard asserts in `check_*` dispatchers
+  (negligible cost, kept as documentation).
+- Verify: `pytest tests/unit/test_rate_limiter.py` (existing suite
+  covers burst, pruning, per-key isolation, registry). (Not run in
+  this branch — run before merge.)

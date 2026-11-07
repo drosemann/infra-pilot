@@ -3587,6 +3587,42 @@ const terminalRooms = new Map<string, TerminalRoom>();
 // they only receive invalidation broadcasts pushed on every flag write.
 const flagSubscribers = new Set<WebSocket>();
 
+// Shared docker-stats sampler: one 5s interval per appId, broadcast to all
+// subscribers. Previously every subscriber spawned `docker stats` every 2s.
+const METRICS_INTERVAL_MS = 5000;
+const metricsSubs = new Map<string, { clients: Set<WebSocket>; timer: NodeJS.Timeout }>();
+
+async function sampleAppMetrics(appId: string) {
+  const entry = metricsSubs.get(appId);
+  if (!entry) return;
+  try {
+    const { stdout } = await runCommand('docker', ['stats', appId, '--no-stream', '--format', '{{json .}}']);
+    const msg = JSON.stringify({ type: 'metrics', appId, data: JSON.parse(stdout) });
+    for (const client of entry.clients) {
+      if (client.readyState === WebSocket.OPEN) client.send(msg);
+    }
+  } catch {}
+}
+
+function subscribeMetrics(ws: WebSocket, appId: string) {
+  let entry = metricsSubs.get(appId);
+  if (!entry) {
+    entry = { clients: new Set(), timer: setInterval(() => { void sampleAppMetrics(appId); }, METRICS_INTERVAL_MS) };
+    metricsSubs.set(appId, entry);
+  }
+  entry.clients.add(ws);
+}
+
+function unsubscribeMetrics(ws: WebSocket, appId: string) {
+  const entry = metricsSubs.get(appId);
+  if (!entry) return;
+  entry.clients.delete(ws);
+  if (entry.clients.size === 0) {
+    clearInterval(entry.timer);
+    metricsSubs.delete(appId);
+  }
+}
+
 function broadcastFlagChange(changedKey?: string) {
   const msg = JSON.stringify({ type: 'feature-flags:changed', key: changedKey || null, at: new Date().toISOString() });
   for (const client of flagSubscribers) {
@@ -3705,15 +3741,8 @@ wss.on('connection', (ws, req) => {
         ws.on('close', () => { logStream.kill(); });
       }
       if (msg.type === 'subscribe:metrics' && msg.appId) {
-        const interval = setInterval(async () => {
-          try {
-            const { stdout } = await runCommand('docker', ['stats', msg.appId, '--no-stream', '--format', '{{json .}}']);
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: 'metrics', appId: msg.appId, data: JSON.parse(stdout) }));
-            }
-          } catch {}
-        }, 2000);
-        ws.on('close', () => clearInterval(interval));
+        subscribeMetrics(ws, msg.appId);
+        ws.on('close', () => unsubscribeMetrics(ws, msg.appId));
       }
     } catch {}
   });

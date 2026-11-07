@@ -140,3 +140,8 @@ The project also contains Playwright and accessibility tests; see `package.json`
 The panel invokes Docker operations for application lifecycle actions, logs,
 stats, and terminal-related features. Give Docker access only to trusted
 deployments, because the Docker socket is privileged.
+
+## Performance
+
+See [docs/PERFORMANCE.md](../../docs/PERFORMANCE.md) for the living performance log (subprocess, polling, payload notes).
+

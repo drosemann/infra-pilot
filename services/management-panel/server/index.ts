@@ -95,6 +95,14 @@ app.disable('x-powered-by');
 app.set('trust proxy', false);
 
 const execAsync = promisify(exec);
+
+// Clamp client-controlled `?limit=` to [1, max], falling back to `def`.
+// Keeps list endpoints bounded: payload size stays flat as tables grow.
+function boundedLimit(req: Request, def: number, max: number): number {
+  const raw = parseInt((req.query as any)?.limit as string, 10);
+  if (!Number.isFinite(raw) || raw <= 0) return def;
+  return Math.min(raw, max);
+}
 const execFileAsync = promisify(execFile);
 
 /**
@@ -1538,7 +1546,7 @@ app.get('/api/customers', verifyAuth, customersLimiter, async (req: Request, res
       }
     }
     // After potential seeding, fetch and return
-    const { data, error } = await supabase.from('customers').select('*').eq('owner_user_id', userId);
+    const { data, error } = await supabase.from('customers').select('*').eq('owner_user_id', userId).limit(boundedLimit(req, 200, 500));
     if (error) throw error;
     res.json(data || []);
   } catch (err) {
@@ -3749,6 +3757,7 @@ app.get('/api/ssh/sessions', verifyAuth, async (req: Request, res: Response) => 
   const { status } = req.query;
   let query = supabase.from('ssh_sessions').select('*').eq('user_id', userId).order('started_at', { ascending: false });
   if (status) query = query.eq('status', status as string);
+  query = query.limit(boundedLimit(req, 50, 200));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ sessions: data || [] });
@@ -3844,6 +3853,7 @@ app.get('/api/inventory', verifyAuth, async (req: Request, res: Response) => {
   if (region) query = query.eq('region', region as string);
   if (owner) query = query.eq('owner', owner as string);
   if (provider) query = query.eq('provider', provider as string);
+  query = query.limit(boundedLimit(req, 100, 500));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ inventory: data || [] });
@@ -4031,7 +4041,7 @@ app.delete('/api/secrets/:key/access/:role', verifyAuth, async (req: Request, re
 
 app.get('/api/webhooks', verifyAuth, async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId);
+  const { data, error } = await supabase.from('webhooks').select('*').eq('user_id', userId).limit(boundedLimit(req, 100, 500));
   if (error) return res.status(500).json({ error: error.message });
   res.json({ webhooks: data || [] });
 });
@@ -4087,7 +4097,7 @@ app.get('/api/webhooks/:id/logs', verifyAuth, async (req: Request, res: Response
   const userId = (req as any).user.id;
   const { data: webhook } = await supabase.from('webhooks').select('id').eq('id', req.params.id).eq('user_id', userId).single();
   if (!webhook) return res.status(404).json({ error: 'Webhook not found' });
-  const { data, error } = await supabase.from('webhook_logs').select('*').eq('webhook_id', webhook.id).order('delivered_at', { ascending: false });
+  const { data, error } = await supabase.from('webhook_logs').select('*').eq('webhook_id', webhook.id).order('delivered_at', { ascending: false }).limit(boundedLimit(req, 100, 500));
   if (error) return res.status(500).json({ error: error.message });
   res.json({ logs: data || [] });
 });
@@ -4133,6 +4143,7 @@ app.get('/api/plugins', verifyAuth, async (req: Request, res: Response) => {
   const { installed } = req.query;
   let query = supabase.from('plugins').select('*').eq('user_id', userId);
   if (installed === 'true') query = query.eq('installed', true);
+  query = query.limit(boundedLimit(req, 100, 500));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   const builtinPlugins = [
@@ -4377,6 +4388,7 @@ app.get('/api/changes/history', verifyAuth, async (req: Request, res: Response) 
   let query = supabase.from('change_history').select('*').eq('user_id', userId).order('created_at', { ascending: false });
   if (resource_type) query = query.eq('resource_type', resource_type as string);
   if (resource_id) query = query.eq('resource_id', resource_id as string);
+  query = query.limit(boundedLimit(req, 50, 200));
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ history: data || [] });

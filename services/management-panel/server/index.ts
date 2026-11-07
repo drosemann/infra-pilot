@@ -22,18 +22,22 @@ import { sanitizeAuditValue } from './audit-sanitize.ts';
  * @returns Promise resolving with stdout and stderr on success
  * @throws Error if the command exits with a non-zero code
  */
-function runCommand(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+function runCommand(command: string, args: string[], stdin?: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { shell: false });
-    let stdout = '';
-    let stderr = '';
+    if (stdin !== undefined && child.stdin) {
+      child.stdin.write(stdin);
+      child.stdin.end();
+    }
+    const stdoutChunks: string[] = [];
+    const stderrChunks: string[] = [];
 
     child.stdout.on('data', (data) => {
-      stdout += data.toString();
+      stdoutChunks.push(data.toString());
     });
 
     child.stderr.on('data', (data) => {
-      stderr += data.toString();
+      stderrChunks.push(data.toString());
     });
 
     child.on('error', (err) => {
@@ -42,7 +46,7 @@ function runCommand(command: string, args: string[]): Promise<{ stdout: string; 
 
     child.on('close', (code) => {
       if (code === 0) {
-        resolve({ stdout, stderr });
+        resolve({ stdout: stdoutChunks.join(''), stderr: stderrChunks.join('') });
       } else {
         reject(new Error(stderr || `${command} exited with code ${code}`));
       }
@@ -1305,7 +1309,7 @@ app.post('/api/apps/:appId/config/write', verifyAuth, async (req: Request, res: 
     });
 
     // Write new content
-    const escapedContent = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    // content is piped via runCommand stdin (never shell-interpolated), no escaping needed
     await runCommand('docker', ['exec', '-i', app.container_id, 'tee', filePath], content);
 
     await logAudit(userId, 'config:write', 'config_file', `${appId}:${filePath}`, null, { backupPath });

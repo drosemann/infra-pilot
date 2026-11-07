@@ -75,3 +75,8 @@ pytest tests/smoke/ -v
 See the repository [architecture guide](../../wiki/06-Architecture.md) and
 [authentication matrix](../../wiki/11-Auth-Matrix.md) for the cross-service
 view.
+
+## Performance
+
+See [docs/PERFORMANCE.md](../../docs/PERFORMANCE.md) for the living performance log (rate limiter, resource monitor notes).
+

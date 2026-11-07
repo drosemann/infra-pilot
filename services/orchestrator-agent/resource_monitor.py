@@ -6,15 +6,25 @@ from datetime import datetime
 from typing import Dict, Optional
 
 import docker
-import mysql.connector
+# mysql.connector is imported lazily in connect_to_database (optional dep).
 import psutil
+
+
+def _parse_df_use_percent(df_output: str) -> float:
+    """Extract the Use% value for the '/' mount without fixed indexes."""
+    for line in df_output.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[-1] == "/":
+            return float(parts[-2].strip("%"))
+    raise ValueError("no '/' mount found in df output")
 
 
 class ResourceMonitor:
     def __init__(self, config_path: str = "config.json"):
-        self.docker_client = docker.from_env()
+        self._docker_client = None  # created lazily via docker_client
         self.config = self.load_config(config_path)
-        self.db_connection = self.connect_to_database()
+        self._db_connection = None  # created lazily via db_connection
+        psutil.cpu_percent(interval=None)  # prime: later interval=None calls are non-blocking
         self.containers_cache = {}
 
     def load_config(self, config_path: str) -> dict:
@@ -25,7 +35,27 @@ class ResourceMonitor:
             logging.error(f"Error loading config: {str(e)}")
             return {}
 
-    def connect_to_database(self) -> mysql.connector.connection.MySQLConnection:
+    @property
+    def docker_client(self):
+        """Docker client, created on first use instead of at construction."""
+        if self._docker_client is None:
+            self._docker_client = docker.from_env()
+        return self._docker_client
+
+    @property
+    def db_connection(self):
+        """DB connection, created on first use instead of at construction."""
+        if self._db_connection is None:
+            self._db_connection = self.connect_to_database()
+        return self._db_connection
+
+    @db_connection.setter
+    def db_connection(self, connection) -> None:
+        self._db_connection = connection
+
+    def connect_to_database(self):
+        import mysql.connector  # lazy: optional dependency, keeps import light
+
         return mysql.connector.connect(
             host=self.config["db_host"],
             user=self.config["db_user"],
@@ -36,7 +66,7 @@ class ResourceMonitor:
     def collect_system_stats(self) -> Dict:
         """Collect overall system statistics"""
         return {
-            "cpu_percent": psutil.cpu_percent(interval=1),
+            "cpu_percent": psutil.cpu_percent(interval=None),  # non-blocking (primed in __init__)
             "memory": dict(psutil.virtual_memory()._asdict()),
             "disk": {
                 mount.mountpoint: dict(psutil.disk_usage(mount.mountpoint)._asdict())
@@ -76,7 +106,7 @@ class ResourceMonitor:
 
             # Get disk usage
             disk_stats = container.exec_run("df -h /").output.decode()
-            disk_percent = float(disk_stats.split()[11].strip("%"))
+            disk_percent = _parse_df_use_percent(disk_stats)
 
             return {
                 "container_id": container_id,

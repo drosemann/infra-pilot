@@ -508,3 +508,8 @@ Started as `dmh-hosting` in March 2025, evolved into `infra-pilot`
 as an internal tool for lean VPS and game-server operations.
 Built during FISI training; maintained as a learning project with
 production-grade hygiene.
+
+## Performance
+
+See [docs/PERFORMANCE.md](docs/PERFORMANCE.md) for the living performance log (one section per branch).
+

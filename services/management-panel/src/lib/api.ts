@@ -4,11 +4,17 @@
  */
 
 import axios from 'axios';
-import type { AxiosInstance } from 'axios';
+import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 import type { DockerApp, SetupStatus, UserProfile, AppConfig, Customer, ServerPreset, ServerMetric, AccessLog, ConfigVersion, MaintenanceWindow, BackupJob, BackupStatusEntry, BackupArtifactsResponse, AlertConfig, AlertHistoryEntry, HealthCheck, ScheduledTask, GitDeployment, Database, BillingInfo, Transaction, BillingRates, CostEstimate, Modpack, ModpackInstallation, ServerCloneRequest, ServerRoleAssignment, ServerSnapshot, AutopilotRecommendation, ServerWorkspace, ServerBillingLedger } from './types.ts';
 import type { CreatureView } from '../components/FleetPet';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
+
+// Shared GET cache: identical polls fired by different mounted components
+// share one request; hits return the same object so React bails out of
+// re-renders. Bounded to cap memory.
+const GET_CACHE_TTL_MS = 5000;
+const GET_CACHE_MAX_ENTRIES = 200;
 
 export type { APIClient };
 
@@ -19,6 +25,8 @@ export type { APIClient };
 class APIClient {
   private api: AxiosInstance;
   private token: string | null = null;
+  private getCache = new Map<string, { at: number; data: any }>();
+  private getInflight = new Map<string, Promise<any>>();
 
   constructor() {
     this.api = axios.create({
@@ -38,6 +46,52 @@ class APIClient {
     } catch {
       // storage unavailable (private mode, tests) — remain unauthenticated
     }
+    this.installGetCache();
+    // Any mutation invalidates GET cache entries: no stale reads after writes.
+    this.api.interceptors.response.use(
+      (res) => {
+        if ((res.config.method || 'get') !== 'get') this.getCache.clear();
+        return res;
+      },
+      (err) => Promise.reject(err),
+    );
+  }
+
+  /**
+   * Wrap axios GET with dedup + short-TTL cache + hidden-tab serving.
+   * Concurrent identical requests share one promise; while the tab is
+   * hidden no network fires at all (last response is served instead).
+   */
+  private installGetCache() {
+    const rawGet = this.api.get.bind(this.api);
+    const client = this;
+    this.api.get = (async function (url: string, config?: AxiosRequestConfig) {
+      const key = `${url}|${JSON.stringify(config?.params ?? null)}`;
+      const hit = client.getCache.get(key);
+      const hidden = typeof document !== 'undefined' && document.hidden;
+      if (hit && (hidden || Date.now() - hit.at < GET_CACHE_TTL_MS)) {
+        return { data: hit.data, status: 200, statusText: 'OK', headers: {}, config: config ?? {} };
+      }
+      const ongoing = client.getInflight.get(key);
+      if (ongoing) return ongoing;
+      const pending = rawGet(url, config).then(
+        (res) => {
+          client.getInflight.delete(key);
+          if (client.getCache.size >= GET_CACHE_MAX_ENTRIES) {
+            const oldest = client.getCache.keys().next();
+            if (!oldest.done) client.getCache.delete(oldest.value);
+          }
+          client.getCache.set(key, { at: Date.now(), data: res.data });
+          return res;
+        },
+        (err) => {
+          client.getInflight.delete(key);
+          throw err;
+        },
+      );
+      client.getInflight.set(key, pending);
+      return pending;
+    }) as typeof client.api.get;
   }
 
   setToken(token: string) {

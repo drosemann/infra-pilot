@@ -35,7 +35,7 @@
     "desktop:doctor": "zero-native doctor --manifest app.zon --strict"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/supabase-js": "^2.119.0",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-fs": "^2.7.1",
     "@tauri-apps/plugin-notification": "^2.8.0",
@@ -44,11 +44,11 @@
     "axios": "^1.21.0",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
-    "effect": "^4.1.0",
+    "effect": "^4.1.2",
     "express": "^5.3.0",
-    "express-rate-limit": "^8.7.2",
+    "express-rate-limit": "^8.7.3",
     "jdenticon": "^3.3.0",
-    "lucide-react": "^1.65.0",
+    "lucide-react": "^1.70.0",
     "pg": "^8.23.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -56,7 +56,7 @@
     "react-router": "^8.5.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
-    "ws": "^8.22.0"
+    "ws": "^8.22.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

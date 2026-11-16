@@ -12,16 +12,16 @@
     "type-check": "node --check index.js"
   },
   "dependencies": {
-    "@discordjs/builders": "^1.7.0",
-    "axios": "^1.21.0",
+    "@discordjs/builders": "^1.15.0",
+    "axios": "^1.21.1",
     "canvas": "^3.2.3",
-    "discord.js": "^14.14.1",
-    "dotenv": "^18.0.9",
-    "fast-xml-parser": "^5.11.2",
+    "discord.js": "^14.28.1",
+    "dotenv": "^18.0.10",
+    "fast-xml-parser": "^5.12.0",
     "node-cron": "^4.2.1",
     "pg": "^8.23.1",
     "pretty-bytes": "^7.2.0",
     "quickchart-js": "^4.0.0",
-    "systeminformation": "^5.33.19"
+    "systeminformation": "^5.33.21"
   }
 }
